@@ -1,0 +1,26 @@
+{
+  "name": "Cave Goblin Guard",
+  "description": "The scrawny cave goblin, clad in filthy rags that barely cover its knobby green skin, bares its jagged yellow teeth in a vicious snarl and jabs its crude spear in your direction, eyes gleaming with feral hostility.",
+  "disposition": "Hostile",
+  "attributes": {
+    "healthPoints": 8,
+    "armorClass": 8,
+    "actionPoints": 3,
+    "initiative": 1,
+    "xpReward": 50
+  },
+  "equipment": {
+    "Right Hand": "rusty_sword"
+  },
+  "carriedItems": ["healing_potion"],
+  "droppedLoot": [
+    {
+      "item": "gold",
+      "amount": 10
+    },
+    {
+      "item": "home_rune",
+      "amount": 1
+    }
+  ]
+}

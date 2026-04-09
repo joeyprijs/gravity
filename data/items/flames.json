@@ -1,0 +1,12 @@
+{
+  "name": "Flames",
+  "type": "Spell",
+  "slot": "Right Hand",
+  "description": "Conjure a burst of raw fire. Requires no weapon to cast.",
+  "value": 100,
+  "actionPoints": 2,
+  "attributes": {
+    "damageRoll": "2d6"
+  },
+  "bonusHitChance": 2
+}

@@ -1,0 +1,48 @@
+{
+  "title": "Stone Hallway",
+  "region": "dungeon",
+  "mapDefinitions": {
+    "top": 140,
+    "left": 175,
+    "width": 50,
+    "height": 80,
+    "background": "rgba(40, 40, 40, 0.9)"
+  },
+  "description": [
+    {
+      "text": "The hallway is lined with flickering torches. The bloody corpse of a goblin guard lies on the floor.",
+      "requiredState": {
+        "flag": "defeated_goblin_guard",
+        "value": true
+      }
+    },
+    {
+      "text": "The hallway is lined with flickering torches. A goblin guard spots you and draws its weapon!"
+    }
+  ],
+  "options": [
+    {
+      "text": "Prepare to fight!",
+      "action": "combat",
+      "actionDetails": {
+        "enemy": "goblin_guard"
+      },
+      "requiredState": {
+        "flag": "defeated_goblin_guard",
+        "value": false
+      }
+    },
+    {
+      "text": "Proceed deeper into the dungeon",
+      "destination": "dungeon_chamber",
+      "requiredState": {
+        "flag": "defeated_goblin_guard",
+        "value": true
+      }
+    },
+    {
+      "text": "Retreat to the cellar",
+      "destination": "dungeon_start"
+    }
+  ]
+}

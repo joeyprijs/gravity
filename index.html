@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vanilla JS RPG Engine</title>
+  <link id="theme-stylesheet" rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+  <div class="game" id="game-container">
+    <header class="game__header glass-panel">
+      <div class="game__stats" id="player-basic-stats">
+        <span class="stat-item" id="stat-hp">HP: 10/10</span>
+        <span class="stat-item" id="stat-ac">AC: 10</span>
+        <span class="stat-item" id="stat-ap">AP: 3/3</span>
+        <span class="stat-item" id="stat-initiative">Init: 0</span>
+        <span class="stat-item" id="stat-gold">Gold: 0</span>
+        <span class="stat-item" id="stat-level">Lvl 1</span>
+        <div class="stat-item__xp-wrapper">
+          <div class="stat-item__xp-bar" id="xp-bar" style="width: 0%;"></div>
+        </div>
+      </div>
+      <div class="game__controls controls">
+        <!--
+        <select class="btn btn--glass" id="dev-theme-switcher" onchange="document.getElementById('theme-stylesheet').href = this.value">
+          <option value="css/styles.css">Glass Theme</option>
+        </select>
+        -->
+        <button class="btn btn--glass" id="btn-save">Save</button>
+        <button class="btn btn--glass" id="btn-load">Load</button>
+        <button class="btn btn--glass" id="btn-restart">Restart</button>
+        <input type="file" id="file-upload" accept=".json" class="controls__hidden-input hidden-input">
+      </div>
+    </header>
+
+    <div class="game__main" id="main-content">
+      <aside class="game__sidebar glass-panel" id="left-panel">
+        <nav class="tabs__nav">
+          <button class="tabs__btn" data-tab="inventory-tab">Inventory</button>
+          <button class="tabs__btn tabs__btn--active" data-tab="equipment-tab">Equipment</button>
+          <button class="tabs__btn" data-tab="quests-tab">Quests</button>
+        </nav>
+        <div class="tabs__content scrollable" id="inventory-tab"></div>
+        <div class="tabs__content tabs__content--active scrollable" id="equipment-tab"></div>
+        <div class="tabs__content scrollable" id="quests-tab"></div>
+      </aside>
+
+      <main class="game__scene glass-panel" id="scene-panel">
+        <div class="minimap" id="minimap" title="Click to open full map" hidden>
+          <div class="minimap__canvas" id="minimap-canvas"></div>
+        </div>
+        <div class="scene__narrative scrollable" id="scene-narrative"></div>
+        <div class="scene__location" id="scene-location-reminder"></div>
+        <div class="scene__options" id="scene-options">
+          <!-- Action buttons injected here -->
+        </div>
+      </main>
+
+      <div class="fullmap-overlay" id="fullmap-overlay" hidden>
+        <div class="fullmap-overlay__panel">
+          <div class="fullmap-overlay__header">
+            <h3 class="fullmap-overlay__title" id="fullmap-title"></h3>
+            <button class="fullmap-close" id="fullmap-close">&#x2715;</button>
+          </div>
+          <div class="fullmap-overlay__inner">
+            <div class="fullmap__canvas" id="fullmap-canvas"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="src/engine.js"></script>
+</body>
+
+</html>

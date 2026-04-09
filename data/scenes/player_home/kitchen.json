@@ -1,0 +1,22 @@
+{
+  "name": "Kitchen",
+  "region": "player_home",
+  "mapDefinitions": {
+    "top": 1800,
+    "left": 2390,
+    "width": 110,
+    "height": 100,
+    "background": "rgba(70, 50, 30, 0.9)"
+  },
+  "description": "You walk into the kitchen, smelling the rich aroma of roasting meats. You find the servant cooking a stew over an open flame.",
+  "options": [
+    {
+      "text": "Eat a Snack",
+      "action": "eat_snack"
+    },
+    {
+      "text": "Return to Living Room",
+      "destination": "home_living_room"
+    }
+  ]
+}

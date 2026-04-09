@@ -1,0 +1,42 @@
+{
+  "title": "The Grand Chamber",
+  "region": "dungeon",
+  "mapDefinitions": {
+    "top": 40,
+    "left": 80,
+    "width": 200,
+    "height": 100,
+    "background": "rgba(30, 30, 50, 0.9)"
+  },
+  "description": "You enter a grand chamber. Sunlight streams in from a crack in the ceiling. A mysterious stranger stands near the exit.",
+  "questsTriggeredOnEntry": {
+    "mission": "escape_dungeon",
+    "status": "complete"
+  },
+  "options": [
+    {
+      "text": "Talk to the stranger",
+      "action": "dialogue",
+      "actionDetails": {
+        "npc": "mysterious_stranger"
+      }
+    },
+    {
+      "text": "Rest here (Restore HP)",
+      "action": "rest",
+      "actionDetails": {
+        "heal": 10,
+        "cost": 0,
+        "hideAfter": true
+      },
+      "requiredState": {
+        "flag": "chamber_rested",
+        "value": false
+      }
+    },
+    {
+      "text": "Retreat to the Hallway",
+      "destination": "dungeon_hallway"
+    }
+  ]
+}

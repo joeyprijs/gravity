@@ -1,0 +1,9 @@
+{
+  "name": "Escape the Dungeon",
+  "description": "Find a way out of the underground complex and reach the surface.",
+  "finished": false,
+  "missionRewards": {
+    "xp": 100,
+    "gold": 50
+  }
+}

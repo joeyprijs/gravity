@@ -1,0 +1,12 @@
+{
+  "name": "Rusty Sword",
+  "type": "Weapon",
+  "slot": "Right Hand",
+  "description": "An old, chipped blade. Better than nothing.",
+  "value": 5,
+  "actionPoints": 1,
+  "attributes": {
+    "damageRoll": "1d4"
+  },
+  "bonusHitChance": 0
+}

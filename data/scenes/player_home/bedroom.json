@@ -1,0 +1,22 @@
+{
+  "name": "Bedroom",
+  "region": "player_home",
+  "mapDefinitions": {
+    "top": 1700,
+    "left": 2500,
+    "width": 140,
+    "height": 100,
+    "background": "rgba(30, 30, 80, 0.9)"
+  },
+  "description": "You enter the bedroom. It's surprisingly tidy, with a plush feather bed tucked in the corner. The mattress looks incredibly inviting.",
+  "options": [
+    {
+      "text": "Sleep (Full Rest)",
+      "action": "full_rest"
+    },
+    {
+      "text": "Return to Living Room",
+      "destination": "home_living_room"
+    }
+  ]
+}

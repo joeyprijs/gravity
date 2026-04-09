@@ -1,0 +1,23 @@
+{
+  "name": "Front Door",
+  "region": "player_home",
+  "mapDefinitions": {
+    "top": 1900,
+    "left": 2525,
+    "width": 90,
+    "height": 40,
+    "background": "rgba(80, 50, 20, 0.9)"
+  },
+  "description": "You stand before a sturdy oak door set into a quiet hillside. Warm light spills from tiny windows.",
+  "options": [
+    {
+      "text": "Go Inside",
+      "destination": "home_living_room"
+    },
+    {
+      "text": "Return via Teleport",
+      "action": "return_to_world",
+      "requirements": { "item": "home_rune" }
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "title": "The Awakening",
+  "region": "dungeon",
+  "mapDefinitions": {
+    "top": 220,
+    "left": 175,
+    "width": 50,
+    "height": 60,
+    "background": "rgba(60, 40, 20, 0.9)"
+  },
+  "questsTriggeredOnEntry": {
+    "mission": "escape_dungeon",
+    "status": "active"
+  },
+  "description": [
+    {
+      "text": "You are back in the dimly lit cellar. The heavy wooden door stands wide open to the north.",
+      "requiredState": {
+        "flag": "door_unlocked",
+        "value": true
+      }
+    },
+    {
+      "text": "You awake in a dimly lit cellar. The smell of damp earth fills the air. A heavy wooden door stands locked to the north."
+    }
+  ],
+  "options": [
+    {
+      "text": "Search the room",
+      "action": "loot",
+      "actionDetails": {
+        "item": "cellar_key",
+        "amount": 1,
+        "hideAfter": true
+      },
+      "requiredState": {
+        "flag": "searched_room",
+        "value": false
+      }
+    },
+    {
+      "text": "Unlock the door",
+      "destination": "dungeon_hallway",
+      "requirements": {
+        "item": "cellar_key"
+      },
+      "changeStateFlag": {
+        "flag": "door_unlocked",
+        "value": true
+      },
+      "requiredState": {
+        "flag": "door_unlocked",
+        "value": false
+      }
+    },
+    {
+      "text": "Go through the open door",
+      "destination": "dungeon_hallway",
+      "requiredState": {
+        "flag": "door_unlocked",
+        "value": true
+      }
+    }
+  ]
+}

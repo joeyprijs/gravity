@@ -1,0 +1,30 @@
+{
+  "name": "Living Room",
+  "region": "player_home",
+  "mapDefinitions": {
+    "top": 1800,
+    "left": 2500,
+    "width": 140,
+    "height": 100,
+    "background": "rgba(30, 60, 40, 0.9)"
+  },
+  "description": "You enter the home and find yourself inside a cozy living room with a roaring hearth. Multiple wooden doors are visible leading deeper into the house. A gruff dwarf is sitting in a worn armchair, completely fixated on a strange scrying box emitting colorful moving pictures.",
+  "options": [
+    {
+      "text": "Enter Kitchen",
+      "destination": "home_kitchen"
+    },
+    {
+      "text": "Enter Bedroom",
+      "destination": "home_bedroom"
+    },
+    {
+      "text": "Enter Museum Room",
+      "destination": "home_museum"
+    },
+    {
+      "text": "Leave House",
+      "destination": "home_door"
+    }
+  ]
+}

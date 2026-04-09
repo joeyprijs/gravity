@@ -1,0 +1,38 @@
+{
+  "name": "Mysterious Stranger",
+  "disposition": "Friendly",
+  "isMerchant": true,
+  "storeExitText": "No problem.",
+  "attributes": {
+    "initiative": 0
+  },
+  "carriedItems": ["healing_potion", "leather_armor"],
+  "conversations": {
+    "start": {
+      "npcText": "Greetings, traveler. I am the Mysterious Stranger.",
+      "responses": [
+        {
+          "text": "What can I do for you?",
+          "goToConversation": "ask_wares"
+        },
+        {
+          "text": "I must be going.",
+          "action": "leave"
+        }
+      ]
+    },
+    "ask_wares": {
+      "npcText": "I have many fine items for sale, provided you have the coin.",
+      "responses": [
+        {
+          "text": "Let's trade.",
+          "action": "trade"
+        },
+        {
+          "text": "Nevermind. Goodbye.",
+          "action": "leave"
+        }
+      ]
+    }
+  }
+}

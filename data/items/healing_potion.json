@@ -1,0 +1,10 @@
+{
+  "name": "Healing Potion",
+  "type": "Consumable",
+  "description": "A vial of red liquid that restores 1d8+2 HP.",
+  "value": 15,
+  "actionPoints": 1,
+  "attributes": {
+    "healingAmount": "1d8+2"
+  }
+}

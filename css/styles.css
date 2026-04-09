@@ -1,0 +1,636 @@
+/* ==========================================================================
+ VARIABLES & THEMING
+ ========================================================================== */
+:root {
+  /* Global Colors */
+  --bg-color: #0f172a;
+  --bg-gradient-start: #1e1b4b;
+  --bg-gradient-end: #0f172a;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --accent-color: #38bdf8;
+  --accent-hover: #0284c7;
+  --gold-color: #fbbf24;
+
+  /* Stats Colors */
+  --health-color: #ef4444;
+  --ap-color: #f59e0b;
+  --xp-color: #10b981;
+
+  /* Glass Panels */
+  --glass-bg: rgba(30, 41, 59, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+
+  /* Buttons */
+  --btn-glass-bg: rgba(255, 255, 255, 0.05);
+  --btn-glass-hover-bg: rgba(255, 255, 255, 0.15);
+  --btn-glass-hover-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+  --btn-option-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  --btn-option-hover-bg: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(2, 132, 199, 0.2));
+  --btn-option-hover-shadow: 0 4px 15px rgba(2, 132, 199, 0.3);
+  --btn-option-disabled-bg: rgba(0, 0, 0, 0.3);
+
+  --btn-item-bg: rgba(255, 255, 255, 0.1);
+
+  /* Scrollbars */
+  --scrollbar-track: rgba(0, 0, 0, 0.2);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.2);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.4);
+
+  /* Lists */
+  --list-item-bg: rgba(0, 0, 0, 0.2);
+  --list-item-hover-bg: rgba(255, 255, 255, 0.05);
+
+  /* Typography */
+  --font-sm: 0.85rem;
+  --font-md: 0.95rem;
+  --font-lg: 1.05rem;
+  --font-xl: 1.1rem;
+
+  /* Spacing */
+  --spacing: 8px;
+
+  /* Misc/Utility */
+  --layer-shadow: rgba(0, 0, 0, 0.5);
+}
+
+/* ==========================================================================
+ RESET & BASE
+ ========================================================================== */
+
+/* * */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* body */
+body {
+  background-color: var(--bg-color);
+  background-image: radial-gradient(circle at top right, var(--bg-gradient-start), var(--bg-gradient-end));
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ==========================================================================
+ LAYOUT & GRID
+ ========================================================================== */
+
+/* .game */
+.game {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 0);
+}
+
+.game__main {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: calc(var(--spacing) * 0);
+  flex-grow: 1;
+  min-height: 0;
+}
+
+@media (max-width: calc(var(--spacing) * 128)) {
+  .game__main {
+    grid-template-columns: calc(var(--spacing) * 35) 1fr;
+  }
+}
+
+@media (max-width: calc(var(--spacing) * 96)) {
+  .game__main {
+    grid-template-columns: 1fr;
+  }
+
+  .game__sidebar {
+    display: none;
+  }
+}
+
+/* .glass-panel */
+.glass-panel {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  padding: calc(var(--spacing) * 2.5);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.game__header.glass-panel {
+  flex-direction: row;
+  justify-content: space-between;
+  min-height: unset;
+  border-bottom: none;
+}
+
+.game__scene.glass-panel {
+  border-left: none;
+}
+
+/* ==========================================================================
+ GLOBAL UI COMPONENTS (Scrolling, Buttons, Controls)
+ ========================================================================== */
+
+/* .scrollable */
+.scrollable {
+  overflow-y: auto;
+  flex-grow: 1;
+  min-height: 0;
+}
+
+.scrollable::-webkit-scrollbar {
+  width: calc(var(--spacing) * 0.75);
+}
+
+.scrollable::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+.scrollable::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+}
+
+.scrollable::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* .controls */
+.controls__hidden-input {
+  display: none;
+}
+
+/* .btn */
+.btn {
+  font-family: inherit;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn--glass {
+  background: var(--btn-glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  padding: var(--spacing) calc(var(--spacing) * 2);
+  margin-left: calc(var(--spacing) * 1.25);
+}
+
+.btn--glass:hover {
+  background: var(--btn-glass-hover-bg);
+  transform: translateY(-2px);
+  box-shadow: var(--btn-glass-hover-shadow);
+}
+
+.btn--item {
+  background: var(--btn-item-bg);
+  color: #fff;
+  border: none;
+  padding: calc(var(--spacing) / 2) var(--spacing);
+  font-size: var(--font-sm);
+}
+
+.btn--item:hover {
+  background: var(--accent-color);
+}
+
+/* .option-btn */
+.option-btn {
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--btn-option-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  padding: calc(var(--spacing) * 1.875) calc(var(--spacing) * 2.5);
+  font-size: var(--font-lg);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: inherit;
+}
+
+.option-btn:hover:not(:disabled) {
+  background: var(--btn-option-hover-bg);
+  border-color: var(--accent-hover);
+  transform: translateX(5px);
+  box-shadow: var(--btn-option-hover-shadow);
+}
+
+.option-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(1);
+  background: var(--btn-option-disabled-bg);
+}
+
+.option-btn__req-text {
+  font-size: var(--font-sm);
+  color: var(--health-color);
+  background: rgba(0, 0, 0, 0.3);
+  padding: calc(var(--spacing) / 2) var(--spacing);
+}
+
+.option-btn__req-text--sell {
+  background: var(--xp-color);
+  color: #000;
+}
+
+/* .tabs */
+.tabs__nav {
+  display: flex;
+  flex-flow: row wrap;
+  gap: calc(var(--spacing) * 1.25);
+  margin-bottom: calc(var(--spacing) * 2.5);
+  border-bottom: calc(var(--spacing) * 0.125) solid var(--glass-border);
+  padding-bottom: calc(var(--spacing) * 1.5);
+  flex: 0 0 auto;
+}
+
+.tabs__btn {
+  background: var(--list-item-bg);
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: var(--font-md);
+  padding: calc(var(--spacing) * 0.625) calc(var(--spacing) * 1.25);
+  transition: all 0.2s;
+}
+
+.tabs__btn:hover {
+  color: var(--text-primary);
+}
+
+.tabs__btn--active {
+  color: var(--accent-color);
+  font-weight: bold;
+  background: rgba(56, 189, 248, 0.1);
+}
+
+.tabs__content {
+  display: none;
+  flex-grow: 1;
+}
+
+.tabs__content--active {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ==========================================================================
+ PLAYER STATS
+ ========================================================================== */
+
+/* .game__stats */
+.game__stats {
+  display: flex;
+  gap: calc(var(--spacing) * 2.5);
+  align-items: center;
+}
+
+/* .stat-item */
+.stat-item {
+  font-weight: 600;
+  font-size: var(--font-xl);
+}
+
+.stat-item__xp-wrapper {
+  width: calc(var(--spacing) * 18.75);
+  height: calc(var(--spacing) * 1.25);
+  background: var(--layer-shadow);
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--glass-border);
+}
+
+.stat-item__xp-bar {
+  height: 100%;
+  background: var(--xp-color);
+  transition: width 0.3s ease;
+  box-shadow: 0 0 10px var(--xp-color);
+}
+
+/* ==========================================================================
+ INVENTORY & EQUIPMENT
+ ========================================================================== */
+
+/* .item-list */
+.item-list {
+  margin-bottom: calc(var(--spacing) * 2);
+}
+
+.item-list__title {
+  margin-bottom: calc(var(--spacing) * 1.5);
+  color: var(--text-primary);
+  border-bottom: calc(var(--spacing) * 0.125) solid var(--glass-border);
+  padding-bottom: calc(var(--spacing) * 1.5);
+}
+
+.item-list__items {
+  line-height: calc(var(--spacing) * 2.5);
+  list-style: none;
+  padding: 0;
+}
+
+.item-list__item {
+  padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 1.875);
+  background: var(--list-item-bg);
+  margin-bottom: calc(var(--spacing) * 1.25);
+  font-size: var(--font-md);
+  border: 1px solid transparent;
+  transition: all 0.2s;
+}
+
+.item-list__item:hover {
+  border-color: var(--glass-border);
+  background: var(--list-item-hover-bg);
+}
+
+.item-list__item--completed {
+  opacity: 0.8;
+}
+
+/* .item */
+.item-list__item > * + *,
+.item__description > * + * {
+  margin-top: var(--spacing);
+
+  &:empty {
+    margin-top: 0;
+  }
+}
+
+.item__title {
+  display: block;
+}
+
+.item__type {
+  display: block;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.item__stats {
+  font-size: var(--font-sm);
+  color: var(--accent-color);
+}
+
+.item__actions {
+  display: flex;
+  gap: var(--spacing);
+}
+
+.item__actions:has(button) {
+  margin-top: calc(var(--spacing) * 2);
+}
+
+/* ==========================================================================
+ SCENE NARRATIVE & LOGGING
+ ========================================================================== */
+
+/* .scene__narrative */
+.scene__narrative {
+  padding-bottom: calc(var(--spacing) * 10);
+  margin-bottom: calc(var(--spacing) * 2.5);
+}
+
+.scene__options {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 1.5);
+  flex: 0 0 auto;
+  margin-top: auto;
+}
+
+.scene__location {
+  padding-bottom: calc(var(--spacing) * 3);
+  margin-bottom: calc(var(--spacing) * 3);
+  border-bottom: calc(var(--spacing) * 0.125) solid var(--glass-border);
+}
+
+/* .scene */
+.scene + .scene {
+  margin-top: calc(var(--spacing) * 3);
+  padding-top: calc(var(--spacing) * 3);
+  border-top: 1px solid var(--glass-border);
+}
+
+.scene__description {
+  margin-bottom: calc(var(--spacing) * 3);
+}
+
+.scene__body {
+  line-height: calc(var(--spacing) * 3);
+  margin-top: calc(var(--spacing) * 3);
+}
+
+.scene__title--game-over {
+  color: var(--health-color);
+}
+
+/* .scene__log */
+.scene__log {
+  font-size: var(--font-md);
+  margin-top: calc(var(--spacing) * 3);
+}
+
+.scene__log--choice  { color: var(--text-primary); }
+.scene__log--loot    { color: var(--gold-color); }
+.scene__log--damage  { color: var(--health-color); }
+.scene__log--combat  { color: var(--accent-color); }
+.scene__log--quest   { color: var(--gold-color); }
+
+
+/* ==========================================================================
+ MISC & HELPERS
+ ========================================================================== */
+
+/* .combat-stats */
+.combat-stats__bar {
+  text-align: center;
+  margin-bottom: calc(var(--spacing) * 1.875);
+  color: var(--gold-color);
+}
+
+/* .store-stats */
+.store-stats__gold-bar {
+  text-align: center;
+  margin-bottom: calc(var(--spacing) * 1.875);
+  color: var(--gold-color);
+}
+
+/* ==========================================================================
+ MINIMAP & FULL MAP
+ ========================================================================== */
+
+.game__scene {
+  position: relative;
+}
+
+/* Minimap HUD */
+.minimap {
+  position: absolute;
+  top: calc(var(--spacing) * 2.5);
+  right: calc(var(--spacing) * 2.5);
+  width: 200px;
+  height: 200px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  z-index: 10;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.minimap:hover {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
+}
+
+/* Hide labels at minimap scale — too small to read */
+.minimap .map-node__label {
+  display: none;
+}
+
+.minimap__canvas {
+  position: relative;
+}
+
+/* Map scene nodes */
+.map-node {
+  position: absolute;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: box-shadow 0.3s;
+}
+
+.map-node--current {
+  border-color: var(--accent-color);
+
+}
+
+.map-node__label {
+  font-size: 0.6rem;
+  color: rgba(255, 255, 255, 0.65);
+  text-align: center;
+  padding: 2px 4px;
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  line-height: 1.2;
+}
+
+/* Full map overlay */
+.fullmap-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.75);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.fullmap-overlay[hidden] {
+  display: none;
+}
+
+.fullmap-overlay__panel {
+  display: flex;
+  flex-direction: column;
+  width: 90vw;
+  height: 90vh;
+  background: rgba(5, 10, 20, 0.97);
+  border: 1px solid var(--glass-border);
+}
+
+.fullmap-overlay__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
+  border-bottom: 1px solid var(--glass-border);
+  flex-shrink: 0;
+}
+
+.fullmap-overlay__title {
+  color: var(--text-primary);
+  font-size: var(--font-xl);
+}
+
+.fullmap-overlay__inner {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+  padding: calc(var(--spacing) * 2);
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-color) var(--glass-bg);
+  overscroll-behavior: contain;
+}
+
+.fullmap-overlay__inner::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.fullmap-overlay__inner::-webkit-scrollbar-track {
+  background: var(--glass-bg);
+  border-radius: 4px;
+}
+
+.fullmap-overlay__inner::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.8);
+  border-radius: 4px;
+}
+
+.fullmap-overlay__inner::-webkit-scrollbar-corner {
+  background: var(--glass-bg);
+}
+
+.fullmap__canvas {
+  position: relative;
+}
+
+.fullmap-close {
+  background: var(--btn-glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  flex-shrink: 0;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.fullmap-close:hover {
+  background: var(--btn-glass-hover-bg);
+  border-color: var(--accent-color);
+}

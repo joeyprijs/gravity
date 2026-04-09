@@ -1,0 +1,23 @@
+{
+  "name": "Museum Room",
+  "region": "player_home",
+  "mapDefinitions": {
+    "top": 1800,
+    "left": 2640,
+    "width": 120,
+    "height": 100,
+    "background": "rgba(60, 30, 70, 0.9)"
+  },
+  "descriptionHook": "museumChestContents",
+  "description": "You step into the grand museum room. Display cases line the walls, and a large communal storage chest sits imposingly in the center, waiting to preserve your most valuable discoveries.",
+  "options": [
+    {
+      "text": "Manage Museum Chest",
+      "action": "manage_chest"
+    },
+    {
+      "text": "Return to Living Room",
+      "destination": "home_living_room"
+    }
+  ]
+}
