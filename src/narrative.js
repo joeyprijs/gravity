@@ -30,7 +30,7 @@ export class NarrativeLog {
 
   flush() {
     if (this.isGameStart) return;
-    this.el.querySelectorAll('.scene--new').forEach(el => el.classList.remove('scene--new'));
+    this.el.querySelectorAll(`.${CSS.SCENE_NEW}`).forEach(el => el.classList.remove(CSS.SCENE_NEW));
   }
 
   log(type, message, variant = 'system', persist = true) {

@@ -11,12 +11,12 @@ export class UIManager {
 
   setup() {
     // Tab switching
-    document.querySelectorAll('.tabs__btn').forEach(btn => {
+    document.querySelectorAll(`.${CSS.TABS_BTN}`).forEach(btn => {
       btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.tabs__btn').forEach(b => b.classList.remove('tabs__btn--active'));
-        document.querySelectorAll('.tabs__content').forEach(c => c.classList.remove('tabs__content--active'));
-        e.target.classList.add('tabs__btn--active');
-        document.getElementById(e.target.dataset.tab).classList.add('tabs__content--active');
+        document.querySelectorAll(`.${CSS.TABS_BTN}`).forEach(b => b.classList.remove(CSS.TABS_BTN_ACTIVE));
+        document.querySelectorAll(`.${CSS.TABS_CONTENT}`).forEach(c => c.classList.remove(CSS.TABS_CONTENT_ACTIVE));
+        e.target.classList.add(CSS.TABS_BTN_ACTIVE);
+        document.getElementById(e.target.dataset.tab).classList.add(CSS.TABS_CONTENT_ACTIVE);
       });
     });
 
@@ -254,7 +254,7 @@ export class UIManager {
 
   // Buttons call engine game-logic methods — UI layer owns no game logic here.
   bindItemActions() {
-    document.querySelectorAll('.btn--item').forEach(btn => {
+    document.querySelectorAll(`.${CSS.BTN_ITEM}`).forEach(btn => {
       // Use onclick so re-binding on every update() replaces previous handlers
       // instead of stacking duplicates.
       btn.onclick = (e) => {

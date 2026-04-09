@@ -69,50 +69,58 @@ export const ENEMY_CLAW = {
 // appending to the base constant: `${CSS.SCENE_LOG}--${variant}`.
 export const CSS = {
   // Scene / narrative
-  SCENE_DESCRIPTION:     'scene__description',
-  SCENE_TITLE:           'scene__title',
-  SCENE_TITLE_GAME_OVER: 'scene__title--game-over',
-  SCENE_BODY:            'scene__body',
-  SCENE_LOG:             'scene__log',
+  SCENE_DESCRIPTION:      'scene__description',
+  SCENE_TITLE:            'scene__title',
+  SCENE_TITLE_GAME_OVER:  'scene__title--game-over',
+  SCENE_BODY:             'scene__body',
+  SCENE_LOG:              'scene__log',
+  SCENE_NEW:              'scene--new',
+
+  // Tabs (ui.js setup)
+  TABS_BTN:               'tabs__btn',
+  TABS_BTN_ACTIVE:        'tabs__btn--active',
+  TABS_CONTENT:           'tabs__content',
+  TABS_CONTENT_ACTIVE:    'tabs__content--active',
 
   // Buttons
-  OPTION_BTN:            'option-btn',
-  OPTION_BTN_REQ:        'option-btn__req-text',
-  OPTION_BTN_REQ_SELL:   'option-btn__req-text--sell',
-  BTN:                   'btn',
-  BTN_ITEM:              'btn--item',
-  BTN_DEPOSIT:           'btn--deposit',
+  OPTION_BTN:             'option-btn',
+  OPTION_BTN_REQ:         'option-btn__req-text',
+  OPTION_BTN_REQ_SELL:    'option-btn__req-text--sell',
+  BTN:                    'btn',
+  BTN_ITEM:               'btn--item',
+  BTN_DEPOSIT:            'btn--deposit',
 
   // Item lists
-  ITEM_LIST:             'item-list',
-  ITEM_LIST_TITLE:       'item-list__title',
-  ITEM_LIST_ITEMS:       'item-list__items',
-  ITEM_LIST_ITEM:        'item-list__item',
-  ITEM_LIST_ITEM_DONE:   'item-list__item--completed',
-  ITEM_DESCRIPTION:      'item__description',
-  ITEM_TITLE:            'item__title',
-  ITEM_TYPE:             'item__type',
-  ITEM_STATS:            'item__stats',
-  ITEM_ACTIONS:          'item__actions',
+  ITEM_LIST:              'item-list',
+  ITEM_LIST_TITLE:        'item-list__title',
+  ITEM_LIST_ITEMS:        'item-list__items',
+  ITEM_LIST_ITEM:         'item-list__item',
+  ITEM_LIST_ITEM_DONE:    'item-list__item--completed',
+  ITEM_DESCRIPTION:       'item__description',
+  ITEM_TITLE:             'item__title',
+  ITEM_TYPE:              'item__type',
+  ITEM_STATS:             'item__stats',
+  ITEM_ACTIONS:           'item__actions',
 
   // Combat / merchant stat bars
-  COMBAT_STATS_BAR:      'combat-stats__bar',
-  STORE_STATS_GOLD:      'store-stats__gold-bar',
+  COMBAT_STATS_BAR:       'combat-stats__bar',
+  STORE_STATS_GOLD:       'store-stats__gold-bar',
 
   // Museum
-  MUSEUM_SECTION:        'museum__section',
-  MUSEUM_HEADING:        'museum__heading',
-  MUSEUM_DONE_BTN:       'museum__done-btn',
-  MUSEUM_ITEM_LIST:      'museum-item-list',
+  MUSEUM_SECTION:         'museum__section',
+  MUSEUM_HEADING:         'museum__heading',
+  MUSEUM_DONE_BTN:        'museum__done-btn',
+  MUSEUM_ITEM_LIST:       'museum-item-list',
 
   // Map
-  MAP_NODE:              'map-node',
-  MAP_NODE_CURRENT:      'map-node--current',
-  MAP_NODE_LABEL:        'map-node__label',
-  MINIMAP_CANVAS:        'minimap__canvas',
+  MAP_NODE:               'map-node',
+  MAP_NODE_CURRENT:       'map-node--current',
+  MAP_NODE_LABEL:         'map-node__label',
+  MINIMAP_CANVAS:         'minimap__canvas',
+  FULLMAP_INNER:          'fullmap-overlay__inner',
 
   // Layout
-  GLASS_PANEL:           'glass-panel',
+  GLASS_PANEL:            'glass-panel',
 };
 
 // HTML element IDs referenced from more than one source file.

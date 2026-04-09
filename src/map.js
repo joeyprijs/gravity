@@ -85,7 +85,7 @@ export class MapManager {
     const overlay = document.getElementById('fullmap-overlay');
     const canvasEl = document.getElementById('fullmap-canvas');
     const titleEl = document.getElementById('fullmap-title');
-    const scrollEl = overlay?.querySelector('.fullmap-overlay__inner');
+    const scrollEl = overlay?.querySelector(`.${CSS.FULLMAP_INNER}`);
     if (!overlay || !canvasEl || !scrollEl) return;
 
     const currentSceneId = gameState.getCurrentSceneId();
