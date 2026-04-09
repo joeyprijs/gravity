@@ -4,6 +4,32 @@ A browser-based text RPG inspired by classic choose-your-own-adventure games. Na
 
 **[Play the live demo](https://joeyprijs.github.io/gravity/)**
 
+## Table of Contents
+
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Running Locally](#running-locally)
+- [Content Authoring Reference](#content-authoring-reference)
+  - [Manifest](#manifest--dataindexjson)
+  - [Scenes](#scenes)
+    - [Conditional descriptions](#conditional-descriptions)
+    - [Options](#options)
+  - [Actions](#actions)
+    - [loot](#loot--give-the-player-an-item)
+    - [combat](#combat--start-a-combat-encounter)
+    - [dialogue](#dialogue--start-an-npc-conversation)
+    - [rest](#rest--restore-a-fixed-amount-of-hp)
+    - [full_rest](#full_rest--fully-restore-hp-and-ap)
+    - [return_to_world](#return_to_world--teleport-back-to-the-previous-location)
+    - [eat_snack](#eat_snack--restore-a-small-amount-of-hp)
+    - [manage_chest](#manage_chest--open-the-museum-chest-ui)
+  - [Items](#items)
+  - [NPCs](#npcs)
+  - [Missions](#missions)
+  - [Locales](#locales--datalocalesjson)
+  - [The Flag & State System](#the-flag--state-system)
+
 ## Features
 
 - **Scene system** — branching narrative driven by JSON scene definitions; choices can require items, check state flags, trigger quests, and more
