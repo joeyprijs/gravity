@@ -1,6 +1,6 @@
 import { gameState } from "./state.js";
-import { createElement, clearElement } from "./utils.js";
-import { MAX_D20_ROLL, UNARMED_STRIKE, ENEMY_CLAW, EL } from "./config.js";
+import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "./utils.js";
+import { MAX_D20_ROLL, UNARMED_STRIKE, ENEMY_CLAW, EL, CSS } from "./config.js";
 
 // CombatSystem manages the full lifecycle of a turn-based combat encounter:
 // initiative roll, player/enemy turns, AP tracking, and victory/defeat resolution.
@@ -30,9 +30,9 @@ export class CombatSystem {
     gameState.modifyPlayerStat('ap', player.maxAp - player.ap);
 
     this.engine.openScene('combat');
-    const desc = createElement('div', 'scene__description');
-    desc.innerHTML = `<h2 class="scene__title">Fighting: ${this.enemy.name}</h2>${this.enemy.description ? `<p class="scene__body">${this.enemy.description}</p>` : ''}`;
-    this.engine.currentSceneEl.appendChild(desc);
+    this.engine.currentSceneEl.appendChild(
+      buildSceneDescription(`Fighting: ${this.enemy.name}`, this.enemy.description || null)
+    );
 
     this.engine.log("Combat", `Combat started with ${this.enemy.name}!`, 'combat');
 
@@ -53,20 +53,20 @@ export class CombatSystem {
     const container = document.getElementById(EL.SCENE_OPTIONS);
     clearElement(container);
 
-    const statsBar = createElement('div', 'combat-stats__bar', `<strong>Enemy HP: ${this.enemy.attributes.healthPoints} | AC: ${this.enemy.attributes.armorClass}</strong>`);
+    const statsBar = createElement('div', CSS.COMBAT_STATS_BAR, `<strong>Enemy HP: ${this.enemy.attributes.healthPoints} | AC: ${this.enemy.attributes.armorClass}</strong>`);
     container.appendChild(statsBar);
 
     const attacks = this.getAvailableAttacks();
 
     attacks.forEach(att => {
-      const btn = createElement('button', 'option-btn', `<span>Attack with ${att.name}</span> <span class="option-btn__req-text">AP: ${att.actionPoints}</span>`);
+      const btn = buildOptionButton(`Attack with ${att.name}`, `AP: ${att.actionPoints}`);
       if (gameState.getPlayer().ap < att.actionPoints) btn.disabled = true;
       btn.onclick = () => this.playerAttack(att);
       container.appendChild(btn);
     });
 
     // End turn button
-    const endBtn = createElement('button', 'option-btn', `<span>End Turn</span>`);
+    const endBtn = buildOptionButton('End Turn');
     endBtn.onclick = () => this.enemyTurn();
     container.appendChild(endBtn);
   }
@@ -286,17 +286,17 @@ export class CombatSystem {
 
     } else {
       this.engine.openScene();
-      const desc = createElement('div', 'scene__description');
-      desc.innerHTML = `<h2 class="scene__title scene__title--game-over">Game Over</h2><p class="scene__body">Your adventure ends here.</p>`;
+      const desc = buildSceneDescription('Game Over', 'Your adventure ends here.');
+      desc.querySelector('h2').classList.add(CSS.SCENE_TITLE_GAME_OVER);
       this.engine.currentSceneEl.appendChild(desc);
 
       const container = document.getElementById(EL.SCENE_OPTIONS);
       clearElement(container);
-      const loadBtn = createElement('button', 'option-btn', `Load Last Save`);
+      const loadBtn = buildOptionButton('Load Last Save');
       loadBtn.onclick = () => document.getElementById(EL.BTN_LOAD).click();
       container.appendChild(loadBtn);
 
-      const restartBtn = createElement('button', 'option-btn', `Restart Game`);
+      const restartBtn = buildOptionButton('Restart Game');
       restartBtn.onclick = () => document.getElementById(EL.BTN_RESTART).click();
       container.appendChild(restartBtn);
     }

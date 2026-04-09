@@ -1,6 +1,6 @@
 import { gameState } from "./state.js";
 import { createElement, clearElement } from "./utils.js";
-import { ITEM_TYPE_ORDER, XP_PER_LEVEL, EL, MSG } from "./config.js";
+import { ITEM_TYPE_ORDER, XP_PER_LEVEL, EL, CSS, MSG } from "./config.js";
 import { MapManager } from "./map.js";
 
 export class UIManager {
@@ -115,7 +115,7 @@ export class UIManager {
     invTab.innerHTML = '';
 
     if (sortedInv.length === 0) {
-      invTab.appendChild(createElement('p', 'item__type', 'Inventory is empty.'));
+      invTab.appendChild(createElement('p', CSS.ITEM_TYPE, 'Inventory is empty.'));
       return;
     }
 
@@ -129,36 +129,46 @@ export class UIManager {
 
       if (itemData.type !== currentType) {
         currentType = itemData.type;
-        currentGroup = createElement('div', 'item-list');
-        currentGroup.appendChild(createElement('h3', 'item-list__title', itemData.type));
-        currentUl = createElement('ul', 'item-list__items');
+        currentGroup = createElement('div', CSS.ITEM_LIST);
+        currentGroup.appendChild(createElement('h3', CSS.ITEM_LIST_TITLE, itemData.type));
+        currentUl = createElement('ul', CSS.ITEM_LIST_ITEMS);
         currentGroup.appendChild(currentUl);
         invTab.appendChild(currentGroup);
       }
 
-      const li = createElement('li', 'item-list__item');
-      const statsHtml = this.buildItemStatsHtml(itemData);
+      const li = createElement('li', CSS.ITEM_LIST_ITEM);
+      const label = `${itemData.name}${invItem.amount > 1 ? ` (x${invItem.amount})` : ''}`;
 
-      let buttonsHtml = '';
+      const descDiv = createElement('div', CSS.ITEM_DESCRIPTION);
+      descDiv.appendChild(createElement('strong', CSS.ITEM_TITLE, label));
+      descDiv.appendChild(createElement('div', CSS.ITEM_TYPE, itemData.description));
+      const statsEl = this.buildItemStatsEl(itemData);
+      if (statsEl) descDiv.appendChild(statsEl);
+
+      const actionsDiv = createElement('div', CSS.ITEM_ACTIONS);
       if (itemData.type === 'Consumable') {
-        buttonsHtml = `<button class="btn btn--item" data-action="consume" data-item="${invItem.item}">Use</button>`;
+        const btn = createElement('button', [CSS.BTN, CSS.BTN_ITEM], 'Use');
+        btn.dataset.action = 'consume';
+        btn.dataset.item = invItem.item;
+        actionsDiv.appendChild(btn);
       } else if (itemData.type === 'Weapon' || itemData.type === 'Spell') {
-        buttonsHtml = `
-          <button class="btn btn--item" data-action="equip" data-slot="Left Hand" data-item="${invItem.item}">Left hand</button>
-          <button class="btn btn--item" data-action="equip" data-slot="Right Hand" data-item="${invItem.item}">Right hand</button>
-        `;
+        for (const [slot, label] of [['Left Hand', 'Left hand'], ['Right Hand', 'Right hand']]) {
+          const btn = createElement('button', [CSS.BTN, CSS.BTN_ITEM], label);
+          btn.dataset.action = 'equip';
+          btn.dataset.slot = slot;
+          btn.dataset.item = invItem.item;
+          actionsDiv.appendChild(btn);
+        }
       } else if (itemData.type === 'Armor') {
-        buttonsHtml = `<button class="btn btn--item" data-action="equip" data-slot="${itemData.slot}" data-item="${invItem.item}">Equip</button>`;
+        const btn = createElement('button', [CSS.BTN, CSS.BTN_ITEM], 'Equip');
+        btn.dataset.action = 'equip';
+        btn.dataset.slot = itemData.slot;
+        btn.dataset.item = invItem.item;
+        actionsDiv.appendChild(btn);
       }
 
-      li.innerHTML = `
-        <div class="item__description">
-          <strong class="item__title">${itemData.name}${invItem.amount > 1 ? ` (x${invItem.amount})` : ''}</strong>
-          <div class="item__type">${itemData.description}</div>
-          ${statsHtml}
-        </div>
-        <div class="item__actions">${buttonsHtml}</div>
-      `;
+      li.appendChild(descDiv);
+      li.appendChild(actionsDiv);
       currentUl.appendChild(li);
     });
   }
@@ -167,24 +177,27 @@ export class UIManager {
     const equipTab = document.getElementById('equipment-tab');
     equipTab.innerHTML = '';
     for (const slot in player.equipment) {
-      const group = createElement('div', 'item-list');
-      group.appendChild(createElement('h3', 'item-list__title', slot));
-      const ul = createElement('ul', 'item-list__items');
-      const li = createElement('li', 'item-list__item');
+      const group = createElement('div', CSS.ITEM_LIST);
+      group.appendChild(createElement('h3', CSS.ITEM_LIST_TITLE, slot));
+      const ul = createElement('ul', CSS.ITEM_LIST_ITEMS);
+      const li = createElement('li', CSS.ITEM_LIST_ITEM);
       const itemId = player.equipment[slot];
       if (itemId) {
         const itemData = this.engine.data.items[itemId];
-        const statsHtml = this.buildItemStatsHtml(itemData);
-        li.innerHTML = `
-          <div class="item__description">
-            <strong class="item__title">${itemData.name}</strong>
-            <div class="item__type">${itemData.type}: ${itemData.description}</div>
-            ${statsHtml}
-          </div>
-          <div class="item__actions"><button class="btn btn--item" data-action="unequip" data-slot="${slot}">Unequip</button></div>
-        `;
+        const descDiv = createElement('div', CSS.ITEM_DESCRIPTION);
+        descDiv.appendChild(createElement('strong', CSS.ITEM_TITLE, itemData.name));
+        descDiv.appendChild(createElement('div', CSS.ITEM_TYPE, `${itemData.type}: ${itemData.description}`));
+        const statsEl = this.buildItemStatsEl(itemData);
+        if (statsEl) descDiv.appendChild(statsEl);
+
+        const unequipBtn = createElement('button', [CSS.BTN, CSS.BTN_ITEM], 'Unequip');
+        unequipBtn.dataset.action = 'unequip';
+        unequipBtn.dataset.slot = slot;
+
+        li.appendChild(descDiv);
+        li.appendChild(createElement('div', CSS.ITEM_ACTIONS)).appendChild(unequipBtn);
       } else {
-        li.appendChild(createElement('span', 'item__type', 'Empty'));
+        li.appendChild(createElement('span', CSS.ITEM_TYPE, 'Empty'));
       }
       ul.appendChild(li);
       group.appendChild(ul);
@@ -200,43 +213,42 @@ export class UIManager {
     const activeList = [];
     const completedList = [];
 
+    const buildQuestItem = (mData, extraClass = null) => {
+      const li = createElement('li', extraClass ? [CSS.ITEM_LIST_ITEM, extraClass] : CSS.ITEM_LIST_ITEM);
+      const descDiv = createElement('div', CSS.ITEM_DESCRIPTION);
+      descDiv.appendChild(createElement('strong', CSS.ITEM_TITLE, mData.name));
+      descDiv.appendChild(createElement('div', CSS.ITEM_TYPE, mData.description));
+      li.appendChild(descDiv);
+      return li;
+    };
+
     for (const [mId, mData] of Object.entries(this.engine.data.missions)) {
       const status = gameState.getMissionStatus(mId);
       if (status === "active") {
-        activeList.push(createElement('li', 'item-list__item', `
-          <div class="item__description">
-            <strong class="item__title">${mData.name}</strong>
-            <div class="item__type">${mData.description}</div>
-          </div>
-        `));
+        activeList.push(buildQuestItem(mData));
       } else if (status === "complete") {
-        completedList.push(createElement('li', ['item-list__item', 'item-list__item--completed'], `
-          <div class="item__description">
-            <strong class="item__title">${mData.name}</strong>
-            <div class="item__type">${mData.description}</div>
-          </div>
-        `));
+        completedList.push(buildQuestItem(mData, CSS.ITEM_LIST_ITEM_DONE));
       }
     }
 
     if (activeList.length > 0) {
-      const group = createElement('div', 'item-list');
-      group.appendChild(createElement('h3', 'item-list__title', 'Active Quests'));
-      const ul = createElement('ul', 'item-list__items');
+      const group = createElement('div', CSS.ITEM_LIST);
+      group.appendChild(createElement('h3', CSS.ITEM_LIST_TITLE, 'Active Quests'));
+      const ul = createElement('ul', CSS.ITEM_LIST_ITEMS);
       activeList.forEach(li => ul.appendChild(li));
       group.appendChild(ul);
       container.appendChild(group);
     }
     if (completedList.length > 0) {
-      const group = createElement('div', 'item-list');
-      group.appendChild(createElement('h3', 'item-list__title', 'Completed Quests'));
-      const ul = createElement('ul', 'item-list__items');
+      const group = createElement('div', CSS.ITEM_LIST);
+      group.appendChild(createElement('h3', CSS.ITEM_LIST_TITLE, 'Completed Quests'));
+      const ul = createElement('ul', CSS.ITEM_LIST_ITEMS);
       completedList.forEach(li => ul.appendChild(li));
       group.appendChild(ul);
       container.appendChild(group);
     }
     if (activeList.length === 0 && completedList.length === 0) {
-      container.appendChild(createElement('p', 'item__type', 'No active quests.'));
+      container.appendChild(createElement('p', CSS.ITEM_TYPE, 'No active quests.'));
     }
   }
 
@@ -261,48 +273,52 @@ export class UIManager {
     const chest = gameState.getMuseumChest();
     const pInv = gameState.getPlayer().inventory;
 
-    const chestDiv = createElement('div', ['glass-panel', 'museum__section']);
-    chestDiv.appendChild(createElement('h3', 'museum__heading', 'Museum Displays'));
+    const buildMuseumRow = (b, btnLabel, onClickFn) => {
+      const itemData = this.engine.data.items[b.item];
+      const name = itemData?.name || b.item;
+      const label = b.amount > 1 ? `${name} (x${b.amount})` : name;
+      const row = createElement('div', CSS.ITEM_LIST_ITEM);
+      const descDiv = createElement('div', CSS.ITEM_DESCRIPTION);
+      descDiv.appendChild(createElement('strong', CSS.ITEM_TITLE, label));
+      row.appendChild(descDiv);
+      const btn = createElement('button', btnLabel === 'Display' ? [CSS.BTN, CSS.BTN_ITEM, CSS.BTN_DEPOSIT] : [CSS.BTN, CSS.BTN_ITEM], btnLabel);
+      btn.onclick = onClickFn;
+      row.appendChild(btn);
+      return row;
+    };
+
+    const chestDiv = createElement('div', [CSS.GLASS_PANEL, CSS.MUSEUM_SECTION]);
+    chestDiv.appendChild(createElement('h3', CSS.MUSEUM_HEADING, 'Museum Displays'));
     if (chest && chest.length > 0) {
       chest.forEach(b => {
         const itemData = this.engine.data.items[b.item];
-        const row = createElement('div', 'item-list__item');
-        row.innerHTML = `<div class="item__description"><strong class="item__title">${itemData?.name || b.item}${b.amount > 1 ? ` (x${b.amount})` : ''}</strong></div>`;
-        const btn = createElement('button', ['btn', 'btn--item'], 'Take');
-        btn.onclick = () => {
+        chestDiv.appendChild(buildMuseumRow(b, 'Take', () => {
           gameState.withdrawFromChest(b.item, 1);
           this.engine.log("System", `You retrieved ${itemData?.name || b.item} from the display.`);
           this.renderMuseumChestUI();
-        };
-        row.appendChild(btn);
-        chestDiv.appendChild(row);
+        }));
       });
     } else {
-      chestDiv.appendChild(createElement('p', 'item__type', 'No items on display.'));
+      chestDiv.appendChild(createElement('p', CSS.ITEM_TYPE, 'No items on display.'));
     }
 
-    const invDiv = createElement('div', ['glass-panel', 'museum__section']);
-    invDiv.appendChild(createElement('h3', 'museum__heading', 'Your Inventory'));
+    const invDiv = createElement('div', [CSS.GLASS_PANEL, CSS.MUSEUM_SECTION]);
+    invDiv.appendChild(createElement('h3', CSS.MUSEUM_HEADING, 'Your Inventory'));
     if (pInv && pInv.length > 0) {
       pInv.forEach(b => {
         const itemData = this.engine.data.items[b.item];
-        const row = createElement('div', 'item-list__item');
-        row.innerHTML = `<div class="item__description"><strong class="item__title">${itemData?.name || b.item}${b.amount > 1 ? ` (x${b.amount})` : ''}</strong></div>`;
-        const btn = createElement('button', ['btn', 'btn--item', 'btn--deposit'], 'Display');
-        btn.onclick = () => {
+        invDiv.appendChild(buildMuseumRow(b, 'Display', () => {
           gameState.depositToChest(b.item, 1);
           this.engine.log("System", `You proudly displayed ${itemData?.name || b.item}.`);
           this.renderMuseumChestUI();
-        };
-        row.appendChild(btn);
-        invDiv.appendChild(row);
+        }));
       });
     } else {
-      invDiv.appendChild(createElement('p', 'item__type', 'Inventory is empty.'));
+      invDiv.appendChild(createElement('p', CSS.ITEM_TYPE, 'Inventory is empty.'));
     }
 
-    const closeBtn = createElement('button', ['option-btn', 'museum__done-btn']);
-    closeBtn.innerHTML = `<span>Done Managing</span>`;
+    const closeBtn = createElement('button', [CSS.OPTION_BTN, CSS.MUSEUM_DONE_BTN]);
+    closeBtn.appendChild(createElement('span', '', 'Done Managing'));
     closeBtn.onclick = () => this.engine.renderScene(gameState.getCurrentSceneId());
 
     optionsContainer.appendChild(chestDiv);
@@ -310,7 +326,8 @@ export class UIManager {
     optionsContainer.appendChild(closeBtn);
   }
 
-  buildItemStatsHtml(itemData) {
+  // Returns a div.item__stats element, or null if the item has no displayable stats.
+  buildItemStatsEl(itemData) {
     const statStrs = [];
     if (itemData.actionPoints !== undefined) statStrs.push(`AP: ${itemData.actionPoints}`);
     if (itemData.bonusHitChance !== undefined) {
@@ -320,6 +337,7 @@ export class UIManager {
     if (itemData.attributes) {
       for (const k in itemData.attributes) statStrs.push(`${k}: ${itemData.attributes[k]}`);
     }
-    return statStrs.length > 0 ? `<div class="item__stats">${statStrs.join(', ')}</div>` : '';
+    if (statStrs.length === 0) return null;
+    return createElement('div', CSS.ITEM_STATS, statStrs.join(', '));
   }
 }

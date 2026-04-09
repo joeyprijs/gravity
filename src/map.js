@@ -1,6 +1,6 @@
 import { gameState } from "./state.js";
 import { clearElement } from "./utils.js";
-import { MINIMAP_SIZE, MAP_NODE_DEFAULT_BG, EL } from "./config.js";
+import { MINIMAP_SIZE, MAP_NODE_DEFAULT_BG, CSS } from "./config.js";
 
 // MapManager handles both the minimap HUD and the full-screen world map overlay.
 // The minimap is cached by scene ID so it only rebuilds when the player moves.
@@ -59,7 +59,7 @@ export class MapManager {
     // stale minimap when navigating between scenes.
     const fresh = document.createElement('div');
     fresh.id = 'minimap-canvas';
-    fresh.className = 'minimap__canvas';
+    fresh.className = CSS.MINIMAP_CANVAS;
 
     for (const { id, scene } of regionScenes) {
       const d = scene.mapDefinitions;
@@ -138,9 +138,9 @@ export class MapManager {
   // top/left/width/height/background on the returned element.
   _buildMapNode(id, scene, isCurrentScene) {
     const node = document.createElement('div');
-    node.className = 'map-node' + (isCurrentScene ? ' map-node--current' : '');
+    node.className = isCurrentScene ? `${CSS.MAP_NODE} ${CSS.MAP_NODE_CURRENT}` : CSS.MAP_NODE;
     const label = document.createElement('span');
-    label.className = 'map-node__label';
+    label.className = CSS.MAP_NODE_LABEL;
     label.textContent = scene.title || scene.name || id;
     node.appendChild(label);
     return node;

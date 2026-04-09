@@ -63,6 +63,58 @@ export const ENEMY_CLAW = {
   attributes: { damageRoll: "1-3" }
 };
 
+// CSS class names referenced from JavaScript. Centralised here so that renaming
+// a class only requires a change in this file, not a grep across all JS files.
+// Dynamic variant suffixes (e.g. scene__log--${variant}) are built by
+// appending to the base constant: `${CSS.SCENE_LOG}--${variant}`.
+export const CSS = {
+  // Scene / narrative
+  SCENE_DESCRIPTION:     'scene__description',
+  SCENE_TITLE:           'scene__title',
+  SCENE_TITLE_GAME_OVER: 'scene__title--game-over',
+  SCENE_BODY:            'scene__body',
+  SCENE_LOG:             'scene__log',
+
+  // Buttons
+  OPTION_BTN:            'option-btn',
+  OPTION_BTN_REQ:        'option-btn__req-text',
+  OPTION_BTN_REQ_SELL:   'option-btn__req-text--sell',
+  BTN:                   'btn',
+  BTN_ITEM:              'btn--item',
+  BTN_DEPOSIT:           'btn--deposit',
+
+  // Item lists
+  ITEM_LIST:             'item-list',
+  ITEM_LIST_TITLE:       'item-list__title',
+  ITEM_LIST_ITEMS:       'item-list__items',
+  ITEM_LIST_ITEM:        'item-list__item',
+  ITEM_LIST_ITEM_DONE:   'item-list__item--completed',
+  ITEM_DESCRIPTION:      'item__description',
+  ITEM_TITLE:            'item__title',
+  ITEM_TYPE:             'item__type',
+  ITEM_STATS:            'item__stats',
+  ITEM_ACTIONS:          'item__actions',
+
+  // Combat / merchant stat bars
+  COMBAT_STATS_BAR:      'combat-stats__bar',
+  STORE_STATS_GOLD:      'store-stats__gold-bar',
+
+  // Museum
+  MUSEUM_SECTION:        'museum__section',
+  MUSEUM_HEADING:        'museum__heading',
+  MUSEUM_DONE_BTN:       'museum__done-btn',
+  MUSEUM_ITEM_LIST:      'museum-item-list',
+
+  // Map
+  MAP_NODE:              'map-node',
+  MAP_NODE_CURRENT:      'map-node--current',
+  MAP_NODE_LABEL:        'map-node__label',
+  MINIMAP_CANVAS:        'minimap__canvas',
+
+  // Layout
+  GLASS_PANEL:           'glass-panel',
+};
+
 // HTML element IDs referenced from more than one source file.
 // Single-file IDs (e.g. stat bars, tab panels) stay as inline literals in
 // their respective files — centralising every ID would be over-engineering.

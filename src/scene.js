@@ -1,6 +1,6 @@
 import { gameState } from "./state.js";
-import { createElement, clearElement } from "./utils.js";
-import { REST_HEAL_AMOUNT, SNACK_HEAL_AMOUNT, EL, RETURN_WORLD_FALLBACK_SCENE } from "./config.js";
+import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "./utils.js";
+import { REST_HEAL_AMOUNT, SNACK_HEAL_AMOUNT, EL, CSS, RETURN_WORLD_FALLBACK_SCENE } from "./config.js";
 
 // SceneRenderer handles navigating to scenes, resolving their descriptions,
 // and rendering their option buttons. It is the main driver of scene-to-scene
@@ -41,11 +41,9 @@ export class SceneRenderer {
     // actually changed — prevents duplicate entries when options re-render.
     if (this.lastRenderedSceneId !== sceneId || this.lastRenderedDesc !== currentDesc) {
       this.engine.openScene();
-      const desc = createElement('div', 'scene__description');
       // Scene content comes from developer-authored JSON, not user input —
-      // innerHTML is intentional here to allow basic formatting in descriptions.
-      desc.innerHTML = `<h2 class="scene__title">${scene.title || scene.name}</h2><p class="scene__body">${currentDesc}</p>`;
-      this.engine.currentSceneEl.appendChild(desc);
+      // buildSceneDescription uses innerHTML for the body to allow basic formatting.
+      this.engine.currentSceneEl.appendChild(buildSceneDescription(scene.title || scene.name, currentDesc));
       gameState.appendLog({ type: 'scene', title: scene.title || scene.name, desc: currentDesc });
 
       this.lastRenderedSceneId = sceneId;
@@ -69,20 +67,17 @@ export class SceneRenderer {
         if (gameState.getFlag(opt.requiredState.flag) !== opt.requiredState.value) return;
       }
 
-      const btn = document.createElement('button');
-      btn.className = 'option-btn';
-
-      let reqHtml = '';
+      let reqText = null;
       let disabled = false;
       if (opt.requirements?.item) {
         const hasItem = gameState.getPlayer().inventory.find(i => i.item === opt.requirements.item);
         if (!hasItem) {
           disabled = true;
-          reqHtml = `<span class="option-btn__req-text">Requires: ${this.engine.data.items[opt.requirements.item]?.name || opt.requirements.item}</span>`;
+          reqText = `Requires: ${this.engine.data.items[opt.requirements.item]?.name || opt.requirements.item}`;
         }
       }
 
-      btn.innerHTML = `<span>${opt.text}</span> ${reqHtml}`;
+      const btn = buildOptionButton(opt.text, reqText);
       if (disabled) btn.disabled = true;
       btn.onclick = () => this.handleOption(opt);
       optionsContainer.appendChild(btn);
@@ -201,7 +196,7 @@ export class SceneRenderer {
         }).join(", ");
         // The museum-item-list class applies var(--gold-color) via CSS so
         // no colour value is hardcoded here.
-        desc += `<br><br>Displayed within the room: <span class="museum-item-list">${names}</span>.`;
+        desc += `<br><br>Displayed within the room: <span class="${CSS.MUSEUM_ITEM_LIST}">${names}</span>.`;
       } else {
         desc += `<br><br>The room is currently devoid of trophies.`;
       }

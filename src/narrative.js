@@ -1,6 +1,6 @@
 import { gameState } from "./state.js";
-import { createElement } from "./utils.js";
-import { EL } from "./config.js";
+import { createElement, buildSceneDescription } from "./utils.js";
+import { EL, CSS } from "./config.js";
 
 // NarrativeLog manages the scrollable narrative panel — the stream of scene
 // descriptions, player choices, and system messages that forms the game log.
@@ -36,7 +36,7 @@ export class NarrativeLog {
   log(type, message, variant = 'system', persist = true) {
     this.flush();
     if (!this.currentSceneEl) this.openScene();
-    const p = createElement('p', ['scene__log', `scene__log--${variant}`]);
+    const p = createElement('p', [CSS.SCENE_LOG, `${CSS.SCENE_LOG}--${variant}`]);
     p.innerText = `[${type}] ${message}`;
     this.currentSceneEl.appendChild(p);
     this.el.scrollTop = this.el.scrollHeight;
@@ -50,13 +50,11 @@ export class NarrativeLog {
     logEntries.forEach(entry => {
       if (entry.type === 'scene') {
         this.openScene();
-        const d = createElement('div', 'scene__description');
-        d.innerHTML = `<h2 class="scene__title">${entry.title}</h2><p class="scene__body">${entry.desc}</p>`;
-        this.currentSceneEl.appendChild(d);
+        this.currentSceneEl.appendChild(buildSceneDescription(entry.title, entry.desc));
         lastDesc = entry.desc;
       } else {
         if (!this.currentSceneEl) this.openScene();
-        const p = createElement('p', ['scene__log', `scene__log--${entry.variant}`]);
+        const p = createElement('p', [CSS.SCENE_LOG, `${CSS.SCENE_LOG}--${entry.variant}`]);
         p.innerText = `[${entry.type}] ${entry.message}`;
         this.currentSceneEl.appendChild(p);
       }

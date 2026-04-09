@@ -1,6 +1,6 @@
 import { gameState } from "./state.js";
-import { createElement, clearElement } from "./utils.js";
-import { MERCHANT_SELL_RATIO, EL } from "./config.js";
+import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "./utils.js";
+import { MERCHANT_SELL_RATIO, EL, CSS } from "./config.js";
 
 // DialogueSystem handles NPC conversations and the merchant buy/sell interface.
 // Conversations are driven by a node graph defined in NPC JSON files. If an NPC
@@ -33,9 +33,9 @@ export class DialogueSystem {
 
     if (nodeId === "start") {
       this.engine.openScene('dialogue');
-      const desc = createElement('div', 'scene__description');
-      desc.innerHTML = `<h2 class="scene__title">${this.currentNPC.name}</h2><p class="scene__body">[${this.currentNPC.name}] ${displayString}</p>`;
-      this.engine.currentSceneEl.appendChild(desc);
+      this.engine.currentSceneEl.appendChild(
+        buildSceneDescription(this.currentNPC.name, `[${this.currentNPC.name}] ${displayString}`)
+      );
     } else {
       this.engine.log(this.currentNPC.name, displayString);
     }
@@ -47,8 +47,7 @@ export class DialogueSystem {
     clearElement(container);
 
     node.responses.forEach(res => {
-      const btn = createElement('button', 'option-btn', `<span>${res.text}</span>`);
-
+      const btn = buildOptionButton(res.text);
       btn.onclick = () => {
         this.engine.log('player', res.text, 'choice');
 
@@ -68,9 +67,9 @@ export class DialogueSystem {
     const displayString = overrideText || `Greetings, traveler. I am ${this.currentNPC.name}.`;
 
     this.engine.openScene('dialogue');
-    const desc = createElement('div', 'scene__description');
-    desc.innerHTML = `<h2 class="scene__title">${this.currentNPC.name}</h2><p class="scene__body">[${this.currentNPC.name}] ${displayString}</p>`;
-    this.engine.currentSceneEl.appendChild(desc);
+    this.engine.currentSceneEl.appendChild(
+      buildSceneDescription(this.currentNPC.name, `[${this.currentNPC.name}] ${displayString}`)
+    );
 
     const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
     if (reminder) reminder.innerText = `DIALOGUE: ${this.currentNPC.name}`;
@@ -79,7 +78,7 @@ export class DialogueSystem {
     clearElement(container);
 
     if (this.currentNPC.isMerchant) {
-      const tradeBtn = createElement('button', 'option-btn', `<span>Trade</span>`);
+      const tradeBtn = buildOptionButton('Trade');
       tradeBtn.onclick = () => {
         this.engine.log('player', 'Trade', 'choice');
         this.renderStore();
@@ -87,7 +86,7 @@ export class DialogueSystem {
       container.appendChild(tradeBtn);
     }
 
-    const leaveBtn = createElement('button', 'option-btn', `<span>Leave</span>`);
+    const leaveBtn = buildOptionButton('Leave');
     leaveBtn.onclick = () => {
       this.engine.renderScene(gameState.getCurrentSceneId());
     };
@@ -98,9 +97,9 @@ export class DialogueSystem {
     if (!isUpdate) {
       this.storeOpen = true;
       this.engine.openScene('merchant');
-      const desc = createElement('div', 'scene__description');
-      desc.innerHTML = `<h2 class="scene__title">${this.currentNPC.name}'s Wares</h2><p class="scene__body">[${this.currentNPC.name}] Take a look!</p>`;
-      this.engine.currentSceneEl.appendChild(desc);
+      this.engine.currentSceneEl.appendChild(
+        buildSceneDescription(`${this.currentNPC.name}'s Wares`, `[${this.currentNPC.name}] Take a look!`)
+      );
     }
 
     const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
@@ -109,7 +108,7 @@ export class DialogueSystem {
     const container = document.getElementById(EL.SCENE_OPTIONS);
     clearElement(container);
 
-    const goldBar = createElement('div', 'store-stats__gold-bar', `<strong>Your Gold: ${gameState.getPlayer().gold}</strong>`);
+    const goldBar = createElement('div', CSS.STORE_STATS_GOLD, `<strong>Your Gold: ${gameState.getPlayer().gold}</strong>`);
     container.appendChild(goldBar);
 
     // Buy items
@@ -117,12 +116,8 @@ export class DialogueSystem {
       this.currentNPC.carriedItems.forEach(itemId => {
         const item = this.engine.data.items[itemId];
         if (item) {
-          const btn = createElement('button', 'option-btn', `<span>Buy ${item.name}</span> <span class="option-btn__req-text">${item.value} Gold</span>`);
-
-          if (gameState.getPlayer().gold < item.value) {
-            btn.disabled = true;
-          }
-
+          const btn = buildOptionButton(`Buy ${item.name}`, `${item.value} Gold`);
+          if (gameState.getPlayer().gold < item.value) btn.disabled = true;
           btn.onclick = () => {
             gameState.modifyPlayerStat('gold', -item.value);
             gameState.addToInventory(itemId, 1);
@@ -141,7 +136,7 @@ export class DialogueSystem {
       if (item && item.value > 0) {
         const sellValue = Math.floor(item.value * MERCHANT_SELL_RATIO);
         if (sellValue > 0) {
-          const btn = createElement('button', 'option-btn', `<span>Sell ${item.name} (x${invItem.amount})</span> <span class="option-btn__req-text option-btn__req-text--sell">+${sellValue} Gold</span>`);
+          const btn = buildOptionButton(`Sell ${item.name} (x${invItem.amount})`, `+${sellValue} Gold`, true);
           btn.onclick = () => {
             gameState.removeFromInventory(invItem.item, 1);
             gameState.modifyPlayerStat('gold', sellValue);
@@ -153,7 +148,7 @@ export class DialogueSystem {
       }
     });
 
-    const leaveBtn = createElement('button', 'option-btn', `<span>Never mind.</span>`);
+    const leaveBtn = buildOptionButton('Never mind.');
     leaveBtn.onclick = () => {
       this.storeOpen = false;
       this.engine.log('player', 'Never mind.', 'choice');
