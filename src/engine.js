@@ -77,6 +77,7 @@ class RPGEngine {
       });
       gameState.registerMissions(missions);
       gameState.registerSceneFlags(sceneFlags);
+      this._validateData();
     } catch (e) {
       console.error("Failed to load game data:", e);
       this.log("System", this.t('system.dataError'));
@@ -109,6 +110,37 @@ class RPGEngine {
     if (player.ac !== newAC) {
       player.ac = newAC;
       gameState.forceUpdate();
+    }
+  }
+
+  // Validates cross-references in game data after load and warns about broken links.
+  // Developer tooling only — logs to console, no in-game effect.
+  _validateData() {
+    const { items, npcs, scenes } = this.data;
+    const warn = (msg) => console.warn(`[Gravity] ${msg}`);
+
+    for (const [sceneId, scene] of Object.entries(scenes)) {
+      for (const opt of (scene.options || [])) {
+        if (opt.destination && !scenes[opt.destination])
+          warn(`Scene "${sceneId}": option "${opt.text}" → unknown destination "${opt.destination}"`);
+        if (opt.requirements?.item && !items[opt.requirements.item])
+          warn(`Scene "${sceneId}": option "${opt.text}" requires unknown item "${opt.requirements.item}"`);
+        if (opt.action === 'loot' && opt.actionDetails?.item && opt.actionDetails.item !== 'gold' && !items[opt.actionDetails.item])
+          warn(`Scene "${sceneId}": loot option → unknown item "${opt.actionDetails.item}"`);
+        if (opt.action === 'dialogue' && opt.actionDetails?.npc && !npcs[opt.actionDetails.npc])
+          warn(`Scene "${sceneId}": dialogue option → unknown NPC "${opt.actionDetails.npc}"`);
+        if (opt.action === 'combat' && opt.actionDetails?.enemy && !npcs[opt.actionDetails.enemy])
+          warn(`Scene "${sceneId}": combat option → unknown enemy "${opt.actionDetails.enemy}"`);
+      }
+    }
+
+    for (const [npcId, npc] of Object.entries(npcs)) {
+      for (const itemId of (npc.carriedItems || []))
+        if (!items[itemId]) warn(`NPC "${npcId}": carriedItems → unknown item "${itemId}"`);
+      for (const loot of (npc.droppedLoot || []))
+        if (loot.item !== 'gold' && !items[loot.item]) warn(`NPC "${npcId}": droppedLoot → unknown item "${loot.item}"`);
+      for (const [slot, itemId] of Object.entries(npc.equipment || {}))
+        if (itemId && !items[itemId]) warn(`NPC "${npcId}": equipment[${slot}] → unknown item "${itemId}"`);
     }
   }
 

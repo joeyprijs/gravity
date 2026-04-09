@@ -16,7 +16,7 @@ export class DialogueSystem {
     const npc = this.engine.data.npcs[npcId];
     if (!npc) return;
 
-    this.engine.lastRenderedSceneId = null;
+    this.engine.scene.reset();
     this.currentNPC = npc;
     if (npc.conversations) {
       this.renderDialogue("start");

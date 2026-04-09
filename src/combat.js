@@ -18,7 +18,7 @@ export class CombatSystem {
     const enemyData = this.engine.data.npcs[enemyId];
     if (!enemyData) return;
 
-    this.engine.lastRenderedSceneId = null;
+    this.engine.scene.reset();
     this.inCombat = true;
     // Deep clone so we can mutate HP without touching the source data
     this.enemy = JSON.parse(JSON.stringify(enemyData));
