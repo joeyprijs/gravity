@@ -44,6 +44,7 @@ gravity/
 │   └── utils.js        # DOM helpers
 └── data/
     ├── index.json      # Manifest — regions, world map size
+    ├── locales.json    # All player-visible strings (UI labels, log messages, button text)
     ├── scenes/         # Scene definitions (grouped by region)
     ├── items/          # Item definitions
     ├── npcs/           # NPC and enemy definitions
@@ -61,6 +62,8 @@ python3 -m http.server
 ```
 
 Then open `http://localhost:3000` (or whichever port your server uses).
+
+Open the browser's developer console while authoring — the engine validates all cross-references on startup and logs a warning for any broken IDs (unknown scene destinations, missing item/NPC references, invalid equipment). No reload or build step needed; just fix the JSON and refresh.
 
 ---
 
@@ -518,6 +521,31 @@ Missions (quests) live in `data/missions/`. They are triggered by scenes and tra
 **Status lifecycle:** `not_started` → `active` → `complete`
 
 Status transitions are triggered by a scene's `questsTriggeredOnEntry`. The progression is one-way — a completed mission cannot be reactivated.
+
+---
+
+### Locales — `data/locales.json`
+
+All player-visible strings (UI labels, button text, log messages, combat narration) live in `data/locales.json`. Editing this file is the only thing needed to change any text in the game — no JavaScript knowledge required.
+
+The file is organised into namespaces that mirror the engine's subsystems:
+
+```json
+{
+  "system":    { "saved": "Game Saved to Disk.", ... },
+  "stats":     { "hp": "HP: {current}/{max}", ... },
+  "ui":        { "inventoryEmpty": "Inventory is empty.", ... },
+  "inventory": { "useButton": "Use", "equipButton": "Equip", ... },
+  "loot":      { "receivedItem": "You received {name}!", ... },
+  "actions":   { "rested": "You rested and recovered HP.", ... },
+  "player":    { "equipped": "Equipped {name} to {slot}.", ... },
+  "combat":    { "attackHit": "Attack Roll with {weapon}: ...", ... },
+  "dialogue":  { "buyButton": "Buy {name}", ... },
+  "quest":     { "completed": "Quest complete: {name}!", ... }
+}
+```
+
+Strings can include `{placeholder}` tokens. The engine substitutes them at runtime — e.g. `"HP: {current}/{max}"` becomes `"HP: 12/20"`. To translate the game or rebrand the UI, replace the string values while keeping the keys and placeholders intact.
 
 ---
 
