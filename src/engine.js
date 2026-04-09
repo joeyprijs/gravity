@@ -6,6 +6,8 @@ import { NarrativeLog } from "./narrative.js";
 import { UIManager } from "./ui.js";
 import { SceneRenderer } from "./scene.js";
 import { BASE_AC, UNEQUIP_AP_COST, DEFAULT_WORLD_MAP_SIZE, MSG } from "./config.js";
+// MSG is still imported for the state.js log filter (MSG.GAME_LOADED).
+// All display strings now come from data/locales.json via this.t().
 
 // RPGEngine is the central orchestrator. It owns all subsystems, loads game
 // data from JSON, and exposes a thin delegate API so subsystems can call each
@@ -14,7 +16,7 @@ class RPGEngine {
   constructor() {
     // Populated by loadData(). Kept as an empty shell here so subsystems
     // constructed below can safely reference this.engine.data without null checks.
-    this.data = { items: {}, npcs: {}, scenes: {}, missions: {}, regions: {}, worldMapSize: DEFAULT_WORLD_MAP_SIZE };
+    this.data = { items: {}, npcs: {}, scenes: {}, missions: {}, regions: {}, worldMapSize: DEFAULT_WORLD_MAP_SIZE, locale: {} };
 
     this.narrative = new NarrativeLog();
     this.combatSystem = new CombatSystem(this);
@@ -39,6 +41,10 @@ class RPGEngine {
   }
 
   async loadData() {
+    // Load locale first — must be available before the try-catch below so
+    // error messages can still be translated if game data fails to load.
+    this.data.locale = await fetch('data/locales.json').then(r => r.json()).catch(() => ({}));
+
     try {
       const manifestRes = await fetch('data/index.json');
       const manifest = await manifestRes.json();
@@ -58,7 +64,7 @@ class RPGEngine {
         loadCategory(manifest.missions)
       ]);
 
-      this.data = { items, npcs, scenes, missions, regions: manifest.regions || {}, worldMapSize: manifest.worldMapSize || DEFAULT_WORLD_MAP_SIZE };
+      this.data = { items, npcs, scenes, missions, regions: manifest.regions || {}, worldMapSize: manifest.worldMapSize || DEFAULT_WORLD_MAP_SIZE, locale: this.data.locale };
 
       // Auto-register flags declared in scene JSON so state.js needs no manual entries
       const sceneFlags = {};
@@ -73,8 +79,19 @@ class RPGEngine {
       gameState.registerSceneFlags(sceneFlags);
     } catch (e) {
       console.error("Failed to load game data:", e);
-      this.log("System", MSG.GAME_DATA_ERROR);
+      this.log("System", this.t('system.dataError'));
     }
+  }
+
+  // Looks up a locale string by dot-separated key and substitutes {param} placeholders.
+  // Falls back to the key itself if the string is not found, so missing translations
+  // are visible but don't crash the game.
+  t(key, params = {}) {
+    const parts = key.split('.');
+    let str = this.data.locale;
+    for (const p of parts) str = str?.[p];
+    if (typeof str !== 'string') return key;
+    return str.replace(/\{(\w+)\}/g, (_, k) => (k in params ? params[k] : `{${k}}`));
   }
 
   // Recomputes the player's AC from BASE_AC plus all equipped armor bonuses.
@@ -107,27 +124,27 @@ class RPGEngine {
 
     if (itemData.attributes?.healingAmount) {
       let amount = itemData.attributes.healingAmount;
-      let rollStr = "";
+      let rollSuffix = "";
       if (typeof amount === 'string') {
         const result = this.combatSystem.parseDamage(amount);
         amount = result.total;
-        rollStr = `(Roll: ${result.string})`;
+        rollSuffix = ` (Roll: ${result.string})`;
       }
       gameState.modifyPlayerStat('hp', amount);
-      this.log("System", `You used ${itemData.name} and recovered ${amount} HP. ${rollStr}`, 'loot');
+      this.log("System", this.t('player.usedItem', { name: itemData.name, amount, rollSuffix }), 'loot');
       gameState.removeFromInventory(itemId, 1);
     } else if (itemData.attributes?.teleportScene) {
       if (this.combatSystem.inCombat) {
-        this.log("System", "Cannot use teleport items during combat!");
+        this.log("System", this.t('player.noCombatTeleport'));
         return;
       }
       const curScene = gameState.getCurrentSceneId();
       if (curScene !== itemData.attributes.teleportScene) {
         gameState.setReturnSceneId(curScene);
-        this.log("System", `You gripped the ${itemData.name} and vanished into thin air...`);
+        this.log("System", this.t('player.teleported', { name: itemData.name }));
         this.renderScene(itemData.attributes.teleportScene);
       } else {
-        this.log("System", "You are already here.");
+        this.log("System", this.t('player.alreadyHere'));
       }
     }
 
@@ -143,7 +160,7 @@ class RPGEngine {
 
     gameState.equipItem(targetSlot, itemId);
     this.recalculateAC();
-    this.log("player", `Equipped ${itemData.name} to ${targetSlot}.`);
+    this.log("player", this.t('player.equipped', { name: itemData.name, slot: targetSlot }));
     this._refreshCombatIfActive();
   }
 
@@ -151,7 +168,7 @@ class RPGEngine {
     if (!this._spendAP(UNEQUIP_AP_COST)) return;
     gameState.equipItem(slot, null);
     this.recalculateAC();
-    this.log("player", `Unequipped item from ${slot}.`);
+    this.log("player", this.t('player.unequipped', { slot }));
     this._refreshCombatIfActive();
   }
 
@@ -160,7 +177,7 @@ class RPGEngine {
     if (!this.combatSystem.inCombat) return true;
     const player = gameState.getPlayer();
     if (player.ap < cost) {
-      this.log("System", `Not enough AP! Need ${cost}.`);
+      this.log("System", this.t('player.notEnoughAP', { cost }));
       return false;
     }
     gameState.modifyPlayerStat('ap', -cost);

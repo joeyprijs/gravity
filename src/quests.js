@@ -26,7 +26,7 @@ export class QuestSystem {
     // should not re-log the quest description.
     if (triggerData.status === "active" && gameState.getMissionStatus(mId) === "not_started") {
       gameState.setMissionStatus(mId, "active");
-      this.engine.log('Quest', `${mData.name}: ${mData.description}`, 'quest');
+      this.engine.log('Quest', this.engine.t('quest.started', { name: mData.name, description: mData.description }), 'quest');
       return true;
     }
     return false;
@@ -35,14 +35,14 @@ export class QuestSystem {
   // Marks a mission complete, logs the result, and grants any XP/gold rewards.
   completeMission(mId, mData) {
     gameState.setMissionStatus(mId, "complete");
-    this.engine.log("Quest", `Quest complete: ${mData.name}!`, 'quest');
+    this.engine.log("Quest", this.engine.t('quest.completed', { name: mData.name }), 'quest');
     if (mData.missionRewards?.xp) {
       gameState.addXP(mData.missionRewards.xp);
-      this.engine.log("Quest", `Earned ${mData.missionRewards.xp} XP.`, 'loot');
+      this.engine.log("Quest", this.engine.t('quest.earnedXP', { amount: mData.missionRewards.xp }), 'loot');
     }
     if (mData.missionRewards?.gold) {
       gameState.modifyPlayerStat('gold', mData.missionRewards.gold);
-      this.engine.log("Quest", `Earned ${mData.missionRewards.gold} Gold.`, 'loot');
+      this.engine.log("Quest", this.engine.t('quest.earnedGold', { amount: mData.missionRewards.gold }), 'loot');
     }
     // forceUpdate() so the quest log panel and stat bars reflect rewards immediately.
     gameState.forceUpdate();

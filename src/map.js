@@ -92,7 +92,7 @@ export class MapManager {
     const allScenes = this._getAllVisitedMapScenes();
     const { width, height } = this.engine.data.worldMapSize;
 
-    if (titleEl) titleEl.textContent = 'World Map';
+    if (titleEl) titleEl.textContent = this.engine.t('ui.worldMapTitle');
     canvasEl.style.width = `${width}px`;
     canvasEl.style.height = `${height}px`;
 

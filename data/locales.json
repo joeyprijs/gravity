@@ -1,0 +1,111 @@
+{
+  "system": {
+    "saved":      "Game Saved to Disk.",
+    "loaded":     "Game Loaded from Disk.",
+    "loadFailed": "Failed to parse save file.",
+    "dataError":  "Error loading game data."
+  },
+  "stats": {
+    "level":      "Lvl {value}",
+    "hp":         "HP: {current}/{max}",
+    "ap":         "AP: {current}/{max}",
+    "ac":         "AC: {value}",
+    "initiative": "Init: {value}",
+    "gold":       "Gold: {value}"
+  },
+  "ui": {
+    "inventoryEmpty":      "Inventory is empty.",
+    "slotEmpty":           "Empty",
+    "questsNone":          "No active quests.",
+    "questsActive":        "Active Quests",
+    "questsCompleted":     "Completed Quests",
+    "museumTitle":         "Museum Displays",
+    "inventoryTitle":      "Your Inventory",
+    "museumEmpty":         "No items on display.",
+    "museumDone":          "Done Managing",
+    "museumTake":          "Take",
+    "museumDisplay":       "Display",
+    "worldMapTitle":       "World Map",
+    "equipmentTypeFormat": "{type}: {description}",
+    "itemRequires":        "Requires: {name}",
+    "locationDialogue":    "DIALOGUE: {name}",
+    "locationMerchant":    "MERCHANT: {name}",
+    "locationCombat":      "Combat: {name}"
+  },
+  "inventory": {
+    "useButton":        "Use",
+    "equipButton":      "Equip",
+    "unequipButton":    "Unequip",
+    "leftHandButton":   "Left hand",
+    "rightHandButton":  "Right hand"
+  },
+  "loot": {
+    "receivedItem": "You received {name}!",
+    "foundGold":    "Found {amount} Gold.",
+    "foundItem":    "Found {name}.",
+    "xpGained":     "+{amount} XP"
+  },
+  "actions": {
+    "rested":               "You rested and recovered HP.",
+    "fullRest":             "You slept soundly. Health and Actions fully restored.",
+    "eatSnack":             "You ate a warm meal from the pot. Recovered {amount} HP.",
+    "museumTook":           "You retrieved {name} from the display.",
+    "museumDisplayed":      "You proudly displayed {name}.",
+    "museumRoomEmpty":      "The room is currently devoid of trophies.",
+    "museumDisplayedWithin":"Displayed within the room: {names}."
+  },
+  "player": {
+    "equipped":          "Equipped {name} to {slot}.",
+    "unequipped":        "Unequipped item from {slot}.",
+    "usedItem":          "You used {name} and recovered {amount} HP{rollSuffix}.",
+    "teleported":        "You gripped the {name} and vanished into thin air...",
+    "alreadyHere":       "You are already here.",
+    "notEnoughAP":       "Not enough AP! Need {cost}.",
+    "noCombatTeleport":  "Cannot use teleport items during combat!"
+  },
+  "combat": {
+    "fightingTitle":        "Fighting: {name}",
+    "started":              "Combat started with {name}!",
+    "initiative":           "Initiative: You rolled {playerRoll} vs {name} rolled {enemyRoll}. {goesFirst}",
+    "youGoFirst":           "You go first!",
+    "enemyGoesFirst":       "{name} goes first!",
+    "enemyStats":           "Enemy HP: {hp} | AC: {ac}",
+    "attackWith":           "Attack with {name}",
+    "apCost":               "AP: {cost}",
+    "endTurn":              "End Turn",
+    "attackHit":            "Attack Roll with {weapon}: [{roll}]{mod} vs AC {ac}. Hit! You deal {damage} damage! (Roll: {rollStr})",
+    "attackMiss":           "Attack Roll with {weapon}: [{roll}]{mod} vs AC {ac}. Miss!",
+    "enemyAttack":          "Attacked with {weapon} {count} time{s}, {parts}.",
+    "enemyAttackHits":      "{count} hit{s} (Roll: {rolls})",
+    "enemyAttackMisses":    "{count} miss{es} (Roll: {rolls})",
+    "playerTakesDamage":    "You take {damage} damage (Roll: {rolls})!",
+    "playerTakesNoDamage":  "You take 0 damage.",
+    "victory":              "You defeated {name}!",
+    "gameOverTitle":        "Game Over",
+    "gameOverBody":         "Your adventure ends here.",
+    "loadLastSave":         "Load Last Save",
+    "restartGame":          "Restart Game"
+  },
+  "dialogue": {
+    "greeting":          "Greetings, traveler. I am {name}.",
+    "comeAgain":         "Come again.",
+    "merchantWaresTitle":"[{name}]'s Wares",
+    "merchantGreeting":  "[{name}] Take a look!",
+    "yourGold":          "Your Gold: {amount}",
+    "buyButton":         "Buy {name}",
+    "buyPrice":          "{amount} Gold",
+    "bought":            "Bought {name} for {price} Gold.",
+    "sellButton":        "Sell {name} (x{count})",
+    "sellPrice":         "+{amount} Gold",
+    "sold":              "Sold {name} for {price} Gold.",
+    "neverMind":         "Never mind.",
+    "trade":             "Trade",
+    "leave":             "Leave"
+  },
+  "quest": {
+    "started":     "{name}: {description}",
+    "completed":   "Quest complete: {name}!",
+    "earnedXP":    "Earned {amount} XP.",
+    "earnedGold":  "Earned {amount} Gold."
+  }
+}

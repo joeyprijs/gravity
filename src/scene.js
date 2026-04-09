@@ -73,7 +73,7 @@ export class SceneRenderer {
         const hasItem = gameState.getPlayer().inventory.find(i => i.item === opt.requirements.item);
         if (!hasItem) {
           disabled = true;
-          reqText = `Requires: ${this.engine.data.items[opt.requirements.item]?.name || opt.requirements.item}`;
+          reqText = this.engine.t('ui.itemRequires', { name: this.engine.data.items[opt.requirements.item]?.name || opt.requirements.item });
         }
       }
 
@@ -94,7 +94,7 @@ export class SceneRenderer {
       if (!gameState.getFlag(xpFlag)) {
         gameState.addXP(scene.xpReward);
         gameState.setFlag(xpFlag, true);
-        this.engine.log("System", `+${scene.xpReward} XP`, 'loot');
+        this.engine.log("System", this.engine.t('loot.xpGained', { amount: scene.xpReward }), 'loot');
       }
     }
   }
@@ -112,10 +112,10 @@ export class SceneRenderer {
         case "loot": {
           const param = opt.actionDetails;
           gameState.addToInventory(param.item, param.amount || 1);
-          this.engine.log("System", `You received ${this.engine.data.items[param.item]?.name || param.item}!`, 'loot');
+          this.engine.log("System", this.engine.t('loot.receivedItem', { name: this.engine.data.items[param.item]?.name || param.item }), 'loot');
           if (param.xpReward) {
             gameState.addXP(param.xpReward);
-            this.engine.log("System", `+${param.xpReward} XP`, 'loot');
+            this.engine.log("System", this.engine.t('loot.xpGained', { amount: param.xpReward }), 'loot');
           }
           // hideAfter flips the option's requiredState flag so the option
           // disappears on the next render (e.g. "Search the room" one-time events)
@@ -133,7 +133,7 @@ export class SceneRenderer {
           break;
         case "rest":
           gameState.modifyPlayerStat('hp', opt.actionDetails.heal || REST_HEAL_AMOUNT);
-          this.engine.log("System", "You rested and recovered HP.");
+          this.engine.log("System", this.engine.t('actions.rested'));
           if (opt.actionDetails.hideAfter && opt.requiredState) {
             gameState.setFlag(opt.requiredState.flag, !opt.requiredState.value);
           }
@@ -148,13 +148,13 @@ export class SceneRenderer {
           const p = gameState.getPlayer();
           gameState.modifyPlayerStat('hp', p.maxHp - p.hp);
           gameState.modifyPlayerStat('ap', p.maxAp - p.ap);
-          this.engine.log("System", "You slept soundly. Health and Actions fully restored.");
+          this.engine.log("System", this.engine.t('actions.fullRest'));
           if (opt.destination) this.engine.renderScene(opt.destination);
           break;
         }
         case "eat_snack":
           gameState.modifyPlayerStat('hp', SNACK_HEAL_AMOUNT);
-          this.engine.log("System", `You ate a warm meal from the pot. Recovered ${SNACK_HEAL_AMOUNT} HP.`, 'loot');
+          this.engine.log("System", this.engine.t('actions.eatSnack', { amount: SNACK_HEAL_AMOUNT }), 'loot');
           if (opt.destination) this.engine.renderScene(opt.destination);
           break;
         case "manage_chest":
@@ -190,15 +190,15 @@ export class SceneRenderer {
     if (scene.descriptionHook === "museumChestContents") {
       const chest = gameState.getMuseumChest();
       if (chest && chest.length > 0) {
-        const names = chest.map(b => {
+        const nameList = chest.map(b => {
           const name = this.engine.data.items[b.item]?.name || b.item;
           return b.amount > 1 ? `${name} (x${b.amount})` : name;
         }).join(", ");
-        // The museum-item-list class applies var(--gold-color) via CSS so
-        // no colour value is hardcoded here.
-        desc += `<br><br>Displayed within the room: <span class="${CSS.MUSEUM_ITEM_LIST}">${names}</span>.`;
+        // Wrap item names in the styled span, then pass to locale for the surrounding sentence.
+        const names = `<span class="${CSS.MUSEUM_ITEM_LIST}">${nameList}</span>`;
+        desc += `<br><br>${this.engine.t('actions.museumDisplayedWithin', { names })}`;
       } else {
-        desc += `<br><br>The room is currently devoid of trophies.`;
+        desc += `<br><br>${this.engine.t('actions.museumRoomEmpty')}`;
       }
     }
 

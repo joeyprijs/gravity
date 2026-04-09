@@ -31,16 +31,22 @@ export class CombatSystem {
 
     this.engine.openScene('combat');
     this.engine.currentSceneEl.appendChild(
-      buildSceneDescription(`Fighting: ${this.enemy.name}`, this.enemy.description || null)
+      buildSceneDescription(
+        this.engine.t('combat.fightingTitle', { name: this.enemy.name }),
+        this.enemy.description || null
+      )
     );
 
-    this.engine.log("Combat", `Combat started with ${this.enemy.name}!`, 'combat');
+    this.engine.log("Combat", this.engine.t('combat.started', { name: this.enemy.name }), 'combat');
 
     // Roll initiative
     const playerInit = Math.ceil(Math.random() * MAX_D20_ROLL) + (player.initiative || 0);
     const enemyInit  = Math.ceil(Math.random() * MAX_D20_ROLL) + (this.enemy.attributes.initiative || 0);
     this.enemyGoesFirst = enemyInit > playerInit;
-    this.engine.log("Combat", `Initiative: You rolled ${playerInit} vs ${this.enemy.name} rolled ${enemyInit}. ${this.enemyGoesFirst ? this.enemy.name + ' goes first!' : 'You go first!'}`, 'combat');
+    const goesFirst = this.enemyGoesFirst
+      ? this.engine.t('combat.enemyGoesFirst', { name: this.enemy.name })
+      : this.engine.t('combat.youGoFirst');
+    this.engine.log("Combat", this.engine.t('combat.initiative', { playerRoll: playerInit, name: this.enemy.name, enemyRoll: enemyInit, goesFirst }), 'combat');
 
     this.renderCombatUI();
     if (this.enemyGoesFirst) this.enemyTurn();
@@ -48,25 +54,28 @@ export class CombatSystem {
 
   renderCombatUI() {
     const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
-    if (reminder) reminder.innerText = `Combat: ${this.enemy.name}`;
+    if (reminder) reminder.innerText = this.engine.t('ui.locationCombat', { name: this.enemy.name });
 
     const container = document.getElementById(EL.SCENE_OPTIONS);
     clearElement(container);
 
-    const statsBar = createElement('div', CSS.COMBAT_STATS_BAR, `<strong>Enemy HP: ${this.enemy.attributes.healthPoints} | AC: ${this.enemy.attributes.armorClass}</strong>`);
+    const statsBar = createElement('div', CSS.COMBAT_STATS_BAR, `<strong>${this.engine.t('combat.enemyStats', { hp: this.enemy.attributes.healthPoints, ac: this.enemy.attributes.armorClass })}</strong>`);
     container.appendChild(statsBar);
 
     const attacks = this.getAvailableAttacks();
 
     attacks.forEach(att => {
-      const btn = buildOptionButton(`Attack with ${att.name}`, `AP: ${att.actionPoints}`);
+      const btn = buildOptionButton(
+        this.engine.t('combat.attackWith', { name: att.name }),
+        this.engine.t('combat.apCost', { cost: att.actionPoints })
+      );
       if (gameState.getPlayer().ap < att.actionPoints) btn.disabled = true;
       btn.onclick = () => this.playerAttack(att);
       container.appendChild(btn);
     });
 
     // End turn button
-    const endBtn = buildOptionButton('End Turn');
+    const endBtn = buildOptionButton(this.engine.t('combat.endTurn'));
     endBtn.onclick = () => this.enemyTurn();
     container.appendChild(endBtn);
   }
@@ -157,14 +166,19 @@ export class CombatSystem {
     if (hitRoll >= this.enemy.attributes.armorClass) {
       const dmgResult = this.parseDamage(weapon.attributes.damageRoll);
       this.enemy.attributes.healthPoints -= dmgResult.total;
-      this.engine.log("player", `Attack Roll with ${weapon.name}: [${baseRoll}]${modStr} vs AC ${this.enemy.attributes.armorClass}. Hit! You deal ${dmgResult.total} damage! (Roll: ${dmgResult.string})`, 'damage');
+      this.engine.log("player", this.engine.t('combat.attackHit', {
+        weapon: weapon.name, roll: baseRoll, mod: modStr,
+        ac: this.enemy.attributes.armorClass, damage: dmgResult.total, rollStr: dmgResult.string
+      }), 'damage');
 
       if (this.enemy.attributes.healthPoints <= 0) {
         this.endCombat(true);
         return;
       }
     } else {
-      this.engine.log("player", `Attack Roll with ${weapon.name}: [${baseRoll}]${modStr} vs AC ${this.enemy.attributes.armorClass}. Miss!`, 'damage');
+      this.engine.log("player", this.engine.t('combat.attackMiss', {
+        weapon: weapon.name, roll: baseRoll, mod: modStr, ac: this.enemy.attributes.armorClass
+      }), 'damage');
     }
 
     if (player.ap > 0) {
@@ -200,7 +214,7 @@ export class CombatSystem {
     while (eAP >= eWeapon.actionPoints && player.hp > 0 && this.enemy.attributes.healthPoints > 0) {
       eAP -= eWeapon.actionPoints;
       attackCount++;
-      
+
       const hitModifier = eWeapon.bonusHitChance || 0;
       const baseRoll = this.roll(1, MAX_D20_ROLL);
       const hitRoll = baseRoll + hitModifier;
@@ -209,7 +223,7 @@ export class CombatSystem {
       if (hitRoll >= player.ac) {
         hits++;
         hitRolls.push(`[${baseRoll}]${modStr}`);
-        
+
         const dmgResult = this.parseDamage(eWeapon.attributes.damageRoll);
         totalDamage += dmgResult.total;
         damageRolls.push(dmgResult.string);
@@ -222,16 +236,14 @@ export class CombatSystem {
     }
 
     if (attackCount > 0) {
-      let parts = [];
-      if (hits > 0) parts.push(`${hits} hit${hits > 1 ? 's' : ''} (Roll: ${hitRolls.join(' and ')})`);
-      if (misses > 0) parts.push(`${misses} miss${misses > 1 ? 'es' : ''} (Roll: ${missRolls.join(' and ')})`);
-      
-      let summary = `Attacked with ${eWeapon.name} ${attackCount} time${attackCount > 1 ? 's' : ''}, ${parts.join(', ')}.`;
-      if (hits > 0) {
-        summary += ` You take ${totalDamage} damage (Roll: ${damageRolls.join(' and ')})!`;
-      } else {
-        summary += ` You take 0 damage.`;
-      }
+      const parts = [];
+      if (hits > 0) parts.push(this.engine.t('combat.enemyAttackHits', { count: hits, s: hits > 1 ? 's' : '', rolls: hitRolls.join(' and ') }));
+      if (misses > 0) parts.push(this.engine.t('combat.enemyAttackMisses', { count: misses, es: misses > 1 ? 'es' : '', rolls: missRolls.join(' and ') }));
+
+      let summary = this.engine.t('combat.enemyAttack', { weapon: eWeapon.name, count: attackCount, s: attackCount > 1 ? 's' : '', parts: parts.join(', ') });
+      summary += ' ' + (hits > 0
+        ? this.engine.t('combat.playerTakesDamage', { damage: totalDamage, rolls: damageRolls.join(' and ') })
+        : this.engine.t('combat.playerTakesNoDamage'));
       this.engine.log(this.enemy.name, summary, 'damage');
     }
 
@@ -248,24 +260,24 @@ export class CombatSystem {
   endCombat(isVictory) {
     this.inCombat = false;
     if (isVictory) {
-      this.engine.log("System", `You defeated ${this.enemy.name}!`, 'loot');
+      this.engine.log("System", this.engine.t('combat.victory', { name: this.enemy.name }), 'loot');
 
       // Loot
       if (this.enemy.droppedLoot) {
         this.enemy.droppedLoot.forEach(l => {
           if (l.item === 'gold') {
             gameState.modifyPlayerStat('gold', l.amount);
-            this.engine.log("System", `Found ${l.amount} Gold.`, 'loot');
+            this.engine.log("System", this.engine.t('loot.foundGold', { amount: l.amount }), 'loot');
           } else {
             gameState.addToInventory(l.item, l.amount || 1);
-            this.engine.log("System", `Found ${this.engine.data.items[l.item]?.name || l.item}.`, 'loot');
+            this.engine.log("System", this.engine.t('loot.foundItem', { name: this.engine.data.items[l.item]?.name || l.item }), 'loot');
           }
         });
       }
       // XP reward
       if (this.enemy.attributes.xpReward) {
         gameState.addXP(this.enemy.attributes.xpReward);
-        this.engine.log("System", `+${this.enemy.attributes.xpReward} XP`, 'loot');
+        this.engine.log("System", this.engine.t('loot.xpGained', { amount: this.enemy.attributes.xpReward }), 'loot');
       }
 
       // Flag flip
@@ -286,17 +298,20 @@ export class CombatSystem {
 
     } else {
       this.engine.openScene();
-      const desc = buildSceneDescription('Game Over', 'Your adventure ends here.');
+      const desc = buildSceneDescription(
+        this.engine.t('combat.gameOverTitle'),
+        this.engine.t('combat.gameOverBody')
+      );
       desc.querySelector('h2').classList.add(CSS.SCENE_TITLE_GAME_OVER);
       this.engine.currentSceneEl.appendChild(desc);
 
       const container = document.getElementById(EL.SCENE_OPTIONS);
       clearElement(container);
-      const loadBtn = buildOptionButton('Load Last Save');
+      const loadBtn = buildOptionButton(this.engine.t('combat.loadLastSave'));
       loadBtn.onclick = () => document.getElementById(EL.BTN_LOAD).click();
       container.appendChild(loadBtn);
 
-      const restartBtn = buildOptionButton('Restart Game');
+      const restartBtn = buildOptionButton(this.engine.t('combat.restartGame'));
       restartBtn.onclick = () => document.getElementById(EL.BTN_RESTART).click();
       container.appendChild(restartBtn);
     }

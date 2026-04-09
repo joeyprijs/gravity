@@ -41,7 +41,7 @@ export class DialogueSystem {
     }
 
     const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
-    if (reminder) reminder.innerText = `DIALOGUE: ${this.currentNPC.name}`;
+    if (reminder) reminder.innerText = this.engine.t('ui.locationDialogue', { name: this.currentNPC.name });
 
     const container = document.getElementById(EL.SCENE_OPTIONS);
     clearElement(container);
@@ -64,7 +64,7 @@ export class DialogueSystem {
   }
 
   renderDialogueFallback(overrideText = null) {
-    const displayString = overrideText || `Greetings, traveler. I am ${this.currentNPC.name}.`;
+    const displayString = overrideText || this.engine.t('dialogue.greeting', { name: this.currentNPC.name });
 
     this.engine.openScene('dialogue');
     this.engine.currentSceneEl.appendChild(
@@ -72,21 +72,21 @@ export class DialogueSystem {
     );
 
     const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
-    if (reminder) reminder.innerText = `DIALOGUE: ${this.currentNPC.name}`;
+    if (reminder) reminder.innerText = this.engine.t('ui.locationDialogue', { name: this.currentNPC.name });
 
     const container = document.getElementById(EL.SCENE_OPTIONS);
     clearElement(container);
 
     if (this.currentNPC.isMerchant) {
-      const tradeBtn = buildOptionButton('Trade');
+      const tradeBtn = buildOptionButton(this.engine.t('dialogue.trade'));
       tradeBtn.onclick = () => {
-        this.engine.log('player', 'Trade', 'choice');
+        this.engine.log('player', this.engine.t('dialogue.trade'), 'choice');
         this.renderStore();
       };
       container.appendChild(tradeBtn);
     }
 
-    const leaveBtn = buildOptionButton('Leave');
+    const leaveBtn = buildOptionButton(this.engine.t('dialogue.leave'));
     leaveBtn.onclick = () => {
       this.engine.renderScene(gameState.getCurrentSceneId());
     };
@@ -98,17 +98,20 @@ export class DialogueSystem {
       this.storeOpen = true;
       this.engine.openScene('merchant');
       this.engine.currentSceneEl.appendChild(
-        buildSceneDescription(`${this.currentNPC.name}'s Wares`, `[${this.currentNPC.name}] Take a look!`)
+        buildSceneDescription(
+          this.engine.t('dialogue.merchantWaresTitle', { name: this.currentNPC.name }),
+          this.engine.t('dialogue.merchantGreeting', { name: this.currentNPC.name })
+        )
       );
     }
 
     const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
-    if (reminder) reminder.innerText = `MERCHANT: ${this.currentNPC.name}`;
+    if (reminder) reminder.innerText = this.engine.t('ui.locationMerchant', { name: this.currentNPC.name });
 
     const container = document.getElementById(EL.SCENE_OPTIONS);
     clearElement(container);
 
-    const goldBar = createElement('div', CSS.STORE_STATS_GOLD, `<strong>Your Gold: ${gameState.getPlayer().gold}</strong>`);
+    const goldBar = createElement('div', CSS.STORE_STATS_GOLD, `<strong>${this.engine.t('dialogue.yourGold', { amount: gameState.getPlayer().gold })}</strong>`);
     container.appendChild(goldBar);
 
     // Buy items
@@ -116,12 +119,15 @@ export class DialogueSystem {
       this.currentNPC.carriedItems.forEach(itemId => {
         const item = this.engine.data.items[itemId];
         if (item) {
-          const btn = buildOptionButton(`Buy ${item.name}`, `${item.value} Gold`);
+          const btn = buildOptionButton(
+            this.engine.t('dialogue.buyButton', { name: item.name }),
+            this.engine.t('dialogue.buyPrice', { amount: item.value })
+          );
           if (gameState.getPlayer().gold < item.value) btn.disabled = true;
           btn.onclick = () => {
             gameState.modifyPlayerStat('gold', -item.value);
             gameState.addToInventory(itemId, 1);
-            this.engine.log("player", `Bought ${item.name} for ${item.value} Gold.`, 'loot');
+            this.engine.log("player", this.engine.t('dialogue.bought', { name: item.name, price: item.value }), 'loot');
             this.renderStore(true);
           };
           container.appendChild(btn);
@@ -136,11 +142,15 @@ export class DialogueSystem {
       if (item && item.value > 0) {
         const sellValue = Math.floor(item.value * MERCHANT_SELL_RATIO);
         if (sellValue > 0) {
-          const btn = buildOptionButton(`Sell ${item.name} (x${invItem.amount})`, `+${sellValue} Gold`, true);
+          const btn = buildOptionButton(
+            this.engine.t('dialogue.sellButton', { name: item.name, count: invItem.amount }),
+            this.engine.t('dialogue.sellPrice', { amount: sellValue }),
+            true
+          );
           btn.onclick = () => {
             gameState.removeFromInventory(invItem.item, 1);
             gameState.modifyPlayerStat('gold', sellValue);
-            this.engine.log("player", `Sold ${item.name} for ${sellValue} Gold.`, 'loot');
+            this.engine.log("player", this.engine.t('dialogue.sold', { name: item.name, price: sellValue }), 'loot');
             this.renderStore(true);
           };
           container.appendChild(btn);
@@ -148,12 +158,13 @@ export class DialogueSystem {
       }
     });
 
-    const leaveBtn = buildOptionButton('Never mind.');
+    const neverMind = this.engine.t('dialogue.neverMind');
+    const leaveBtn = buildOptionButton(neverMind);
     leaveBtn.onclick = () => {
       this.storeOpen = false;
-      this.engine.log('player', 'Never mind.', 'choice');
+      this.engine.log('player', neverMind, 'choice');
 
-      const exitStr = this.currentNPC.storeExitText || "Come again.";
+      const exitStr = this.currentNPC.storeExitText || this.engine.t('dialogue.comeAgain');
       if (this.currentNPC.conversations) {
         this.renderDialogue("start", exitStr);
       } else {
