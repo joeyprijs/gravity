@@ -1,6 +1,6 @@
 import { gameState } from "./state.js";
 import { createElement, clearElement } from "./utils.js";
-import { ITEM_TYPE_ORDER, XP_PER_LEVEL } from "./config.js";
+import { ITEM_TYPE_ORDER, XP_PER_LEVEL, EL, MSG } from "./config.js";
 import { MapManager } from "./map.js";
 
 export class UIManager {
@@ -35,15 +35,22 @@ export class UIManager {
       reader.onload = (ev) => {
         try {
           let raw = ev.target.result;
-          try { raw = decodeURIComponent(escape(atob(raw))); } catch (_) {}
+          // Decode the base64+UTF-8 encoding written by state.js downloadSave().
+          // TextDecoder is the modern replacement for the deprecated escape() approach.
+          try {
+            const binary = atob(raw);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            raw = new TextDecoder().decode(bytes);
+          } catch (_) {}
           const data = JSON.parse(raw);
           gameState.loadFromObject(data);
           this.engine.isGameStart = true;
-          clearElement('scene-narrative');
+          clearElement(EL.SCENE_NARRATIVE);
           this.engine.currentSceneEl = null;
           this.engine.scene.reset();
           this.engine.recalculateAC();
-          this.engine.log("System", "Game Loaded from Disk.", 'system', false);
+          this.engine.log("System", MSG.GAME_LOADED, 'system', false);
           const lastDesc = this.engine.narrative.restore(gameState.getLog());
           if (lastDesc !== null) {
             this.engine.scene.lastRenderedSceneId = gameState.getCurrentSceneId();
@@ -53,7 +60,7 @@ export class UIManager {
           if (currentScene) this.engine.scene.renderOptions(currentScene);
         } catch (err) {
           console.error(err);
-          this.engine.log("System", "Failed to parse save file.");
+          this.engine.log("System", MSG.GAME_LOAD_FAILED);
         }
       };
       reader.readAsText(file);
@@ -254,8 +261,8 @@ export class UIManager {
     const chest = gameState.getMuseumChest();
     const pInv = gameState.getPlayer().inventory;
 
-    const chestDiv = createElement('div', 'glass-panel');
-    chestDiv.innerHTML = `<h3 style="margin-bottom:10px; color:var(--text-primary);">Museum Displays</h3>`;
+    const chestDiv = createElement('div', ['glass-panel', 'museum__section']);
+    chestDiv.appendChild(createElement('h3', 'museum__heading', 'Museum Displays'));
     if (chest && chest.length > 0) {
       chest.forEach(b => {
         const itemData = this.engine.data.items[b.item];
@@ -271,19 +278,17 @@ export class UIManager {
         chestDiv.appendChild(row);
       });
     } else {
-      chestDiv.innerHTML += `<p class="item__type">No items on display.</p>`;
+      chestDiv.appendChild(createElement('p', 'item__type', 'No items on display.'));
     }
 
-    const invDiv = createElement('div', 'glass-panel');
-    invDiv.style.marginTop = '10px';
-    invDiv.innerHTML = `<h3 style="margin-bottom:10px; color:var(--text-primary);">Your Inventory</h3>`;
+    const invDiv = createElement('div', ['glass-panel', 'museum__section']);
+    invDiv.appendChild(createElement('h3', 'museum__heading', 'Your Inventory'));
     if (pInv && pInv.length > 0) {
       pInv.forEach(b => {
         const itemData = this.engine.data.items[b.item];
         const row = createElement('div', 'item-list__item');
         row.innerHTML = `<div class="item__description"><strong class="item__title">${itemData?.name || b.item}${b.amount > 1 ? ` (x${b.amount})` : ''}</strong></div>`;
-        const btn = createElement('button', ['btn', 'btn--item'], 'Display');
-        btn.style.background = 'var(--xp-color)';
+        const btn = createElement('button', ['btn', 'btn--item', 'btn--deposit'], 'Display');
         btn.onclick = () => {
           gameState.depositToChest(b.item, 1);
           this.engine.log("System", `You proudly displayed ${itemData?.name || b.item}.`);
@@ -293,12 +298,11 @@ export class UIManager {
         invDiv.appendChild(row);
       });
     } else {
-      invDiv.innerHTML += `<p class="item__type">Inventory is empty.</p>`;
+      invDiv.appendChild(createElement('p', 'item__type', 'Inventory is empty.'));
     }
 
-    const closeBtn = createElement('button', 'option-btn');
+    const closeBtn = createElement('button', ['option-btn', 'museum__done-btn']);
     closeBtn.innerHTML = `<span>Done Managing</span>`;
-    closeBtn.style.marginTop = '15px';
     closeBtn.onclick = () => this.engine.renderScene(gameState.getCurrentSceneId());
 
     optionsContainer.appendChild(chestDiv);

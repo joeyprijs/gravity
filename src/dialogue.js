@@ -1,7 +1,10 @@
 import { gameState } from "./state.js";
 import { createElement, clearElement } from "./utils.js";
-import { MERCHANT_SELL_RATIO } from "./config.js";
+import { MERCHANT_SELL_RATIO, EL } from "./config.js";
 
+// DialogueSystem handles NPC conversations and the merchant buy/sell interface.
+// Conversations are driven by a node graph defined in NPC JSON files. If an NPC
+// has no conversations object, a minimal fallback UI is shown instead.
 export class DialogueSystem {
   constructor(engine) {
     this.engine = engine;
@@ -37,10 +40,10 @@ export class DialogueSystem {
       this.engine.log(this.currentNPC.name, displayString);
     }
 
-    const reminder = document.getElementById('scene-location-reminder');
+    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
     if (reminder) reminder.innerText = `DIALOGUE: ${this.currentNPC.name}`;
 
-    const container = document.getElementById('scene-options');
+    const container = document.getElementById(EL.SCENE_OPTIONS);
     clearElement(container);
 
     node.responses.forEach(res => {
@@ -69,10 +72,10 @@ export class DialogueSystem {
     desc.innerHTML = `<h2 class="scene__title">${this.currentNPC.name}</h2><p class="scene__body">[${this.currentNPC.name}] ${displayString}</p>`;
     this.engine.currentSceneEl.appendChild(desc);
 
-    const reminder = document.getElementById('scene-location-reminder');
+    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
     if (reminder) reminder.innerText = `DIALOGUE: ${this.currentNPC.name}`;
 
-    const container = document.getElementById('scene-options');
+    const container = document.getElementById(EL.SCENE_OPTIONS);
     clearElement(container);
 
     if (this.currentNPC.isMerchant) {
@@ -100,10 +103,10 @@ export class DialogueSystem {
       this.engine.currentSceneEl.appendChild(desc);
     }
 
-    const reminder = document.getElementById('scene-location-reminder');
+    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
     if (reminder) reminder.innerText = `MERCHANT: ${this.currentNPC.name}`;
 
-    const container = document.getElementById('scene-options');
+    const container = document.getElementById(EL.SCENE_OPTIONS);
     clearElement(container);
 
     const goldBar = createElement('div', 'store-stats__gold-bar', `<strong>Your Gold: ${gameState.getPlayer().gold}</strong>`);

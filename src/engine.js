@@ -5,11 +5,16 @@ import { QuestSystem } from "./quests.js";
 import { NarrativeLog } from "./narrative.js";
 import { UIManager } from "./ui.js";
 import { SceneRenderer } from "./scene.js";
-import { BASE_AC, UNEQUIP_AP_COST } from "./config.js";
+import { BASE_AC, UNEQUIP_AP_COST, DEFAULT_WORLD_MAP_SIZE, MSG } from "./config.js";
 
+// RPGEngine is the central orchestrator. It owns all subsystems, loads game
+// data from JSON, and exposes a thin delegate API so subsystems can call each
+// other without importing each other directly (avoiding circular deps).
 class RPGEngine {
   constructor() {
-    this.data = { items: {}, npcs: {}, scenes: {}, missions: {}, regions: {}, worldMapSize: { width: 3000, height: 2000 } };
+    // Populated by loadData(). Kept as an empty shell here so subsystems
+    // constructed below can safely reference this.engine.data without null checks.
+    this.data = { items: {}, npcs: {}, scenes: {}, missions: {}, regions: {}, worldMapSize: DEFAULT_WORLD_MAP_SIZE };
 
     this.narrative = new NarrativeLog();
     this.combatSystem = new CombatSystem(this);
@@ -25,6 +30,8 @@ class RPGEngine {
     this.isGameStart = true;
     await this.loadData();
     this.ui.setup();
+    // Every state change triggers a full UI update. Subsystems mutate state
+    // and the reactive UI re-renders — no manual refresh calls needed.
     gameState.subscribe(() => this.ui.update());
     this.recalculateAC();
     this.ui.update();
@@ -51,7 +58,7 @@ class RPGEngine {
         loadCategory(manifest.missions)
       ]);
 
-      this.data = { items, npcs, scenes, missions, regions: manifest.regions || {}, worldMapSize: manifest.worldMapSize || { width: 3000, height: 2000 } };
+      this.data = { items, npcs, scenes, missions, regions: manifest.regions || {}, worldMapSize: manifest.worldMapSize || DEFAULT_WORLD_MAP_SIZE };
 
       // Auto-register flags declared in scene JSON so state.js needs no manual entries
       const sceneFlags = {};
@@ -66,10 +73,13 @@ class RPGEngine {
       gameState.registerSceneFlags(sceneFlags);
     } catch (e) {
       console.error("Failed to load game data:", e);
-      this.log("System", "Error loading game data.");
+      this.log("System", MSG.GAME_DATA_ERROR);
     }
   }
 
+  // Recomputes the player's AC from BASE_AC plus all equipped armor bonuses.
+  // Called after every equip/unequip and on save load. Uses forceUpdate() only
+  // when the value actually changes to avoid unnecessary re-renders.
   recalculateAC() {
     const player = gameState.getPlayer();
     let newAC = BASE_AC;

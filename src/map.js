@@ -1,19 +1,26 @@
 import { gameState } from "./state.js";
 import { clearElement } from "./utils.js";
-import { MINIMAP_SIZE } from "./config.js";
+import { MINIMAP_SIZE, MAP_NODE_DEFAULT_BG, EL } from "./config.js";
 
+// MapManager handles both the minimap HUD and the full-screen world map overlay.
+// The minimap is cached by scene ID so it only rebuilds when the player moves.
+// The full map renders all visited scenes at their authored pixel coordinates.
 export class MapManager {
   constructor(engine) {
     this.engine = engine;
+    // Last scene ID for which the minimap was successfully rendered.
+    // null forces a render on the first update() call.
     this._minimapCacheKey = null;
   }
 
+  // Wires up minimap click-to-open, ESC/backdrop/button close for the full map.
   setup() {
     document.getElementById('minimap').addEventListener('click', () => this.openFullMap());
     document.getElementById('fullmap-close').addEventListener('click', () => this.closeFullMap());
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !document.getElementById('fullmap-overlay').hidden) this.closeFullMap();
     });
+    // Clicking outside the map panel (on the backdrop) also closes it.
     document.getElementById('fullmap-overlay').addEventListener('click', (e) => {
       if (e.target === e.currentTarget) this.closeFullMap();
     });
@@ -47,8 +54,9 @@ export class MapManager {
     const bboxH = (bbox.maxBottom - bbox.minTop) + padding * 2;
     const scale = MINIMAP_SIZE / Math.max(bboxW, bboxH);
 
-    // Compute each node's position directly in minimap pixel space — no CSS
-    // transform on the canvas, which avoids Safari compositor layer caching.
+    // Build a fresh canvas div and swap it in with replaceWith() — this forces
+    // Safari to flush its compositor layer cache, which can otherwise show a
+    // stale minimap when navigating between scenes.
     const fresh = document.createElement('div');
     fresh.id = 'minimap-canvas';
     fresh.className = 'minimap__canvas';
@@ -56,11 +64,13 @@ export class MapManager {
     for (const { id, scene } of regionScenes) {
       const d = scene.mapDefinitions;
       const node = this._buildMapNode(id, scene, id === currentSceneId);
+      // Positions are computed directly in minimap pixel space rather than
+      // using CSS transforms, which avoids additional Safari caching issues.
       node.style.top    = ((d.top    - bbox.minTop  + padding) * scale) + 'px';
       node.style.left   = ((d.left   - bbox.minLeft + padding) * scale) + 'px';
       node.style.width  = (d.width  * scale) + 'px';
       node.style.height = (d.height * scale) + 'px';
-      node.style.background = d.background || 'var(--glass-bg)';
+      node.style.background = d.background || MAP_NODE_DEFAULT_BG;
       fresh.appendChild(node);
     }
 
@@ -69,6 +79,8 @@ export class MapManager {
     this._minimapCacheKey = currentSceneId;
   }
 
+  // Renders all visited scenes on the full-screen world map and scrolls so the
+  // current scene is centered in the scrollable viewport.
   openFullMap() {
     const overlay = document.getElementById('fullmap-overlay');
     const canvasEl = document.getElementById('fullmap-canvas');
@@ -87,7 +99,8 @@ export class MapManager {
     this._renderSceneNodes(canvasEl, allScenes, currentSceneId);
     overlay.hidden = false;
 
-    // Scroll so the current scene is centered in the viewport
+    // Scroll so the current scene is centered in the viewport.
+    // requestAnimationFrame ensures the overlay is visible before we measure.
     const defs = this.engine.data.scenes[currentSceneId]?.mapDefinitions;
     if (defs) {
       requestAnimationFrame(() => {
@@ -103,6 +116,7 @@ export class MapManager {
     document.getElementById('fullmap-overlay').hidden = true;
   }
 
+  // Returns all visited scenes that have mapDefinitions, across all regions.
   _getAllVisitedMapScenes() {
     const visited = new Set(gameState.getVisitedScenes());
     return Object.entries(this.engine.data.scenes)
@@ -110,6 +124,8 @@ export class MapManager {
       .map(([id, scene]) => ({ id, scene }));
   }
 
+  // Returns visited scenes that belong to a specific region and have mapDefinitions.
+  // Used by the minimap to show only the current region, not the whole world.
   _getVisitedScenesForRegion(regionId) {
     if (!regionId) return [];
     const visited = new Set(gameState.getVisitedScenes());
@@ -118,6 +134,8 @@ export class MapManager {
       .map(([id, scene]) => ({ id, scene }));
   }
 
+  // Builds a positioned map node div. The caller is responsible for setting
+  // top/left/width/height/background on the returned element.
   _buildMapNode(id, scene, isCurrentScene) {
     const node = document.createElement('div');
     node.className = 'map-node' + (isCurrentScene ? ' map-node--current' : '');
@@ -128,6 +146,8 @@ export class MapManager {
     return node;
   }
 
+  // Computes the axis-aligned bounding box of a set of map scenes.
+  // Used by renderMinimap() to fit all visible nodes within the minimap square.
   _computeBbox(scenes) {
     let minLeft = Infinity, minTop = Infinity, maxRight = -Infinity, maxBottom = -Infinity;
     for (const { scene } of scenes) {
@@ -140,6 +160,8 @@ export class MapManager {
     return { minLeft, minTop, maxRight, maxBottom };
   }
 
+  // Clears and redraws scene nodes on a canvas element at their authored pixel
+  // coordinates. Used by openFullMap() to populate the full-screen world map.
   _renderSceneNodes(canvasEl, scenes, currentSceneId) {
     clearElement(canvasEl);
     for (const { id, scene } of scenes) {
@@ -150,7 +172,7 @@ export class MapManager {
         left: left + 'px',
         width: width + 'px',
         height: height + 'px',
-        background: background || 'var(--glass-bg)'
+        background: background || MAP_NODE_DEFAULT_BG
       });
       canvasEl.appendChild(node);
     }

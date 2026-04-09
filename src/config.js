@@ -35,6 +35,17 @@ export const XP_PER_LEVEL = 100;
 // The scene ID loaded when starting a new game
 export const STARTING_SCENE = "dungeon_start";
 
+// Fallback scene used by the "return_to_world" action when no returnSceneId
+// has been stored in state (e.g. player hasn't used a teleport item yet)
+export const RETURN_WORLD_FALLBACK_SCENE = "dungeon_start";
+
+// Default world canvas dimensions used when worldMapSize is absent from index.json
+export const DEFAULT_WORLD_MAP_SIZE = { width: 3000, height: 2000 };
+
+// CSS fallback background applied to map nodes that have no background defined
+// in their mapDefinitions. Must stay in sync with the --glass-bg CSS variable.
+export const MAP_NODE_DEFAULT_BG = 'var(--glass-bg)';
+
 // Size of the minimap HUD in pixels (square)
 export const MINIMAP_SIZE = 200;
 
@@ -50,6 +61,25 @@ export const ENEMY_CLAW = {
   name: "claws",
   actionPoints: 2,
   attributes: { damageRoll: "1-3" }
+};
+
+// HTML element IDs referenced from more than one source file.
+// Single-file IDs (e.g. stat bars, tab panels) stay as inline literals in
+// their respective files — centralising every ID would be over-engineering.
+export const EL = {
+  SCENE_NARRATIVE:         'scene-narrative',
+  SCENE_OPTIONS:           'scene-options',
+  SCENE_LOCATION_REMINDER: 'scene-location-reminder',
+  BTN_LOAD:                'btn-load',
+  BTN_RESTART:             'btn-restart',
+};
+
+// System messages shared across multiple modules. Keeping them here ensures
+// that e.g. the load-filter in state.js and the log call in ui.js always match.
+export const MSG = {
+  GAME_LOADED:        'Game Loaded from Disk.',
+  GAME_LOAD_FAILED:   'Failed to parse save file.',
+  GAME_DATA_ERROR:    'Error loading game data.',
 };
 
 // Starting stats and inventory for a new player

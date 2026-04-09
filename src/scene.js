@@ -1,10 +1,15 @@
 import { gameState } from "./state.js";
-import { createElement } from "./utils.js";
-import { REST_HEAL_AMOUNT, SNACK_HEAL_AMOUNT } from "./config.js";
+import { createElement, clearElement } from "./utils.js";
+import { REST_HEAL_AMOUNT, SNACK_HEAL_AMOUNT, EL, RETURN_WORLD_FALLBACK_SCENE } from "./config.js";
 
+// SceneRenderer handles navigating to scenes, resolving their descriptions,
+// and rendering their option buttons. It is the main driver of scene-to-scene
+// movement and all non-combat, non-dialogue player interactions.
 export class SceneRenderer {
   constructor(engine) {
     this.engine = engine;
+    // Tracks the last rendered scene/desc so we don't duplicate narrative
+    // entries when re-rendering options without changing the scene body.
     this.lastRenderedSceneId = null;
     this.lastRenderedDesc = null;
   }
@@ -23,14 +28,22 @@ export class SceneRenderer {
       return;
     }
 
+    // addVisitedScene must be called BEFORE setCurrentSceneId because
+    // setCurrentSceneId triggers notifyListeners → ui.update() → renderMinimap(),
+    // which checks visitedScenes. If the order is reversed, the current scene
+    // would be absent from visitedScenes when the minimap first renders.
     gameState.addVisitedScene(sceneId);
     gameState.setCurrentSceneId(sceneId);
 
     const currentDesc = this._resolveDescription(scene);
 
+    // Only append a new narrative block when the scene or its description has
+    // actually changed — prevents duplicate entries when options re-render.
     if (this.lastRenderedSceneId !== sceneId || this.lastRenderedDesc !== currentDesc) {
       this.engine.openScene();
       const desc = createElement('div', 'scene__description');
+      // Scene content comes from developer-authored JSON, not user input —
+      // innerHTML is intentional here to allow basic formatting in descriptions.
       desc.innerHTML = `<h2 class="scene__title">${scene.title || scene.name}</h2><p class="scene__body">${currentDesc}</p>`;
       this.engine.currentSceneEl.appendChild(desc);
       gameState.appendLog({ type: 'scene', title: scene.title || scene.name, desc: currentDesc });
@@ -44,13 +57,14 @@ export class SceneRenderer {
   }
 
   renderOptions(scene) {
-    const reminder = document.getElementById('scene-location-reminder');
+    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
     if (reminder) reminder.innerText = scene.title || scene.name;
 
-    const optionsContainer = document.getElementById('scene-options');
-    optionsContainer.innerHTML = '';
+    const optionsContainer = document.getElementById(EL.SCENE_OPTIONS);
+    clearElement(optionsContainer);
 
     (scene.options || []).forEach(opt => {
+      // Hide options whose requiredState condition is not currently met
       if (opt.requiredState) {
         if (gameState.getFlag(opt.requiredState.flag) !== opt.requiredState.value) return;
       }
@@ -78,6 +92,8 @@ export class SceneRenderer {
       this.engine.questSystem.handleTrigger(scene.questsTriggeredOnEntry);
     }
 
+    // One-time XP reward on first visit. The flag prevents re-awarding on
+    // subsequent visits or after loading a save.
     if (scene.xpReward) {
       const xpFlag = `xp_awarded_${gameState.getCurrentSceneId()}`;
       if (!gameState.getFlag(xpFlag)) {
@@ -106,6 +122,8 @@ export class SceneRenderer {
             gameState.addXP(param.xpReward);
             this.engine.log("System", `+${param.xpReward} XP`, 'loot');
           }
+          // hideAfter flips the option's requiredState flag so the option
+          // disappears on the next render (e.g. "Search the room" one-time events)
           if (param.hideAfter && opt.requiredState) {
             gameState.setFlag(opt.requiredState.flag, !opt.requiredState.value);
           }
@@ -127,7 +145,9 @@ export class SceneRenderer {
           this.engine.renderScene(opt.destination || gameState.getCurrentSceneId());
           break;
         case "return_to_world":
-          this.engine.renderScene(gameState.getReturnSceneId() || "dungeon_start");
+          // Navigate to the stored return scene, falling back to the configured
+          // default if the player hasn't used a teleport item yet.
+          this.engine.renderScene(gameState.getReturnSceneId() || RETURN_WORLD_FALLBACK_SCENE);
           break;
         case "full_rest": {
           const p = gameState.getPlayer();
@@ -151,12 +171,18 @@ export class SceneRenderer {
     }
   }
 
-  // Resolves the correct description string for a scene, accounting for
-  // conditional descriptions and description hooks.
+  // Returns the description string to display for a scene.
+  // Handles three cases:
+  //   1. Plain string description — returned as-is.
+  //   2. Conditional array — first matching requiredState wins; the entry with
+  //      no requiredState acts as the fallback.
+  //   3. descriptionHook — appends dynamic content after the base description.
   _resolveDescription(scene) {
     let desc = scene.description;
 
     if (Array.isArray(scene.description)) {
+      // Default to the fallback entry (no requiredState) first, then override
+      // with the first conditional entry whose flag condition is met.
       desc = scene.description.find(d => !d.requiredState)?.text || '';
       for (const d of scene.description) {
         if (d.requiredState && gameState.getFlag(d.requiredState.flag) === d.requiredState.value) {
@@ -173,7 +199,9 @@ export class SceneRenderer {
           const name = this.engine.data.items[b.item]?.name || b.item;
           return b.amount > 1 ? `${name} (x${b.amount})` : name;
         }).join(", ");
-        desc += `<br><br>Displayed within the room: <span style="color:var(--gold-color);">${names}</span>.`;
+        // The museum-item-list class applies var(--gold-color) via CSS so
+        // no colour value is hardcoded here.
+        desc += `<br><br>Displayed within the room: <span class="museum-item-list">${names}</span>.`;
       } else {
         desc += `<br><br>The room is currently devoid of trophies.`;
       }

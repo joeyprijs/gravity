@@ -1,12 +1,16 @@
 import { gameState } from "./state.js";
 import { createElement, clearElement } from "./utils.js";
-import { MAX_D20_ROLL, UNARMED_STRIKE, ENEMY_CLAW } from "./config.js";
+import { MAX_D20_ROLL, UNARMED_STRIKE, ENEMY_CLAW, EL } from "./config.js";
 
+// CombatSystem manages the full lifecycle of a turn-based combat encounter:
+// initiative roll, player/enemy turns, AP tracking, and victory/defeat resolution.
 export class CombatSystem {
   constructor(engine) {
     this.engine = engine;
     this.inCombat = false;
     this.enemy = null;
+    // originOption is the scene option that triggered this combat. On victory,
+    // its requiredState flag is flipped so the fight option disappears.
     this.originOption = null;
   }
 
@@ -16,11 +20,12 @@ export class CombatSystem {
 
     this.engine.lastRenderedSceneId = null;
     this.inCombat = true;
+    // Deep clone so we can mutate HP without touching the source data
     this.enemy = JSON.parse(JSON.stringify(enemyData));
     this.enemy.id = enemyId;
     this.originOption = originOption;
 
-    // Reset AP
+    // Restore player AP to full at the start of every combat encounter
     const player = gameState.getPlayer();
     gameState.modifyPlayerStat('ap', player.maxAp - player.ap);
 
@@ -42,11 +47,10 @@ export class CombatSystem {
   }
 
   renderCombatUI() {
-    // Update reminder
-    const reminder = document.getElementById('scene-location-reminder');
+    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
     if (reminder) reminder.innerText = `Combat: ${this.enemy.name}`;
 
-    const container = document.getElementById('scene-options');
+    const container = document.getElementById(EL.SCENE_OPTIONS);
     clearElement(container);
 
     const statsBar = createElement('div', 'combat-stats__bar', `<strong>Enemy HP: ${this.enemy.attributes.healthPoints} | AC: ${this.enemy.attributes.armorClass}</strong>`);
@@ -93,18 +97,29 @@ export class CombatSystem {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
+  // Parses a damage string and returns { total, string } where string is a
+  // human-readable roll breakdown for the combat log.
+  //
+  // Supported formats:
+  //   "1d6"    — roll one six-sided die
+  //   "2d4+2"  — roll two d4s and add 2
+  //   "1d8-1"  — roll one d8 and subtract 1
+  //   "1-4"    — legacy range syntax (kept for backwards compatibility)
+  //
+  // Returns { total: 1, string: "1" } as a safe fallback for unrecognised input.
   parseDamage(dmgString) {
-    // Fallback for old "1-4" syntax
+    // Legacy "min-max" range syntax (e.g. "1-4"). Must be checked before the
+    // dice regex because it also contains a hyphen.
     if (dmgString.includes('-') && !dmgString.includes('d')) {
       const [min, max] = dmgString.split('-').map(Number);
       return { total: this.roll(min, max), string: dmgString };
     }
 
-    // Parse format "1d6+2" or "2d4-1" or "1d8"
+    // Standard dice notation: NdF[+/-M] (e.g. "2d6+3")
     const regex = /^(\d+)d(\d+)([\+\-]\d+)?$/;
     const match = dmgString.match(regex);
 
-    if (!match) return { total: 1, string: "1" }; // Fallback
+    if (!match) return { total: 1, string: "1" };
 
     const numDice = parseInt(match[1]);
     const diceFaces = parseInt(match[2]);
@@ -119,6 +134,7 @@ export class CombatSystem {
       rollResults.push(r);
     }
 
+    // Clamp to 0 so negative modifiers never produce negative damage
     const grandTotal = Math.max(0, totalRoll + modifier);
 
     let rollStr = `[${rollResults.join('+')}]`;
@@ -274,14 +290,14 @@ export class CombatSystem {
       desc.innerHTML = `<h2 class="scene__title scene__title--game-over">Game Over</h2><p class="scene__body">Your adventure ends here.</p>`;
       this.engine.currentSceneEl.appendChild(desc);
 
-      const container = document.getElementById('scene-options');
+      const container = document.getElementById(EL.SCENE_OPTIONS);
       clearElement(container);
       const loadBtn = createElement('button', 'option-btn', `Load Last Save`);
-      loadBtn.onclick = () => document.getElementById('btn-load').click();
+      loadBtn.onclick = () => document.getElementById(EL.BTN_LOAD).click();
       container.appendChild(loadBtn);
 
       const restartBtn = createElement('button', 'option-btn', `Restart Game`);
-      restartBtn.onclick = () => document.getElementById('btn-restart').click();
+      restartBtn.onclick = () => document.getElementById(EL.BTN_RESTART).click();
       container.appendChild(restartBtn);
     }
   }

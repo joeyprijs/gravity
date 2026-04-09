@@ -634,3 +634,33 @@ body {
   background: var(--btn-glass-hover-bg);
   border-color: var(--accent-color);
 }
+
+/* ==========================================================================
+   MUSEUM ROOM UI
+   ========================================================================== */
+
+/* Section heading inside the museum chest panel */
+.museum__heading {
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+
+/* Spacing between the chest section and the inventory section */
+.museum__section + .museum__section {
+  margin-top: 10px;
+}
+
+/* Deposit button gets a distinct green to signal "move to chest" */
+.btn--deposit {
+  background: var(--xp-color);
+}
+
+/* Bottom-of-panel close button */
+.museum__done-btn {
+  margin-top: 15px;
+}
+
+/* Highlighted item list inside the museum description (descriptionHook) */
+.museum-item-list {
+  color: var(--gold-color);
+}
