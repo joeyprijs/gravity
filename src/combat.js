@@ -227,7 +227,9 @@ export class CombatSystem {
     if (!this.inCombat) return;
 
     const player = gameState.getPlayer();
-    const livingEnemies = this.enemies.filter(e => e.attributes.healthPoints > 0);
+    const livingEnemies = this.enemies
+      .filter(e => e.attributes.healthPoints > 0)
+      .sort((a, b) => (b.initiativeRoll || 0) - (a.initiativeRoll || 0));
 
     for (const enemy of livingEnemies) {
       const eWeapon = this._resolveEnemyWeapon(enemy);

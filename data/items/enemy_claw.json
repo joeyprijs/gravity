@@ -1,7 +1,7 @@
 {
   "name": "Claws",
   "type": "Weapon",
-  "actionPoints": 2,
+  "actionPoints": 1,
   "bonusHitChance": 0,
   "attributes": { "damageRoll": "1-3" }
 }
