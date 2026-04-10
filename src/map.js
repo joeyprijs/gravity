@@ -58,7 +58,7 @@ export class MapManager {
     // Safari to flush its compositor layer cache, which can otherwise show a
     // stale minimap when navigating between scenes.
     const fresh = document.createElement('div');
-    fresh.id = 'minimap-canvas';
+    fresh.id = EL.MINIMAP_CANVAS;
     fresh.className = CSS.MINIMAP_CANVAS;
 
     for (const { id, scene } of regionScenes) {
