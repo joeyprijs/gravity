@@ -178,7 +178,7 @@ class RPGEngine {
       this.log(LOG.SYSTEM, this.t('player.usedItem', { name: itemData.name, amount, rollSuffix }), 'loot');
       gameState.removeFromInventory(itemId, 1);
     } else if (itemData.attributes?.teleportScene) {
-      if (this.combatSystem.inCombat) {
+      if (this.inCombat) {
         this.log(LOG.SYSTEM, this.t('player.noCombatTeleport'));
         return;
       }
@@ -216,7 +216,7 @@ class RPGEngine {
   // Emits player:apSpent so CombatSystem can refresh the UI and hand off to
   // the enemy if AP hits zero — engine no longer calls combat methods directly.
   _spendAP(cost) {
-    if (!this.combatSystem.inCombat) return true;
+    if (!this.inCombat) return true;
     const player = gameState.getPlayer();
     if (player.ap < cost) {
       this.log(LOG.SYSTEM, this.t('player.notEnoughAP', { cost }));
@@ -231,6 +231,8 @@ class RPGEngine {
   // Subsystems (combat, dialogue, quests) call these on `this.engine`.
   // They forward to the appropriate module so subsystems need no knowledge
   // of the internal structure.
+
+  get inCombat() { return this.combatSystem.inCombat; }
 
   get isGameStart() { return this.narrative.isGameStart; }
   set isGameStart(v) { this.narrative.isGameStart = v; }

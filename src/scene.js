@@ -32,7 +32,7 @@ export class SceneRenderer {
   }
 
   render(sceneId) {
-    if (this.engine.combatSystem.inCombat) return;
+    if (this.engine.inCombat) return;
 
     const scene = this.engine.data.scenes[sceneId];
     if (!scene) {
