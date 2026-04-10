@@ -13,10 +13,12 @@ export class CombatSystem {
     // its requiredState flag is flipped so the fight option disappears.
     this.originOption = null;
 
+    this.playerInit = 0;
+
     this.engine.on('player:apSpent', ({ remaining }) => {
       if (!this.inCombat) return;
       if (remaining <= 0) {
-        this.enemyTurn();
+        this.enemyTurn('after');
       } else {
         this.renderCombatUI();
       }
@@ -55,24 +57,25 @@ export class CombatSystem {
 
     this.engine.log(LOG.COMBAT, this.engine.t('combat.started', { names }), 'combat');
 
-    // Each enemy rolls initiative separately; highest roll determines group turn order
-    const playerInit = Math.ceil(Math.random() * MAX_D20_ROLL) + (player.initiative || 0);
+    // Each enemy rolls initiative separately; enemies who beat the player go before the player,
+    // enemies the player beats go after. playerInit is stored for phase filtering each round.
+    this.playerInit = Math.ceil(Math.random() * MAX_D20_ROLL) + (player.initiative || 0);
     let highestEnemyInit = 0;
     this.enemies.forEach(e => {
       e.initiativeRoll = Math.ceil(Math.random() * MAX_D20_ROLL) + (e.attributes.initiative || 0);
       if (e.initiativeRoll > highestEnemyInit) highestEnemyInit = e.initiativeRoll;
     });
-    this.enemyGoesFirst = highestEnemyInit > playerInit;
+    this.enemyGoesFirst = highestEnemyInit > this.playerInit;
     const goesFirst = this.enemyGoesFirst
       ? this.engine.t('combat.enemyGoesFirst')
       : this.engine.t('combat.youGoFirst');
     const enemyRolls = this.enemies
       .map(e => this.engine.t('combat.initiativeEnemy', { name: e.name, roll: e.initiativeRoll }))
       .join(', ');
-    this.engine.log(LOG.COMBAT, this.engine.t('combat.initiative', { playerRoll: playerInit, enemyRolls, goesFirst }), 'combat');
+    this.engine.log(LOG.COMBAT, this.engine.t('combat.initiative', { playerRoll: this.playerInit, enemyRolls, goesFirst }), 'combat');
 
     this.renderCombatUI();
-    if (this.enemyGoesFirst) this.enemyTurn();
+    if (this.enemyGoesFirst) this.enemyTurn('before');
   }
 
   renderCombatUI() {
@@ -108,7 +111,7 @@ export class CombatSystem {
 
     // End turn button
     const endBtn = buildOptionButton(this.engine.t('combat.endTurn'));
-    endBtn.onclick = () => this.enemyTurn();
+    endBtn.onclick = () => this.enemyTurn('after');
     container.appendChild(endBtn);
   }
 
@@ -219,19 +222,25 @@ export class CombatSystem {
     if (player.ap > 0) {
       this.renderCombatUI();
     } else {
-      this.enemyTurn();
+      this.enemyTurn('after');
     }
   }
 
-  enemyTurn() {
+  // phase='before': enemies who outrolled the player (act before the player each round)
+  // phase='after' : enemies the player outrolled (act after the player each round)
+  enemyTurn(phase = 'after') {
     if (!this.inCombat) return;
 
     const player = gameState.getPlayer();
-    const livingEnemies = this.enemies
+    const allLiving = this.enemies
       .filter(e => e.attributes.healthPoints > 0)
       .sort((a, b) => (b.initiativeRoll || 0) - (a.initiativeRoll || 0));
 
-    for (const enemy of livingEnemies) {
+    const enemiesToAct = phase === 'before'
+      ? allLiving.filter(e => (e.initiativeRoll || 0) > this.playerInit)
+      : allLiving.filter(e => (e.initiativeRoll || 0) <= this.playerInit);
+
+    for (const enemy of enemiesToAct) {
       const eWeapon = this._resolveEnemyWeapon(enemy);
       if (!eWeapon) { console.warn(`[Gravity] enemyTurn: no weapon resolved for "${enemy.name}", skipping`); continue; }
       const result = this._resolveEnemyAttacks(eWeapon, enemy.attributes.actionPoints, enemy);
@@ -254,9 +263,19 @@ export class CombatSystem {
       }
     }
 
-    // Reset player AP for next round
-    gameState.modifyPlayerStat('ap', player.maxAp - player.ap);
-    this.renderCombatUI();
+    if (phase === 'before') {
+      // High-initiative enemies done — player acts next
+      this.renderCombatUI();
+    } else {
+      // Low-initiative enemies done — start next round
+      gameState.modifyPlayerStat('ap', player.maxAp - player.ap);
+      const hasBeforeEnemies = this.enemies.some(e => e.attributes.healthPoints > 0 && (e.initiativeRoll || 0) > this.playerInit);
+      if (hasBeforeEnemies) {
+        this.enemyTurn('before');
+      } else {
+        this.renderCombatUI();
+      }
+    }
   }
 
   // Returns the weapon this enemy attacks with — equipped Right Hand item, or
