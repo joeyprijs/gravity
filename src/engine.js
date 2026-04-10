@@ -6,6 +6,7 @@ import { NarrativeLog } from "./narrative.js";
 import { UIManager } from "./ui.js";
 import { SceneRenderer } from "./scene.js";
 import { BASE_AC, UNEQUIP_AP_COST, DEFAULT_WORLD_MAP_SIZE, MSG, LOG, UNARMED_STRIKE_ID, ENEMY_CLAW_ID } from "./config.js";
+import { registerBuiltinActions } from "./actions.js";
 // MSG is still imported for the state.js log filter (MSG.GAME_LOADED).
 // All display strings now come from data/locales.json via this.t().
 
@@ -17,6 +18,8 @@ class RPGEngine {
     // Populated by loadData(). Kept as an empty shell here so subsystems
     // constructed below can safely reference this.engine.data without null checks.
     this.data = { items: {}, npcs: {}, scenes: {}, missions: {}, regions: {}, worldMapSize: DEFAULT_WORLD_MAP_SIZE, locale: {} };
+
+    this._actionRegistry = new Map();
 
     this.narrative = new NarrativeLog();
     this.combatSystem = new CombatSystem(this);
@@ -30,6 +33,7 @@ class RPGEngine {
 
   async init() {
     this.isGameStart = true;
+    registerBuiltinActions(this);
     await this.loadData();
     this.ui.setup();
     // Every state change triggers a full UI update. Subsystems mutate state
@@ -125,6 +129,8 @@ class RPGEngine {
           warn(`Scene "${sceneId}": option "${opt.text}" → unknown destination "${opt.destination}"`);
         if (opt.requirements?.item && !items[opt.requirements.item])
           warn(`Scene "${sceneId}": option "${opt.text}" requires unknown item "${opt.requirements.item}"`);
+        if (opt.action && !this._actionRegistry.has(opt.action))
+          warn(`Scene "${sceneId}": option "${opt.text}" has unknown action "${opt.action}"`);
         if (opt.action === 'loot' && opt.actionDetails?.item && opt.actionDetails.item !== 'gold' && !items[opt.actionDetails.item])
           warn(`Scene "${sceneId}": loot option → unknown item "${opt.actionDetails.item}"`);
         if (opt.action === 'dialogue' && opt.actionDetails?.npc && !npcs[opt.actionDetails.npc])
@@ -243,6 +249,17 @@ class RPGEngine {
   openScene(modifier) { return this.narrative.openScene(modifier); }
   log(type, message, variant, persist) { return this.narrative.log(type, message, variant, persist); }
   renderScene(sceneId) { return this.scene.render(sceneId); }
+
+  registerAction(name, handlerFn) {
+    if (this._actionRegistry.has(name)) {
+      console.warn(`[Gravity] registerAction: "${name}" already registered — overwriting`);
+    }
+    this._actionRegistry.set(name, handlerFn);
+  }
+
+  getActionHandler(name) {
+    return this._actionRegistry.get(name) || null;
+  }
 }
 
 window.addEventListener('DOMContentLoaded', () => {

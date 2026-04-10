@@ -1,6 +1,6 @@
 import { gameState } from "./state.js";
 import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "./utils.js";
-import { REST_HEAL_AMOUNT, SNACK_HEAL_AMOUNT, EL, CSS, LOG, RETURN_WORLD_FALLBACK_SCENE } from "./config.js";
+import { EL, CSS, LOG } from "./config.js";
 
 // SceneRenderer handles navigating to scenes, resolving their descriptions,
 // and rendering their option buttons. It is the main driver of scene-to-scene
@@ -108,58 +108,11 @@ export class SceneRenderer {
     }
 
     if (opt.action) {
-      switch (opt.action) {
-        case "loot": {
-          const param = opt.actionDetails || {};
-          gameState.addToInventory(param.item, param.amount || 1);
-          this.engine.log(LOG.SYSTEM, this.engine.t('loot.receivedItem', { name: this.engine.data.items[param.item]?.name || param.item }), 'loot');
-          if (param.xpReward) {
-            gameState.addXP(param.xpReward);
-            this.engine.log(LOG.SYSTEM, this.engine.t('loot.xpGained', { amount: param.xpReward }), 'loot');
-          }
-          // hideAfter flips the option's requiredState flag so the option
-          // disappears on the next render (e.g. "Search the room" one-time events)
-          if (param.hideAfter && opt.requiredState) {
-            gameState.setFlag(opt.requiredState.flag, !opt.requiredState.value);
-          }
-          this.engine.renderScene(opt.destination || gameState.getCurrentSceneId());
-          break;
-        }
-        case "combat":
-          this.engine.combatSystem.startCombat(opt.actionDetails?.enemy, opt);
-          break;
-        case "dialogue":
-          this.engine.dialogueSystem.startDialogue(opt.actionDetails?.npc);
-          break;
-        case "rest":
-          gameState.modifyPlayerStat('hp', opt.actionDetails?.heal || REST_HEAL_AMOUNT);
-          this.engine.log(LOG.SYSTEM, this.engine.t('actions.rested'));
-          if (opt.actionDetails?.hideAfter && opt.requiredState) {
-            gameState.setFlag(opt.requiredState.flag, !opt.requiredState.value);
-          }
-          this.engine.renderScene(opt.destination || gameState.getCurrentSceneId());
-          break;
-        case "return_to_world":
-          // Navigate to the stored return scene, falling back to the configured
-          // default if the player hasn't used a teleport item yet.
-          this.engine.renderScene(gameState.getReturnSceneId() || RETURN_WORLD_FALLBACK_SCENE);
-          break;
-        case "full_rest": {
-          const p = gameState.getPlayer();
-          gameState.modifyPlayerStat('hp', p.maxHp - p.hp);
-          gameState.modifyPlayerStat('ap', p.maxAp - p.ap);
-          this.engine.log(LOG.SYSTEM, this.engine.t('actions.fullRest'));
-          if (opt.destination) this.engine.renderScene(opt.destination);
-          break;
-        }
-        case "eat_snack":
-          gameState.modifyPlayerStat('hp', SNACK_HEAL_AMOUNT);
-          this.engine.log(LOG.SYSTEM, this.engine.t('actions.eatSnack', { amount: SNACK_HEAL_AMOUNT }), 'loot');
-          if (opt.destination) this.engine.renderScene(opt.destination);
-          break;
-        case "manage_chest":
-          this.engine.ui.renderMuseumChestUI();
-          break;
+      const handler = this.engine.getActionHandler(opt.action);
+      if (handler) {
+        handler(opt, this.engine);
+      } else {
+        console.warn(`[Gravity] handleOption: no handler for action "${opt.action}"`);
       }
     } else if (opt.destination) {
       this.engine.renderScene(opt.destination);

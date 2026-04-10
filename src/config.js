@@ -194,3 +194,16 @@ export const PLAYER_DEFAULTS = {
     "Right Hand": null
   }
 };
+
+// Canonical names for all built-in scene option actions.
+// Used by actions.js at registration time and by _validateData() for dev warnings.
+export const ACTIONS = {
+  LOOT:            'loot',
+  COMBAT:          'combat',
+  DIALOGUE:        'dialogue',
+  REST:            'rest',
+  RETURN_TO_WORLD: 'return_to_world',
+  FULL_REST:       'full_rest',
+  EAT_SNACK:       'eat_snack',
+  MANAGE_CHEST:    'manage_chest',
+};
