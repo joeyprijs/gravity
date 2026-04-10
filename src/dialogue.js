@@ -133,6 +133,7 @@ export class DialogueSystem {
 
     const container = document.getElementById(EL.SCENE_OPTIONS);
     clearElement(container);
+    container.classList.add('scene__options--grid');
 
     const goldBar = createElement('div', CSS.STORE_STATS_GOLD, `<strong>${this.engine.t('dialogue.yourGold', { amount: gameState.getPlayer().gold })}</strong>`);
     container.appendChild(goldBar);
