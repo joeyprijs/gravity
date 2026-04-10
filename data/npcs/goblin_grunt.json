@@ -1,0 +1,15 @@
+{
+  "name": "Goblin Grunt",
+  "description": "A smaller, scrappier goblin, all teeth and desperation.",
+  "disposition": "Hostile",
+  "attributes": {
+    "healthPoints": 3,
+    "armorClass": 6,
+    "actionPoints": 1,
+    "initiative": 0,
+    "xpReward": 25
+  },
+  "droppedLoot": [
+    { "item": "gold", "amount": 3 }
+  ]
+}

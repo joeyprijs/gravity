@@ -8,7 +8,7 @@ export class CombatSystem {
   constructor(engine) {
     this.engine = engine;
     this.inCombat = false;
-    this.enemy = null;
+    this.enemies = [];
     // originOption is the scene option that triggered this combat. On victory,
     // its requiredState flag is flipped so the fight option disappears.
     this.originOption = null;
@@ -23,64 +23,87 @@ export class CombatSystem {
     });
   }
 
-  startCombat(enemyId, originOption) {
-    const enemyData = this.engine.data.npcs[enemyId];
-    if (!enemyData) { console.warn(`[Gravity] startCombat: unknown enemy "${enemyId}"`); return; }
+  startCombat(enemyIds, originOption) {
+    const enemyDataList = enemyIds.map(id => {
+      const data = this.engine.data.npcs[id];
+      if (!data) { console.warn(`[Gravity] startCombat: unknown enemy "${id}"`); return null; }
+      const clone = JSON.parse(JSON.stringify(data));
+      clone.id = id;
+      return clone;
+    }).filter(Boolean);
+
+    if (!enemyDataList.length) return;
 
     this.engine.scene.reset();
     this.inCombat = true;
-    // Deep clone so we can mutate HP without touching the source data
-    this.enemy = JSON.parse(JSON.stringify(enemyData));
-    this.enemy.id = enemyId;
+    this.enemies = enemyDataList;
     this.originOption = originOption;
 
     // Restore player AP to full at the start of every combat encounter
     const player = gameState.getPlayer();
     gameState.modifyPlayerStat('ap', player.maxAp - player.ap);
 
+    const names = this.enemies.map(e => e.name).join(' & ');
+
     this.engine.openScene(CSS.SCENE_COMBAT);
     this.engine.currentSceneEl.appendChild(
       buildSceneDescription(
-        this.engine.t('combat.fightingTitle', { name: this.enemy.name }),
-        this.enemy.description || null
+        this.engine.t('combat.fightingTitle', { names }),
+        this.enemies.length === 1 ? (this.enemies[0].description || null) : null
       )
     );
 
-    this.engine.log(LOG.COMBAT, this.engine.t('combat.started', { name: this.enemy.name }), 'combat');
+    this.engine.log(LOG.COMBAT, this.engine.t('combat.started', { names }), 'combat');
 
-    // Roll initiative
+    // Each enemy rolls initiative separately; highest roll determines group turn order
     const playerInit = Math.ceil(Math.random() * MAX_D20_ROLL) + (player.initiative || 0);
-    const enemyInit  = Math.ceil(Math.random() * MAX_D20_ROLL) + (this.enemy.attributes.initiative || 0);
-    this.enemyGoesFirst = enemyInit > playerInit;
+    let highestEnemyInit = 0;
+    this.enemies.forEach(e => {
+      e.initiativeRoll = Math.ceil(Math.random() * MAX_D20_ROLL) + (e.attributes.initiative || 0);
+      if (e.initiativeRoll > highestEnemyInit) highestEnemyInit = e.initiativeRoll;
+    });
+    this.enemyGoesFirst = highestEnemyInit > playerInit;
     const goesFirst = this.enemyGoesFirst
-      ? this.engine.t('combat.enemyGoesFirst', { name: this.enemy.name })
+      ? this.engine.t('combat.enemyGoesFirst')
       : this.engine.t('combat.youGoFirst');
-    this.engine.log(LOG.COMBAT, this.engine.t('combat.initiative', { playerRoll: playerInit, name: this.enemy.name, enemyRoll: enemyInit, goesFirst }), 'combat');
+    const enemyRolls = this.enemies
+      .map(e => this.engine.t('combat.initiativeEnemy', { name: e.name, roll: e.initiativeRoll }))
+      .join(', ');
+    this.engine.log(LOG.COMBAT, this.engine.t('combat.initiative', { playerRoll: playerInit, enemyRolls, goesFirst }), 'combat');
 
     this.renderCombatUI();
     if (this.enemyGoesFirst) this.enemyTurn();
   }
 
   renderCombatUI() {
+    const livingEnemies = this.enemies.filter(e => e.attributes.healthPoints > 0);
+
     const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
-    if (reminder) reminder.innerText = this.engine.t('ui.locationCombat', { name: this.enemy.name });
+    if (reminder) reminder.innerText = this.engine.t('ui.locationCombat', { name: livingEnemies.map(e => e.name).join(' & ') });
 
     const container = document.getElementById(EL.SCENE_OPTIONS);
     clearElement(container);
 
-    const statsBar = createElement('div', CSS.COMBAT_STATS_BAR, `<strong>${this.engine.t('combat.enemyStats', { hp: this.enemy.attributes.healthPoints, ac: this.enemy.attributes.armorClass })}</strong>`);
+    // Stats bar: one entry per living enemy
+    const statsBar = createElement('div', CSS.COMBAT_STATS_BAR);
+    statsBar.innerHTML = `<strong>${livingEnemies.map(e =>
+      this.engine.t('combat.enemyStats', { name: e.name, hp: e.attributes.healthPoints, ac: e.attributes.armorClass })
+    ).join('<br />')}</strong>`;
     container.appendChild(statsBar);
 
     const attacks = this.getAvailableAttacks();
 
+    // One button per (weapon × living enemy)
     attacks.forEach(att => {
-      const btn = buildOptionButton(
-        this.engine.t('combat.attackWith', { name: att.name }),
-        this.engine.t('combat.apCost', { cost: att.actionPoints })
-      );
-      if (gameState.getPlayer().ap < att.actionPoints) btn.disabled = true;
-      btn.onclick = () => this.playerAttack(att);
-      container.appendChild(btn);
+      livingEnemies.forEach(target => {
+        const btn = buildOptionButton(
+          this.engine.t('combat.attackTarget', { name: att.name, target: target.name }),
+          this.engine.t('combat.apCost', { cost: att.actionPoints })
+        );
+        if (gameState.getPlayer().ap < att.actionPoints) btn.disabled = true;
+        btn.onclick = () => this.playerAttack(att, target);
+        container.appendChild(btn);
+      });
     });
 
     // End turn button
@@ -162,7 +185,7 @@ export class CombatSystem {
     return { total: grandTotal, string: rollStr };
   }
 
-  playerAttack(weapon) {
+  playerAttack(weapon, targetEnemy) {
     const player = gameState.getPlayer();
     gameState.modifyPlayerStat('ap', -weapon.actionPoints);
 
@@ -172,21 +195,24 @@ export class CombatSystem {
     const hitRoll = baseRoll + hitModifier;
     const modStr = hitModifier !== 0 ? (hitModifier > 0 ? `+${hitModifier}` : hitModifier) : "";
 
-    if (hitRoll >= this.enemy.attributes.armorClass) {
+    if (hitRoll >= targetEnemy.attributes.armorClass) {
       const dmgResult = this.parseDamage(weapon.attributes.damageRoll);
-      this.enemy.attributes.healthPoints -= dmgResult.total;
+      targetEnemy.attributes.healthPoints -= dmgResult.total;
       this.engine.log(LOG.PLAYER, this.engine.t('combat.attackHit', {
         weapon: weapon.name, roll: baseRoll, mod: modStr,
-        ac: this.enemy.attributes.armorClass, damage: dmgResult.total, rollStr: dmgResult.string
+        ac: targetEnemy.attributes.armorClass, damage: dmgResult.total, rollStr: dmgResult.string
       }), 'damage');
 
-      if (this.enemy.attributes.healthPoints <= 0) {
-        this.endCombat(true);
-        return;
+      if (targetEnemy.attributes.healthPoints <= 0) {
+        this.engine.log(LOG.COMBAT, this.engine.t('combat.enemyDefeated', { name: targetEnemy.name }), 'loot');
+        if (this.enemies.every(e => e.attributes.healthPoints <= 0)) {
+          this.endCombat(true);
+          return;
+        }
       }
     } else {
       this.engine.log(LOG.PLAYER, this.engine.t('combat.attackMiss', {
-        weapon: weapon.name, roll: baseRoll, mod: modStr, ac: this.enemy.attributes.armorClass
+        weapon: weapon.name, roll: baseRoll, mod: modStr, ac: targetEnemy.attributes.armorClass
       }), 'damage');
     }
 
@@ -201,25 +227,29 @@ export class CombatSystem {
     if (!this.inCombat) return;
 
     const player = gameState.getPlayer();
-    const eWeapon = this._resolveEnemyWeapon();
-    if (!eWeapon) { console.warn('[Gravity] enemyTurn: no weapon resolved, ending combat'); this.endCombat(false); return; }
-    const result = this._resolveEnemyAttacks(eWeapon, this.enemy.attributes.actionPoints);
+    const livingEnemies = this.enemies.filter(e => e.attributes.healthPoints > 0);
 
-    if (result.attackCount > 0) {
-      const parts = [];
-      if (result.hits > 0) parts.push(this.engine.t('combat.enemyAttackHits', { count: result.hits, s: result.hits > 1 ? 's' : '', rolls: result.hitRolls.join(' and ') }));
-      if (result.misses > 0) parts.push(this.engine.t('combat.enemyAttackMisses', { count: result.misses, es: result.misses > 1 ? 'es' : '', rolls: result.missRolls.join(' and ') }));
+    for (const enemy of livingEnemies) {
+      const eWeapon = this._resolveEnemyWeapon(enemy);
+      if (!eWeapon) { console.warn(`[Gravity] enemyTurn: no weapon resolved for "${enemy.name}", skipping`); continue; }
+      const result = this._resolveEnemyAttacks(eWeapon, enemy.attributes.actionPoints, enemy);
 
-      let summary = this.engine.t('combat.enemyAttack', { weapon: eWeapon.name, count: result.attackCount, s: result.attackCount > 1 ? 's' : '', parts: parts.join(', ') });
-      summary += ' ' + (result.hits > 0
-        ? this.engine.t('combat.playerTakesDamage', { damage: result.totalDamage, rolls: result.damageRolls.join(' and ') })
-        : this.engine.t('combat.playerTakesNoDamage'));
-      this.engine.log(LOG.COMBAT, summary, 'damage');
-    }
+      if (result.attackCount > 0) {
+        const parts = [];
+        if (result.hits > 0) parts.push(this.engine.t('combat.enemyAttackHits', { count: result.hits, s: result.hits > 1 ? 's' : '', rolls: result.hitRolls.join(' and ') }));
+        if (result.misses > 0) parts.push(this.engine.t('combat.enemyAttackMisses', { count: result.misses, es: result.misses > 1 ? 'es' : '', rolls: result.missRolls.join(' and ') }));
 
-    if (player.hp <= 0) {
-      this.endCombat(false);
-      return;
+        let summary = this.engine.t('combat.enemyAttack', { name: enemy.name, weapon: eWeapon.name, count: result.attackCount, s: result.attackCount > 1 ? 's' : '', parts: parts.join(', ') });
+        summary += ' ' + (result.hits > 0
+          ? this.engine.t('combat.playerTakesDamage', { damage: result.totalDamage, rolls: result.damageRolls.join(' and ') })
+          : this.engine.t('combat.playerTakesNoDamage'));
+        this.engine.log(LOG.COMBAT, summary, 'damage');
+      }
+
+      if (player.hp <= 0) {
+        this.endCombat(false);
+        return;
+      }
     }
 
     // Reset player AP for next round
@@ -230,20 +260,20 @@ export class CombatSystem {
   // Returns the weapon this enemy attacks with — equipped Right Hand item, or
   // the default claw fallback if nothing is equipped. Returns null if neither
   // is available (data loading failure).
-  _resolveEnemyWeapon() {
-    const equipped = this.enemy.equipment?.['Right Hand'];
+  _resolveEnemyWeapon(enemy) {
+    const equipped = enemy.equipment?.['Right Hand'];
     const item = equipped ? this.engine.data.items[equipped] : null;
     return item || this.engine.data.items[ENEMY_CLAW_ID] || null;
   }
 
   // Executes all enemy attacks for one turn and returns a roll summary.
   // Mutates player HP via gameState. Does not log — enemyTurn() owns the narrative.
-  _resolveEnemyAttacks(eWeapon, eAP) {
+  _resolveEnemyAttacks(eWeapon, eAP, enemy) {
     const player = gameState.getPlayer();
     let attackCount = 0, hits = 0, misses = 0, totalDamage = 0;
     const hitRolls = [], missRolls = [], damageRolls = [];
 
-    while (eAP >= eWeapon.actionPoints && player.hp > 0 && this.enemy.attributes.healthPoints > 0) {
+    while (eAP >= eWeapon.actionPoints && player.hp > 0 && enemy.attributes.healthPoints > 0) {
       eAP -= eWeapon.actionPoints;
       attackCount++;
 
@@ -272,25 +302,27 @@ export class CombatSystem {
   endCombat(isVictory) {
     this.inCombat = false;
     if (isVictory) {
-      this.engine.log(LOG.SYSTEM, this.engine.t('combat.victory', { name: this.enemy.name }), 'loot');
+      const names = this.enemies.map(e => e.name).join(' & ');
+      this.engine.log(LOG.SYSTEM, this.engine.t('combat.victory', { names }), 'loot');
 
-      // Loot
-      if (this.enemy.droppedLoot) {
-        this.enemy.droppedLoot.forEach(l => {
-          if (l.item === 'gold') {
-            gameState.modifyPlayerStat('gold', l.amount);
-            this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundGold', { amount: l.amount }), 'loot');
-          } else {
-            gameState.addToInventory(l.item, l.amount || 1);
-            this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundItem', { name: this.engine.data.items[l.item]?.name || l.item }), 'loot');
-          }
-        });
-      }
-      // XP reward
-      if (this.enemy.attributes.xpReward) {
-        gameState.addXP(this.enemy.attributes.xpReward);
-        this.engine.log(LOG.SYSTEM, this.engine.t('loot.xpGained', { amount: this.enemy.attributes.xpReward }), 'loot');
-      }
+      // Aggregate loot and XP from all enemies
+      this.enemies.forEach(enemy => {
+        if (enemy.droppedLoot) {
+          enemy.droppedLoot.forEach(l => {
+            if (l.item === 'gold') {
+              gameState.modifyPlayerStat('gold', l.amount);
+              this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundGold', { amount: l.amount }), 'loot');
+            } else {
+              gameState.addToInventory(l.item, l.amount || 1);
+              this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundItem', { name: this.engine.data.items[l.item]?.name || l.item }), 'loot');
+            }
+          });
+        }
+        if (enemy.attributes.xpReward) {
+          gameState.addXP(enemy.attributes.xpReward);
+          this.engine.log(LOG.SYSTEM, this.engine.t('loot.xpGained', { amount: enemy.attributes.xpReward }), 'loot');
+        }
+      });
 
       // Flag flip
       if (this.originOption && this.originOption.requiredState) {

@@ -10,14 +10,14 @@
   },
   "description": [
     {
-      "text": "The hallway is lined with flickering torches. The bloody corpse of a goblin guard lies on the floor.",
+      "text": "The hallway is lined with flickering torches. The bloody corpses of a goblin guard and its grunt lie on the floor.",
       "requiredState": {
         "flag": "defeated_goblin_guard",
         "value": true
       }
     },
     {
-      "text": "The hallway is lined with flickering torches. A goblin guard spots you and draws its weapon!"
+      "text": "The hallway is lined with flickering torches. A goblin guard and its scraggly grunt companion spot you and draw their weapons!"
     }
   ],
   "options": [
@@ -25,7 +25,7 @@
       "text": "Prepare to fight!",
       "action": "combat",
       "actionDetails": {
-        "enemy": "goblin_guard"
+        "enemies": ["goblin_guard", "goblin_grunt"]
       },
       "requiredState": {
         "flag": "defeated_goblin_guard",

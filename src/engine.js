@@ -136,8 +136,12 @@ class RPGEngine {
           warn(`Scene "${sceneId}": loot option → unknown item "${opt.actionDetails.item}"`);
         if (opt.action === 'dialogue' && opt.actionDetails?.npc && !npcs[opt.actionDetails.npc])
           warn(`Scene "${sceneId}": dialogue option → unknown NPC "${opt.actionDetails.npc}"`);
-        if (opt.action === 'combat' && opt.actionDetails?.enemy && !npcs[opt.actionDetails.enemy])
-          warn(`Scene "${sceneId}": combat option → unknown enemy "${opt.actionDetails.enemy}"`);
+        if (opt.action === 'combat') {
+          const ids = opt.actionDetails?.enemies || (opt.actionDetails?.enemy ? [opt.actionDetails.enemy] : []);
+          ids.forEach(id => {
+            if (!npcs[id]) warn(`Scene "${sceneId}": combat option → unknown enemy "${id}"`);
+          });
+        }
       }
     }
 

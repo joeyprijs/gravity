@@ -1,0 +1,29 @@
+{
+  "name": "Bron",
+  "disposition": "Friendly",
+  "isMerchant": false,
+  "conversations": {
+    "start": {
+      "npcText": "Aye, you look like you've had a rough time. The dungeon'll do that to ya.",
+      "responses": [
+        { "text": "Who are you?", "goToConversation": "who_are_you" },
+        { "text": "What do you know about this place?", "goToConversation": "about_place" },
+        { "text": "Goodbye.", "action": "leave" }
+      ]
+    },
+    "who_are_you": {
+      "npcText": "Name's Bron. Retired adventurer. Decided sitting by fires beats dying in dungeons.",
+      "responses": [
+        { "text": "Sounds wise.", "goToConversation": "start" },
+        { "text": "Goodbye.", "action": "leave" }
+      ]
+    },
+    "about_place": {
+      "npcText": "This used to be a waystation for adventurers. Now it's just me and my drink.",
+      "responses": [
+        { "text": "Thanks for the info.", "goToConversation": "start" },
+        { "text": "Goodbye.", "action": "leave" }
+      ]
+    }
+  }
+}

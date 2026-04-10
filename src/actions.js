@@ -21,7 +21,9 @@ function handleLoot(opt, engine) {
 }
 
 function handleCombat(opt, engine) {
-  engine.combatSystem.startCombat(opt.actionDetails?.enemy, opt);
+  const enemies = opt.actionDetails?.enemies
+    || (opt.actionDetails?.enemy ? [opt.actionDetails.enemy] : []);
+  engine.combatSystem.startCombat(enemies, opt);
 }
 
 function handleDialogue(opt, engine) {

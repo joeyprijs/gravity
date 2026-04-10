@@ -23,6 +23,11 @@
       "destination": "home_museum"
     },
     {
+      "text": "Talk to Bron",
+      "action": "dialogue",
+      "actionDetails": { "npc": "dwarf_innkeeper" }
+    },
+    {
       "text": "Leave House",
       "destination": "home_door"
     }
