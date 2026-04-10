@@ -10,6 +10,12 @@ export class DialogueSystem {
     this.engine = engine;
     this.currentNPC = null;
     this.storeOpen = false;
+
+    // Re-render the store on any state change so gold and inventory stay in
+    // sync — removing the need for UIManager to know the store exists.
+    gameState.subscribe(() => {
+      if (this.storeOpen) this.renderStore(true);
+    });
   }
 
   startDialogue(npcId) {

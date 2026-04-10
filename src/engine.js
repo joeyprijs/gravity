@@ -20,6 +20,7 @@ class RPGEngine {
     this.data = { items: {}, npcs: {}, scenes: {}, missions: {}, regions: {}, worldMapSize: DEFAULT_WORLD_MAP_SIZE, locale: {} };
 
     this._actionRegistry = new Map();
+    this._events = new Map();
 
     this.narrative = new NarrativeLog();
     this.combatSystem = new CombatSystem(this);
@@ -190,8 +191,6 @@ class RPGEngine {
         this.log(LOG.SYSTEM, this.t('player.alreadyHere'));
       }
     }
-
-    this._refreshCombatIfActive();
   }
 
   equipItem(slot, itemId) {
@@ -204,7 +203,6 @@ class RPGEngine {
     gameState.equipItem(targetSlot, itemId);
     this.recalculateAC();
     this.log(LOG.PLAYER, this.t('player.equipped', { name: itemData.name, slot: targetSlot }));
-    this._refreshCombatIfActive();
   }
 
   unequipItem(slot) {
@@ -212,10 +210,11 @@ class RPGEngine {
     gameState.equipItem(slot, null);
     this.recalculateAC();
     this.log(LOG.PLAYER, this.t('player.unequipped', { slot }));
-    this._refreshCombatIfActive();
   }
 
   // Deducts AP in combat. Returns false (blocking the action) if insufficient.
+  // Emits player:apSpent so CombatSystem can refresh the UI and hand off to
+  // the enemy if AP hits zero — engine no longer calls combat methods directly.
   _spendAP(cost) {
     if (!this.combatSystem.inCombat) return true;
     const player = gameState.getPlayer();
@@ -224,15 +223,8 @@ class RPGEngine {
       return false;
     }
     gameState.modifyPlayerStat('ap', -cost);
+    this.emit('player:apSpent', { remaining: gameState.getPlayer().ap });
     return true;
-  }
-
-  // After spending AP in combat, refresh the combat UI and hand off to the
-  // enemy if the player has run out of actions.
-  _refreshCombatIfActive() {
-    if (!this.combatSystem.inCombat) return;
-    this.combatSystem.renderCombatUI();
-    if (gameState.getPlayer().ap <= 0) this.combatSystem.enemyTurn();
   }
 
   // --- Delegate API ---
@@ -249,6 +241,29 @@ class RPGEngine {
   openScene(modifier) { return this.narrative.openScene(modifier); }
   log(type, message, variant, persist) { return this.narrative.log(type, message, variant, persist); }
   renderScene(sceneId) { return this.scene.render(sceneId); }
+
+  // --- Event system ---
+  // Minimal pub/sub. Subsystems subscribe in their constructors; emitters need
+  // no knowledge of who is listening. Use for cross-system notifications where
+  // a direct call would create unwanted coupling.
+
+  on(event, handler) {
+    if (!this._events.has(event)) this._events.set(event, []);
+    this._events.get(event).push(handler);
+  }
+
+  off(event, handler) {
+    const handlers = this._events.get(event);
+    if (!handlers) return;
+    const idx = handlers.indexOf(handler);
+    if (idx !== -1) handlers.splice(idx, 1);
+  }
+
+  emit(event, data) {
+    const handlers = this._events.get(event);
+    if (!handlers) return;
+    handlers.forEach(h => h(data));
+  }
 
   registerAction(name, handlerFn) {
     if (this._actionRegistry.has(name)) {

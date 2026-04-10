@@ -12,6 +12,15 @@ export class CombatSystem {
     // originOption is the scene option that triggered this combat. On victory,
     // its requiredState flag is flipped so the fight option disappears.
     this.originOption = null;
+
+    this.engine.on('player:apSpent', ({ remaining }) => {
+      if (!this.inCombat) return;
+      if (remaining <= 0) {
+        this.enemyTurn();
+      } else {
+        this.renderCombatUI();
+      }
+    });
   }
 
   startCombat(enemyId, originOption) {

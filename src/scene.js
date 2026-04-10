@@ -84,7 +84,7 @@ export class SceneRenderer {
     });
 
     if (scene.questsTriggeredOnEntry) {
-      this.engine.questSystem.handleTrigger(scene.questsTriggeredOnEntry);
+      this.engine.emit('scene:entered', { sceneId: gameState.getCurrentSceneId(), scene });
     }
 
     // One-time XP reward on first visit. The flag prevents re-awarding on

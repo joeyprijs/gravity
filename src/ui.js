@@ -98,10 +98,6 @@ export class UIManager {
     this.updateQuestLog();
     this.map.renderMinimap();
 
-    if (this.engine.dialogueSystem.storeOpen) {
-      this.engine.dialogueSystem.renderStore(true);
-    }
-
     this.bindItemActions();
   }
 
