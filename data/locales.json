@@ -56,7 +56,7 @@
   },
   "player": {
     "equipped":          "Equipped {name} to {slot}.",
-    "unequipped":        "Unequipped item from {slot}.",
+    "unequipped":        "Unequipped {name} from {slot}.",
     "usedItem":          "You used {name} and recovered {amount} HP{rollSuffix}.",
     "teleported":        "You gripped the {name} and vanished into thin air...",
     "alreadyHere":       "You are already here.",

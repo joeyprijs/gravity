@@ -226,9 +226,11 @@ class RPGEngine {
 
   unequipItem(slot) {
     if (!this._spendAP(UNEQUIP_AP_COST)) return;
+    const itemId = gameState.getPlayer().equipment[slot];
+    const itemName = itemId ? (this.data.items[itemId]?.name || itemId) : slot;
     gameState.equipItem(slot, null);
     this.recalculateAC();
-    this.log(LOG.PLAYER, this.t('player.unequipped', { slot }));
+    this.log(LOG.PLAYER, this.t('player.unequipped', { name: itemName, slot }));
   }
 
   // Deducts AP in combat. Returns false (blocking the action) if insufficient.
