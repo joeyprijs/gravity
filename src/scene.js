@@ -1,5 +1,5 @@
 import { gameState } from "./state.js";
-import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "./utils.js";
+import { createElement, clearElement, buildSceneDescription, buildOptionButton, applyOptionsLayout } from "./utils.js";
 import { EL, LOG } from "./config.js";
 import { evaluateCondition, fromRequiredState } from "./condition.js";
 
@@ -95,6 +95,8 @@ export class SceneRenderer {
       btn.onclick = () => this.handleOption(opt);
       optionsContainer.appendChild(btn);
     });
+
+    applyOptionsLayout(optionsContainer);
 
     if (scene.questsTriggeredOnEntry) {
       this.engine.emit('scene:entered', { sceneId: gameState.getCurrentSceneId(), scene });

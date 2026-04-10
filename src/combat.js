@@ -1,5 +1,5 @@
 import { gameState } from "./state.js";
-import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "./utils.js";
+import { createElement, clearElement, buildSceneDescription, buildOptionButton, applyOptionsLayout } from "./utils.js";
 import { MAX_D20_ROLL, UNARMED_STRIKE_ID, ENEMY_CLAW_ID, EL, CSS, LOG } from "./config.js";
 
 // CombatSystem manages the full lifecycle of a turn-based combat encounter:
@@ -115,6 +115,8 @@ export class CombatSystem {
     const endBtn = buildOptionButton(this.engine.t('combat.endTurn'));
     endBtn.onclick = () => this.enemyTurn('after');
     container.appendChild(endBtn);
+
+    applyOptionsLayout(container);
   }
 
   getAvailableAttacks() {

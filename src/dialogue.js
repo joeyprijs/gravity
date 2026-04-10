@@ -1,5 +1,5 @@
 import { gameState } from "./state.js";
-import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "./utils.js";
+import { createElement, clearElement, buildSceneDescription, buildOptionButton, applyOptionsLayout } from "./utils.js";
 import { MERCHANT_SELL_RATIO, EL, CSS, LOG } from "./config.js";
 import { evaluateCondition } from "./condition.js";
 
@@ -82,6 +82,8 @@ export class DialogueSystem {
       };
       container.appendChild(btn);
     });
+
+    applyOptionsLayout(container);
   }
 
   renderDialogueFallback(overrideText = null) {
@@ -193,5 +195,6 @@ export class DialogueSystem {
       }
     };
     container.appendChild(leaveBtn);
+    applyOptionsLayout(container);
   }
 }

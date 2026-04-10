@@ -231,6 +231,10 @@ body {
   box-shadow: var(--btn-option-hover-shadow);
 }
 
+.scene__options--grid .option-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
 .option-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -414,6 +418,19 @@ body {
   gap: calc(var(--spacing) * 1.5);
   flex: 0 0 auto;
   margin-top: auto;
+  max-height: 40vh;
+  overflow-y: auto;
+  padding-right: calc(var(--spacing) * 0.5);
+}
+
+.scene__options--grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* Non-button children (stat bars, gold display) always span full width */
+.scene__options--grid > :not(button) {
+  grid-column: 1 / -1;
 }
 
 .scene__location {
