@@ -66,10 +66,9 @@
   "combat": {
     "fightingTitle":        "Fighting: {names}",
     "started":              "Combat started with {names}!",
-    "initiative":           "Initiative: You rolled {playerRoll}. {enemyRolls}. {goesFirst}",
+    "initiative":           "Initiative: You rolled {playerRoll}. {enemyRolls}. Turn order: {turnOrder}.",
     "initiativeEnemy":      "{name} rolled {roll}",
-    "youGoFirst":           "You go first!",
-    "enemyGoesFirst":       "Enemies go first!",
+    "initiativeYou":        "You",
     "enemyStats":           "{name}: {hp} HP / AC {ac}",
     "attackTarget":         "Attack {target} with {name}",
     "apCost":               "AP: {cost}",

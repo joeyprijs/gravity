@@ -66,13 +66,15 @@ export class CombatSystem {
       if (e.initiativeRoll > highestEnemyInit) highestEnemyInit = e.initiativeRoll;
     });
     this.enemyGoesFirst = highestEnemyInit > this.playerInit;
-    const goesFirst = this.enemyGoesFirst
-      ? this.engine.t('combat.enemyGoesFirst')
-      : this.engine.t('combat.youGoFirst');
     const enemyRolls = this.enemies
       .map(e => this.engine.t('combat.initiativeEnemy', { name: e.name, roll: e.initiativeRoll }))
       .join(', ');
-    this.engine.log(LOG.COMBAT, this.engine.t('combat.initiative', { playerRoll: this.playerInit, enemyRolls, goesFirst }), 'combat');
+    const allCombatants = [
+      { name: this.engine.t('combat.initiativeYou'), roll: this.playerInit },
+      ...this.enemies.map(e => ({ name: e.name, roll: e.initiativeRoll || 0 }))
+    ].sort((a, b) => b.roll - a.roll);
+    const turnOrder = allCombatants.map(c => c.name).join(' → ');
+    this.engine.log(LOG.COMBAT, this.engine.t('combat.initiative', { playerRoll: this.playerInit, enemyRolls, turnOrder }), 'combat');
 
     this.renderCombatUI();
     if (this.enemyGoesFirst) this.enemyTurn('before');
@@ -96,9 +98,9 @@ export class CombatSystem {
 
     const attacks = this.getAvailableAttacks();
 
-    // One button per (weapon × living enemy)
-    attacks.forEach(att => {
-      livingEnemies.forEach(target => {
+    // One button per (living enemy × weapon), grouped by enemy
+    livingEnemies.forEach(target => {
+      attacks.forEach(att => {
         const btn = buildOptionButton(
           this.engine.t('combat.attackTarget', { name: att.name, target: target.name }),
           this.engine.t('combat.apCost', { cost: att.actionPoints })
