@@ -21,13 +21,13 @@ export class UIManager {
     });
 
     // Save
-    document.getElementById('btn-save').addEventListener('click', () => {
+    document.getElementById(EL.BTN_SAVE).addEventListener('click', () => {
       if (gameState.downloadSave()) this.engine.log("System", this.engine.t('system.saved'));
     });
 
     // Load
-    const fileInput = document.getElementById('file-upload');
-    document.getElementById('btn-load').addEventListener('click', () => fileInput.click());
+    const fileInput = document.getElementById(EL.FILE_UPLOAD);
+    document.getElementById(EL.BTN_LOAD).addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -68,7 +68,7 @@ export class UIManager {
     });
 
     // Restart
-    document.getElementById('btn-restart').addEventListener('click', () => {
+    document.getElementById(EL.BTN_RESTART).addEventListener('click', () => {
       gameState.reset();
       window.location.reload();
     });
@@ -82,16 +82,16 @@ export class UIManager {
 
     // Stats
     const t = this.engine.t.bind(this.engine);
-    document.getElementById('stat-level').innerText = t('stats.level', { value: player.level });
-    document.getElementById('stat-hp').innerText = t('stats.hp', { current: player.hp, max: player.maxHp });
-    document.getElementById('stat-ap').innerText = t('stats.ap', { current: player.ap, max: player.maxAp });
-    document.getElementById('stat-ac').innerText = t('stats.ac', { value: player.ac });
-    document.getElementById('stat-initiative').innerText = t('stats.initiative', { value: player.initiative });
-    document.getElementById('stat-gold').innerText = t('stats.gold', { value: player.gold });
+    document.getElementById(EL.STAT_LEVEL).innerText = t('stats.level', { value: player.level });
+    document.getElementById(EL.STAT_HP).innerText = t('stats.hp', { current: player.hp, max: player.maxHp });
+    document.getElementById(EL.STAT_AP).innerText = t('stats.ap', { current: player.ap, max: player.maxAp });
+    document.getElementById(EL.STAT_AC).innerText = t('stats.ac', { value: player.ac });
+    document.getElementById(EL.STAT_INITIATIVE).innerText = t('stats.initiative', { value: player.initiative });
+    document.getElementById(EL.STAT_GOLD).innerText = t('stats.gold', { value: player.gold });
 
     // XP bar
     const xpPerc = (player.xp / (player.level * XP_PER_LEVEL)) * 100;
-    document.getElementById('xp-bar').style.width = `${xpPerc}%`;
+    document.getElementById(EL.XP_BAR).style.width = `${xpPerc}%`;
 
     this.renderInventory(player);
     this.renderEquipment(player);
@@ -112,7 +112,7 @@ export class UIManager {
       return (ITEM_TYPE_ORDER[typeA] || 99) - (ITEM_TYPE_ORDER[typeB] || 99);
     });
 
-    const invTab = document.getElementById('inventory-tab');
+    const invTab = document.getElementById(EL.TAB_INVENTORY);
     invTab.innerHTML = '';
 
     if (sortedInv.length === 0) {
@@ -175,7 +175,7 @@ export class UIManager {
   }
 
   renderEquipment(player) {
-    const equipTab = document.getElementById('equipment-tab');
+    const equipTab = document.getElementById(EL.TAB_EQUIPMENT);
     equipTab.innerHTML = '';
     for (const slot in player.equipment) {
       const group = createElement('div', CSS.ITEM_LIST);
@@ -207,7 +207,7 @@ export class UIManager {
   }
 
   updateQuestLog() {
-    const container = document.getElementById('quests-tab');
+    const container = document.getElementById(EL.TAB_QUESTS);
     if (!container) return;
     clearElement(container);
 
@@ -268,7 +268,7 @@ export class UIManager {
   }
 
   renderMuseumChestUI() {
-    const optionsContainer = document.getElementById('scene-options');
+    const optionsContainer = document.getElementById(EL.SCENE_OPTIONS);
     optionsContainer.innerHTML = '';
 
     const chest = gameState.getMuseumChest();

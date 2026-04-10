@@ -1,6 +1,6 @@
 import { gameState } from "./state.js";
 import { clearElement } from "./utils.js";
-import { MINIMAP_SIZE, MAP_NODE_DEFAULT_BG, CSS } from "./config.js";
+import { MINIMAP_SIZE, MAP_NODE_DEFAULT_BG, CSS, EL } from "./config.js";
 
 // MapManager handles both the minimap HUD and the full-screen world map overlay.
 // The minimap is cached by scene ID so it only rebuilds when the player moves.
@@ -15,20 +15,20 @@ export class MapManager {
 
   // Wires up minimap click-to-open, ESC/backdrop/button close for the full map.
   setup() {
-    document.getElementById('minimap').addEventListener('click', () => this.openFullMap());
-    document.getElementById('fullmap-close').addEventListener('click', () => this.closeFullMap());
+    document.getElementById(EL.MINIMAP).addEventListener('click', () => this.openFullMap());
+    document.getElementById(EL.FULLMAP_CLOSE).addEventListener('click', () => this.closeFullMap());
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !document.getElementById('fullmap-overlay').hidden) this.closeFullMap();
+      if (e.key === 'Escape' && !document.getElementById(EL.FULLMAP_OVERLAY).hidden) this.closeFullMap();
     });
     // Clicking outside the map panel (on the backdrop) also closes it.
-    document.getElementById('fullmap-overlay').addEventListener('click', (e) => {
+    document.getElementById(EL.FULLMAP_OVERLAY).addEventListener('click', (e) => {
       if (e.target === e.currentTarget) this.closeFullMap();
     });
   }
 
   renderMinimap() {
-    const minimapEl = document.getElementById('minimap');
-    const canvasEl = document.getElementById('minimap-canvas');
+    const minimapEl = document.getElementById(EL.MINIMAP);
+    const canvasEl = document.getElementById(EL.MINIMAP_CANVAS);
     if (!minimapEl || !canvasEl) return;
 
     const currentSceneId = gameState.getCurrentSceneId();
@@ -82,9 +82,9 @@ export class MapManager {
   // Renders all visited scenes on the full-screen world map and scrolls so the
   // current scene is centered in the scrollable viewport.
   openFullMap() {
-    const overlay = document.getElementById('fullmap-overlay');
-    const canvasEl = document.getElementById('fullmap-canvas');
-    const titleEl = document.getElementById('fullmap-title');
+    const overlay = document.getElementById(EL.FULLMAP_OVERLAY);
+    const canvasEl = document.getElementById(EL.FULLMAP_CANVAS);
+    const titleEl = document.getElementById(EL.FULLMAP_TITLE);
     const scrollEl = overlay?.querySelector(`.${CSS.FULLMAP_INNER}`);
     if (!overlay || !canvasEl || !scrollEl) return;
 
@@ -113,7 +113,7 @@ export class MapManager {
   }
 
   closeFullMap() {
-    document.getElementById('fullmap-overlay').hidden = true;
+    document.getElementById(EL.FULLMAP_OVERLAY).hidden = true;
   }
 
   // Returns all visited scenes that have mapDefinitions, across all regions.

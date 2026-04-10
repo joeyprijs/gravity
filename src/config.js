@@ -123,15 +123,40 @@ export const CSS = {
   GLASS_PANEL:            'glass-panel',
 };
 
-// HTML element IDs referenced from more than one source file.
-// Single-file IDs (e.g. stat bars, tab panels) stay as inline literals in
-// their respective files — centralising every ID would be over-engineering.
+// HTML element IDs — single source of truth for every getElementById call in JS.
 export const EL = {
+  // Narrative / scene
   SCENE_NARRATIVE:         'scene-narrative',
   SCENE_OPTIONS:           'scene-options',
   SCENE_LOCATION_REMINDER: 'scene-location-reminder',
+
+  // Toolbar buttons & file input
+  BTN_SAVE:                'btn-save',
   BTN_LOAD:                'btn-load',
   BTN_RESTART:             'btn-restart',
+  FILE_UPLOAD:             'file-upload',
+
+  // Stat display
+  STAT_LEVEL:              'stat-level',
+  STAT_HP:                 'stat-hp',
+  STAT_AP:                 'stat-ap',
+  STAT_AC:                 'stat-ac',
+  STAT_INITIATIVE:         'stat-initiative',
+  STAT_GOLD:               'stat-gold',
+  XP_BAR:                  'xp-bar',
+
+  // Sidebar tabs
+  TAB_INVENTORY:           'inventory-tab',
+  TAB_EQUIPMENT:           'equipment-tab',
+  TAB_QUESTS:              'quests-tab',
+
+  // Map
+  MINIMAP:                 'minimap',
+  MINIMAP_CANVAS:          'minimap-canvas',
+  FULLMAP_OVERLAY:         'fullmap-overlay',
+  FULLMAP_CANVAS:          'fullmap-canvas',
+  FULLMAP_TITLE:           'fullmap-title',
+  FULLMAP_CLOSE:           'fullmap-close',
 };
 
 // System messages shared across multiple modules. Keeping them here ensures
