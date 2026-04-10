@@ -334,16 +334,16 @@ export class CombatSystem {
           enemy.droppedLoot.forEach(l => {
             if (l.item === 'gold') {
               gameState.modifyPlayerStat('gold', l.amount);
-              this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundGold', { amount: l.amount }), 'loot');
+              this.engine.log(LOG.SYSTEM, `${enemy.name}: ${this.engine.t('loot.foundGold', { amount: l.amount })}`, 'loot');
             } else {
               gameState.addToInventory(l.item, l.amount || 1);
-              this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundItem', { name: this.engine.data.items[l.item]?.name || l.item }), 'loot');
+              this.engine.log(LOG.SYSTEM, `${enemy.name}: ${this.engine.t('loot.foundItem', { name: this.engine.data.items[l.item]?.name || l.item })}`, 'loot');
             }
           });
         }
         if (enemy.attributes.xpReward) {
           gameState.addXP(enemy.attributes.xpReward);
-          this.engine.log(LOG.SYSTEM, this.engine.t('loot.xpGained', { amount: enemy.attributes.xpReward }), 'loot');
+          this.engine.log(LOG.SYSTEM, `${enemy.name}: ${this.engine.t('loot.xpGained', { amount: enemy.attributes.xpReward })}`, 'loot');
         }
       });
 
