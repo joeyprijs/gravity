@@ -8,6 +8,21 @@
       "responses": [
         { "text": "Who are you?", "goToConversation": "who_are_you" },
         { "text": "What do you know about this place?", "goToConversation": "about_place" },
+        {
+          "text": "I made it out of the dungeon.",
+          "condition": {
+            "and": [
+              { "mission": "escape_dungeon", "status": "complete" },
+              { "not": { "flag": "received_brons_charm", "value": true } }
+            ]
+          },
+          "goToConversation": "survived_dungeon"
+        },
+        {
+          "text": "Staying out of trouble.",
+          "condition": { "flag": "received_brons_charm", "value": true },
+          "goToConversation": "after_charm"
+        },
         { "text": "Goodbye.", "action": "leave" }
       ]
     },
@@ -23,6 +38,30 @@
       "responses": [
         { "text": "Thanks for the info.", "goToConversation": "start" },
         { "text": "Goodbye.", "action": "leave" }
+      ]
+    },
+    "survived_dungeon": {
+      "npcText": "You made it out? Ha! Wasn't sure you had it in ya. Most don't come back from that place. Here — take this. Old wayfinder's charm. Kept me alive more times than I care to count.",
+      "responses": [
+        {
+          "text": "Thank you, Bron.",
+          "giveItem": "wayfinder_charm",
+          "changeStateFlag": { "flag": "received_brons_charm", "value": true },
+          "goToConversation": "charm_given"
+        },
+        { "text": "I can't accept that.", "goToConversation": "start" }
+      ]
+    },
+    "charm_given": {
+      "npcText": "Don't mention it. Just don't go dyin' on me now.",
+      "responses": [
+        { "text": "I won't. Thanks, Bron.", "action": "leave" }
+      ]
+    },
+    "after_charm": {
+      "npcText": "Good. That charm'll keep the worst of it off ya. Trust me.",
+      "responses": [
+        { "text": "Cheers, Bron.", "action": "leave" }
       ]
     }
   }

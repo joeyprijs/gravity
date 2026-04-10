@@ -224,7 +224,7 @@ Each entry in the `options` array renders as a button the player can click.
 
 #### Conditions
 
-`condition` replaces `requiredState` when you need more than a single flag check. Both options and conditional description entries support it.
+`condition` replaces `requiredState` when you need more than a single flag check. Scene options, conditional description entries, and dialogue responses all support it.
 
 ```json
 {
@@ -247,6 +247,7 @@ Each entry in the `options` array renders as a button the player can click.
 | `{ "item": "item_id" }` | Player has item in inventory |
 | `{ "level": 3 }` | Player level ≥ value |
 | `{ "gold": 50 }` | Player gold ≥ value |
+| `{ "mission": "mission_id", "status": "complete" }` | Mission is in the given status (`"not_started"`, `"active"`, or `"complete"`) |
 
 **Combinators:** `and` (array, all must pass), `or` (array, any must pass), `not` (single child, inverted).
 
@@ -553,8 +554,14 @@ NPCs serve two roles depending on their fields: **enemies** (combat encounters) 
 | `responses[].text` | String | Button text for this reply. |
 | `responses[].goToConversation` | String | Node ID to navigate to next. |
 | `responses[].action` | String | `"trade"` — opens the merchant UI. `"leave"` — ends dialogue and returns to the scene. |
+| `responses[].condition` | Object | [Condition tree](#conditions) — hides this response if the condition is not met. |
+| `responses[].changeStateFlag` | Object | `{ "flag": "name", "value": true }` — sets a flag when this response is chosen. |
+| `responses[].giveItem` | String | Item ID to give the player when this response is chosen. |
+| `responses[].giveItemAmount` | Number | Quantity to give (default: 1). |
+| `responses[].setMission` | String | Mission ID to activate or complete. |
+| `responses[].setMissionStatus` | String | `"active"` or `"complete"` (default: `"active"`). |
 
-A response can have either `goToConversation` or `action`, not both.
+A response can have either `goToConversation` or `action`. Side effects (`changeStateFlag`, `giveItem`, `setMission`) fire before navigation.
 
 ---
 

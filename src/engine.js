@@ -127,6 +127,8 @@ class RPGEngine {
     if (condition.not) { this._validateCondition(condition.not, context, items, warn); return; }
     if ('item' in condition && !items[condition.item])
       warn(`${context}: condition references unknown item "${condition.item}"`);
+    if ('mission' in condition && !this.data.missions[condition.mission])
+      warn(`${context}: condition references unknown mission "${condition.mission}"`);
   }
 
   // Validates cross-references in game data after load and warns about broken links.

@@ -2,10 +2,11 @@
 // Used by SceneRenderer to show/hide options and description variants.
 //
 // Leaf types:
-//   { "flag": "name", "value": true }   — flag equals value
-//   { "item": "item_id" }               — player has item in inventory
-//   { "level": 3 }                      — player level >= value
-//   { "gold": 50 }                      — player gold >= value
+//   { "flag": "name", "value": true }              — flag equals value
+//   { "item": "item_id" }                          — player has item in inventory
+//   { "level": 3 }                                 — player level >= value
+//   { "gold": 50 }                                 — player gold >= value
+//   { "mission": "id", "status": "complete" }      — mission is in the given status
 //
 // Combinators:
 //   { "and": [ ...conditions ] }
@@ -25,6 +26,7 @@ export function evaluateCondition(condition, gameState) {
   if ('item' in condition) return !!gameState.getPlayer().inventory.find(i => i.item === condition.item);
   if ('level' in condition) return gameState.getPlayer().level >= condition.level;
   if ('gold' in condition)  return gameState.getPlayer().gold >= condition.gold;
+  if ('mission' in condition) return gameState.getMissionStatus(condition.mission) === condition.status;
 
   console.warn('[Gravity] evaluateCondition: unrecognised condition shape', condition);
   return true;

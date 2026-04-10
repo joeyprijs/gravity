@@ -12,7 +12,8 @@
     "leather_armor": "data/items/leather_armor.json",
     "cellar_key": "data/items/cellar_key.json",
     "flames": "data/items/flames.json",
-    "home_rune": "data/items/home_rune.json"
+    "home_rune": "data/items/home_rune.json",
+    "wayfinder_charm": "data/items/wayfinder_charm.json"
   },
   "npcs": {
     "goblin_guard": "data/npcs/goblin_guard.json",

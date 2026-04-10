@@ -1,6 +1,7 @@
 import { gameState } from "./state.js";
 import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "./utils.js";
 import { MERCHANT_SELL_RATIO, EL, CSS, LOG } from "./config.js";
+import { evaluateCondition } from "./condition.js";
 
 // DialogueSystem handles NPC conversations and the merchant buy/sell interface.
 // Conversations are driven by a node graph defined in NPC JSON files. If an NPC
@@ -53,9 +54,23 @@ export class DialogueSystem {
     clearElement(container);
 
     (node.responses || []).forEach(res => {
+      if (!evaluateCondition(res.condition ?? null, gameState)) return;
+
       const btn = buildOptionButton(res.text);
       btn.onclick = () => {
         this.engine.log(LOG.PLAYER, res.text, 'choice');
+
+        if (res.changeStateFlag) {
+          gameState.setFlag(res.changeStateFlag.flag, res.changeStateFlag.value);
+        }
+        if (res.giveItem) {
+          gameState.addToInventory(res.giveItem, res.giveItemAmount || 1);
+          const name = this.engine.data.items[res.giveItem]?.name || res.giveItem;
+          this.engine.log(LOG.SYSTEM, this.engine.t('loot.receivedItem', { name }), 'loot');
+        }
+        if (res.setMission) {
+          this.engine.questSystem.handleTrigger({ mission: res.setMission, status: res.setMissionStatus || 'active' });
+        }
 
         if (res.goToConversation) {
           this.renderDialogue(res.goToConversation);

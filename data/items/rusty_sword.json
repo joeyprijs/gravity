@@ -6,7 +6,7 @@
   "value": 5,
   "actionPoints": 1,
   "attributes": {
-    "damageRoll": "1d4"
+    "damageRoll": "1d6"
   },
   "bonusHitChance": 0
 }
