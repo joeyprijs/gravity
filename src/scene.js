@@ -19,6 +19,18 @@ export class SceneRenderer {
     this.lastRenderedDesc = null;
   }
 
+  // Called after a save is loaded. Syncs the cache to the restored state so
+  // the next render doesn't duplicate the scene description, then re-renders
+  // the option buttons without appending a new narrative block.
+  restoreFromSave(sceneId, lastDesc) {
+    if (lastDesc !== null) {
+      this.lastRenderedSceneId = sceneId;
+      this.lastRenderedDesc = lastDesc;
+    }
+    const scene = this.engine.data.scenes[sceneId];
+    if (scene) this.renderOptions(scene);
+  }
+
   render(sceneId) {
     if (this.engine.combatSystem.inCombat) return;
 

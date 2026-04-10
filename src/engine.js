@@ -241,6 +241,7 @@ class RPGEngine {
   openScene(modifier) { return this.narrative.openScene(modifier); }
   log(type, message, variant, persist) { return this.narrative.log(type, message, variant, persist); }
   renderScene(sceneId) { return this.scene.render(sceneId); }
+  restoreScene(sceneId, lastDesc) { return this.scene.restoreFromSave(sceneId, lastDesc); }
 
   // --- Event system ---
   // Minimal pub/sub. Subsystems subscribe in their constructors; emitters need

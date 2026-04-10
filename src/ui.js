@@ -52,12 +52,7 @@ export class UIManager {
           this.engine.recalculateAC();
           this.engine.log(LOG.SYSTEM, this.engine.t('system.loaded'), 'system', false);
           const lastDesc = this.engine.narrative.restore(gameState.getLog());
-          if (lastDesc !== null) {
-            this.engine.scene.lastRenderedSceneId = gameState.getCurrentSceneId();
-            this.engine.scene.lastRenderedDesc = lastDesc;
-          }
-          const currentScene = this.engine.data.scenes[gameState.getCurrentSceneId()];
-          if (currentScene) this.engine.scene.renderOptions(currentScene);
+          this.engine.restoreScene(gameState.getCurrentSceneId(), lastDesc);
         } catch (err) {
           console.error(err);
           this.engine.log(LOG.SYSTEM, this.engine.t('system.loadFailed'));
