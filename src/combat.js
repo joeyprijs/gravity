@@ -193,6 +193,7 @@ export class CombatSystem {
 
     const player = gameState.getPlayer();
     const eWeapon = this._resolveEnemyWeapon();
+    if (!eWeapon) { console.warn('[Gravity] enemyTurn: no weapon resolved, ending combat'); this.endCombat(false); return; }
     const result = this._resolveEnemyAttacks(eWeapon, this.enemy.attributes.actionPoints);
 
     if (result.attackCount > 0) {
@@ -204,7 +205,7 @@ export class CombatSystem {
       summary += ' ' + (result.hits > 0
         ? this.engine.t('combat.playerTakesDamage', { damage: result.totalDamage, rolls: result.damageRolls.join(' and ') })
         : this.engine.t('combat.playerTakesNoDamage'));
-      this.engine.log(this.enemy.name, summary, 'damage');
+      this.engine.log(LOG.COMBAT, summary, 'damage');
     }
 
     if (player.hp <= 0) {
@@ -218,11 +219,12 @@ export class CombatSystem {
   }
 
   // Returns the weapon this enemy attacks with — equipped Right Hand item, or
-  // the default claw fallback if nothing is equipped.
+  // the default claw fallback if nothing is equipped. Returns null if neither
+  // is available (data loading failure).
   _resolveEnemyWeapon() {
     const equipped = this.enemy.equipment?.['Right Hand'];
     const item = equipped ? this.engine.data.items[equipped] : null;
-    return item || this.engine.data.items[ENEMY_CLAW_ID];
+    return item || this.engine.data.items[ENEMY_CLAW_ID] || null;
   }
 
   // Executes all enemy attacks for one turn and returns a roll summary.

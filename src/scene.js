@@ -110,7 +110,7 @@ export class SceneRenderer {
     if (opt.action) {
       switch (opt.action) {
         case "loot": {
-          const param = opt.actionDetails;
+          const param = opt.actionDetails || {};
           gameState.addToInventory(param.item, param.amount || 1);
           this.engine.log(LOG.SYSTEM, this.engine.t('loot.receivedItem', { name: this.engine.data.items[param.item]?.name || param.item }), 'loot');
           if (param.xpReward) {
@@ -126,15 +126,15 @@ export class SceneRenderer {
           break;
         }
         case "combat":
-          this.engine.combatSystem.startCombat(opt.actionDetails.enemy, opt);
+          this.engine.combatSystem.startCombat(opt.actionDetails?.enemy, opt);
           break;
         case "dialogue":
-          this.engine.dialogueSystem.startDialogue(opt.actionDetails.npc);
+          this.engine.dialogueSystem.startDialogue(opt.actionDetails?.npc);
           break;
         case "rest":
-          gameState.modifyPlayerStat('hp', opt.actionDetails.heal || REST_HEAL_AMOUNT);
+          gameState.modifyPlayerStat('hp', opt.actionDetails?.heal || REST_HEAL_AMOUNT);
           this.engine.log(LOG.SYSTEM, this.engine.t('actions.rested'));
-          if (opt.actionDetails.hideAfter && opt.requiredState) {
+          if (opt.actionDetails?.hideAfter && opt.requiredState) {
             gameState.setFlag(opt.requiredState.flag, !opt.requiredState.value);
           }
           this.engine.renderScene(opt.destination || gameState.getCurrentSceneId());

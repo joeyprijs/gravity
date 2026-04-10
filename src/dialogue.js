@@ -46,7 +46,7 @@ export class DialogueSystem {
     const container = document.getElementById(EL.SCENE_OPTIONS);
     clearElement(container);
 
-    node.responses.forEach(res => {
+    (node.responses || []).forEach(res => {
       const btn = buildOptionButton(res.text);
       btn.onclick = () => {
         this.engine.log(LOG.PLAYER, res.text, 'choice');

@@ -5,7 +5,7 @@ import { QuestSystem } from "./quests.js";
 import { NarrativeLog } from "./narrative.js";
 import { UIManager } from "./ui.js";
 import { SceneRenderer } from "./scene.js";
-import { BASE_AC, UNEQUIP_AP_COST, DEFAULT_WORLD_MAP_SIZE, MSG, LOG } from "./config.js";
+import { BASE_AC, UNEQUIP_AP_COST, DEFAULT_WORLD_MAP_SIZE, MSG, LOG, UNARMED_STRIKE_ID, ENEMY_CLAW_ID } from "./config.js";
 // MSG is still imported for the state.js log filter (MSG.GAME_LOADED).
 // All display strings now come from data/locales.json via this.t().
 
@@ -142,6 +142,11 @@ class RPGEngine {
       for (const [slot, itemId] of Object.entries(npc.equipment || {}))
         if (itemId && !items[itemId]) warn(`NPC "${npcId}": equipment[${slot}] → unknown item "${itemId}"`);
     }
+
+    if (!items[UNARMED_STRIKE_ID])
+      warn(`Missing required fallback item "${UNARMED_STRIKE_ID}" — add to data/items/ and index.json`);
+    if (!items[ENEMY_CLAW_ID])
+      warn(`Missing required fallback item "${ENEMY_CLAW_ID}" — add to data/items/ and index.json`);
   }
 
   // --- Item action methods ---

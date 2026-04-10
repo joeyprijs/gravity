@@ -336,7 +336,10 @@ export class UIManager {
       statStrs.push(`Hit: ${sign}${itemData.bonusHitChance}`);
     }
     if (itemData.attributes) {
-      for (const k in itemData.attributes) statStrs.push(`${k}: ${itemData.attributes[k]}`);
+      for (const k in itemData.attributes) {
+        const v = itemData.attributes[k];
+        if (typeof v !== 'object') statStrs.push(`${k}: ${v}`);
+      }
     }
     if (statStrs.length === 0) return null;
     return createElement('div', CSS.ITEM_STATS, statStrs.join(', '));

@@ -105,6 +105,7 @@ class StateManager {
     if (stat === "hp" && this.state.player.hp > this.state.player.maxHp) this.state.player.hp = this.state.player.maxHp;
     if (stat === "hp" && this.state.player.hp < 0) this.state.player.hp = 0;
     if (stat === "ap" && this.state.player.ap > this.state.player.maxAp) this.state.player.ap = this.state.player.maxAp;
+    if (stat === "ap" && this.state.player.ap < 0) this.state.player.ap = 0;
     this.notifyListeners();
   }
 
