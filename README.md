@@ -58,6 +58,7 @@ gravity/
 │   └── styles.css      # All styles
 ├── src/
 │   ├── engine.js       # Game orchestrator — loads data, wires systems together
+│   ├── actions.js      # Built-in action handlers and action registration
 │   ├── state.js        # Game state management and save/load
 │   ├── scene.js        # Scene rendering and navigation
 │   ├── combat.js       # Combat system
@@ -254,16 +255,19 @@ The `action` field on an option triggers engine behaviour beyond simple navigati
 {
   "text": "Prepare to fight!",
   "action": "combat",
-  "actionDetails": { "enemy": "goblin_guard" },
+  "actionDetails": { "enemies": ["goblin_guard", "goblin_grunt"] },
   "requiredState": { "flag": "defeated_goblin_guard", "value": false }
 }
 ```
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `enemy` | String | Yes | NPC ID to fight. The NPC must have `attributes.healthPoints` and `attributes.armorClass`. |
+| `enemies` | Array | Yes* | List of NPC IDs to fight simultaneously. Each must have `attributes.healthPoints` and `attributes.armorClass`. |
+| `enemy` | String | No* | Legacy single-enemy shorthand. Use `enemies` for new content. |
 
-On victory the engine automatically flips the option's `requiredState` flag (e.g. `defeated_goblin_guard` → `true`), hiding the combat option on the next visit.
+*One of `enemies` or `enemy` is required.
+
+On victory the engine automatically flips the option's `requiredState` flag (e.g. `defeated_goblin_guard` → `true`), hiding the combat option on the next visit. Loot and XP are aggregated from all defeated enemies.
 
 #### `dialogue` — Start an NPC conversation
 
