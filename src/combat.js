@@ -1,6 +1,6 @@
 import { gameState } from "./state.js";
 import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "./utils.js";
-import { MAX_D20_ROLL, UNARMED_STRIKE, ENEMY_CLAW, EL, CSS, LOG } from "./config.js";
+import { MAX_D20_ROLL, UNARMED_STRIKE_ID, ENEMY_CLAW_ID, EL, CSS, LOG } from "./config.js";
 
 // CombatSystem manages the full lifecycle of a turn-based combat encounter:
 // initiative roll, player/enemy turns, AP tracking, and victory/defeat resolution.
@@ -16,7 +16,7 @@ export class CombatSystem {
 
   startCombat(enemyId, originOption) {
     const enemyData = this.engine.data.npcs[enemyId];
-    if (!enemyData) return;
+    if (!enemyData) { console.warn(`[Gravity] startCombat: unknown enemy "${enemyId}"`); return; }
 
     this.engine.scene.reset();
     this.inCombat = true;
@@ -97,7 +97,7 @@ export class CombatSystem {
     });
 
     if (!hasWeapon) {
-      attacks.push(UNARMED_STRIKE);
+      attacks.push(this.engine.data.items[UNARMED_STRIKE_ID]);
     }
     return attacks;
   }
@@ -191,25 +191,46 @@ export class CombatSystem {
   enemyTurn() {
     if (!this.inCombat) return;
 
-    let eAP = this.enemy.attributes.actionPoints;
     const player = gameState.getPlayer();
+    const eWeapon = this._resolveEnemyWeapon();
+    const result = this._resolveEnemyAttacks(eWeapon, this.enemy.attributes.actionPoints);
 
-    // Determine enemy weapon
-    let eWeapon = ENEMY_CLAW;
-    if (this.enemy.equipment && this.enemy.equipment['Right Hand']) {
-      const wid = this.enemy.equipment['Right Hand'];
-      if (this.engine.data.items[wid]) {
-        eWeapon = this.engine.data.items[wid];
-      }
+    if (result.attackCount > 0) {
+      const parts = [];
+      if (result.hits > 0) parts.push(this.engine.t('combat.enemyAttackHits', { count: result.hits, s: result.hits > 1 ? 's' : '', rolls: result.hitRolls.join(' and ') }));
+      if (result.misses > 0) parts.push(this.engine.t('combat.enemyAttackMisses', { count: result.misses, es: result.misses > 1 ? 'es' : '', rolls: result.missRolls.join(' and ') }));
+
+      let summary = this.engine.t('combat.enemyAttack', { weapon: eWeapon.name, count: result.attackCount, s: result.attackCount > 1 ? 's' : '', parts: parts.join(', ') });
+      summary += ' ' + (result.hits > 0
+        ? this.engine.t('combat.playerTakesDamage', { damage: result.totalDamage, rolls: result.damageRolls.join(' and ') })
+        : this.engine.t('combat.playerTakesNoDamage'));
+      this.engine.log(this.enemy.name, summary, 'damage');
     }
 
-    let attackCount = 0;
-    let hits = 0;
-    let misses = 0;
-    let totalDamage = 0;
-    let hitRolls = [];
-    let missRolls = [];
-    let damageRolls = [];
+    if (player.hp <= 0) {
+      this.endCombat(false);
+      return;
+    }
+
+    // Reset player AP for next round
+    gameState.modifyPlayerStat('ap', player.maxAp - player.ap);
+    this.renderCombatUI();
+  }
+
+  // Returns the weapon this enemy attacks with — equipped Right Hand item, or
+  // the default claw fallback if nothing is equipped.
+  _resolveEnemyWeapon() {
+    const equipped = this.enemy.equipment?.['Right Hand'];
+    const item = equipped ? this.engine.data.items[equipped] : null;
+    return item || this.engine.data.items[ENEMY_CLAW_ID];
+  }
+
+  // Executes all enemy attacks for one turn and returns a roll summary.
+  // Mutates player HP via gameState. Does not log — enemyTurn() owns the narrative.
+  _resolveEnemyAttacks(eWeapon, eAP) {
+    const player = gameState.getPlayer();
+    let attackCount = 0, hits = 0, misses = 0, totalDamage = 0;
+    const hitRolls = [], missRolls = [], damageRolls = [];
 
     while (eAP >= eWeapon.actionPoints && player.hp > 0 && this.enemy.attributes.healthPoints > 0) {
       eAP -= eWeapon.actionPoints;
@@ -223,7 +244,6 @@ export class CombatSystem {
       if (hitRoll >= player.ac) {
         hits++;
         hitRolls.push(`[${baseRoll}]${modStr}`);
-
         const dmgResult = this.parseDamage(eWeapon.attributes.damageRoll);
         totalDamage += dmgResult.total;
         damageRolls.push(dmgResult.string);
@@ -235,26 +255,7 @@ export class CombatSystem {
       if (player.hp <= 0) break;
     }
 
-    if (attackCount > 0) {
-      const parts = [];
-      if (hits > 0) parts.push(this.engine.t('combat.enemyAttackHits', { count: hits, s: hits > 1 ? 's' : '', rolls: hitRolls.join(' and ') }));
-      if (misses > 0) parts.push(this.engine.t('combat.enemyAttackMisses', { count: misses, es: misses > 1 ? 'es' : '', rolls: missRolls.join(' and ') }));
-
-      let summary = this.engine.t('combat.enemyAttack', { weapon: eWeapon.name, count: attackCount, s: attackCount > 1 ? 's' : '', parts: parts.join(', ') });
-      summary += ' ' + (hits > 0
-        ? this.engine.t('combat.playerTakesDamage', { damage: totalDamage, rolls: damageRolls.join(' and ') })
-        : this.engine.t('combat.playerTakesNoDamage'));
-      this.engine.log(this.enemy.name, summary, 'damage');
-    }
-
-    if (player.hp <= 0) {
-      this.endCombat(false);
-      return;
-    }
-
-    // Reset player AP for next round
-    gameState.modifyPlayerStat('ap', player.maxAp - player.ap);
-    this.renderCombatUI();
+    return { attackCount, hits, misses, totalDamage, hitRolls, missRolls, damageRolls };
   }
 
   endCombat(isVictory) {

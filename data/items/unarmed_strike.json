@@ -1,0 +1,7 @@
+{
+  "name": "Unarmed Strike",
+  "type": "Weapon",
+  "actionPoints": 1,
+  "bonusHitChance": 0,
+  "attributes": { "damageRoll": "1-2" }
+}

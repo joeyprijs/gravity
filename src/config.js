@@ -49,19 +49,10 @@ export const MAP_NODE_DEFAULT_BG = 'var(--glass-bg)';
 // Size of the minimap HUD in pixels (square)
 export const MINIMAP_SIZE = 200;
 
-// Fallback weapon used when the player has nothing equipped
-export const UNARMED_STRIKE = {
-  name: "Unarmed Strike",
-  actionPoints: 1,
-  attributes: { damageRoll: "1-2" }
-};
-
-// Fallback weapon used for enemies that have no weapon equipped
-export const ENEMY_CLAW = {
-  name: "claws",
-  actionPoints: 2,
-  attributes: { damageRoll: "1-3" }
-};
+// Item IDs for fallback weapons used in combat when no weapon is equipped.
+// These items are defined in data/items/ like all other items.
+export const UNARMED_STRIKE_ID = 'unarmed_strike';
+export const ENEMY_CLAW_ID    = 'enemy_claw';
 
 // CSS class names referenced from JavaScript. Centralised here so that renaming
 // a class only requires a change in this file, not a grep across all JS files.

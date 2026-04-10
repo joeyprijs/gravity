@@ -5,6 +5,8 @@
     "player_home": { "name": "Player Home", "order": 2 }
   },
   "items": {
+    "unarmed_strike": "data/items/unarmed_strike.json",
+    "enemy_claw": "data/items/enemy_claw.json",
     "rusty_sword": "data/items/rusty_sword.json",
     "healing_potion": "data/items/healing_potion.json",
     "leather_armor": "data/items/leather_armor.json",

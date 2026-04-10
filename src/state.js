@@ -159,6 +159,8 @@ class StateManager {
   setCurrentSceneId(sceneId) { this.state.currentSceneId = sceneId; this.notifyListeners(); }
 
   getVisitedScenes() { return this.state.visitedScenes; }
+  // Intentionally no notifyListeners() — scene rendering drives its own display
+  // update, and triggering a full UI re-render here would be redundant.
   addVisitedScene(sceneId) {
     if (!this.state.visitedScenes.includes(sceneId)) {
       this.state.visitedScenes.push(sceneId);

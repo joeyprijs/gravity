@@ -14,7 +14,7 @@ export class DialogueSystem {
 
   startDialogue(npcId) {
     const npc = this.engine.data.npcs[npcId];
-    if (!npc) return;
+    if (!npc) { console.warn(`[Gravity] startDialogue: unknown NPC "${npcId}"`); return; }
 
     this.engine.scene.reset();
     this.currentNPC = npc;
@@ -27,7 +27,7 @@ export class DialogueSystem {
 
   renderDialogue(nodeId = "start", overrideText = null) {
     const node = this.currentNPC.conversations[nodeId];
-    if (!node) return;
+    if (!node) { console.warn(`[Gravity] renderDialogue: unknown node "${nodeId}" on NPC "${this.currentNPC.name}"`); return; }
 
     const displayString = overrideText || node.npcText;
 
