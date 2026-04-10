@@ -69,12 +69,16 @@ export const ENEMY_CLAW = {
 // appending to the base constant: `${CSS.SCENE_LOG}--${variant}`.
 export const CSS = {
   // Scene / narrative
+  SCENE:                  'scene',
+  SCENE_NEW:              'scene--new',
+  SCENE_COMBAT:           'scene--combat',
+  SCENE_DIALOGUE:         'scene--dialogue',
+  SCENE_MERCHANT:         'scene--merchant',
   SCENE_DESCRIPTION:      'scene__description',
   SCENE_TITLE:            'scene__title',
   SCENE_TITLE_GAME_OVER:  'scene__title--game-over',
   SCENE_BODY:             'scene__body',
   SCENE_LOG:              'scene__log',
-  SCENE_NEW:              'scene--new',
 
   // Tabs (ui.js setup)
   TABS_BTN:               'tabs__btn',

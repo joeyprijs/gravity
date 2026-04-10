@@ -19,8 +19,8 @@ export class NarrativeLog {
 
   openScene(modifier = '') {
     this.flush();
-    const classes = ['scene', 'scene--new'];
-    if (modifier) classes.push(`scene--${modifier}`);
+    const classes = [CSS.SCENE, CSS.SCENE_NEW];
+    if (modifier) classes.push(modifier);
     const scene = createElement('div', classes);
     this.el.appendChild(scene);
     this.el.scrollTop = this.el.scrollHeight;

@@ -32,7 +32,7 @@ export class DialogueSystem {
     const displayString = overrideText || node.npcText;
 
     if (nodeId === "start") {
-      this.engine.openScene('dialogue');
+      this.engine.openScene(CSS.SCENE_DIALOGUE);
       this.engine.currentSceneEl.appendChild(
         buildSceneDescription(this.currentNPC.name, `[${this.currentNPC.name}] ${displayString}`)
       );
@@ -66,7 +66,7 @@ export class DialogueSystem {
   renderDialogueFallback(overrideText = null) {
     const displayString = overrideText || this.engine.t('dialogue.greeting', { name: this.currentNPC.name });
 
-    this.engine.openScene('dialogue');
+    this.engine.openScene(CSS.SCENE_DIALOGUE);
     this.engine.currentSceneEl.appendChild(
       buildSceneDescription(this.currentNPC.name, `[${this.currentNPC.name}] ${displayString}`)
     );
@@ -96,7 +96,7 @@ export class DialogueSystem {
   renderStore(isUpdate = false) {
     if (!isUpdate) {
       this.storeOpen = true;
-      this.engine.openScene('merchant');
+      this.engine.openScene(CSS.SCENE_MERCHANT);
       this.engine.currentSceneEl.appendChild(
         buildSceneDescription(
           this.engine.t('dialogue.merchantWaresTitle', { name: this.currentNPC.name }),

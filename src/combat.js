@@ -29,7 +29,7 @@ export class CombatSystem {
     const player = gameState.getPlayer();
     gameState.modifyPlayerStat('ap', player.maxAp - player.ap);
 
-    this.engine.openScene('combat');
+    this.engine.openScene(CSS.SCENE_COMBAT);
     this.engine.currentSceneEl.appendChild(
       buildSceneDescription(
         this.engine.t('combat.fightingTitle', { name: this.enemy.name }),
