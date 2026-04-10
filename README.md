@@ -59,6 +59,7 @@ gravity/
 ├── src/
 │   ├── engine.js       # Game orchestrator — loads data, wires systems together
 │   ├── actions.js      # Built-in action handlers and action registration
+│   ├── condition.js    # Condition tree evaluator (and/or/not/flag/item/level/gold)
 │   ├── state.js        # Game state management and save/load
 │   ├── scene.js        # Scene rendering and navigation
 │   ├── combat.js       # Combat system
@@ -213,12 +214,43 @@ Each entry in the `options` array renders as a button the player can click.
 | `action` | String | No | Action to execute. See **Actions** below. |
 | `actionDetails` | Object | No | Parameters for the action. Shape depends on `action` type. |
 | `requirements.item` | String | No | Item ID that must be in the player's inventory. Option is disabled (greyed out) if the item is missing. |
-| `requiredState` | Object | No | Flag condition. Option is hidden entirely when the condition is not met. |
+| `requiredState` | Object | No | Simple flag condition (shorthand). Option is hidden when not met. See also `condition`. |
 | `requiredState.flag` | String | Yes | Flag name to evaluate. |
 | `requiredState.value` | Any | Yes | The option is shown only when this flag equals this value. |
+| `condition` | Object | No | Full condition tree. Overrides `requiredState` when present. Supports `and`/`or`/`not` combinators and `flag`/`item`/`level`/`gold` leaf types. See **Conditions** below. |
 | `changeStateFlag` | Object | No | Sets a flag when this option is chosen. Processed before the scene re-renders. |
 | `changeStateFlag.flag` | String | Yes | Flag name to set. |
 | `changeStateFlag.value` | Any | Yes | Value to assign. |
+
+#### Conditions
+
+`condition` replaces `requiredState` when you need more than a single flag check. Both options and conditional description entries support it.
+
+```json
+{
+  "text": "Slip past the guard",
+  "destination": "dungeon_hallway",
+  "condition": {
+    "and": [
+      { "flag": "guard_distracted", "value": true },
+      { "not": { "flag": "defeated_goblin_guard", "value": true } }
+    ]
+  }
+}
+```
+
+**Leaf types:**
+
+| Shape | Meaning |
+|---|---|
+| `{ "flag": "name", "value": true }` | Flag equals value |
+| `{ "item": "item_id" }` | Player has item in inventory |
+| `{ "level": 3 }` | Player level ≥ value |
+| `{ "gold": 50 }` | Player gold ≥ value |
+
+**Combinators:** `and` (array, all must pass), `or` (array, any must pass), `not` (single child, inverted).
+
+`requiredState` still works as a shorthand for a single flag check and is fully supported.
 
 ---
 

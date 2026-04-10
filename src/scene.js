@@ -1,6 +1,7 @@
 import { gameState } from "./state.js";
 import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "./utils.js";
-import { EL, CSS, LOG } from "./config.js";
+import { EL, LOG } from "./config.js";
+import { evaluateCondition, fromRequiredState } from "./condition.js";
 
 // SceneRenderer handles navigating to scenes, resolving their descriptions,
 // and rendering their option buttons. It is the main driver of scene-to-scene
@@ -74,10 +75,10 @@ export class SceneRenderer {
     clearElement(optionsContainer);
 
     (scene.options || []).forEach(opt => {
-      // Hide options whose requiredState condition is not currently met
-      if (opt.requiredState) {
-        if (gameState.getFlag(opt.requiredState.flag) !== opt.requiredState.value) return;
-      }
+      // Hide options whose condition is not currently met.
+      // Supports both the legacy requiredState shorthand and the full condition tree.
+      const cond = opt.condition ?? fromRequiredState(opt.requiredState);
+      if (!evaluateCondition(cond, gameState)) return;
 
       let reqText = null;
       let disabled = false;
@@ -143,28 +144,19 @@ export class SceneRenderer {
     if (Array.isArray(scene.description)) {
       // Default to the fallback entry (no requiredState) first, then override
       // with the first conditional entry whose flag condition is met.
-      desc = scene.description.find(d => !d.requiredState)?.text || '';
+      desc = scene.description.find(d => !d.requiredState && !d.condition)?.text || '';
       for (const d of scene.description) {
-        if (d.requiredState && gameState.getFlag(d.requiredState.flag) === d.requiredState.value) {
+        const cond = d.condition ?? fromRequiredState(d.requiredState);
+        if (cond && evaluateCondition(cond, gameState)) {
           desc = d.text;
           break;
         }
       }
     }
 
-    if (scene.descriptionHook === "museumChestContents") {
-      const chest = gameState.getMuseumChest();
-      if (chest && chest.length > 0) {
-        const nameList = chest.map(b => {
-          const name = this.engine.data.items[b.item]?.name || b.item;
-          return b.amount > 1 ? `${name} (x${b.amount})` : name;
-        }).join(", ");
-        // Wrap item names in the styled span, then pass to locale for the surrounding sentence.
-        const names = `<span class="${CSS.MUSEUM_ITEM_LIST}">${nameList}</span>`;
-        desc += `<br><br>${this.engine.t('actions.museumDisplayedWithin', { names })}`;
-      } else {
-        desc += `<br><br>${this.engine.t('actions.museumRoomEmpty')}`;
-      }
+    if (scene.descriptionHook) {
+      const hook = this.engine.getDescriptionHook(scene.descriptionHook);
+      if (hook) desc += hook(this.engine);
     }
 
     return desc;

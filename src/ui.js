@@ -22,6 +22,10 @@ export class UIManager {
 
     // Save
     document.getElementById(EL.BTN_SAVE).addEventListener('click', () => {
+      if (this.engine.inCombat) {
+        this.engine.log(LOG.SYSTEM, this.engine.t('player.noCombatSave'));
+        return;
+      }
       if (gameState.downloadSave()) this.engine.log(LOG.SYSTEM, this.engine.t('system.saved'));
     });
 

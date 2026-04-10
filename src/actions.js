@@ -1,5 +1,5 @@
 import { gameState } from "./state.js";
-import { REST_HEAL_AMOUNT, SNACK_HEAL_AMOUNT, RETURN_WORLD_FALLBACK_SCENE, LOG, ACTIONS } from "./config.js";
+import { REST_HEAL_AMOUNT, SNACK_HEAL_AMOUNT, RETURN_WORLD_FALLBACK_SCENE, LOG, ACTIONS, CSS } from "./config.js";
 
 // Built-in action handlers for scene option buttons.
 // Each handler receives (opt, engine) — the full option object from scene JSON
@@ -61,6 +61,19 @@ function handleManageChest(opt, engine) {
   engine.ui.renderMuseumChestUI();
 }
 
+function museumChestContentsHook(engine) {
+  const chest = gameState.getMuseumChest();
+  if (chest && chest.length > 0) {
+    const nameList = chest.map(b => {
+      const name = engine.data.items[b.item]?.name || b.item;
+      return b.amount > 1 ? `${name} (x${b.amount})` : name;
+    }).join(", ");
+    const names = `<span class="${CSS.MUSEUM_ITEM_LIST}">${nameList}</span>`;
+    return `<br><br>${engine.t('actions.museumDisplayedWithin', { names })}`;
+  }
+  return `<br><br>${engine.t('actions.museumRoomEmpty')}`;
+}
+
 export function registerBuiltinActions(engine) {
   engine.registerAction(ACTIONS.LOOT,            handleLoot);
   engine.registerAction(ACTIONS.COMBAT,          handleCombat);
@@ -70,4 +83,5 @@ export function registerBuiltinActions(engine) {
   engine.registerAction(ACTIONS.FULL_REST,       handleFullRest);
   engine.registerAction(ACTIONS.EAT_SNACK,       handleEatSnack);
   engine.registerAction(ACTIONS.MANAGE_CHEST,    handleManageChest);
+  engine.registerDescriptionHook('museumChestContents', museumChestContentsHook);
 }

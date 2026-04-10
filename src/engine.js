@@ -20,6 +20,7 @@ class RPGEngine {
     this.data = { items: {}, npcs: {}, scenes: {}, missions: {}, regions: {}, worldMapSize: DEFAULT_WORLD_MAP_SIZE, locale: {} };
 
     this._actionRegistry = new Map();
+    this._descriptionHooks = new Map();
     this._events = new Map();
 
     this.narrative = new NarrativeLog();
@@ -118,6 +119,16 @@ class RPGEngine {
     }
   }
 
+  // Recursively checks a condition tree for unknown item IDs.
+  _validateCondition(condition, context, items, warn) {
+    if (!condition) return;
+    if (condition.and) { condition.and.forEach(c => this._validateCondition(c, context, items, warn)); return; }
+    if (condition.or)  { condition.or.forEach(c => this._validateCondition(c, context, items, warn)); return; }
+    if (condition.not) { this._validateCondition(condition.not, context, items, warn); return; }
+    if ('item' in condition && !items[condition.item])
+      warn(`${context}: condition references unknown item "${condition.item}"`);
+  }
+
   // Validates cross-references in game data after load and warns about broken links.
   // Developer tooling only — logs to console, no in-game effect.
   _validateData() {
@@ -128,6 +139,8 @@ class RPGEngine {
       for (const opt of (scene.options || [])) {
         if (opt.destination && !scenes[opt.destination])
           warn(`Scene "${sceneId}": option "${opt.text}" → unknown destination "${opt.destination}"`);
+        if (opt.condition)
+          this._validateCondition(opt.condition, `Scene "${sceneId}": option "${opt.text}"`, items, warn);
         if (opt.requirements?.item && !items[opt.requirements.item])
           warn(`Scene "${sceneId}": option "${opt.text}" requires unknown item "${opt.requirements.item}"`);
         if (opt.action && !this._actionRegistry.has(opt.action))
@@ -281,6 +294,14 @@ class RPGEngine {
 
   getActionHandler(name) {
     return this._actionRegistry.get(name) || null;
+  }
+
+  registerDescriptionHook(name, fn) {
+    this._descriptionHooks.set(name, fn);
+  }
+
+  getDescriptionHook(name) {
+    return this._descriptionHooks.get(name) || null;
   }
 }
 

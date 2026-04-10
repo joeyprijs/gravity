@@ -221,11 +221,9 @@ export class CombatSystem {
       }), 'damage');
     }
 
-    if (player.ap > 0) {
-      this.renderCombatUI();
-    } else {
-      this.enemyTurn('after');
-    }
+    // Let the apSpent handler decide renderCombatUI vs enemyTurn — consistent
+    // with how item/equip AP costs are handled during combat.
+    if (this.inCombat) this.engine.emit('player:apSpent', { remaining: player.ap });
   }
 
   // phase='before': enemies who outrolled the player (act before the player each round)

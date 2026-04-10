@@ -61,6 +61,7 @@
     "teleported":        "You gripped the {name} and vanished into thin air...",
     "alreadyHere":       "You are already here.",
     "notEnoughAP":       "Not enough AP! Need {cost}.",
+    "noCombatSave":      "Cannot save during combat.",
     "noCombatTeleport":  "Cannot use teleport items during combat!"
   },
   "combat": {
