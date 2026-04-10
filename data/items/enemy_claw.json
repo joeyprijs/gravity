@@ -3,5 +3,5 @@
   "type": "Weapon",
   "actionPoints": 1,
   "bonusHitChance": 0,
-  "attributes": { "damageRoll": "1-3" }
+  "attributes": { "damageRoll": "1d4" }
 }

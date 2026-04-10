@@ -183,7 +183,7 @@ export class CombatSystem {
     // Clamp to 0 so negative modifiers never produce negative damage
     const grandTotal = Math.max(0, totalRoll + modifier);
 
-    let rollStr = `[${rollResults.join('+')}]`;
+    let rollStr = rollResults.join('+');
     if (modifier > 0) rollStr += `+${modifier}`;
     else if (modifier < 0) rollStr += `${modifier}`;
 
@@ -204,8 +204,8 @@ export class CombatSystem {
       const dmgResult = this.parseDamage(weapon.attributes.damageRoll);
       targetEnemy.attributes.healthPoints -= dmgResult.total;
       this.engine.log(LOG.PLAYER, this.engine.t('combat.attackHit', {
-        weapon: weapon.name, roll: baseRoll, mod: modStr,
-        ac: targetEnemy.attributes.armorClass, damage: dmgResult.total, rollStr: dmgResult.string
+        weapon: weapon.name, roll: hitRoll, mod: modStr,
+        ac: targetEnemy.attributes.armorClass, damage: dmgResult.total, dice: weapon.attributes.damageRoll, rollStr: dmgResult.string
       }), 'damage');
 
       if (targetEnemy.attributes.healthPoints <= 0) {
@@ -217,7 +217,7 @@ export class CombatSystem {
       }
     } else {
       this.engine.log(LOG.PLAYER, this.engine.t('combat.attackMiss', {
-        weapon: weapon.name, roll: baseRoll, mod: modStr, ac: targetEnemy.attributes.armorClass
+        weapon: weapon.name, roll: hitRoll, mod: modStr, ac: targetEnemy.attributes.armorClass
       }), 'damage');
     }
 
@@ -252,9 +252,10 @@ export class CombatSystem {
         if (result.hits > 0) parts.push(this.engine.t('combat.enemyAttackHits', { count: result.hits, s: result.hits > 1 ? 's' : '', rolls: result.hitRolls.join(' and ') }));
         if (result.misses > 0) parts.push(this.engine.t('combat.enemyAttackMisses', { count: result.misses, es: result.misses > 1 ? 'es' : '', rolls: result.missRolls.join(' and ') }));
 
-        let summary = this.engine.t('combat.enemyAttack', { name: enemy.name, weapon: eWeapon.name, count: result.attackCount, s: result.attackCount > 1 ? 's' : '', parts: parts.join(', ') });
+        const times = result.attackCount === 1 ? 'once' : result.attackCount === 2 ? 'twice' : `${result.attackCount} times`;
+        let summary = this.engine.t('combat.enemyAttack', { name: enemy.name, weapon: eWeapon.name, times, parts: parts.join(', ') });
         summary += ' ' + (result.hits > 0
-          ? this.engine.t('combat.playerTakesDamage', { damage: result.totalDamage, rolls: result.damageRolls.join(' and ') })
+          ? this.engine.t('combat.playerTakesDamage', { damage: result.totalDamage, dice: eWeapon.attributes.damageRoll, rolls: result.damageRolls.join(' and ') })
           : this.engine.t('combat.playerTakesNoDamage'));
         this.engine.log(LOG.COMBAT, summary, 'damage');
       }
@@ -307,14 +308,14 @@ export class CombatSystem {
 
       if (hitRoll >= player.ac) {
         hits++;
-        hitRolls.push(`[${baseRoll}]${modStr}`);
+        hitRolls.push(`${hitRoll} (1d20${modStr})`);
         const dmgResult = this.parseDamage(eWeapon.attributes.damageRoll);
         totalDamage += dmgResult.total;
         damageRolls.push(dmgResult.string);
         gameState.modifyPlayerStat('hp', -dmgResult.total);
       } else {
         misses++;
-        missRolls.push(`[${baseRoll}]${modStr}`);
+        missRolls.push(`${hitRoll} (1d20${modStr})`);
       }
       if (player.hp <= 0) break;
     }
