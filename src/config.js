@@ -163,6 +163,14 @@ export const EL = {
   FULLMAP_CLOSE:           'fullmap-close',
 };
 
+// Log type labels — the [Label] prefix shown in every narrative log entry.
+export const LOG = {
+  SYSTEM: 'System',
+  PLAYER: 'Player',
+  COMBAT: 'Combat',
+  QUEST:  'Quest',
+};
+
 // System messages shared across multiple modules. Keeping them here ensures
 // that e.g. the load-filter in state.js and the log call in ui.js always match.
 export const MSG = {

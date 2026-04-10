@@ -1,6 +1,6 @@
 import { gameState } from "./state.js";
 import { createElement, clearElement } from "./utils.js";
-import { ITEM_TYPE_ORDER, XP_PER_LEVEL, EL, CSS } from "./config.js";
+import { ITEM_TYPE_ORDER, XP_PER_LEVEL, EL, CSS, LOG } from "./config.js";
 import { MapManager } from "./map.js";
 
 export class UIManager {
@@ -22,7 +22,7 @@ export class UIManager {
 
     // Save
     document.getElementById(EL.BTN_SAVE).addEventListener('click', () => {
-      if (gameState.downloadSave()) this.engine.log("System", this.engine.t('system.saved'));
+      if (gameState.downloadSave()) this.engine.log(LOG.SYSTEM, this.engine.t('system.saved'));
     });
 
     // Load
@@ -50,7 +50,7 @@ export class UIManager {
           this.engine.currentSceneEl = null;
           this.engine.scene.reset();
           this.engine.recalculateAC();
-          this.engine.log("System", this.engine.t('system.loaded'), 'system', false);
+          this.engine.log(LOG.SYSTEM, this.engine.t('system.loaded'), 'system', false);
           const lastDesc = this.engine.narrative.restore(gameState.getLog());
           if (lastDesc !== null) {
             this.engine.scene.lastRenderedSceneId = gameState.getCurrentSceneId();
@@ -60,7 +60,7 @@ export class UIManager {
           if (currentScene) this.engine.scene.renderOptions(currentScene);
         } catch (err) {
           console.error(err);
-          this.engine.log("System", this.engine.t('system.loadFailed'));
+          this.engine.log(LOG.SYSTEM, this.engine.t('system.loadFailed'));
         }
       };
       reader.readAsText(file);
@@ -295,7 +295,7 @@ export class UIManager {
         const itemData = this.engine.data.items[b.item];
         chestDiv.appendChild(buildMuseumRow(b, this.engine.t('ui.museumTake'), false, () => {
           gameState.withdrawFromChest(b.item, 1);
-          this.engine.log("System", this.engine.t('actions.museumTook', { name: itemData?.name || b.item }));
+          this.engine.log(LOG.SYSTEM, this.engine.t('actions.museumTook', { name: itemData?.name || b.item }));
           this.renderMuseumChestUI();
         }));
       });
@@ -310,7 +310,7 @@ export class UIManager {
         const itemData = this.engine.data.items[b.item];
         invDiv.appendChild(buildMuseumRow(b, this.engine.t('ui.museumDisplay'), true, () => {
           gameState.depositToChest(b.item, 1);
-          this.engine.log("System", this.engine.t('actions.museumDisplayed', { name: itemData?.name || b.item }));
+          this.engine.log(LOG.SYSTEM, this.engine.t('actions.museumDisplayed', { name: itemData?.name || b.item }));
           this.renderMuseumChestUI();
         }));
       });

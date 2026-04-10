@@ -1,6 +1,6 @@
 import { gameState } from "./state.js";
 import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "./utils.js";
-import { MERCHANT_SELL_RATIO, EL, CSS } from "./config.js";
+import { MERCHANT_SELL_RATIO, EL, CSS, LOG } from "./config.js";
 
 // DialogueSystem handles NPC conversations and the merchant buy/sell interface.
 // Conversations are driven by a node graph defined in NPC JSON files. If an NPC
@@ -49,7 +49,7 @@ export class DialogueSystem {
     node.responses.forEach(res => {
       const btn = buildOptionButton(res.text);
       btn.onclick = () => {
-        this.engine.log('player', res.text, 'choice');
+        this.engine.log(LOG.PLAYER, res.text, 'choice');
 
         if (res.goToConversation) {
           this.renderDialogue(res.goToConversation);
@@ -80,7 +80,7 @@ export class DialogueSystem {
     if (this.currentNPC.isMerchant) {
       const tradeBtn = buildOptionButton(this.engine.t('dialogue.trade'));
       tradeBtn.onclick = () => {
-        this.engine.log('player', this.engine.t('dialogue.trade'), 'choice');
+        this.engine.log(LOG.PLAYER, this.engine.t('dialogue.trade'), 'choice');
         this.renderStore();
       };
       container.appendChild(tradeBtn);
@@ -127,7 +127,7 @@ export class DialogueSystem {
           btn.onclick = () => {
             gameState.modifyPlayerStat('gold', -item.value);
             gameState.addToInventory(itemId, 1);
-            this.engine.log("player", this.engine.t('dialogue.bought', { name: item.name, price: item.value }), 'loot');
+            this.engine.log(LOG.PLAYER, this.engine.t('dialogue.bought', { name: item.name, price: item.value }), 'loot');
             this.renderStore(true);
           };
           container.appendChild(btn);
@@ -150,7 +150,7 @@ export class DialogueSystem {
           btn.onclick = () => {
             gameState.removeFromInventory(invItem.item, 1);
             gameState.modifyPlayerStat('gold', sellValue);
-            this.engine.log("player", this.engine.t('dialogue.sold', { name: item.name, price: sellValue }), 'loot');
+            this.engine.log(LOG.PLAYER, this.engine.t('dialogue.sold', { name: item.name, price: sellValue }), 'loot');
             this.renderStore(true);
           };
           container.appendChild(btn);
@@ -162,7 +162,7 @@ export class DialogueSystem {
     const leaveBtn = buildOptionButton(neverMind);
     leaveBtn.onclick = () => {
       this.storeOpen = false;
-      this.engine.log('player', neverMind, 'choice');
+      this.engine.log(LOG.PLAYER, neverMind, 'choice');
 
       const exitStr = this.currentNPC.storeExitText || this.engine.t('dialogue.comeAgain');
       if (this.currentNPC.conversations) {

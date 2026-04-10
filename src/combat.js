@@ -1,6 +1,6 @@
 import { gameState } from "./state.js";
 import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "./utils.js";
-import { MAX_D20_ROLL, UNARMED_STRIKE, ENEMY_CLAW, EL, CSS } from "./config.js";
+import { MAX_D20_ROLL, UNARMED_STRIKE, ENEMY_CLAW, EL, CSS, LOG } from "./config.js";
 
 // CombatSystem manages the full lifecycle of a turn-based combat encounter:
 // initiative roll, player/enemy turns, AP tracking, and victory/defeat resolution.
@@ -37,7 +37,7 @@ export class CombatSystem {
       )
     );
 
-    this.engine.log("Combat", this.engine.t('combat.started', { name: this.enemy.name }), 'combat');
+    this.engine.log(LOG.COMBAT, this.engine.t('combat.started', { name: this.enemy.name }), 'combat');
 
     // Roll initiative
     const playerInit = Math.ceil(Math.random() * MAX_D20_ROLL) + (player.initiative || 0);
@@ -46,7 +46,7 @@ export class CombatSystem {
     const goesFirst = this.enemyGoesFirst
       ? this.engine.t('combat.enemyGoesFirst', { name: this.enemy.name })
       : this.engine.t('combat.youGoFirst');
-    this.engine.log("Combat", this.engine.t('combat.initiative', { playerRoll: playerInit, name: this.enemy.name, enemyRoll: enemyInit, goesFirst }), 'combat');
+    this.engine.log(LOG.COMBAT, this.engine.t('combat.initiative', { playerRoll: playerInit, name: this.enemy.name, enemyRoll: enemyInit, goesFirst }), 'combat');
 
     this.renderCombatUI();
     if (this.enemyGoesFirst) this.enemyTurn();
@@ -166,7 +166,7 @@ export class CombatSystem {
     if (hitRoll >= this.enemy.attributes.armorClass) {
       const dmgResult = this.parseDamage(weapon.attributes.damageRoll);
       this.enemy.attributes.healthPoints -= dmgResult.total;
-      this.engine.log("player", this.engine.t('combat.attackHit', {
+      this.engine.log(LOG.PLAYER, this.engine.t('combat.attackHit', {
         weapon: weapon.name, roll: baseRoll, mod: modStr,
         ac: this.enemy.attributes.armorClass, damage: dmgResult.total, rollStr: dmgResult.string
       }), 'damage');
@@ -176,7 +176,7 @@ export class CombatSystem {
         return;
       }
     } else {
-      this.engine.log("player", this.engine.t('combat.attackMiss', {
+      this.engine.log(LOG.PLAYER, this.engine.t('combat.attackMiss', {
         weapon: weapon.name, roll: baseRoll, mod: modStr, ac: this.enemy.attributes.armorClass
       }), 'damage');
     }
@@ -260,24 +260,24 @@ export class CombatSystem {
   endCombat(isVictory) {
     this.inCombat = false;
     if (isVictory) {
-      this.engine.log("System", this.engine.t('combat.victory', { name: this.enemy.name }), 'loot');
+      this.engine.log(LOG.SYSTEM, this.engine.t('combat.victory', { name: this.enemy.name }), 'loot');
 
       // Loot
       if (this.enemy.droppedLoot) {
         this.enemy.droppedLoot.forEach(l => {
           if (l.item === 'gold') {
             gameState.modifyPlayerStat('gold', l.amount);
-            this.engine.log("System", this.engine.t('loot.foundGold', { amount: l.amount }), 'loot');
+            this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundGold', { amount: l.amount }), 'loot');
           } else {
             gameState.addToInventory(l.item, l.amount || 1);
-            this.engine.log("System", this.engine.t('loot.foundItem', { name: this.engine.data.items[l.item]?.name || l.item }), 'loot');
+            this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundItem', { name: this.engine.data.items[l.item]?.name || l.item }), 'loot');
           }
         });
       }
       // XP reward
       if (this.enemy.attributes.xpReward) {
         gameState.addXP(this.enemy.attributes.xpReward);
-        this.engine.log("System", this.engine.t('loot.xpGained', { amount: this.enemy.attributes.xpReward }), 'loot');
+        this.engine.log(LOG.SYSTEM, this.engine.t('loot.xpGained', { amount: this.enemy.attributes.xpReward }), 'loot');
       }
 
       // Flag flip

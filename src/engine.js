@@ -5,7 +5,7 @@ import { QuestSystem } from "./quests.js";
 import { NarrativeLog } from "./narrative.js";
 import { UIManager } from "./ui.js";
 import { SceneRenderer } from "./scene.js";
-import { BASE_AC, UNEQUIP_AP_COST, DEFAULT_WORLD_MAP_SIZE, MSG } from "./config.js";
+import { BASE_AC, UNEQUIP_AP_COST, DEFAULT_WORLD_MAP_SIZE, MSG, LOG } from "./config.js";
 // MSG is still imported for the state.js log filter (MSG.GAME_LOADED).
 // All display strings now come from data/locales.json via this.t().
 
@@ -80,7 +80,7 @@ class RPGEngine {
       this._validateData();
     } catch (e) {
       console.error("Failed to load game data:", e);
-      this.log("System", this.t('system.dataError'));
+      this.log(LOG.SYSTEM, this.t('system.dataError'));
     }
   }
 
@@ -163,20 +163,20 @@ class RPGEngine {
         rollSuffix = ` (Roll: ${result.string})`;
       }
       gameState.modifyPlayerStat('hp', amount);
-      this.log("System", this.t('player.usedItem', { name: itemData.name, amount, rollSuffix }), 'loot');
+      this.log(LOG.SYSTEM, this.t('player.usedItem', { name: itemData.name, amount, rollSuffix }), 'loot');
       gameState.removeFromInventory(itemId, 1);
     } else if (itemData.attributes?.teleportScene) {
       if (this.combatSystem.inCombat) {
-        this.log("System", this.t('player.noCombatTeleport'));
+        this.log(LOG.SYSTEM, this.t('player.noCombatTeleport'));
         return;
       }
       const curScene = gameState.getCurrentSceneId();
       if (curScene !== itemData.attributes.teleportScene) {
         gameState.setReturnSceneId(curScene);
-        this.log("System", this.t('player.teleported', { name: itemData.name }));
+        this.log(LOG.SYSTEM, this.t('player.teleported', { name: itemData.name }));
         this.renderScene(itemData.attributes.teleportScene);
       } else {
-        this.log("System", this.t('player.alreadyHere'));
+        this.log(LOG.SYSTEM, this.t('player.alreadyHere'));
       }
     }
 
@@ -192,7 +192,7 @@ class RPGEngine {
 
     gameState.equipItem(targetSlot, itemId);
     this.recalculateAC();
-    this.log("player", this.t('player.equipped', { name: itemData.name, slot: targetSlot }));
+    this.log(LOG.PLAYER, this.t('player.equipped', { name: itemData.name, slot: targetSlot }));
     this._refreshCombatIfActive();
   }
 
@@ -200,7 +200,7 @@ class RPGEngine {
     if (!this._spendAP(UNEQUIP_AP_COST)) return;
     gameState.equipItem(slot, null);
     this.recalculateAC();
-    this.log("player", this.t('player.unequipped', { slot }));
+    this.log(LOG.PLAYER, this.t('player.unequipped', { slot }));
     this._refreshCombatIfActive();
   }
 
@@ -209,7 +209,7 @@ class RPGEngine {
     if (!this.combatSystem.inCombat) return true;
     const player = gameState.getPlayer();
     if (player.ap < cost) {
-      this.log("System", this.t('player.notEnoughAP', { cost }));
+      this.log(LOG.SYSTEM, this.t('player.notEnoughAP', { cost }));
       return false;
     }
     gameState.modifyPlayerStat('ap', -cost);

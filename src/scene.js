@@ -1,6 +1,6 @@
 import { gameState } from "./state.js";
 import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "./utils.js";
-import { REST_HEAL_AMOUNT, SNACK_HEAL_AMOUNT, EL, CSS, RETURN_WORLD_FALLBACK_SCENE } from "./config.js";
+import { REST_HEAL_AMOUNT, SNACK_HEAL_AMOUNT, EL, CSS, LOG, RETURN_WORLD_FALLBACK_SCENE } from "./config.js";
 
 // SceneRenderer handles navigating to scenes, resolving their descriptions,
 // and rendering their option buttons. It is the main driver of scene-to-scene
@@ -94,14 +94,14 @@ export class SceneRenderer {
       if (!gameState.getFlag(xpFlag)) {
         gameState.addXP(scene.xpReward);
         gameState.setFlag(xpFlag, true);
-        this.engine.log("System", this.engine.t('loot.xpGained', { amount: scene.xpReward }), 'loot');
+        this.engine.log(LOG.SYSTEM, this.engine.t('loot.xpGained', { amount: scene.xpReward }), 'loot');
       }
     }
   }
 
   handleOption(opt) {
     this.engine.isGameStart = false;
-    this.engine.log('player', opt.text, 'choice');
+    this.engine.log(LOG.PLAYER, opt.text, 'choice');
 
     if (opt.changeStateFlag) {
       gameState.setFlag(opt.changeStateFlag.flag, opt.changeStateFlag.value);
@@ -112,10 +112,10 @@ export class SceneRenderer {
         case "loot": {
           const param = opt.actionDetails;
           gameState.addToInventory(param.item, param.amount || 1);
-          this.engine.log("System", this.engine.t('loot.receivedItem', { name: this.engine.data.items[param.item]?.name || param.item }), 'loot');
+          this.engine.log(LOG.SYSTEM, this.engine.t('loot.receivedItem', { name: this.engine.data.items[param.item]?.name || param.item }), 'loot');
           if (param.xpReward) {
             gameState.addXP(param.xpReward);
-            this.engine.log("System", this.engine.t('loot.xpGained', { amount: param.xpReward }), 'loot');
+            this.engine.log(LOG.SYSTEM, this.engine.t('loot.xpGained', { amount: param.xpReward }), 'loot');
           }
           // hideAfter flips the option's requiredState flag so the option
           // disappears on the next render (e.g. "Search the room" one-time events)
@@ -133,7 +133,7 @@ export class SceneRenderer {
           break;
         case "rest":
           gameState.modifyPlayerStat('hp', opt.actionDetails.heal || REST_HEAL_AMOUNT);
-          this.engine.log("System", this.engine.t('actions.rested'));
+          this.engine.log(LOG.SYSTEM, this.engine.t('actions.rested'));
           if (opt.actionDetails.hideAfter && opt.requiredState) {
             gameState.setFlag(opt.requiredState.flag, !opt.requiredState.value);
           }
@@ -148,13 +148,13 @@ export class SceneRenderer {
           const p = gameState.getPlayer();
           gameState.modifyPlayerStat('hp', p.maxHp - p.hp);
           gameState.modifyPlayerStat('ap', p.maxAp - p.ap);
-          this.engine.log("System", this.engine.t('actions.fullRest'));
+          this.engine.log(LOG.SYSTEM, this.engine.t('actions.fullRest'));
           if (opt.destination) this.engine.renderScene(opt.destination);
           break;
         }
         case "eat_snack":
           gameState.modifyPlayerStat('hp', SNACK_HEAL_AMOUNT);
-          this.engine.log("System", this.engine.t('actions.eatSnack', { amount: SNACK_HEAL_AMOUNT }), 'loot');
+          this.engine.log(LOG.SYSTEM, this.engine.t('actions.eatSnack', { amount: SNACK_HEAL_AMOUNT }), 'loot');
           if (opt.destination) this.engine.renderScene(opt.destination);
           break;
         case "manage_chest":
