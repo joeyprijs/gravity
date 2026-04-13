@@ -89,7 +89,8 @@ export class CombatSystem {
     const container = document.getElementById(EL.SCENE_OPTIONS);
     clearElement(container);
 
-    // Stats bar: one entry per living enemy
+    // Stats bar: one entry per living enemy.
+    // innerHTML is safe here — e.name comes from authored NPC JSON, hp/ac are numbers.
     const statsBar = createElement('div', CSS.COMBAT_STATS_BAR);
     statsBar.innerHTML = `<strong>${livingEnemies.map(e =>
       this.engine.t('combat.enemyStats', { name: e.name, hp: e.attributes.healthPoints, ac: e.attributes.armorClass })
@@ -184,7 +185,10 @@ export class CombatSystem {
     const regex = /^(\d+)d(\d+)([\+\-]\d+)?$/;
     const match = dmgString.match(regex);
 
-    if (!match) return { total: 1, string: "1" };
+    if (!match) {
+      console.warn(`[Gravity] parseDamage: unrecognised format "${dmgString}", defaulting to 1`);
+      return { total: 1, string: "1" };
+    }
 
     const numDice = parseInt(match[1]);
     const diceFaces = parseInt(match[2]);

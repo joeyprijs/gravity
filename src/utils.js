@@ -48,6 +48,9 @@ export function buildSceneDescription(title, body = null) {
   div.appendChild(h2);
   if (body !== null) {
     const p = createElement('p', CSS.SCENE_BODY);
+    // body is trusted HTML authored in game JSON (scene descriptions, NPC text).
+    // It intentionally supports inline markup (<br>, <em>, etc.). Never pass
+    // user-supplied or save-file-derived content here.
     p.innerHTML = body;
     div.appendChild(p);
   }

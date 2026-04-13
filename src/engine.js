@@ -58,8 +58,14 @@ class RPGEngine {
       const loadCategory = async (categoryObj) => {
         const results = {};
         const keys = Object.keys(categoryObj);
-        const loadedData = await Promise.all(keys.map(key => fetch(categoryObj[key]).then(r => r.json())));
-        keys.forEach((key, i) => results[key] = loadedData[i]);
+        const loadedData = await Promise.all(
+          keys.map(key =>
+            fetch(categoryObj[key])
+              .then(r => r.json())
+              .catch(err => { console.warn(`[Gravity] Failed to load "${key}": ${err.message}`); return null; })
+          )
+        );
+        keys.forEach((key, i) => { if (loadedData[i] !== null) results[key] = loadedData[i]; });
         return results;
       };
 
@@ -295,7 +301,9 @@ class RPGEngine {
   emit(event, data) {
     const handlers = this._events.get(event);
     if (!handlers) return;
-    handlers.forEach(h => h(data));
+    // Snapshot handlers before iterating so a handler that calls off() on itself
+    // during emit doesn't cause the next handler to be skipped via splice mutation.
+    [...handlers].forEach(h => h(data));
   }
 
   registerAction(name, handlerFn) {

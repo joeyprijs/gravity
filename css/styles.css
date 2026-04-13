@@ -231,9 +231,6 @@ body {
   box-shadow: var(--btn-option-hover-shadow);
 }
 
-.scene__options--grid .option-btn:hover:not(:disabled) {
-
-}
 
 .option-btn:disabled {
   opacity: 0.5;
