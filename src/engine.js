@@ -193,9 +193,14 @@ class RPGEngine {
     const itemData = this.data.items[itemId];
     if (!itemData) return;
 
-    if (!this._spendAP(itemData.actionPoints || 0)) return;
-    if (this.isGameOver) return;
+    const apCost = itemData.actionPoints || 0;
+    if (this.inCombat && gameState.getPlayer().ap < apCost) {
+      this.log(LOG.SYSTEM, this.t('player.notEnoughAP', { cost: apCost }));
+      return;
+    }
 
+    // Apply effect BEFORE spending AP so the log order is always:
+    // "used potion" → (AP spent) → enemy turn fires.
     if (itemData.attributes?.healingAmount) {
       let amount = itemData.attributes.healingAmount;
       let rollSuffix = "";
@@ -221,6 +226,8 @@ class RPGEngine {
         this.log(LOG.SYSTEM, this.t('player.alreadyHere'));
       }
     }
+
+    this._spendAP(apCost);
   }
 
   equipItem(slot, itemId) {
