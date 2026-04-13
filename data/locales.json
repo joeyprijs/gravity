@@ -101,6 +101,8 @@
     "sellPrice":          "+{amount} Gold",
     "sold":               "Sold {name} for {price} Gold.",
     "neverMind":          "Never mind.",
+    "buyGroup":           "Buy",
+    "sellGroup":          "Sell",
     "trade":              "Trade",
     "leave":              "Leave"
   },

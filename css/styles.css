@@ -44,6 +44,7 @@
   --list-item-hover-bg: rgba(255, 255, 255, 0.05);
 
   /* Typography */
+  --font-xs: 0.75rem;
   --font-sm: 0.85rem;
   --font-md: 0.95rem;
   --font-lg: 1.05rem;
@@ -227,12 +228,11 @@ body {
 .option-btn:hover:not(:disabled) {
   background: var(--btn-option-hover-bg);
   border-color: var(--accent-hover);
-  transform: translateX(5px);
   box-shadow: var(--btn-option-hover-shadow);
 }
 
 .scene__options--grid .option-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
+
 }
 
 .option-btn:disabled {
@@ -251,7 +251,7 @@ body {
 
 .option-btn__req-text--sell {
   background: var(--xp-color);
-  color: #000;
+  color: #fff;
 }
 
 /* .tabs */
@@ -431,6 +431,30 @@ body {
 /* Non-button children (stat bars, gold display) always span full width */
 .scene__options--grid > :not(button) {
   grid-column: 1 / -1;
+}
+
+/* .options-group: labelled section of related buttons */
+.options-group__label {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: calc(var(--spacing) * 0.75);
+}
+
+.options-group__buttons {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: calc(var(--spacing) * 1.5);
+}
+
+.options-group__buttons--single {
+  grid-template-columns: 1fr;
+}
+
+.options-group:last-of-type .options-group__buttons {
+  border-bottom: 1px solid var(--glass-border);
+  padding-bottom: calc(var(--spacing) * 1.5);
 }
 
 .scene__location {

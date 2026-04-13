@@ -78,9 +78,13 @@ export const CSS = {
   TABS_CONTENT_ACTIVE:    'tabs__content--active',
 
   // Buttons
-  OPTION_BTN:             'option-btn',
-  OPTION_BTN_REQ:         'option-btn__req-text',
-  OPTION_BTN_REQ_SELL:    'option-btn__req-text--sell',
+  OPTION_BTN:                   'option-btn',
+  OPTION_BTN_REQ:               'option-btn__req-text',
+  OPTION_BTN_REQ_SELL:          'option-btn__req-text--sell',
+  OPTIONS_GROUP:                'options-group',
+  OPTIONS_GROUP_LABEL:          'options-group__label',
+  OPTIONS_GROUP_BUTTONS:        'options-group__buttons',
+  OPTIONS_GROUP_BUTTONS_SINGLE: 'options-group__buttons--single',
   BTN:                    'btn',
   BTN_ITEM:               'btn--item',
   BTN_DEPOSIT:            'btn--deposit',

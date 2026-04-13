@@ -133,54 +133,71 @@ export class DialogueSystem {
 
     const container = document.getElementById(EL.SCENE_OPTIONS);
     clearElement(container);
-    container.classList.add('scene__options--grid');
 
     const goldBar = createElement('div', CSS.STORE_STATS_GOLD, `<strong>${this.engine.t('dialogue.yourGold', { amount: gameState.getPlayer().gold })}</strong>`);
     container.appendChild(goldBar);
 
     // Buy items
-    if (this.currentNPC.carriedItems) {
-      this.currentNPC.carriedItems.forEach(itemId => {
-        const item = this.engine.data.items[itemId];
-        if (item) {
-          const btn = buildOptionButton(
-            this.engine.t('dialogue.buyButton', { name: item.name }),
-            this.engine.t('dialogue.buyPrice', { amount: item.value })
-          );
-          if (gameState.getPlayer().gold < item.value) btn.disabled = true;
-          btn.onclick = () => {
-            gameState.modifyPlayerStat('gold', -item.value);
-            gameState.addToInventory(itemId, 1);
-            this.engine.log(LOG.PLAYER, this.engine.t('dialogue.bought', { name: item.name, price: item.value }), 'loot');
-            this.renderStore(true);
-          };
-          container.appendChild(btn);
-        }
+    const buyItems = (this.currentNPC.carriedItems || [])
+      .map(id => ({ id, item: this.engine.data.items[id] }))
+      .filter(({ item }) => item);
+
+    if (buyItems.length) {
+      const group = createElement('div', CSS.OPTIONS_GROUP);
+      const label = createElement('div', CSS.OPTIONS_GROUP_LABEL, this.engine.t('dialogue.buyGroup'));
+      const btns = createElement('div', CSS.OPTIONS_GROUP_BUTTONS);
+      if (buyItems.length === 1) btns.classList.add(CSS.OPTIONS_GROUP_BUTTONS_SINGLE);
+      group.appendChild(label);
+      buyItems.forEach(({ id: itemId, item }) => {
+        const btn = buildOptionButton(
+          this.engine.t('dialogue.buyButton', { name: item.name }),
+          this.engine.t('dialogue.buyPrice', { amount: item.value })
+        );
+        if (gameState.getPlayer().gold < item.value) btn.disabled = true;
+        btn.onclick = () => {
+          gameState.modifyPlayerStat('gold', -item.value);
+          gameState.addToInventory(itemId, 1);
+          this.engine.log(LOG.PLAYER, this.engine.t('dialogue.bought', { name: item.name, price: item.value }), 'loot');
+          this.renderStore(true);
+        };
+        btns.appendChild(btn);
       });
+      group.appendChild(btns);
+      container.appendChild(group);
     }
 
     // Sell items
     const player = gameState.getPlayer();
-    player.inventory.forEach(invItem => {
+    const sellItems = player.inventory.filter(invItem => {
       const item = this.engine.data.items[invItem.item];
-      if (item && item.value > 0) {
-        const sellValue = Math.floor(item.value * MERCHANT_SELL_RATIO);
-        if (sellValue > 0) {
-          const btn = buildOptionButton(
-            this.engine.t('dialogue.sellButton', { name: item.name, count: invItem.amount }),
-            this.engine.t('dialogue.sellPrice', { amount: sellValue }),
-            true
-          );
-          btn.onclick = () => {
-            gameState.removeFromInventory(invItem.item, 1);
-            gameState.modifyPlayerStat('gold', sellValue);
-            this.engine.log(LOG.PLAYER, this.engine.t('dialogue.sold', { name: item.name, price: sellValue }), 'loot');
-            this.renderStore(true);
-          };
-          container.appendChild(btn);
-        }
-      }
+      return item && item.value > 0 && Math.floor(item.value * MERCHANT_SELL_RATIO) > 0;
     });
+
+    if (sellItems.length) {
+      const group = createElement('div', CSS.OPTIONS_GROUP);
+      const label = createElement('div', CSS.OPTIONS_GROUP_LABEL, this.engine.t('dialogue.sellGroup'));
+      const btns = createElement('div', CSS.OPTIONS_GROUP_BUTTONS);
+      if (sellItems.length === 1) btns.classList.add(CSS.OPTIONS_GROUP_BUTTONS_SINGLE);
+      group.appendChild(label);
+      sellItems.forEach(invItem => {
+        const item = this.engine.data.items[invItem.item];
+        const sellValue = Math.floor(item.value * MERCHANT_SELL_RATIO);
+        const btn = buildOptionButton(
+          this.engine.t('dialogue.sellButton', { name: item.name, count: invItem.amount }),
+          this.engine.t('dialogue.sellPrice', { amount: sellValue }),
+          true
+        );
+        btn.onclick = () => {
+          gameState.removeFromInventory(invItem.item, 1);
+          gameState.modifyPlayerStat('gold', sellValue);
+          this.engine.log(LOG.PLAYER, this.engine.t('dialogue.sold', { name: item.name, price: sellValue }), 'loot');
+          this.renderStore(true);
+        };
+        btns.appendChild(btn);
+      });
+      group.appendChild(btns);
+      container.appendChild(group);
+    }
 
     const neverMind = this.engine.t('dialogue.neverMind');
     const leaveBtn = buildOptionButton(neverMind);

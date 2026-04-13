@@ -59,10 +59,10 @@ export class CombatSystem {
 
     // Each enemy rolls initiative separately; enemies who beat the player go before the player,
     // enemies the player beats go after. playerInit is stored for phase filtering each round.
-    this.playerInit = Math.ceil(Math.random() * MAX_D20_ROLL) + (player.initiative || 0);
+    this.playerInit = this.roll(1, MAX_D20_ROLL) + (player.initiative || 0);
     let highestEnemyInit = 0;
     this.enemies.forEach(e => {
-      e.initiativeRoll = Math.ceil(Math.random() * MAX_D20_ROLL) + (e.attributes.initiative || 0);
+      e.initiativeRoll = this.roll(1, MAX_D20_ROLL) + (e.attributes.initiative || 0);
       if (e.initiativeRoll > highestEnemyInit) highestEnemyInit = e.initiativeRoll;
     });
     this.enemyGoesFirst = highestEnemyInit > this.playerInit;
@@ -98,8 +98,22 @@ export class CombatSystem {
 
     const attacks = this.getAvailableAttacks();
 
-    // One button per (living enemy × weapon), grouped by enemy
+    // One button per (living enemy × weapon). With multiple enemies, buttons are
+    // grouped per enemy under a labelled section so attacks don't intermingle.
     livingEnemies.forEach(target => {
+      let btnContainer = container;
+
+      if (livingEnemies.length > 1) {
+        const group = createElement('div', CSS.OPTIONS_GROUP);
+        const label = createElement('div', CSS.OPTIONS_GROUP_LABEL, target.name);
+        const btns = createElement('div', CSS.OPTIONS_GROUP_BUTTONS);
+        if (attacks.length === 1) btns.classList.add(CSS.OPTIONS_GROUP_BUTTONS_SINGLE);
+        group.appendChild(label);
+        group.appendChild(btns);
+        container.appendChild(group);
+        btnContainer = btns;
+      }
+
       attacks.forEach(att => {
         const btn = buildOptionButton(
           this.engine.t('combat.attackTarget', { name: att.name, target: target.name }),
@@ -107,7 +121,7 @@ export class CombatSystem {
         );
         if (gameState.getPlayer().ap < att.actionPoints) btn.disabled = true;
         btn.onclick = () => this.playerAttack(att, target);
-        container.appendChild(btn);
+        btnContainer.appendChild(btn);
       });
     });
 
@@ -136,7 +150,8 @@ export class CombatSystem {
     });
 
     if (!hasWeapon) {
-      attacks.push(this.engine.data.items[UNARMED_STRIKE_ID]);
+      const unarmed = this.engine.data.items[UNARMED_STRIKE_ID];
+      if (unarmed) attacks.push(unarmed);
     }
     return attacks;
   }
@@ -156,11 +171,13 @@ export class CombatSystem {
   //
   // Returns { total: 1, string: "1" } as a safe fallback for unrecognised input.
   parseDamage(dmgString) {
+    if (!dmgString) return { total: 1, string: "1" };
+
     // Legacy "min-max" range syntax (e.g. "1-4"). Must be checked before the
     // dice regex because it also contains a hyphen.
     if (dmgString.includes('-') && !dmgString.includes('d')) {
-      const [min, max] = dmgString.split('-').map(Number);
-      return { total: this.roll(min, max), string: dmgString };
+      const [a, b] = dmgString.split('-').map(Number);
+      return { total: this.roll(Math.min(a, b), Math.max(a, b)), string: dmgString };
     }
 
     // Standard dice notation: NdF[+/-M] (e.g. "2d6+3")
@@ -293,6 +310,8 @@ export class CombatSystem {
   // Executes all enemy attacks for one turn and returns a roll summary.
   // Mutates player HP via gameState. Does not log — enemyTurn() owns the narrative.
   _resolveEnemyAttacks(eWeapon, eAP, enemy) {
+    if (!eWeapon.actionPoints) return { attackCount: 0, hits: 0, misses: 0, totalDamage: 0, hitRolls: [], missRolls: [], damageRolls: [] };
+
     const player = gameState.getPlayer();
     let attackCount = 0, hits = 0, misses = 0, totalDamage = 0;
     const hitRolls = [], missRolls = [], damageRolls = [];

@@ -111,15 +111,16 @@ class StateManager {
 
   // Awards XP and handles level-up. XP threshold scales with level so each
   // level requires more XP than the last (threshold = level × XP_PER_LEVEL).
-  // On level-up: surplus XP is NOT carried over, HP is fully restored.
+  // Surplus XP carries over and can trigger multiple level-ups in one call.
   addXP(amount) {
     this.state.player.xp += amount;
-    const threshold = this.state.player.level * XP_PER_LEVEL;
-    if (this.state.player.xp >= threshold) {
+    let threshold = this.state.player.level * XP_PER_LEVEL;
+    while (this.state.player.xp >= threshold) {
       this.state.player.xp -= threshold;
       this.state.player.level++;
       this.state.player.maxHp += LEVELUP_HP_BONUS;
       this.state.player.hp = this.state.player.maxHp;
+      threshold = this.state.player.level * XP_PER_LEVEL;
     }
     this.notifyListeners();
   }
