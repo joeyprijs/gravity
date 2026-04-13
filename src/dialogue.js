@@ -48,6 +48,18 @@ export class DialogueSystem {
       this.engine.log(this.currentNPC.name, displayString);
     }
 
+    if (node.giveItem) {
+      gameState.addToInventory(node.giveItem, node.giveItemAmount || 1);
+      const name = this.engine.data.items[node.giveItem]?.name || node.giveItem;
+      this.engine.log(LOG.SYSTEM, this.engine.t('loot.receivedItem', { name }), 'loot');
+    }
+    if (node.changeStateFlag) {
+      gameState.setFlag(node.changeStateFlag.flag, node.changeStateFlag.value);
+    }
+    if (node.setMission) {
+      this.engine.questSystem.handleTrigger({ mission: node.setMission, status: node.setMissionStatus || 'active' });
+    }
+
     const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
     if (reminder) reminder.innerText = this.engine.t('ui.locationDialogue', { name: this.currentNPC.name });
 
@@ -59,16 +71,15 @@ export class DialogueSystem {
 
       const btn = buildOptionButton(res.text);
       btn.onclick = () => {
-        if (res.giveItem) {
-          gameState.addToInventory(res.giveItem, res.giveItemAmount || 1);
-          const name = this.engine.data.items[res.giveItem]?.name || res.giveItem;
-          this.engine.log(LOG.SYSTEM, this.engine.t('loot.receivedItem', { name }), 'loot');
-        }
-
         this.engine.log(LOG.PLAYER, res.text, 'choice');
 
         if (res.changeStateFlag) {
           gameState.setFlag(res.changeStateFlag.flag, res.changeStateFlag.value);
+        }
+        if (res.giveItem) {
+          gameState.addToInventory(res.giveItem, res.giveItemAmount || 1);
+          const name = this.engine.data.items[res.giveItem]?.name || res.giveItem;
+          this.engine.log(LOG.SYSTEM, this.engine.t('loot.receivedItem', { name }), 'loot');
         }
         if (res.setMission) {
           this.engine.questSystem.handleTrigger({ mission: res.setMission, status: res.setMissionStatus || 'active' });
