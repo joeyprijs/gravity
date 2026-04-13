@@ -8,6 +8,7 @@ export class CombatSystem {
   constructor(engine) {
     this.engine = engine;
     this.inCombat = false;
+    this.isGameOver = false;
     this.enemies = [];
     // originOption is the scene option that triggered this combat. On victory,
     // its requiredState flag is flipped so the fight option disappears.
@@ -38,6 +39,7 @@ export class CombatSystem {
 
     this.engine.scene.reset();
     this.inCombat = true;
+    this.isGameOver = false;
     this.enemies = enemyDataList;
     this.originOption = originOption;
 
@@ -348,6 +350,7 @@ export class CombatSystem {
 
   endCombat(isVictory) {
     this.inCombat = false;
+    if (!isVictory) this.isGameOver = true;
     if (isVictory) {
       const names = this.enemies.map(e => e.name).join(' & ');
       this.engine.log(LOG.SYSTEM, this.engine.t('combat.victory', { names }), 'loot');

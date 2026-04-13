@@ -186,6 +186,7 @@ class RPGEngine {
   // combat-refresh logic so the UI layer stays free of game logic.
 
   useItem(itemId) {
+    if (this.isGameOver) return;
     const itemData = this.data.items[itemId];
     if (!itemData) return;
 
@@ -219,6 +220,7 @@ class RPGEngine {
   }
 
   equipItem(slot, itemId) {
+    if (this.isGameOver) return;
     const itemData = this.data.items[itemId];
     const targetSlot = slot || itemData?.slot;
     if (!itemData || !targetSlot) return;
@@ -236,6 +238,7 @@ class RPGEngine {
   }
 
   unequipItem(slot) {
+    if (this.isGameOver) return;
     if (this.inCombat && gameState.getPlayer().ap < UNEQUIP_AP_COST) {
       this.log(LOG.SYSTEM, this.t('player.notEnoughAP', { cost: UNEQUIP_AP_COST }));
       return;
@@ -269,6 +272,7 @@ class RPGEngine {
   // of the internal structure.
 
   get inCombat() { return this.combatSystem.inCombat; }
+  get isGameOver() { return this.combatSystem.isGameOver; }
 
   get isGameStart() { return this.narrative.isGameStart; }
   set isGameStart(v) { this.narrative.isGameStart = v; }
