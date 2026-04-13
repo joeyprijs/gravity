@@ -8,6 +8,8 @@ This report provides a comprehensive, senior-developer-level audit of the Gravit
 
 ### 1.1 The Good (Strengths & Patterns)
 - **Zero-Dependency Vanilla JS:** The adherence to native, zero-build JavaScript (ES Modules) is excellent. It ensures the longevity of the project and removes the cognitive load of complex build pipelines (Webpack, Babel). 
+- **Modular Domain Structure (Recent Update):** The recent refactoring to separate the monolithic `src/` folder into domain-specific subdirectories (`core/`, `systems/`, `ui/`, `screens/`, `world/`) is a massive step forward, enforcing a cleaner separation of concerns and making the core engine much more navigable.
+- **Screen Architecture (Recent Update):** The introduction of standalone UI flows (like the `CharCreationScreen`) proves the engine can elegantly handle custom, pre-game states outside of the standard narrative scene loop.
 - **Data-Driven Design:** Decoupling the game logic from the content (via the `data/` directory and JSON schemas) gives Authoring a huge boost. It means game designers don't have to touch code to add items, scenes, or NPCs.
 - **Reactive UI Pattern:** `state.js` implements a simple React-like `subscribe`/`notify` pattern. When game data mutates, listeners are notified, which updates the UI. This drastically reduces the bugs common to jQuery-era DOM manipulation where UI falls out of sync with internal state.
 - **Cross-Reference Validation:** `engine.js` implements a developer-friendly `_validateData()` method that checks for orphaned scenes, items, and broken links on startup. This is an advanced feature often missing from bespoke engines and heavily speeds up debugging content creation.
