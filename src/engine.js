@@ -278,7 +278,10 @@ class RPGEngine {
 
   openScene(modifier) { return this.narrative.openScene(modifier); }
   log(type, message, variant, persist) { return this.narrative.log(type, message, variant, persist); }
-  renderScene(sceneId) { return this.scene.render(sceneId); }
+  renderScene(sceneId) {
+    this.dialogueSystem.storeOpen = false;
+    return this.scene.render(sceneId);
+  }
   restoreScene(sceneId, lastDesc) { return this.scene.restoreFromSave(sceneId, lastDesc); }
 
   // --- Event system ---

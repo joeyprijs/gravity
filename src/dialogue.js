@@ -20,6 +20,7 @@ export class DialogueSystem {
   }
 
   startDialogue(npcId) {
+    this.storeOpen = false;
     const npc = this.engine.data.npcs[npcId];
     if (!npc) { console.warn(`[Gravity] startDialogue: unknown NPC "${npcId}"`); return; }
 
