@@ -32,12 +32,13 @@ A browser-based text RPG inspired by classic choose-your-own-adventure games. Na
 
 ## Features
 
+- **Character creation** — name your character and distribute stat points before your adventure begins; designed to be extended with backgrounds and feats
 - **Scene system** — branching narrative driven by JSON scene definitions; choices can require items, check state flags, trigger quests, and more
 - **D&D-style combat** — turn-based fights using HP, Armor Class, Action Points, Initiative, and Level/XP
 - **Inventory & equipment** — collect, equip, and use items across weapons, armor, spells, and consumables
 - **Quest log** — missions triggered by scene entry, tracked as active or completed
 - **World map** — minimap HUD showing your current region, click to open a scrollable full world map
-- **Save / Load** — export and import save files to persist progress across sessions
+- **Save / Load** — export and import save files to persist progress across sessions; versioned schema with forward-migration
 
 ## Tech Stack
 
@@ -58,28 +59,35 @@ gravity/
 ├── css/
 │   └── styles.css      # All styles
 ├── src/
-│   ├── engine.js       # Game orchestrator — loads data, wires systems together
-│   ├── actions.js      # Built-in action handlers and action registration
-│   ├── condition.js    # Condition tree evaluator (and/or/not/flag/item/level/gold)
-│   ├── dice.js         # Pure dice math — roll() and parseDamage(), no dependencies
-│   ├── state.js        # Game state management and save/load
-│   ├── scene.js        # Scene rendering and navigation
-│   ├── combat.js       # Combat system
-│   ├── dialogue.js     # NPC dialogue and store system
-│   ├── narrative.js    # Narrative log and scroll behaviour
-│   ├── quests.js       # Quest management
-│   ├── map.js          # Minimap HUD and world map overlay
-│   ├── ui.js           # UI coordinator (tabs, save/load, stat bar)
-│   ├── inventory-ui.js # Inventory and equipment panel rendering
-│   ├── museum.js       # Museum chest deposit/withdraw UI
-│   ├── quest-ui.js     # Quest log panel rendering
-│   ├── config.js       # Shared constants
-│   └── utils.js        # DOM helpers
+│   ├── core/           # Engine fundamentals
+│   │   ├── engine.js   # Orchestrator — loads data, wires all systems together
+│   │   ├── state.js    # Game state, save/load, and schema migration
+│   │   ├── config.js   # Shared constants (CSS classes, element IDs, CHAR_CREATION config)
+│   │   └── utils.js    # DOM helpers (createElement, buildOptionButton, etc.)
+│   ├── systems/        # Game mechanics
+│   │   ├── combat.js   # Turn-based combat — initiative, attacks, AP, victory/defeat
+│   │   ├── dialogue.js # NPC conversations and merchant buy/sell interface
+│   │   ├── scene.js    # Scene rendering and navigation
+│   │   ├── narrative.js# Narrative log — scene descriptions, choices, system messages
+│   │   ├── actions.js  # Built-in scene action handlers (loot, rest, dialogue, etc.)
+│   │   ├── quests.js   # Quest state management and trigger processing
+│   │   ├── condition.js# Condition tree evaluator (and/or/not/flag/item/level/gold)
+│   │   └── dice.js     # Pure dice math — roll() and parseDamage(), no dependencies
+│   ├── ui/             # UI rendering
+│   │   ├── ui.js       # UI coordinator (tabs, save/load, stat bar, item actions)
+│   │   ├── inventory-ui.js # Inventory and equipment panel rendering
+│   │   └── quest-ui.js # Quest log panel rendering
+│   ├── world/          # World / map
+│   │   ├── map.js      # Minimap HUD and full world map overlay
+│   │   └── museum.js   # Museum chest deposit/withdraw UI
+│   └── screens/        # Full-screen overlays
+│       └── char-creation.js # Character creation screen (name + stat point allocation)
 ├── tests/
-│   ├── dice.test.js        # Tests for roll() and parseDamage()
-│   ├── condition.test.js   # Tests for the condition tree evaluator
-│   ├── state.test.js       # Tests for StateManager (XP, inventory, log cap)
-│   └── combat.test.js      # Tests for combat logic (attacks, turns, initiative)
+│   ├── dice.test.js          # Tests for roll() and parseDamage()
+│   ├── condition.test.js     # Tests for the condition tree evaluator
+│   ├── state.test.js         # Tests for StateManager (XP, inventory, log cap)
+│   ├── combat.test.js        # Tests for combat logic (attacks, turns, initiative)
+│   └── char-creation.test.js # Tests for char creation (point budget, bonuses, migration)
 └── data/
     ├── index.json      # Manifest — regions, world map size
     ├── locales.json    # All player-visible strings (UI labels, log messages, button text)

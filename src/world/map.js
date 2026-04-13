@@ -1,6 +1,6 @@
-import { gameState } from "./state.js";
-import { clearElement } from "./utils.js";
-import { MINIMAP_SIZE, MAP_NODE_DEFAULT_BG, CSS, EL } from "./config.js";
+import { gameState } from "../core/state.js";
+import { clearElement } from "../core/utils.js";
+import { MINIMAP_SIZE, MAP_NODE_DEFAULT_BG, CSS, EL } from "../core/config.js";
 
 // MapManager handles both the minimap HUD and the full-screen world map overlay.
 // The minimap is cached by scene ID so it only rebuilds when the player moves.

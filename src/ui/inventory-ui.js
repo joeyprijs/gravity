@@ -1,5 +1,5 @@
-import { createElement } from "./utils.js";
-import { ITEM_TYPE_ORDER, EL, CSS } from "./config.js";
+import { createElement } from "../core/utils.js";
+import { ITEM_TYPE_ORDER, EL, CSS } from "../core/config.js";
 
 // InventoryUI renders the inventory and equipment sidebar panels.
 export class InventoryUI {

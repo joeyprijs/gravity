@@ -123,7 +123,7 @@ body {
   background: var(--glass-bg);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
-  border: 1px solid var(--glass-border);
+  box-shadow: 0 0 0 1px var(--glass-border);
   padding: calc(var(--spacing) * 2.5);
   display: flex;
   flex-direction: column;
@@ -173,70 +173,49 @@ body {
   display: none;
 }
 
-/* .btn */
-.btn {
-  font-family: inherit;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
+/* ==========================================================================
+   .button — shared base for every interactive button element.
+   All buttons carry this class; unique modifier classes override only what
+   differs. .item-list__item shares the visual base (bg, border, font, cursor)
+   but keeps its own block layout and sizing via its own rule below.
+   ========================================================================== */
 
-.btn--glass {
-  background: var(--btn-glass-bg);
-  border: 1px solid var(--glass-border);
-  color: var(--text-primary);
-  padding: var(--spacing) calc(var(--spacing) * 2);
-  margin-left: calc(var(--spacing) * 1.25);
-}
-
-.btn--glass:hover {
-  background: var(--btn-glass-hover-bg);
-  transform: translateY(-2px);
-  box-shadow: var(--btn-glass-hover-shadow);
-}
-
-.btn--item {
-  background: var(--btn-item-bg);
-  color: #fff;
-  border: none;
-  padding: calc(var(--spacing) / 2) var(--spacing);
-  font-size: var(--font-sm);
-}
-
-.btn--item:hover {
-  background: var(--accent-color);
-}
-
-/* .option-btn */
-.option-btn {
+.button, .item-list__item {
   -webkit-appearance: none;
   appearance: none;
   background: var(--btn-option-bg);
   border: 1px solid var(--glass-border);
   color: var(--text-primary);
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* Full button layout + option-btn sizing (not applied to .item-list__item) */
+.button {
   padding: calc(var(--spacing) * 1.875) calc(var(--spacing) * 2.5);
   font-size: var(--font-lg);
   text-align: left;
-  cursor: pointer;
-  transition: all 0.3s ease;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-family: inherit;
 }
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(1);
+  background: var(--btn-option-disabled-bg);
+}
+
+/* .option-btn — scene action buttons; hover/disabled provided here */
+.option-btn { }
 
 .option-btn:hover:not(:disabled) {
   background: var(--btn-option-hover-bg);
   border-color: var(--accent-hover);
   box-shadow: var(--btn-option-hover-shadow);
-}
-
-
-.option-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  filter: grayscale(1);
-  background: var(--btn-option-disabled-bg);
 }
 
 .option-btn__req-text {
@@ -251,11 +230,36 @@ body {
   color: #fff;
 }
 
+/* .btn--glass — header control buttons (Save, Load, Restart) */
+.btn--glass {
+  padding: var(--spacing) calc(var(--spacing) * 2);
+  font-size: var(--font-md);
+  justify-content: center;
+}
+
+.btn--glass:hover {
+  background: var(--btn-option-hover-bg);
+  border-color: var(--accent-hover);
+  box-shadow: var(--btn-option-hover-shadow);
+}
+
+/* .btn--item — inventory action buttons (Use, Equip, Unequip, Deposit) */
+.btn--item {
+  background: var(--btn-item-bg);
+  border: none;
+  padding: calc(var(--spacing) / 2) var(--spacing);
+  font-size: var(--font-sm);
+  justify-content: center;
+}
+
+.btn--item:hover {
+  background: var(--accent-color);
+}
+
 /* .tabs */
 .tabs__nav {
   display: flex;
   flex-flow: row wrap;
-  gap: calc(var(--spacing) * 1.25);
   margin-bottom: calc(var(--spacing) * 2.5);
   border-bottom: calc(var(--spacing) * 0.125) solid var(--glass-border);
   padding-bottom: calc(var(--spacing) * 1.5);
@@ -263,16 +267,19 @@ body {
 }
 
 .tabs__btn {
-  background: var(--list-item-bg);
-  border: none;
+  height: 32px;
+  flex: 1;
   color: var(--text-secondary);
-  cursor: pointer;
   font-size: var(--font-md);
-  padding: calc(var(--spacing) * 0.625) calc(var(--spacing) * 1.25);
-  transition: all 0.2s;
+  line-height: 1;
+  padding: calc(var(--spacing) * 1) calc(var(--spacing) * 2);
+  justify-content: center;
 }
 
 .tabs__btn:hover {
+  background: var(--btn-option-hover-bg);
+  border-color: var(--accent-hover);
+  box-shadow: var(--btn-option-hover-shadow);
   color: var(--text-primary);
 }
 
@@ -326,6 +333,13 @@ body {
 }
 
 /* ==========================================================================
+ Game controls
+ ========================================================================== */
+.game__controls {
+  display: flex;
+}
+
+/* ==========================================================================
  INVENTORY & EQUIPMENT
  ========================================================================== */
 
@@ -349,16 +363,14 @@ body {
 
 .item-list__item {
   padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 1.875);
-  background: var(--list-item-bg);
   margin-bottom: calc(var(--spacing) * 1.25);
   font-size: var(--font-md);
-  border: 1px solid transparent;
-  transition: all 0.2s;
 }
 
 .item-list__item:hover {
-  border-color: var(--glass-border);
-  background: var(--list-item-hover-bg);
+  background: var(--btn-option-hover-bg);
+  border-color: var(--accent-hover);
+  box-shadow: var(--btn-option-hover-shadow);
 }
 
 .item-list__item--completed {
@@ -405,6 +417,7 @@ body {
 
 /* .scene__narrative */
 .scene__narrative {
+  padding-right: calc(var(--spacing) * 30);
   padding-bottom: calc(var(--spacing) * 10);
   margin-bottom: calc(var(--spacing) * 2.5);
 }
@@ -412,7 +425,6 @@ body {
 .scene__options {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--spacing) * 1.5);
   flex: 0 0 auto;
   margin-top: auto;
   max-height: 40vh;
@@ -420,9 +432,8 @@ body {
   padding-right: calc(var(--spacing) * 0.5);
 }
 
-.scene__options--combat,
-.scene__options--merchant {
-  gap: calc(var(--spacing) * 3);
+.scene__options--combat:has(.options-group),
+.scene__options--merchant:has(.options-group) {
 }
 
 .scene__options--grid {
@@ -449,23 +460,15 @@ body {
 .options-group__buttons {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: calc(var(--spacing) * 1.5);
 }
 
 .options-group__buttons--single {
   grid-template-columns: 1fr;
 }
 
-.options-group:last-of-type .options-group__buttons {
-  border-bottom: 1px solid var(--glass-border);
-  padding-bottom: calc(var(--spacing) * 3);
-}
+.options-group:last-of-type .options-group__buttons {  }
 
-.scene__location {
-  padding-bottom: calc(var(--spacing) * 3);
-  margin-bottom: calc(var(--spacing) * 3);
-  border-bottom: calc(var(--spacing) * 0.125) solid var(--glass-border);
-}
+.scene__location {  }
 
 /* .scene */
 .scene + .scene {
@@ -474,9 +477,7 @@ body {
   border-top: 1px solid var(--glass-border);
 }
 
-.scene__description {
-  margin-bottom: calc(var(--spacing) * 3);
-}
+.scene__description {  }
 
 .scene__body {
   line-height: calc(var(--spacing) * 3);
@@ -499,26 +500,6 @@ body {
 .scene__log--combat  { color: var(--accent-color); }
 .scene__log--quest   { color: var(--gold-color); }
 
-
-/* ==========================================================================
- MISC & HELPERS
- ========================================================================== */
-
-/* .combat-stats */
-.combat-stats__bar {
-  text-align: center;
-  padding-bottom: calc(var(--spacing) * 3);
-  color: var(--gold-color);
-  border-bottom: 1px solid var(--glass-border);
-}
-
-/* .store-stats */
-.store-stats__gold-bar {
-  text-align: center;
-  padding-bottom: calc(var(--spacing) * 3);
-  color: var(--gold-color);
-  border-bottom: 1px solid var(--glass-border);
-}
 
 /* ==========================================================================
  MINIMAP & FULL MAP
@@ -663,18 +644,12 @@ body {
 
 .fullmap-close {
   background: var(--btn-glass-bg);
-  border: 1px solid var(--glass-border);
-  color: var(--text-primary);
   width: 36px;
   height: 36px;
-  cursor: pointer;
   font-size: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: inherit;
   flex-shrink: 0;
-  transition: background 0.2s, border-color 0.2s;
+  justify-content: center;
+  padding: 0;
 }
 
 .fullmap-close:hover {
@@ -702,7 +677,7 @@ body {
   background: var(--xp-color);
 }
 
-/* Bottom-of-panel close button */
+/* museum__done-btn: bottom-of-panel close button uses .option-btn sizing */
 .museum__done-btn {
   margin-top: 15px;
 }
@@ -710,4 +685,136 @@ body {
 /* Highlighted item list inside the museum description (descriptionHook) */
 .museum-item-list {
   color: var(--gold-color);
+}
+
+/* ==========================================================================
+   CHARACTER CREATION SCREEN
+   ========================================================================== */
+
+.char-creation-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at top right, var(--bg-gradient-start), var(--bg-gradient-end));
+}
+
+.char-creation-overlay[hidden] {
+  display: none;
+}
+
+.char-creation__panel {
+  width: min(480px, 90vw);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 3);
+}
+
+.char-creation__title {
+  font-size: var(--font-xl);
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.char-creation__section {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 1.5);
+}
+
+.char-creation__label {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.char-creation__points-remaining {
+  color: var(--accent-color);
+  font-size: var(--font-sm);
+}
+
+.char-creation__name-input {
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--list-item-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2);
+  font-size: var(--font-lg);
+  font-family: inherit;
+  width: 100%;
+  outline: none;
+}
+
+.char-creation__name-input:focus {
+  border-color: var(--accent-color);
+}
+
+.char-creation__stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing);
+}
+
+.char-creation__stat-info {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 0.5);
+}
+
+.char-creation__stat-label {
+  font-size: var(--font-md);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.char-creation__stat-desc {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.char-creation__stat-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing);
+}
+
+.char-creation__stat-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  justify-content: center;
+  font-size: var(--font-lg);
+}
+
+.char-creation__stat-value {
+  min-width: calc(var(--spacing) * 10);
+  text-align: center;
+  font-size: var(--font-md);
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+.char-creation__actions {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 1.5);
+}
+
+.char-creation__confirm-btn {
+  justify-content: center;
+}
+
+.char-creation__load-btn {
+  justify-content: center;
+}
+
+/* Player name in game header */
+.stat-item--name {
+  color: var(--accent-color);
+  font-weight: 700;
 }

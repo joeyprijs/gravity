@@ -1,6 +1,6 @@
-import { gameState } from "./state.js";
-import { createElement, clearElement, buildSceneDescription, buildOptionButton, applyOptionsLayout } from "./utils.js";
-import { MERCHANT_SELL_RATIO, EL, CSS, LOG } from "./config.js";
+import { gameState } from "../core/state.js";
+import { createElement, clearElement, buildSceneDescription, buildOptionButton, applyOptionsLayout } from "../core/utils.js";
+import { MERCHANT_SELL_RATIO, EL, CSS, LOG } from "../core/config.js";
 import { evaluateCondition } from "./condition.js";
 
 // DialogueSystem handles NPC conversations and the merchant buy/sell interface.
@@ -147,9 +147,6 @@ export class DialogueSystem {
 
     const container = document.getElementById(EL.SCENE_OPTIONS);
     clearElement(container);
-
-    const goldBar = createElement('div', CSS.STORE_STATS_GOLD, `<strong>${this.engine.t('dialogue.yourGold', { amount: gameState.getPlayer().gold })}</strong>`);
-    container.appendChild(goldBar);
 
     // Buy items
     // carriedItems entries are either a plain string (unlimited stock) or

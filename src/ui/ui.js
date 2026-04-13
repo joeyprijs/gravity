@@ -1,8 +1,8 @@
-import { gameState } from "./state.js";
-import { clearElement } from "./utils.js";
-import { XP_PER_LEVEL, EL, CSS, LOG } from "./config.js";
-import { MapManager } from "./map.js";
-import { MuseumUI } from "./museum.js";
+import { gameState } from "../core/state.js";
+import { clearElement } from "../core/utils.js";
+import { XP_PER_LEVEL, EL, CSS, LOG } from "../core/config.js";
+import { MapManager } from "../world/map.js";
+import { MuseumUI } from "../world/museum.js";
 import { QuestUI } from "./quest-ui.js";
 import { InventoryUI } from "./inventory-ui.js";
 
@@ -54,15 +54,7 @@ export class UIManager {
             raw = new TextDecoder().decode(bytes);
           } catch (_) {}
           const data = JSON.parse(raw);
-          gameState.loadFromObject(data);
-          this.engine.isGameStart = true;
-          clearElement(EL.SCENE_NARRATIVE);
-          this.engine.currentSceneEl = null;
-          this.engine.scene.reset();
-          this.engine.recalculateAC();
-          this.engine.log(LOG.SYSTEM, this.engine.t('system.loaded'), 'system', false);
-          const lastDesc = this.engine.narrative.restore(gameState.getLog());
-          this.engine.restoreScene(gameState.getCurrentSceneId(), lastDesc);
+          this._applyLoadedSave(data);
         } catch (err) {
           console.error(err);
           this.engine.log(LOG.SYSTEM, this.engine.t('system.loadFailed'));
@@ -87,6 +79,7 @@ export class UIManager {
 
     // Stats
     const t = this.engine.t.bind(this.engine);
+    document.getElementById(EL.STAT_NAME).innerText = player.name || '';
     document.getElementById(EL.STAT_LEVEL).innerText = t('stats.level', { value: player.level });
     document.getElementById(EL.STAT_HP).innerText = t('stats.hp', { current: player.hp, max: player.maxHp });
     document.getElementById(EL.STAT_AP).innerText = t('stats.ap', { current: player.ap, max: player.maxAp });
@@ -118,6 +111,26 @@ export class UIManager {
         else if (action === "unequip") this.engine.unequipItem(slot);
       };
     });
+  }
+
+  // Applies a parsed save object and restores the game to its saved state.
+  // Called both from the in-game Load button and from the char creation screen.
+  _applyLoadedSave(data) {
+    // Ensure the game UI is visible (handles the case where this is called
+    // from the char creation screen before the main game has been shown).
+    const charCreation = document.getElementById(EL.CHAR_CREATION);
+    if (charCreation) charCreation.hidden = true;
+    document.getElementById('game-container').hidden = false;
+
+    gameState.loadFromObject(data);
+    this.engine.isGameStart = true;
+    clearElement(EL.SCENE_NARRATIVE);
+    this.engine.currentSceneEl = null;
+    this.engine.scene.reset();
+    this.engine.recalculateAC();
+    this.engine.log(LOG.SYSTEM, this.engine.t('system.loaded'), 'system', false);
+    const lastDesc = this.engine.narrative.restore(gameState.getLog());
+    this.engine.restoreScene(gameState.getCurrentSceneId(), lastDesc);
   }
 
   renderMuseumChestUI() {

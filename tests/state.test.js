@@ -1,6 +1,6 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { gameState } from '../src/state.js';
+import { gameState } from '../src/core/state.js';
 
 // Reset to defaults before each test so singleton state is clean.
 // PLAYER_DEFAULTS starts with: hp/maxHp=10, ap/maxAp=3, level=1, xp=0, gold=0

@@ -2,7 +2,29 @@ import { LEVELUP_HP_BONUS, XP_PER_LEVEL, PLAYER_DEFAULTS, STARTING_SCENE, MSG } 
 
 const MAX_LOG_ENTRIES = 200;
 
+// Increment when the save schema changes. loadFromObject() migrates older saves
+// forward so they remain compatible. Each migration function receives the raw
+// parsed data object and mutates it in-place.
+const SAVE_VERSION = 1;
+
+const MIGRATIONS = {
+  // v0 → v1: added player.name
+  1: (data) => {
+    if (!data.player) data.player = {};
+    if (data.player.name === undefined) data.player.name = "";
+  },
+};
+
+function migrate(data) {
+  const from = data.saveVersion ?? 0;
+  for (let v = from + 1; v <= SAVE_VERSION; v++) {
+    if (MIGRATIONS[v]) MIGRATIONS[v](data);
+  }
+  data.saveVersion = SAVE_VERSION;
+}
+
 const DEFAULT_STATE = {
+  saveVersion: SAVE_VERSION,
   player: PLAYER_DEFAULTS,
   flags: {},
   missions: {},
@@ -56,6 +78,10 @@ class StateManager {
   }
 
   loadFromObject(parsedData) {
+    // Run schema migrations so older saves stay compatible.
+    migrate(parsedData);
+
+    // Legacy guards for arrays that were added before versioned migrations.
     if (!parsedData.museumChest) parsedData.museumChest = [];
     if (!parsedData.visitedScenes) parsedData.visitedScenes = [];
     if (!parsedData.log) parsedData.log = [];

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluateCondition } from '../src/condition.js';
+import { evaluateCondition } from '../src/systems/condition.js';
 
 function makeState({ flags = {}, inventory = [], level = 1, gold = 0, missions = {} } = {}) {
   return {

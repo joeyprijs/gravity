@@ -1,6 +1,6 @@
-import { gameState } from "./state.js";
-import { createElement, clearElement, buildSceneDescription, buildOptionButton, applyOptionsLayout } from "./utils.js";
-import { MAX_D20_ROLL, UNARMED_STRIKE_ID, ENEMY_CLAW_ID, EL, CSS, LOG } from "./config.js";
+import { gameState } from "../core/state.js";
+import { createElement, clearElement, buildSceneDescription, buildOptionButton, applyOptionsLayout } from "../core/utils.js";
+import { MAX_D20_ROLL, UNARMED_STRIKE_ID, ENEMY_CLAW_ID, EL, CSS, LOG } from "../core/config.js";
 import { roll, parseDamage } from "./dice.js";
 
 // CombatSystem manages the full lifecycle of a turn-based combat encounter:
@@ -321,31 +321,21 @@ class CombatRenderer {
     const container = document.getElementById(EL.SCENE_OPTIONS);
     clearElement(container);
 
-    // Stats bar: one entry per living enemy.
-    // innerHTML is safe here — e.name comes from authored NPC JSON, hp/ac are numbers.
-    const statsBar = createElement('div', CSS.COMBAT_STATS_BAR);
-    statsBar.innerHTML = `<strong>${livingEnemies.map(e =>
-      this.cs.engine.t('combat.enemyStats', { name: e.name, hp: e.attributes.healthPoints, ac: e.attributes.armorClass })
-    ).join('<br />')}</strong>`;
-    container.appendChild(statsBar);
-
     const attacks = this.getAvailableAttacks();
 
-    // One button per (living enemy × weapon). With multiple enemies, buttons are
-    // grouped per enemy under a labelled section so attacks don't intermingle.
+    // Each enemy gets its own labelled group. The label includes HP/AC inline
+    // so the player always knows enemy status without a separate stat bar.
     livingEnemies.forEach(target => {
-      let btnContainer = container;
-
-      if (livingEnemies.length > 1) {
-        const group = createElement('div', CSS.OPTIONS_GROUP);
-        const label = createElement('div', CSS.OPTIONS_GROUP_LABEL, target.name);
-        const btns = createElement('div', CSS.OPTIONS_GROUP_BUTTONS);
-        if (attacks.length === 1) btns.classList.add(CSS.OPTIONS_GROUP_BUTTONS_SINGLE);
-        group.appendChild(label);
-        group.appendChild(btns);
-        container.appendChild(group);
-        btnContainer = btns;
-      }
+      const group = createElement('div', CSS.OPTIONS_GROUP);
+      const label = createElement('div', CSS.OPTIONS_GROUP_LABEL,
+        this.cs.engine.t('combat.enemyStats', { name: target.name, hp: target.attributes.healthPoints, ac: target.attributes.armorClass })
+      );
+      const btns = createElement('div', CSS.OPTIONS_GROUP_BUTTONS);
+      if (attacks.length === 1) btns.classList.add(CSS.OPTIONS_GROUP_BUTTONS_SINGLE);
+      group.appendChild(label);
+      group.appendChild(btns);
+      container.appendChild(group);
+      const btnContainer = btns;
 
       attacks.forEach(att => {
         const btn = buildOptionButton(

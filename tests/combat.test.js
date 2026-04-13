@@ -1,8 +1,8 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { CombatSystem } from '../src/combat.js';
-import { gameState } from '../src/state.js';
-import { ENEMY_CLAW_ID } from '../src/config.js';
+import { CombatSystem } from '../src/systems/combat.js';
+import { gameState } from '../src/core/state.js';
+import { ENEMY_CLAW_ID } from '../src/core/config.js';
 
 // Minimal engine mock — satisfies CombatSystem constructor and all methods under test.
 // No DOM calls originate from the methods under test (renderer is overridden below).

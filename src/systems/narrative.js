@@ -1,6 +1,6 @@
-import { gameState } from "./state.js";
-import { createElement, buildSceneDescription } from "./utils.js";
-import { EL, CSS } from "./config.js";
+import { gameState } from "../core/state.js";
+import { createElement, buildSceneDescription } from "../core/utils.js";
+import { EL, CSS } from "../core/config.js";
 
 // NarrativeLog manages the scrollable narrative panel — the stream of scene
 // descriptions, player choices, and system messages that forms the game log.
@@ -8,13 +8,9 @@ import { EL, CSS } from "./config.js";
 // subsystems can append content to the correct container.
 export class NarrativeLog {
   constructor() {
+    this.el = document.getElementById(EL.SCENE_NARRATIVE);
     this.currentSceneEl = null;
     this.isGameStart = true;
-  }
-
-  // Lazily resolved so the element doesn't need to exist at construction time
-  get el() {
-    return document.getElementById(EL.SCENE_NARRATIVE);
   }
 
   openScene(modifier = '') {

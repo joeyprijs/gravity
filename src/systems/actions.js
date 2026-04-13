@@ -1,5 +1,5 @@
-import { gameState } from "./state.js";
-import { REST_HEAL_AMOUNT, SNACK_HEAL_AMOUNT, RETURN_WORLD_FALLBACK_SCENE, LOG, ACTIONS, CSS } from "./config.js";
+import { gameState } from "../core/state.js";
+import { REST_HEAL_AMOUNT, SNACK_HEAL_AMOUNT, RETURN_WORLD_FALLBACK_SCENE, LOG, ACTIONS, CSS } from "../core/config.js";
 
 // Built-in action handlers for scene option buttons.
 // Each handler receives (opt, engine) — the full option object from scene JSON

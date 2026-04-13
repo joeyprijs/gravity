@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { roll, parseDamage } from '../src/dice.js';
+import { roll, parseDamage } from '../src/systems/dice.js';
 
 test('roll returns value within range', () => {
   for (let i = 0; i < 100; i++) {

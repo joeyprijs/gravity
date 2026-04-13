@@ -88,7 +88,8 @@ export const CSS = {
   OPTIONS_GROUP_LABEL:          'options-group__label',
   OPTIONS_GROUP_BUTTONS:        'options-group__buttons',
   OPTIONS_GROUP_BUTTONS_SINGLE: 'options-group__buttons--single',
-  BTN:                    'btn',
+  BTN:                    'button',
+  BTN_GLASS:              'btn--glass',
   BTN_ITEM:               'btn--item',
   BTN_DEPOSIT:            'btn--deposit',
 
@@ -103,10 +104,6 @@ export const CSS = {
   ITEM_TYPE:              'item__type',
   ITEM_STATS:             'item__stats',
   ITEM_ACTIONS:           'item__actions',
-
-  // Combat / merchant stat bars
-  COMBAT_STATS_BAR:       'combat-stats__bar',
-  STORE_STATS_GOLD:       'store-stats__gold-bar',
 
   // Museum
   MUSEUM_SECTION:         'museum__section',
@@ -123,6 +120,24 @@ export const CSS = {
 
   // Layout
   GLASS_PANEL:            'glass-panel',
+
+  // Char creation
+  CC_PANEL:               'char-creation__panel',
+  CC_TITLE:               'char-creation__title',
+  CC_SECTION:             'char-creation__section',
+  CC_LABEL:               'char-creation__label',
+  CC_NAME_INPUT:          'char-creation__name-input',
+  CC_POINTS:              'char-creation__points-remaining',
+  CC_STAT_ROW:            'char-creation__stat-row',
+  CC_STAT_INFO:           'char-creation__stat-info',
+  CC_STAT_LABEL:          'char-creation__stat-label',
+  CC_STAT_DESC:           'char-creation__stat-desc',
+  CC_STAT_CONTROLS:       'char-creation__stat-controls',
+  CC_STAT_BTN:            'char-creation__stat-btn',
+  CC_STAT_VALUE:          'char-creation__stat-value',
+  CC_ACTIONS:             'char-creation__actions',
+  CC_CONFIRM_BTN:         'char-creation__confirm-btn',
+  CC_LOAD_BTN:            'char-creation__load-btn',
 };
 
 // HTML element IDs — single source of truth for every getElementById call in JS.
@@ -139,6 +154,7 @@ export const EL = {
   FILE_UPLOAD:             'file-upload',
 
   // Stat display
+  STAT_NAME:               'stat-name',
   STAT_LEVEL:              'stat-level',
   STAT_HP:                 'stat-hp',
   STAT_AP:                 'stat-ap',
@@ -146,6 +162,9 @@ export const EL = {
   STAT_INITIATIVE:         'stat-initiative',
   STAT_GOLD:               'stat-gold',
   XP_BAR:                  'xp-bar',
+
+  // Character creation overlay
+  CHAR_CREATION:           'char-creation',
 
   // Sidebar tabs
   TAB_INVENTORY:           'inventory-tab',
@@ -177,8 +196,10 @@ export const MSG = {
   GAME_DATA_ERROR:    'Error loading game data.',
 };
 
-// Starting stats and inventory for a new player
+// Starting stats and inventory for a new player.
+// 'name' starts empty — the character creation screen prompts the player for it.
 export const PLAYER_DEFAULTS = {
+  name: "",
   level: 1,
   xp: 0,
   hp: 10,
@@ -187,6 +208,7 @@ export const PLAYER_DEFAULTS = {
   maxAp: 3,
   ac: BASE_AC,
   initiative: 0,
+  baseAcBonus: 0,
   gold: 0,
   inventory: [
     { item: "rusty_sword", amount: 1 },
@@ -201,6 +223,24 @@ export const PLAYER_DEFAULTS = {
     "Right Hand": null,
     "Legs": null
   }
+};
+
+// Character creation configuration.
+// pointBudget: total stat points the player can spend at character creation.
+// stats: each entry defines one allocatable stat.
+//   id:            key in PLAYER_DEFAULTS to modify
+//   label:         display name shown in the UI
+//   description:   tooltip / helper text
+//   bonusPerPoint: how much each spent point adds to the stat
+//   min:           minimum points allocatable (always 0)
+// To add more stats (e.g. initiative, base AC, backgrounds) later, just extend
+// this array — the character creation screen renders it dynamically.
+export const CHAR_CREATION = {
+  pointBudget: 2,
+  stats: [
+    { id: 'maxHp', label: 'Max HP', description: '+2 HP per point', bonusPerPoint: 2, min: 0 },
+    { id: 'baseAcBonus', label: 'AC', description: '+1 AC per point', bonusPerPoint: 1, min: 0 },
+  ]
 };
 
 // Canonical names for all built-in scene option actions.

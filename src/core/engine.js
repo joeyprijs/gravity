@@ -1,13 +1,14 @@
 import { gameState } from "./state.js";
-import { CombatSystem } from "./combat.js";
-import { DialogueSystem } from "./dialogue.js";
-import { QuestSystem } from "./quests.js";
-import { NarrativeLog } from "./narrative.js";
-import { UIManager } from "./ui.js";
-import { SceneRenderer } from "./scene.js";
+import { CombatSystem } from "../systems/combat.js";
+import { DialogueSystem } from "../systems/dialogue.js";
+import { QuestSystem } from "../systems/quests.js";
+import { NarrativeLog } from "../systems/narrative.js";
+import { UIManager } from "../ui/ui.js";
+import { SceneRenderer } from "../systems/scene.js";
 import { BASE_AC, UNEQUIP_AP_COST, DEFAULT_WORLD_MAP_SIZE, MSG, LOG, UNARMED_STRIKE_ID, ENEMY_CLAW_ID } from "./config.js";
-import { registerBuiltinActions } from "./actions.js";
-import { parseDamage } from "./dice.js";
+import { registerBuiltinActions } from "../systems/actions.js";
+import { parseDamage } from "../systems/dice.js";
+import { CharCreationScreen } from "../screens/char-creation.js";
 // MSG is still imported for the state.js log filter (MSG.GAME_LOADED).
 // All display strings now come from data/locales.json via this.t().
 
@@ -42,6 +43,18 @@ class RPGEngine {
     // Every state change triggers a full UI update. Subsystems mutate state
     // and the reactive UI re-renders — no manual refresh calls needed.
     gameState.subscribe(() => this.ui.update());
+
+    if (!gameState.getPlayer().name) {
+      // New game — show character creation before revealing the main UI.
+      new CharCreationScreen(() => this._startGame());
+    } else {
+      this._startGame();
+    }
+  }
+
+  _startGame() {
+    document.getElementById('game-container').hidden = false;
+    document.getElementById('char-creation').hidden = true;
     this.recalculateAC();
     this.ui.update();
     this.renderScene(gameState.getCurrentSceneId());
@@ -113,7 +126,7 @@ class RPGEngine {
   // when the value actually changes to avoid unnecessary re-renders.
   recalculateAC() {
     const player = gameState.getPlayer();
-    let newAC = BASE_AC;
+    let newAC = BASE_AC + player.baseAcBonus;
     for (const slot in player.equipment) {
       const itemId = player.equipment[slot];
       if (itemId && this.data.items[itemId]?.attributes?.armorClassBonus) {

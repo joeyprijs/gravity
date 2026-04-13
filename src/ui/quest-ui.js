@@ -1,6 +1,6 @@
-import { gameState } from "./state.js";
-import { createElement, clearElement } from "./utils.js";
-import { CSS, EL } from "./config.js";
+import { gameState } from "../core/state.js";
+import { createElement, clearElement } from "../core/utils.js";
+import { CSS, EL } from "../core/config.js";
 
 // QuestUI renders the quest log sidebar panel.
 export class QuestUI {

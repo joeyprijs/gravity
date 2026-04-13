@@ -77,7 +77,7 @@ export function applyOptionsLayout(container, threshold = 5) {
 }
 
 export function buildOptionButton(text, reqText = null, isSell = false) {
-  const btn = createElement('button', CSS.OPTION_BTN);
+  const btn = createElement('button', [CSS.BTN, CSS.OPTION_BTN]);
   btn.appendChild(createElement('span', '', text));
   if (reqText !== null) {
     const cls = isSell ? [CSS.OPTION_BTN_REQ, CSS.OPTION_BTN_REQ_SELL] : CSS.OPTION_BTN_REQ;

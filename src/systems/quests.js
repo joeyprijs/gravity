@@ -1,5 +1,5 @@
-import { gameState } from "./state.js";
-import { LOG } from "./config.js";
+import { gameState } from "../core/state.js";
+import { LOG } from "../core/config.js";
 
 // QuestSystem processes quest triggers that are embedded in scene JSON and
 // fires the appropriate state transitions (not_started → active → complete).

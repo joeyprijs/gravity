@@ -1,6 +1,6 @@
-import { gameState } from "./state.js";
-import { createElement } from "./utils.js";
-import { CSS, EL, LOG } from "./config.js";
+import { gameState } from "../core/state.js";
+import { createElement } from "../core/utils.js";
+import { CSS, EL, LOG } from "../core/config.js";
 
 // MuseumUI handles the museum chest deposit/withdraw interface.
 export class MuseumUI {
@@ -59,7 +59,7 @@ export class MuseumUI {
       invDiv.appendChild(createElement('p', CSS.ITEM_TYPE, this.engine.t('ui.inventoryEmpty')));
     }
 
-    const closeBtn = createElement('button', [CSS.OPTION_BTN, CSS.MUSEUM_DONE_BTN]);
+    const closeBtn = createElement('button', [CSS.BTN, CSS.OPTION_BTN, CSS.MUSEUM_DONE_BTN]);
     closeBtn.appendChild(createElement('span', '', this.engine.t('ui.museumDone')));
     closeBtn.onclick = () => this.engine.renderScene(gameState.getCurrentSceneId());
 

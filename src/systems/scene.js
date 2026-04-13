@@ -1,6 +1,6 @@
-import { gameState } from "./state.js";
-import { createElement, clearElement, buildSceneDescription, buildOptionButton, applyOptionsLayout } from "./utils.js";
-import { EL, CSS, LOG } from "./config.js";
+import { gameState } from "../core/state.js";
+import { createElement, clearElement, buildSceneDescription, buildOptionButton, applyOptionsLayout } from "../core/utils.js";
+import { EL, CSS, LOG } from "../core/config.js";
 import { evaluateCondition, fromRequiredState } from "./condition.js";
 
 // SceneRenderer handles navigating to scenes, resolving their descriptions,

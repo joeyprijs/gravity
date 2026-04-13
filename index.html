@@ -9,9 +9,16 @@
 </head>
 
 <body>
-  <div class="game" id="game-container">
+  <!-- Character creation overlay — shown for new games, hidden on save load -->
+  <div id="char-creation" class="char-creation-overlay"></div>
+
+  <!-- File input lives outside game-container so it's accessible from char creation too -->
+  <input type="file" id="file-upload" accept=".json" class="controls__hidden-input">
+
+  <div class="game" id="game-container" hidden>
     <header class="game__header glass-panel">
       <div class="game__stats" id="player-basic-stats">
+        <span class="stat-item stat-item--name" id="stat-name"></span>
         <span class="stat-item" id="stat-hp">HP: 10/10</span>
         <span class="stat-item" id="stat-ac">AC: 10</span>
         <span class="stat-item" id="stat-ap">AP: 3/3</span>
@@ -28,19 +35,19 @@
           <option value="css/styles.css">Glass Theme</option>
         </select>
         -->
-        <button class="btn btn--glass" id="btn-save">Save</button>
-        <button class="btn btn--glass" id="btn-load">Load</button>
-        <button class="btn btn--glass" id="btn-restart">Restart</button>
-        <input type="file" id="file-upload" accept=".json" class="controls__hidden-input hidden-input">
+        <button class="button btn--glass" id="btn-save">Save</button>
+        <button class="button btn--glass" id="btn-load">Load</button>
+        <button class="button btn--glass" id="btn-restart">Restart</button>
+        <!-- file-upload input is declared above game-container for char-creation access -->
       </div>
     </header>
 
     <div class="game__main" id="main-content">
       <aside class="game__sidebar glass-panel" id="left-panel">
         <nav class="tabs__nav">
-          <button class="tabs__btn" data-tab="inventory-tab">Inventory</button>
-          <button class="tabs__btn tabs__btn--active" data-tab="equipment-tab">Equipment</button>
-          <button class="tabs__btn" data-tab="quests-tab">Quests</button>
+          <button class="button tabs__btn" data-tab="inventory-tab">Inventory</button>
+          <button class="button tabs__btn tabs__btn--active" data-tab="equipment-tab">Equipment</button>
+          <button class="button tabs__btn" data-tab="quests-tab">Quests</button>
         </nav>
         <div class="tabs__content scrollable" id="inventory-tab"></div>
         <div class="tabs__content tabs__content--active scrollable" id="equipment-tab"></div>
@@ -62,7 +69,7 @@
         <div class="fullmap-overlay__panel">
           <div class="fullmap-overlay__header">
             <h3 class="fullmap-overlay__title" id="fullmap-title"></h3>
-            <button class="fullmap-close" id="fullmap-close">&#x2715;</button>
+            <button class="button fullmap-close" id="fullmap-close">&#x2715;</button>
           </div>
           <div class="fullmap-overlay__inner">
             <div class="fullmap__canvas" id="fullmap-canvas"></div>
@@ -72,7 +79,7 @@
     </div>
   </div>
 
-  <script type="module" src="src/engine.js"></script>
+  <script type="module" src="src/core/engine.js"></script>
 </body>
 
 </html>
