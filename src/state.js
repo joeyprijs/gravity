@@ -1,5 +1,7 @@
 import { LEVELUP_HP_BONUS, XP_PER_LEVEL, PLAYER_DEFAULTS, STARTING_SCENE, MSG } from "./config.js";
 
+const MAX_LOG_ENTRIES = 200;
+
 const DEFAULT_STATE = {
   player: PLAYER_DEFAULTS,
   flags: {},
@@ -64,7 +66,12 @@ class StateManager {
     this.notifyListeners();
   }
 
-  appendLog(entry) { this.state.log.push(entry); }
+  appendLog(entry) {
+    this.state.log.push(entry);
+    if (this.state.log.length > MAX_LOG_ENTRIES) {
+      this.state.log.shift();
+    }
+  }
   getLog() { return this.state.log; }
 
   // Called once on startup to ensure every mission ID exists in state.

@@ -54,12 +54,14 @@ A browser-based text RPG inspired by classic choose-your-own-adventure games. Na
 ```
 gravity/
 ├── index.html          # Entry point
+├── package.json        # Minimal config — "type": "module" + test script (no runtime deps)
 ├── css/
 │   └── styles.css      # All styles
 ├── src/
 │   ├── engine.js       # Game orchestrator — loads data, wires systems together
 │   ├── actions.js      # Built-in action handlers and action registration
 │   ├── condition.js    # Condition tree evaluator (and/or/not/flag/item/level/gold)
+│   ├── dice.js         # Pure dice math — roll() and parseDamage(), no dependencies
 │   ├── state.js        # Game state management and save/load
 │   ├── scene.js        # Scene rendering and navigation
 │   ├── combat.js       # Combat system
@@ -67,9 +69,17 @@ gravity/
 │   ├── narrative.js    # Narrative log and scroll behaviour
 │   ├── quests.js       # Quest management
 │   ├── map.js          # Minimap HUD and world map overlay
-│   ├── ui.js           # UI rendering (inventory, equipment, quests)
+│   ├── ui.js           # UI coordinator (tabs, save/load, stat bar)
+│   ├── inventory-ui.js # Inventory and equipment panel rendering
+│   ├── museum.js       # Museum chest deposit/withdraw UI
+│   ├── quest-ui.js     # Quest log panel rendering
 │   ├── config.js       # Shared constants
 │   └── utils.js        # DOM helpers
+├── tests/
+│   ├── dice.test.js        # Tests for roll() and parseDamage()
+│   ├── condition.test.js   # Tests for the condition tree evaluator
+│   ├── state.test.js       # Tests for StateManager (XP, inventory, log cap)
+│   └── combat.test.js      # Tests for combat logic (attacks, turns, initiative)
 └── data/
     ├── index.json      # Manifest — regions, world map size
     ├── locales.json    # All player-visible strings (UI labels, log messages, button text)
@@ -90,6 +100,14 @@ python3 -m http.server
 ```
 
 Then open `http://localhost:3000` (or whichever port your server uses).
+
+**Running tests:**
+
+```bash
+npm test
+```
+
+Uses Node's built-in test runner (Node 18+). No `npm install` needed — there are no dependencies.
 
 Open the browser's developer console while authoring — the engine validates all cross-references on startup and logs a warning for any broken IDs (unknown scene destinations, missing item/NPC references, invalid equipment). No reload or build step needed; just fix the JSON and refresh.
 
@@ -524,7 +542,10 @@ NPCs serve two roles depending on their fields: **enemies** (combat encounters) 
 {
   "name": "Mysterious Stranger",
   "isMerchant": true,
-  "carriedItems": ["healing_potion", "leather_armor"],
+  "carriedItems": [
+    "rusty_sword",
+    { "item": "healing_potion", "amount": 3 }
+  ],
   "storeExitText": "Safe travels.",
   "conversations": {
     "start": {
@@ -541,7 +562,7 @@ NPCs serve two roles depending on their fields: **enemies** (combat encounters) 
 | Field | Type | Description |
 |---|---|---|
 | `isMerchant` | Boolean | Enables the buy/sell merchant UI. |
-| `carriedItems` | Array | Item IDs the merchant sells. |
+| `carriedItems` | Array | Items the merchant sells. Each entry is either a plain item ID string (unlimited stock) or `{ "item": "id", "amount": N }` for limited stock that depletes on purchase. |
 | `storeExitText` | String | NPC's farewell line when the player leaves the store (default: `"Come again."`). |
 | `conversations` | Object | Dialogue tree. Keys are node IDs, entry point is always `"start"`. |
 

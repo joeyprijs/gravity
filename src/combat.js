@@ -1,6 +1,7 @@
 import { gameState } from "./state.js";
 import { createElement, clearElement, buildSceneDescription, buildOptionButton, applyOptionsLayout } from "./utils.js";
 import { MAX_D20_ROLL, UNARMED_STRIKE_ID, ENEMY_CLAW_ID, EL, CSS, LOG } from "./config.js";
+import { roll, parseDamage } from "./dice.js";
 
 // CombatSystem manages the full lifecycle of a turn-based combat encounter:
 // initiative roll, player/enemy turns, AP tracking, and victory/defeat resolution.
@@ -15,13 +16,14 @@ export class CombatSystem {
     this.originOption = null;
 
     this.playerInit = 0;
+    this.renderer = new CombatRenderer(this);
 
     this.engine.on('player:apSpent', ({ remaining }) => {
       if (!this.inCombat) return;
       if (remaining <= 0) {
         this.enemyTurn('after');
       } else {
-        this.renderCombatUI();
+        this.renderer.render();
       }
     });
   }
@@ -62,10 +64,10 @@ export class CombatSystem {
 
     // Each enemy rolls initiative separately; enemies who beat the player go before the player,
     // enemies the player beats go after. playerInit is stored for phase filtering each round.
-    this.playerInit = this.roll(1, MAX_D20_ROLL) + (player.initiative || 0);
+    this.playerInit = roll(1, MAX_D20_ROLL) + (player.initiative || 0);
     let highestEnemyInit = 0;
     this.enemies.forEach(e => {
-      e.initiativeRoll = this.roll(1, MAX_D20_ROLL) + (e.attributes.initiative || 0);
+      e.initiativeRoll = roll(1, MAX_D20_ROLL) + (e.attributes.initiative || 0);
       if (e.initiativeRoll > highestEnemyInit) highestEnemyInit = e.initiativeRoll;
     });
     this.enemyGoesFirst = highestEnemyInit > this.playerInit;
@@ -79,141 +81,8 @@ export class CombatSystem {
     const turnOrder = allCombatants.map(c => c.name).join(' → ');
     this.engine.log(LOG.COMBAT, this.engine.t('combat.initiative', { playerRoll: this.playerInit, enemyRolls, turnOrder }), 'combat');
 
-    this.renderCombatUI();
+    this.renderer.render();
     if (this.enemyGoesFirst) this.enemyTurn('before');
-  }
-
-  renderCombatUI() {
-    const livingEnemies = this.enemies.filter(e => e.attributes.healthPoints > 0);
-
-    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
-    if (reminder) reminder.innerText = this.engine.t('ui.locationCombat', { name: livingEnemies.map(e => e.name).join(' & ') });
-
-    const container = document.getElementById(EL.SCENE_OPTIONS);
-    clearElement(container);
-
-    // Stats bar: one entry per living enemy.
-    // innerHTML is safe here — e.name comes from authored NPC JSON, hp/ac are numbers.
-    const statsBar = createElement('div', CSS.COMBAT_STATS_BAR);
-    statsBar.innerHTML = `<strong>${livingEnemies.map(e =>
-      this.engine.t('combat.enemyStats', { name: e.name, hp: e.attributes.healthPoints, ac: e.attributes.armorClass })
-    ).join('<br />')}</strong>`;
-    container.appendChild(statsBar);
-
-    const attacks = this.getAvailableAttacks();
-
-    // One button per (living enemy × weapon). With multiple enemies, buttons are
-    // grouped per enemy under a labelled section so attacks don't intermingle.
-    livingEnemies.forEach(target => {
-      let btnContainer = container;
-
-      if (livingEnemies.length > 1) {
-        const group = createElement('div', CSS.OPTIONS_GROUP);
-        const label = createElement('div', CSS.OPTIONS_GROUP_LABEL, target.name);
-        const btns = createElement('div', CSS.OPTIONS_GROUP_BUTTONS);
-        if (attacks.length === 1) btns.classList.add(CSS.OPTIONS_GROUP_BUTTONS_SINGLE);
-        group.appendChild(label);
-        group.appendChild(btns);
-        container.appendChild(group);
-        btnContainer = btns;
-      }
-
-      attacks.forEach(att => {
-        const btn = buildOptionButton(
-          this.engine.t('combat.attackTarget', { name: att.name, target: target.name }),
-          this.engine.t('combat.apCost', { cost: att.actionPoints })
-        );
-        if (gameState.getPlayer().ap < att.actionPoints) btn.disabled = true;
-        btn.onclick = () => this.playerAttack(att, target);
-        btnContainer.appendChild(btn);
-      });
-    });
-
-    // End turn button
-    const endBtn = buildOptionButton(this.engine.t('combat.endTurn'));
-    endBtn.onclick = () => this.enemyTurn('after');
-    container.appendChild(endBtn);
-
-    applyOptionsLayout(container);
-  }
-
-  getAvailableAttacks() {
-    const player = gameState.getPlayer();
-    const attacks = [];
-
-    let hasWeapon = false;
-    ['Left Hand', 'Right Hand'].forEach(slot => {
-      const itemId = player.equipment[slot];
-      if (itemId && this.engine.data.items[itemId]) {
-        const item = this.engine.data.items[itemId];
-        if (item.type === 'Weapon' || item.type === 'Spell') {
-          attacks.push(item);
-          hasWeapon = true;
-        }
-      }
-    });
-
-    if (!hasWeapon) {
-      const unarmed = this.engine.data.items[UNARMED_STRIKE_ID];
-      if (unarmed) attacks.push(unarmed);
-    }
-    return attacks;
-  }
-
-  roll(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  }
-
-  // Parses a damage string and returns { total, string } where string is a
-  // human-readable roll breakdown for the combat log.
-  //
-  // Supported formats:
-  //   "1d6"    — roll one six-sided die
-  //   "2d4+2"  — roll two d4s and add 2
-  //   "1d8-1"  — roll one d8 and subtract 1
-  //   "1-4"    — legacy range syntax (kept for backwards compatibility)
-  //
-  // Returns { total: 1, string: "1" } as a safe fallback for unrecognised input.
-  parseDamage(dmgString) {
-    if (!dmgString) return { total: 1, string: "1" };
-
-    // Legacy "min-max" range syntax (e.g. "1-4"). Must be checked before the
-    // dice regex because it also contains a hyphen.
-    if (dmgString.includes('-') && !dmgString.includes('d')) {
-      const [a, b] = dmgString.split('-').map(Number);
-      return { total: this.roll(Math.min(a, b), Math.max(a, b)), string: dmgString };
-    }
-
-    // Standard dice notation: NdF[+/-M] (e.g. "2d6+3")
-    const regex = /^(\d+)d(\d+)([\+\-]\d+)?$/;
-    const match = dmgString.match(regex);
-
-    if (!match) {
-      console.warn(`[Gravity] parseDamage: unrecognised format "${dmgString}", defaulting to 1`);
-      return { total: 1, string: "1" };
-    }
-
-    const numDice = parseInt(match[1]);
-    const diceFaces = parseInt(match[2]);
-    const modifier = match[3] ? parseInt(match[3]) : 0;
-
-    let totalRoll = 0;
-    let rollResults = [];
-
-    for (let i = 0; i < numDice; i++) {
-      const r = this.roll(1, diceFaces);
-      totalRoll += r;
-      rollResults.push(r);
-    }
-
-    // Clamp to 0 so negative modifiers never produce negative damage
-    const grandTotal = Math.max(0, totalRoll + modifier);
-
-    let rollStr = rollResults.join('+');
-    if (modifier > 0) rollStr += `+${modifier}`;
-    else if (modifier < 0) rollStr += `${modifier}`;
-
-    return { total: grandTotal, string: rollStr };
   }
 
   playerAttack(weapon, targetEnemy) {
@@ -222,12 +91,12 @@ export class CombatSystem {
 
     // Attack roll 1-20 + modifier
     const hitModifier = weapon.bonusHitChance || 0;
-    const baseRoll = this.roll(1, MAX_D20_ROLL);
+    const baseRoll = roll(1, MAX_D20_ROLL);
     const hitRoll = baseRoll + hitModifier;
     const modStr = hitModifier !== 0 ? (hitModifier > 0 ? `+${hitModifier}` : hitModifier) : "";
 
     if (hitRoll >= targetEnemy.attributes.armorClass) {
-      const dmgResult = this.parseDamage(weapon.attributes.damageRoll);
+      const dmgResult = parseDamage(weapon.attributes.damageRoll);
       targetEnemy.attributes.healthPoints -= dmgResult.total;
       this.engine.log(LOG.PLAYER, this.engine.t('combat.attackHit', {
         weapon: weapon.name, roll: hitRoll, mod: modStr,
@@ -292,7 +161,7 @@ export class CombatSystem {
 
     if (phase === 'before') {
       // High-initiative enemies done — player acts next
-      this.renderCombatUI();
+      this.renderer.render();
     } else {
       // Low-initiative enemies done — start next round
       gameState.modifyPlayerStat('ap', player.maxAp - player.ap);
@@ -300,7 +169,7 @@ export class CombatSystem {
       if (hasBeforeEnemies) {
         this.enemyTurn('before');
       } else {
-        this.renderCombatUI();
+        this.renderer.render();
       }
     }
   }
@@ -328,14 +197,14 @@ export class CombatSystem {
       attackCount++;
 
       const hitModifier = eWeapon.bonusHitChance || 0;
-      const baseRoll = this.roll(1, MAX_D20_ROLL);
+      const baseRoll = roll(1, MAX_D20_ROLL);
       const hitRoll = baseRoll + hitModifier;
       const modStr = hitModifier !== 0 ? (hitModifier > 0 ? `+${hitModifier}` : hitModifier) : "";
 
       if (hitRoll >= player.ac) {
         hits++;
         hitRolls.push(`${hitRoll} (1d20${modStr})`);
-        const dmgResult = this.parseDamage(eWeapon.attributes.damageRoll);
+        const dmgResult = parseDamage(eWeapon.attributes.damageRoll);
         totalDamage += dmgResult.total;
         damageRolls.push(dmgResult.string);
         gameState.modifyPlayerStat('hp', -dmgResult.total);
@@ -410,5 +279,90 @@ export class CombatSystem {
       restartBtn.onclick = () => document.getElementById(EL.BTN_RESTART).click();
       container.appendChild(restartBtn);
     }
+  }
+}
+
+// CombatRenderer owns all DOM manipulation for the combat UI.
+// It holds no game state — all data is read from combatSystem on each render call.
+class CombatRenderer {
+  constructor(combatSystem) {
+    this.cs = combatSystem;
+  }
+
+  getAvailableAttacks() {
+    const player = gameState.getPlayer();
+    const attacks = [];
+
+    let hasWeapon = false;
+    ['Left Hand', 'Right Hand'].forEach(slot => {
+      const itemId = player.equipment[slot];
+      if (itemId && this.cs.engine.data.items[itemId]) {
+        const item = this.cs.engine.data.items[itemId];
+        if (item.type === 'Weapon' || item.type === 'Spell') {
+          attacks.push(item);
+          hasWeapon = true;
+        }
+      }
+    });
+
+    if (!hasWeapon) {
+      const unarmed = this.cs.engine.data.items[UNARMED_STRIKE_ID];
+      if (unarmed) attacks.push(unarmed);
+    }
+    return attacks;
+  }
+
+  render() {
+    const livingEnemies = this.cs.enemies.filter(e => e.attributes.healthPoints > 0);
+
+    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
+    if (reminder) reminder.innerText = this.cs.engine.t('ui.locationCombat', { name: livingEnemies.map(e => e.name).join(' & ') });
+
+    const container = document.getElementById(EL.SCENE_OPTIONS);
+    clearElement(container);
+
+    // Stats bar: one entry per living enemy.
+    // innerHTML is safe here — e.name comes from authored NPC JSON, hp/ac are numbers.
+    const statsBar = createElement('div', CSS.COMBAT_STATS_BAR);
+    statsBar.innerHTML = `<strong>${livingEnemies.map(e =>
+      this.cs.engine.t('combat.enemyStats', { name: e.name, hp: e.attributes.healthPoints, ac: e.attributes.armorClass })
+    ).join('<br />')}</strong>`;
+    container.appendChild(statsBar);
+
+    const attacks = this.getAvailableAttacks();
+
+    // One button per (living enemy × weapon). With multiple enemies, buttons are
+    // grouped per enemy under a labelled section so attacks don't intermingle.
+    livingEnemies.forEach(target => {
+      let btnContainer = container;
+
+      if (livingEnemies.length > 1) {
+        const group = createElement('div', CSS.OPTIONS_GROUP);
+        const label = createElement('div', CSS.OPTIONS_GROUP_LABEL, target.name);
+        const btns = createElement('div', CSS.OPTIONS_GROUP_BUTTONS);
+        if (attacks.length === 1) btns.classList.add(CSS.OPTIONS_GROUP_BUTTONS_SINGLE);
+        group.appendChild(label);
+        group.appendChild(btns);
+        container.appendChild(group);
+        btnContainer = btns;
+      }
+
+      attacks.forEach(att => {
+        const btn = buildOptionButton(
+          this.cs.engine.t('combat.attackTarget', { name: att.name, target: target.name }),
+          this.cs.engine.t('combat.apCost', { cost: att.actionPoints })
+        );
+        if (gameState.getPlayer().ap < att.actionPoints) btn.disabled = true;
+        btn.onclick = () => this.cs.playerAttack(att, target);
+        btnContainer.appendChild(btn);
+      });
+    });
+
+    // End turn button
+    const endBtn = buildOptionButton(this.cs.engine.t('combat.endTurn'));
+    endBtn.onclick = () => this.cs.enemyTurn('after');
+    container.appendChild(endBtn);
+
+    applyOptionsLayout(container);
   }
 }

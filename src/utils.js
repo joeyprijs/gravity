@@ -73,7 +73,7 @@ export function buildSceneDescription(title, body = null) {
  */
 export function applyOptionsLayout(container, threshold = 5) {
   const btnCount = Array.from(container.children).filter(c => c.tagName === 'BUTTON').length;
-  container.classList.toggle('scene__options--grid', btnCount >= threshold);
+  container.classList.toggle(CSS.SCENE_OPTIONS_GRID, btnCount >= threshold);
 }
 
 export function buildOptionButton(text, reqText = null, isSell = false) {

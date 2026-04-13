@@ -508,7 +508,6 @@ body {
 .combat-stats__bar {
   text-align: center;
   padding-bottom: calc(var(--spacing) * 3);
-  margin-bottom: calc(var(--spacing) * 1.875);
   color: var(--gold-color);
   border-bottom: 1px solid var(--glass-border);
 }
@@ -517,7 +516,6 @@ body {
 .store-stats__gold-bar {
   text-align: center;
   padding-bottom: calc(var(--spacing) * 3);
-  margin-bottom: calc(var(--spacing) * 1.875);
   color: var(--gold-color);
   border-bottom: 1px solid var(--glass-border);
 }

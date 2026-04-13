@@ -1,12 +1,18 @@
 import { gameState } from "./state.js";
-import { createElement, clearElement } from "./utils.js";
-import { ITEM_TYPE_ORDER, XP_PER_LEVEL, EL, CSS, LOG } from "./config.js";
+import { clearElement } from "./utils.js";
+import { XP_PER_LEVEL, EL, CSS, LOG } from "./config.js";
 import { MapManager } from "./map.js";
+import { MuseumUI } from "./museum.js";
+import { QuestUI } from "./quest-ui.js";
+import { InventoryUI } from "./inventory-ui.js";
 
 export class UIManager {
   constructor(engine) {
     this.engine = engine;
     this.map = new MapManager(engine);
+    this.museum = new MuseumUI(engine);
+    this.questUI = new QuestUI(engine);
+    this.inventoryUI = new InventoryUI(engine);
   }
 
   setup() {
@@ -92,160 +98,12 @@ export class UIManager {
     const xpPerc = (player.xp / (player.level * XP_PER_LEVEL)) * 100;
     document.getElementById(EL.XP_BAR).style.width = `${xpPerc}%`;
 
-    this.renderInventory(player);
-    this.renderEquipment(player);
-    this.updateQuestLog();
+    this.inventoryUI.renderInventory(player);
+    this.inventoryUI.renderEquipment(player);
+    this.questUI.render();
     this.map.renderMinimap();
 
     this.bindItemActions();
-  }
-
-  renderInventory(player) {
-    const sortedInv = [...player.inventory].sort((a, b) => {
-      const typeA = this.engine.data.items[a.item]?.type || "Flavour";
-      const typeB = this.engine.data.items[b.item]?.type || "Flavour";
-      return (ITEM_TYPE_ORDER[typeA] || 99) - (ITEM_TYPE_ORDER[typeB] || 99);
-    });
-
-    const invTab = document.getElementById(EL.TAB_INVENTORY);
-    invTab.innerHTML = '';
-
-    if (sortedInv.length === 0) {
-      invTab.appendChild(createElement('p', CSS.ITEM_TYPE, this.engine.t('ui.inventoryEmpty')));
-      return;
-    }
-
-    let currentType = null;
-    let currentGroup = null;
-    let currentUl = null;
-
-    sortedInv.forEach(invItem => {
-      const itemData = this.engine.data.items[invItem.item];
-      if (!itemData) return;
-
-      if (itemData.type !== currentType) {
-        currentType = itemData.type;
-        currentGroup = createElement('div', CSS.ITEM_LIST);
-        currentGroup.appendChild(createElement('h3', CSS.ITEM_LIST_TITLE, itemData.type));
-        currentUl = createElement('ul', CSS.ITEM_LIST_ITEMS);
-        currentGroup.appendChild(currentUl);
-        invTab.appendChild(currentGroup);
-      }
-
-      const li = createElement('li', CSS.ITEM_LIST_ITEM);
-      const label = `${itemData.name}${invItem.amount > 1 ? ` (x${invItem.amount})` : ''}`;
-
-      const descDiv = createElement('div', CSS.ITEM_DESCRIPTION);
-      descDiv.appendChild(createElement('strong', CSS.ITEM_TITLE, label));
-      descDiv.appendChild(createElement('div', CSS.ITEM_TYPE, itemData.description));
-      const statsEl = this.buildItemStatsEl(itemData);
-      if (statsEl) descDiv.appendChild(statsEl);
-
-      const actionsDiv = createElement('div', CSS.ITEM_ACTIONS);
-      if (itemData.type === 'Consumable') {
-        const btn = createElement('button', [CSS.BTN, CSS.BTN_ITEM], this.engine.t('inventory.useButton'));
-        btn.dataset.action = 'consume';
-        btn.dataset.item = invItem.item;
-        actionsDiv.appendChild(btn);
-      } else if (itemData.type === 'Weapon' || itemData.type === 'Spell') {
-        for (const [slot, labelKey] of [['Left Hand', 'inventory.leftHandButton'], ['Right Hand', 'inventory.rightHandButton']]) {
-          const btn = createElement('button', [CSS.BTN, CSS.BTN_ITEM], this.engine.t(labelKey));
-          btn.dataset.action = 'equip';
-          btn.dataset.slot = slot;
-          btn.dataset.item = invItem.item;
-          actionsDiv.appendChild(btn);
-        }
-      } else if (itemData.type === 'Armor') {
-        const btn = createElement('button', [CSS.BTN, CSS.BTN_ITEM], this.engine.t('inventory.equipButton'));
-        btn.dataset.action = 'equip';
-        btn.dataset.slot = itemData.slot;
-        btn.dataset.item = invItem.item;
-        actionsDiv.appendChild(btn);
-      }
-
-      li.appendChild(descDiv);
-      li.appendChild(actionsDiv);
-      currentUl.appendChild(li);
-    });
-  }
-
-  renderEquipment(player) {
-    const equipTab = document.getElementById(EL.TAB_EQUIPMENT);
-    equipTab.innerHTML = '';
-    for (const slot in player.equipment) {
-      const group = createElement('div', CSS.ITEM_LIST);
-      group.appendChild(createElement('h3', CSS.ITEM_LIST_TITLE, slot));
-      const ul = createElement('ul', CSS.ITEM_LIST_ITEMS);
-      const li = createElement('li', CSS.ITEM_LIST_ITEM);
-      const itemId = player.equipment[slot];
-      if (itemId) {
-        const itemData = this.engine.data.items[itemId];
-        const descDiv = createElement('div', CSS.ITEM_DESCRIPTION);
-        descDiv.appendChild(createElement('strong', CSS.ITEM_TITLE, itemData.name));
-        descDiv.appendChild(createElement('div', CSS.ITEM_TYPE, this.engine.t('ui.equipmentTypeFormat', { type: itemData.type, description: itemData.description })));
-        const statsEl = this.buildItemStatsEl(itemData);
-        if (statsEl) descDiv.appendChild(statsEl);
-
-        const unequipBtn = createElement('button', [CSS.BTN, CSS.BTN_ITEM], this.engine.t('inventory.unequipButton'));
-        unequipBtn.dataset.action = 'unequip';
-        unequipBtn.dataset.slot = slot;
-
-        li.appendChild(descDiv);
-        li.appendChild(createElement('div', CSS.ITEM_ACTIONS)).appendChild(unequipBtn);
-      } else {
-        li.appendChild(createElement('span', CSS.ITEM_TYPE, this.engine.t('ui.slotEmpty')));
-      }
-      ul.appendChild(li);
-      group.appendChild(ul);
-      equipTab.appendChild(group);
-    }
-  }
-
-  updateQuestLog() {
-    const container = document.getElementById(EL.TAB_QUESTS);
-    if (!container) return;
-    clearElement(container);
-
-    const activeList = [];
-    const completedList = [];
-
-    const buildQuestItem = (mData, extraClass = null) => {
-      const li = createElement('li', extraClass ? [CSS.ITEM_LIST_ITEM, extraClass] : CSS.ITEM_LIST_ITEM);
-      const descDiv = createElement('div', CSS.ITEM_DESCRIPTION);
-      descDiv.appendChild(createElement('strong', CSS.ITEM_TITLE, mData.name));
-      descDiv.appendChild(createElement('div', CSS.ITEM_TYPE, mData.description));
-      li.appendChild(descDiv);
-      return li;
-    };
-
-    for (const [mId, mData] of Object.entries(this.engine.data.missions)) {
-      const status = gameState.getMissionStatus(mId);
-      if (status === "active") {
-        activeList.push(buildQuestItem(mData));
-      } else if (status === "complete") {
-        completedList.push(buildQuestItem(mData, CSS.ITEM_LIST_ITEM_DONE));
-      }
-    }
-
-    if (activeList.length > 0) {
-      const group = createElement('div', CSS.ITEM_LIST);
-      group.appendChild(createElement('h3', CSS.ITEM_LIST_TITLE, this.engine.t('ui.questsActive')));
-      const ul = createElement('ul', CSS.ITEM_LIST_ITEMS);
-      activeList.forEach(li => ul.appendChild(li));
-      group.appendChild(ul);
-      container.appendChild(group);
-    }
-    if (completedList.length > 0) {
-      const group = createElement('div', CSS.ITEM_LIST);
-      group.appendChild(createElement('h3', CSS.ITEM_LIST_TITLE, this.engine.t('ui.questsCompleted')));
-      const ul = createElement('ul', CSS.ITEM_LIST_ITEMS);
-      completedList.forEach(li => ul.appendChild(li));
-      group.appendChild(ul);
-      container.appendChild(group);
-    }
-    if (activeList.length === 0 && completedList.length === 0) {
-      container.appendChild(createElement('p', CSS.ITEM_TYPE, this.engine.t('ui.questsNone')));
-    }
   }
 
   // Buttons call engine game-logic methods — UI layer owns no game logic here.
@@ -263,80 +121,6 @@ export class UIManager {
   }
 
   renderMuseumChestUI() {
-    const optionsContainer = document.getElementById(EL.SCENE_OPTIONS);
-    optionsContainer.innerHTML = '';
-
-    const chest = gameState.getMuseumChest();
-    const pInv = gameState.getPlayer().inventory;
-
-    const buildMuseumRow = (b, btnLabel, isDeposit, onClickFn) => {
-      const itemData = this.engine.data.items[b.item];
-      const name = itemData?.name || b.item;
-      const label = b.amount > 1 ? `${name} (x${b.amount})` : name;
-      const row = createElement('div', CSS.ITEM_LIST_ITEM);
-      const descDiv = createElement('div', CSS.ITEM_DESCRIPTION);
-      descDiv.appendChild(createElement('strong', CSS.ITEM_TITLE, label));
-      row.appendChild(descDiv);
-      const btn = createElement('button', isDeposit ? [CSS.BTN, CSS.BTN_ITEM, CSS.BTN_DEPOSIT] : [CSS.BTN, CSS.BTN_ITEM], btnLabel);
-      btn.onclick = onClickFn;
-      row.appendChild(btn);
-      return row;
-    };
-
-    const chestDiv = createElement('div', [CSS.GLASS_PANEL, CSS.MUSEUM_SECTION]);
-    chestDiv.appendChild(createElement('h3', CSS.MUSEUM_HEADING, this.engine.t('ui.museumTitle')));
-    if (chest && chest.length > 0) {
-      chest.forEach(b => {
-        const itemData = this.engine.data.items[b.item];
-        chestDiv.appendChild(buildMuseumRow(b, this.engine.t('ui.museumTake'), false, () => {
-          gameState.withdrawFromChest(b.item, 1);
-          this.engine.log(LOG.SYSTEM, this.engine.t('actions.museumTook', { name: itemData?.name || b.item }));
-          this.renderMuseumChestUI();
-        }));
-      });
-    } else {
-      chestDiv.appendChild(createElement('p', CSS.ITEM_TYPE, this.engine.t('ui.museumEmpty')));
-    }
-
-    const invDiv = createElement('div', [CSS.GLASS_PANEL, CSS.MUSEUM_SECTION]);
-    invDiv.appendChild(createElement('h3', CSS.MUSEUM_HEADING, this.engine.t('ui.inventoryTitle')));
-    if (pInv && pInv.length > 0) {
-      pInv.forEach(b => {
-        const itemData = this.engine.data.items[b.item];
-        invDiv.appendChild(buildMuseumRow(b, this.engine.t('ui.museumDisplay'), true, () => {
-          gameState.depositToChest(b.item, 1);
-          this.engine.log(LOG.SYSTEM, this.engine.t('actions.museumDisplayed', { name: itemData?.name || b.item }));
-          this.renderMuseumChestUI();
-        }));
-      });
-    } else {
-      invDiv.appendChild(createElement('p', CSS.ITEM_TYPE, this.engine.t('ui.inventoryEmpty')));
-    }
-
-    const closeBtn = createElement('button', [CSS.OPTION_BTN, CSS.MUSEUM_DONE_BTN]);
-    closeBtn.appendChild(createElement('span', '', this.engine.t('ui.museumDone')));
-    closeBtn.onclick = () => this.engine.renderScene(gameState.getCurrentSceneId());
-
-    optionsContainer.appendChild(chestDiv);
-    optionsContainer.appendChild(invDiv);
-    optionsContainer.appendChild(closeBtn);
-  }
-
-  // Returns a div.item__stats element, or null if the item has no displayable stats.
-  buildItemStatsEl(itemData) {
-    const statStrs = [];
-    if (itemData.actionPoints !== undefined) statStrs.push(`AP: ${itemData.actionPoints}`);
-    if (itemData.bonusHitChance !== undefined) {
-      const sign = itemData.bonusHitChance >= 0 ? '+' : '';
-      statStrs.push(`Hit: ${sign}${itemData.bonusHitChance}`);
-    }
-    if (itemData.attributes) {
-      for (const k in itemData.attributes) {
-        const v = itemData.attributes[k];
-        if (typeof v !== 'object') statStrs.push(`${k}: ${v}`);
-      }
-    }
-    if (statStrs.length === 0) return null;
-    return createElement('div', CSS.ITEM_STATS, statStrs.join(', '));
+    this.museum.render();
   }
 }
