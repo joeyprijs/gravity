@@ -192,6 +192,7 @@ export const PLAYER_DEFAULTS = {
   ],
   equipment: {
     "Head": null,
+    "Amulet": null,
     "Torso": null,
     "Legs": null,
     "Left Hand": null,
