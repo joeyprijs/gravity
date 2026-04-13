@@ -59,15 +59,16 @@ export class DialogueSystem {
 
       const btn = buildOptionButton(res.text);
       btn.onclick = () => {
-        this.engine.log(LOG.PLAYER, res.text, 'choice');
-
-        if (res.changeStateFlag) {
-          gameState.setFlag(res.changeStateFlag.flag, res.changeStateFlag.value);
-        }
         if (res.giveItem) {
           gameState.addToInventory(res.giveItem, res.giveItemAmount || 1);
           const name = this.engine.data.items[res.giveItem]?.name || res.giveItem;
           this.engine.log(LOG.SYSTEM, this.engine.t('loot.receivedItem', { name }), 'loot');
+        }
+
+        this.engine.log(LOG.PLAYER, res.text, 'choice');
+
+        if (res.changeStateFlag) {
+          gameState.setFlag(res.changeStateFlag.flag, res.changeStateFlag.value);
         }
         if (res.setMission) {
           this.engine.questSystem.handleTrigger({ mission: res.setMission, status: res.setMissionStatus || 'active' });
