@@ -6,7 +6,10 @@
   "attributes": {
     "initiative": 0
   },
-  "carriedItems": ["healing_potion", "leather_armor"],
+  "carriedItems": [
+    { "item": "healing_potion", "amount": 3 },
+    { "item": "leather_armor", "amount": 1 }
+  ],
   "conversations": {
     "start": {
       "npcText": "Greetings, traveler. I am the Mysterious Stranger.",

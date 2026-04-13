@@ -139,9 +139,17 @@ export class DialogueSystem {
     container.appendChild(goldBar);
 
     // Buy items
+    // carriedItems entries are either a plain string (unlimited stock) or
+    // { item, amount } (limited stock). amount is decremented in-memory on
+    // purchase; entries at 0 are filtered out so the item disappears from
+    // the store. Stock resets when the game is reloaded (standard behaviour).
     const buyItems = (this.currentNPC.carriedItems || [])
-      .map(id => ({ id, item: this.engine.data.items[id] }))
-      .filter(({ item }) => item);
+      .map(entry => {
+        const id = typeof entry === 'string' ? entry : entry.item;
+        const stock = typeof entry === 'object' && entry !== null ? (entry.amount ?? null) : null;
+        return { id, item: this.engine.data.items[id], stock, entry };
+      })
+      .filter(({ item, stock }) => item && stock !== 0);
 
     if (buyItems.length) {
       const group = createElement('div', CSS.OPTIONS_GROUP);
@@ -149,13 +157,15 @@ export class DialogueSystem {
       const btns = createElement('div', CSS.OPTIONS_GROUP_BUTTONS);
       if (buyItems.length === 1) btns.classList.add(CSS.OPTIONS_GROUP_BUTTONS_SINGLE);
       group.appendChild(label);
-      buyItems.forEach(({ id: itemId, item }) => {
+      buyItems.forEach(({ id: itemId, item, stock, entry }) => {
+        const displayName = stock !== null ? `${item.name} (x${stock})` : item.name;
         const btn = buildOptionButton(
-          this.engine.t('dialogue.buyButton', { name: item.name }),
+          this.engine.t('dialogue.buyButton', { name: displayName }),
           this.engine.t('dialogue.buyPrice', { amount: item.value })
         );
         if (gameState.getPlayer().gold < item.value) btn.disabled = true;
         btn.onclick = () => {
+          if (stock !== null) entry.amount--;
           gameState.modifyPlayerStat('gold', -item.value);
           gameState.addToInventory(itemId, 1);
           this.engine.log(LOG.PLAYER, this.engine.t('dialogue.bought', { name: item.name, price: item.value }), 'loot');
