@@ -215,6 +215,7 @@ export class DialogueSystem {
     const leaveBtn = buildOptionButton(neverMind);
     leaveBtn.onclick = () => {
       this.storeOpen = false;
+      document.getElementById(EL.SCENE_OPTIONS).classList.remove(CSS.SCENE_OPTIONS_MERCHANT);
       this.engine.log(LOG.PLAYER, neverMind, 'choice');
 
       const exitStr = this.currentNPC.storeExitText || this.engine.t('dialogue.comeAgain');
