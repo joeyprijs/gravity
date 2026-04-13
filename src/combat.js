@@ -50,6 +50,7 @@ export class CombatSystem {
     const names = this.enemies.map(e => e.name).join(' & ');
 
     this.engine.openScene(CSS.SCENE_COMBAT);
+    document.getElementById(EL.SCENE_OPTIONS).classList.add(CSS.SCENE_OPTIONS_COMBAT);
     this.engine.currentSceneEl.appendChild(
       buildSceneDescription(
         this.engine.t('combat.fightingTitle', { names }),

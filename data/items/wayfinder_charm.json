@@ -4,7 +4,7 @@
   "type": "Armor",
   "slot": "Amulet",
   "description": "A worn iron disc on a leather cord, etched with a compass rose. Bron carried this through a dozen dungeons. It grants a quiet confidence.",
-  "value": 0,
+  "value": 40,
   "actionPoints": 1,
   "attributes": {
     "armorClassBonus": 1

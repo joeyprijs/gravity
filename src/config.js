@@ -70,6 +70,8 @@ export const CSS = {
   SCENE_TITLE_GAME_OVER:  'scene__title--game-over',
   SCENE_BODY:             'scene__body',
   SCENE_LOG:              'scene__log',
+  SCENE_OPTIONS_COMBAT:   'scene__options--combat',
+  SCENE_OPTIONS_MERCHANT: 'scene__options--merchant',
 
   // Tabs (ui.js setup)
   TABS_BTN:               'tabs__btn',
@@ -194,9 +196,9 @@ export const PLAYER_DEFAULTS = {
     "Head": null,
     "Amulet": null,
     "Torso": null,
-    "Legs": null,
     "Left Hand": null,
-    "Right Hand": null
+    "Right Hand": null,
+    "Legs": null
   }
 };
 

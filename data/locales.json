@@ -91,7 +91,7 @@
   "dialogue": {
     "greeting":           "Greetings, traveler. I am {name}.",
     "comeAgain":          "Come again.",
-    "merchantWaresTitle": "[{name}]'s Wares",
+    "merchantWaresTitle": "{name}'s Wares",
     "merchantGreeting":   "[{name}] Take a look!",
     "yourGold":           "Your Gold: {amount}",
     "buyButton":          "Buy {name}",

@@ -121,6 +121,7 @@ export class DialogueSystem {
     if (!isUpdate) {
       this.storeOpen = true;
       this.engine.openScene(CSS.SCENE_MERCHANT);
+      document.getElementById(EL.SCENE_OPTIONS).classList.add(CSS.SCENE_OPTIONS_MERCHANT);
       this.engine.currentSceneEl.appendChild(
         buildSceneDescription(
           this.engine.t('dialogue.merchantWaresTitle', { name: this.currentNPC.name }),

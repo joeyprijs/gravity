@@ -1,6 +1,6 @@
 import { gameState } from "./state.js";
 import { createElement, clearElement, buildSceneDescription, buildOptionButton, applyOptionsLayout } from "./utils.js";
-import { EL, LOG } from "./config.js";
+import { EL, CSS, LOG } from "./config.js";
 import { evaluateCondition, fromRequiredState } from "./condition.js";
 
 // SceneRenderer handles navigating to scenes, resolving their descriptions,
@@ -72,6 +72,7 @@ export class SceneRenderer {
     if (reminder) reminder.innerText = scene.title || scene.name;
 
     const optionsContainer = document.getElementById(EL.SCENE_OPTIONS);
+    optionsContainer.classList.remove(CSS.SCENE_OPTIONS_COMBAT, CSS.SCENE_OPTIONS_MERCHANT);
     clearElement(optionsContainer);
 
     (scene.options || []).forEach(opt => {

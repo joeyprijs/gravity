@@ -420,6 +420,11 @@ body {
   padding-right: calc(var(--spacing) * 0.5);
 }
 
+.scene__options--combat,
+.scene__options--merchant {
+  gap: calc(var(--spacing) * 3);
+}
+
 .scene__options--grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -431,6 +436,8 @@ body {
 }
 
 /* .options-group: labelled section of related buttons */
+.options-group {  }
+
 .options-group__label {
   font-size: var(--font-xs);
   color: var(--text-secondary);
@@ -451,7 +458,7 @@ body {
 
 .options-group:last-of-type .options-group__buttons {
   border-bottom: 1px solid var(--glass-border);
-  padding-bottom: calc(var(--spacing) * 1.5);
+  padding-bottom: calc(var(--spacing) * 3);
 }
 
 .scene__location {
@@ -500,15 +507,19 @@ body {
 /* .combat-stats */
 .combat-stats__bar {
   text-align: center;
+  padding-bottom: calc(var(--spacing) * 3);
   margin-bottom: calc(var(--spacing) * 1.875);
   color: var(--gold-color);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 /* .store-stats */
 .store-stats__gold-bar {
   text-align: center;
+  padding-bottom: calc(var(--spacing) * 3);
   margin-bottom: calc(var(--spacing) * 1.875);
   color: var(--gold-color);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 /* ==========================================================================
