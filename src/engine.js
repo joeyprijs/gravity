@@ -194,6 +194,7 @@ class RPGEngine {
     if (!itemData) return;
 
     if (!this._spendAP(itemData.actionPoints || 0)) return;
+    if (this.isGameOver) return;
 
     if (itemData.attributes?.healingAmount) {
       let amount = itemData.attributes.healingAmount;
