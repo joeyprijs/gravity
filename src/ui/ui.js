@@ -133,7 +133,6 @@ export class UIManager {
     clearElement(EL.SCENE_NARRATIVE);
     this.engine.currentSceneEl = null;
     this.engine.resetScene();
-    this.engine.recalculateAC();
     this.engine.log(LOG.SYSTEM, this.engine.t('system.loaded'), 'system', false);
     const lastDesc = this.engine.narrative.restore(gameState.getLog());
     this.engine.restoreScene(gameState.getCurrentSceneId(), lastDesc);

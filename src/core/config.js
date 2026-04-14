@@ -4,9 +4,6 @@ export const MAX_D20_ROLL = 20;
 // Fraction of an item's value that merchants pay when the player sells — 0.5 = 50%
 export const MERCHANT_SELL_RATIO = 0.5;
 
-// Starting armor class before any equipment bonuses are applied
-export const BASE_AC = 10;
-
 // Determines the display order of items in the inventory panel — lower number = higher up
 export const ITEM_TYPE_ORDER = {
   "Weapon": 1,
@@ -208,9 +205,8 @@ export const PLAYER_DEFAULTS = {
   maxHp: 10,
   ap: 3,
   maxAp: 3,
-  ac: BASE_AC,
+  ac: 10,
   initiative: 0,
-  baseAcBonus: 0,
   gold: 0,
   inventory: [
     { item: "rusty_sword", amount: 1 },
@@ -241,7 +237,7 @@ export const CHAR_CREATION = {
   pointBudget: 2,
   stats: [
     { id: 'maxHp', label: 'Max HP', description: '+2 HP per point', bonusPerPoint: 2, min: 0 },
-    { id: 'baseAcBonus', label: 'AC', description: '+1 AC per point', bonusPerPoint: 1, min: 0 },
+    { id: 'ac', label: 'AC', description: '+1 AC per point', bonusPerPoint: 1, min: 0 },
   ]
 };
 

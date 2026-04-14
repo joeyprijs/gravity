@@ -5,7 +5,7 @@ const MAX_LOG_ENTRIES = 200;
 // Increment when the save schema changes. loadFromObject() migrates older saves
 // forward so they remain compatible. Each migration function receives the raw
 // parsed data object and mutates it in-place.
-const SAVE_VERSION = 2;
+const SAVE_VERSION = 3;
 
 const MIGRATIONS = {
   // v0 → v1: added player.name
@@ -13,12 +13,15 @@ const MIGRATIONS = {
     if (!data.player) data.player = {};
     if (data.player.name === undefined) data.player.name = "";
   },
-  // v1 → v2: added museumChest, visitedScenes, log, player.baseAcBonus
+  // v1 → v2: added museumChest, visitedScenes, log
   2: (data) => {
     if (!data.museumChest)   data.museumChest   = [];
     if (!data.visitedScenes) data.visitedScenes = [];
     if (!data.log)           data.log           = [];
-    if (data.player && data.player.baseAcBonus === undefined) data.player.baseAcBonus = 0;
+  },
+  // v2 → v3: removed baseAcBonus (AC is now stored directly on player.ac)
+  3: (data) => {
+    if (data.player) delete data.player.baseAcBonus;
   },
 };
 

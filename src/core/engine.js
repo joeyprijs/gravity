@@ -5,7 +5,7 @@ import { QuestSystem } from "../systems/quests.js";
 import { NarrativeLog } from "../systems/narrative.js";
 import { UIManager } from "../ui/ui.js";
 import { SceneRenderer } from "../systems/scene.js";
-import { BASE_AC, UNEQUIP_AP_COST, DEFAULT_WORLD_MAP_SIZE, MSG, LOG, UNARMED_STRIKE_ID, ENEMY_CLAW_ID } from "./config.js";
+import { UNEQUIP_AP_COST, DEFAULT_WORLD_MAP_SIZE, MSG, LOG, UNARMED_STRIKE_ID, ENEMY_CLAW_ID } from "./config.js";
 import { registerBuiltinActions } from "../systems/actions.js";
 import { parseDamage } from "../systems/dice.js";
 import { CharCreationScreen } from "../screens/char-creation.js";
@@ -55,7 +55,6 @@ class RPGEngine {
   _startGame() {
     document.getElementById('game-container').hidden = false;
     document.getElementById('char-creation').hidden = true;
-    this.recalculateAC();
     this.ui.update();
     this.renderScene(gameState.getCurrentSceneId());
   }
@@ -119,24 +118,6 @@ class RPGEngine {
     for (const p of parts) str = str?.[p];
     if (typeof str !== 'string') return key;
     return str.replace(/\{(\w+)\}/g, (_, k) => (k in params ? params[k] : `{${k}}`));
-  }
-
-  // Recomputes the player's AC from BASE_AC plus all equipped armor bonuses.
-  // Called after every equip/unequip and on save load. Uses forceUpdate() only
-  // when the value actually changes to avoid unnecessary re-renders.
-  recalculateAC() {
-    const player = gameState.getPlayer();
-    let newAC = BASE_AC + player.baseAcBonus;
-    for (const slot in player.equipment) {
-      const itemId = player.equipment[slot];
-      if (itemId && this.data.items[itemId]?.attributes?.armorClassBonus) {
-        newAC += this.data.items[itemId].attributes.armorClassBonus;
-      }
-    }
-    if (player.ac !== newAC) {
-      player.ac = newAC;
-      gameState.forceUpdate();
-    }
   }
 
   // Recursively checks a condition tree for unknown item IDs.
@@ -255,8 +236,11 @@ class RPGEngine {
       return;
     }
 
+    const oldItemId = gameState.getPlayer().equipment[targetSlot];
+    const oldBonus = (oldItemId && this.data.items[oldItemId]?.attributes?.armorClassBonus) || 0;
+    const newBonus = itemData.attributes?.armorClassBonus || 0;
     gameState.equipItem(targetSlot, itemId);
-    this.recalculateAC();
+    if (newBonus - oldBonus !== 0) gameState.modifyPlayerStat('ac', newBonus - oldBonus);
     this.log(LOG.PLAYER, this.t('player.equipped', { name: itemData.name, slot: targetSlot }));
     this._spendAP(apCost);
   }
@@ -269,8 +253,9 @@ class RPGEngine {
     }
     const itemId = gameState.getPlayer().equipment[slot];
     const itemName = itemId ? (this.data.items[itemId]?.name || itemId) : slot;
+    const bonus = (itemId && this.data.items[itemId]?.attributes?.armorClassBonus) || 0;
     gameState.equipItem(slot, null);
-    this.recalculateAC();
+    if (bonus !== 0) gameState.modifyPlayerStat('ac', -bonus);
     this.log(LOG.PLAYER, this.t('player.unequipped', { name: itemName, slot }));
     this._spendAP(UNEQUIP_AP_COST);
   }
@@ -311,7 +296,7 @@ class RPGEngine {
     return this.scene.render(sceneId);
   }
   restoreScene(sceneId, lastDesc) { return this.scene.restoreFromSave(sceneId, lastDesc); }
-  resetScene() { return this.scene.reset(); }
+  resetScene()                   { return this.scene.reset(); }
   handleQuestTrigger(trigger, state) { return this.questSystem.handleTrigger(trigger, state); }
   scrollNarrativeToBottom() { return this.narrative.scrollToBottom(); }
 

@@ -140,7 +140,7 @@ export class CharCreationScreen {
 
     // Confirm button
     this.confirmBtn = document.createElement('button');
-    this.confirmBtn.className = `${CSS.BTN} ${CSS.OPTION_BTN} ${CSS.CC_CONFIRM_BTN}`;
+    this.confirmBtn.className = `${CSS.BTN} ${CSS.BTN_GLASS} ${CSS.CC_CONFIRM_BTN}`;
     this.confirmBtn.textContent = 'Begin Adventure';
     this.confirmBtn.disabled = true;
     this.confirmBtn.onclick = () => this._confirm();
@@ -158,7 +158,7 @@ export class CharCreationScreen {
   }
 
   _setStatValueText(el, stat) {
-    const base = PLAYER_DEFAULTS[stat.id];
+    const base = stat.base ?? PLAYER_DEFAULTS[stat.id];
     const bonus = this.spent[stat.id] * stat.bonusPerPoint;
     el.textContent = bonus > 0 ? `${base} + ${bonus}` : `${base}`;
   }
