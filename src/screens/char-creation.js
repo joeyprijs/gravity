@@ -140,7 +140,7 @@ export class CharCreationScreen {
 
     // Confirm button
     this.confirmBtn = document.createElement('button');
-    this.confirmBtn.className = `${CSS.BTN} ${CSS.BTN_GLASS} ${CSS.CC_CONFIRM_BTN}`;
+    this.confirmBtn.className = `${CSS.BTN} ${CSS.CC_CONFIRM_BTN}`;
     this.confirmBtn.textContent = 'Begin Adventure';
     this.confirmBtn.disabled = true;
     this.confirmBtn.onclick = () => this._confirm();
@@ -148,7 +148,7 @@ export class CharCreationScreen {
 
     // Load save button — lets returning players skip char creation
     const loadBtn = document.createElement('button');
-    loadBtn.className = `${CSS.BTN} ${CSS.BTN_GLASS} ${CSS.CC_LOAD_BTN}`;
+    loadBtn.className = `${CSS.BTN} ${CSS.CC_LOAD_BTN}`;
     loadBtn.textContent = 'Load Save';
     loadBtn.onclick = () => document.getElementById(EL.FILE_UPLOAD).click();
     actions.appendChild(loadBtn);

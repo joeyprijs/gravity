@@ -169,7 +169,7 @@ body {
 
 /* ==========================================================================
    .button — single source of truth for all button visuals.
-   Modifier classes (.btn--glass, .btn--item, etc.) handle layout and sizing
+   Modifier classes (.btn--item, etc.) handle layout and sizing
    only (padding, dimensions, justify-content) — never visual properties.
    .item-list__item shares the visual base but has its own layout rule below.
    ========================================================================== */
@@ -222,9 +222,6 @@ body {
   background: var(--xp-color);
   color: #fff;
 }
-
-/* .btn--glass — UI control buttons (Save, Load, Restart, char creation) */
-.btn--glass { }
 
 /* .btn--item — inventory action buttons (Use, Equip, Unequip, Deposit) */
 .btn--item { }

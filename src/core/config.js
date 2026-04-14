@@ -86,7 +86,6 @@ export const CSS = {
   OPTIONS_GROUP_BUTTONS:        'options-group__buttons',
   OPTIONS_GROUP_BUTTONS_SINGLE: 'options-group__buttons--single',
   BTN:                    'button',
-  BTN_GLASS:              'btn--glass',
   BTN_ITEM:               'btn--item',
   BTN_DEPOSIT:            'btn--deposit',
 
