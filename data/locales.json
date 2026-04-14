@@ -1,4 +1,18 @@
 {
+  "charCreation": {
+    "title":                "Create Your Character",
+    "nameLabel":            "Character Name",
+    "namePlaceholder":      "Enter your name…",
+    "statPoints":           "Stat Points ",
+    "pointsRemainingOne":   "— 1 point remaining",
+    "pointsRemainingMany":  "— {remaining} points remaining",
+    "confirmBtn":           "Begin Adventure",
+    "loadSaveBtn":          "Load Save",
+    "stats": {
+      "maxHp": { "label": "HP", "description": "+2 HP per point" },
+      "ac":    { "label": "AC", "description": "+1 AC per point"  }
+    }
+  },
   "system": {
     "saved":      "Game Saved to Disk.",
     "loaded":     "Game Loaded from Disk.",

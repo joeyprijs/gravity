@@ -38,11 +38,11 @@
   --list-item-hover-bg: rgba(255, 255, 255, 0.05);
 
   /* Typography */
-  --font-xs: 0.75rem;
-  --font-sm: 0.85rem;
-  --font-md: 0.95rem;
-  --font-lg: 1.05rem;
-  --font-xl: 1.1rem;
+  --font-xs: 13px;
+  --font-sm: 14px;
+  --font-md: 16px;
+  --font-lg: 18px;
+  --font-xl: 19px;
 
   /* Spacing */
   --spacing: 8px;
@@ -55,18 +55,76 @@
  RESET & BASE
  ========================================================================== */
 
-/* * */
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-/* body */
+html {
+  -moz-text-size-adjust: none;
+  -webkit-text-size-adjust: none;
+  text-size-adjust: none;
+}
+
+body, h1, h2, h3, h4, p,
+figure, blockquote, dl, dd {
+  margin-block-end: 0;
+}
+
+ul[role='list'],
+ol[role='list'] {
+  list-style: none;
+}
+
+body {
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+h1, h2, h3, h4,
+button, input, label {
+  line-height: 1.1;
+}
+
+h1, h2,
+h3, h4 {
+  text-wrap: balance;
+}
+
+a:not([class]) {
+  text-decoration-skip-ink: auto;
+  color: currentColor;
+}
+
+img,
+picture {
+  max-width: 100%;
+  display: block;
+}
+
+input, button,
+textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+textarea:not([rows]) {
+  min-height: 10em;
+}
+
+:target {
+  scroll-margin-block: 5ex;
+}
+
 body {
   background-color: var(--bg-color);
   background-image: radial-gradient(circle at top right, var(--bg-gradient-start), var(--bg-gradient-end));
   color: var(--text-primary);
+  font-size: var(--font-md);
+  line-height: 24px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
   height: 100vh;
   overflow: hidden;
@@ -174,21 +232,22 @@ body {
    .item-list__item shares the visual base but has its own layout rule below.
    ========================================================================== */
 
-.button, .item-list__item {
+.button,
+.item-list__item {
   -webkit-appearance: none;
   appearance: none;
   background: var(--btn-bg);
   border: 1px solid var(--glass-border);
   color: var(--text-primary);
   font-family: inherit;
+  font-size: var(--font-md);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .button {
-  padding: calc(var(--spacing) * 2) calc(var(--spacing) * 2.5);
-  font-size: var(--font-lg);
+  padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -212,10 +271,9 @@ body {
 .option-btn { justify-content: space-between; }
 
 .option-btn__req-text {
-  font-size: var(--font-sm);
   color: var(--health-color);
   background: rgba(0, 0, 0, 0.3);
-  padding: calc(var(--spacing) / 2) var(--spacing);
+  padding: 0;
 }
 
 .option-btn__req-text--sell {
@@ -231,8 +289,8 @@ body {
   display: flex;
   flex-flow: row wrap;
   margin-bottom: calc(var(--spacing) * 2.5);
-  border-bottom: calc(var(--spacing) * 0.125) solid var(--glass-border);
-  padding-bottom: calc(var(--spacing) * 1.5);
+  border-bottom: 1px solid var(--glass-border);
+  padding-bottom: calc(var(--spacing) * 2.5);
   flex: 0 0 auto;
 }
 
@@ -271,7 +329,6 @@ body {
   display: block;
   width: 100%;
   font-weight: 600;
-  font-size: var(--font-xl);
   margin-bottom: calc(var(--spacing) * 2);
 }
 
@@ -295,7 +352,12 @@ body {
  Game controls
  ========================================================================== */
 .game__controls {
-  display: flex;
+
+  button {
+    width: 100%;
+    justify-content: center;
+    margin-bottom: calc(var(--spacing) * 2);
+  }
 }
 
 /* ==========================================================================
@@ -321,12 +383,10 @@ body {
 }
 
 .item-list__item {
-  padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 1.875);
+  font-weight: 400;
+  padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2);
   margin-bottom: calc(var(--spacing) * 1.25);
-  font-size: var(--font-md);
 }
-
-
 
 .item-list__item--completed {
   opacity: 0.8;
@@ -348,12 +408,10 @@ body {
 
 .item__type {
   display: block;
-  font-size: var(--font-sm);
   color: var(--text-secondary);
 }
 
 .item__stats {
-  font-size: var(--font-sm);
   color: var(--accent-color);
 }
 
@@ -372,7 +430,6 @@ body {
 
 /* .scene__narrative */
 .scene__narrative {
-  padding-right: calc(var(--spacing) * 30);
   padding-bottom: calc(var(--spacing) * 10);
   margin-bottom: calc(var(--spacing) * 2.5);
 }
@@ -385,6 +442,10 @@ body {
   max-height: 40vh;
   overflow-y: auto;
   padding-right: calc(var(--spacing) * 0.5);
+}
+
+.scene__options:not(:has(.options-group)) {
+  gap: calc(var(--spacing) * 2);
 }
 
 .scene__options--combat:has(.options-group),
@@ -402,28 +463,37 @@ body {
 }
 
 /* .options-group: labelled section of related buttons */
-.options-group {  }
+.options-group {
+  margin-bottom: calc(var(--spacing) * 2);
+}
 
 .options-group__label {
-  font-size: var(--font-xs);
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-bottom: calc(var(--spacing) * 0.75);
+  margin-bottom: calc(var(--spacing) * 1);
 }
 
 .options-group__buttons {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
+  gap: calc(var(--spacing) * 2);
 }
 
 .options-group__buttons--single {
   grid-template-columns: 1fr;
 }
 
-.options-group:last-of-type .options-group__buttons {  }
+.options-group:last-of-type .options-group__buttons {
+  padding-bottom: calc(var(--spacing) * 2);
+  border-bottom: 1px solid var(--glass-border);
+}
 
-.scene__location {  }
+.scene__location {
+  padding-bottom: calc(var(--spacing) * 2);
+  border-bottom: 1px solid var(--glass-border);
+  margin-bottom: calc(var(--spacing) * 2);
+}
 
 /* .scene */
 .scene + .scene {
@@ -445,7 +515,6 @@ body {
 
 /* .scene__log */
 .scene__log {
-  font-size: var(--font-md);
   margin-top: calc(var(--spacing) * 3);
 }
 
@@ -512,7 +581,6 @@ body {
 }
 
 .map-node__label {
-  font-size: 0.6rem;
   color: rgba(255, 255, 255, 0.65);
   text-align: center;
   padding: 2px 4px;
@@ -669,7 +737,6 @@ body {
 }
 
 .char-creation__label {
-  font-size: var(--font-sm);
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -677,7 +744,6 @@ body {
 
 .char-creation__points-remaining {
   color: var(--accent-color);
-  font-size: var(--font-sm);
 }
 
 .char-creation__name-input {
@@ -687,8 +753,8 @@ body {
   border: 1px solid var(--glass-border);
   color: var(--text-primary);
   padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2);
-  font-size: var(--font-lg);
   font-family: inherit;
+  font-size: inherit;
   width: 100%;
   outline: none;
 }
@@ -711,13 +777,11 @@ body {
 }
 
 .char-creation__stat-label {
-  font-size: var(--font-md);
   color: var(--text-primary);
   font-weight: 600;
 }
 
 .char-creation__stat-desc {
-  font-size: var(--font-sm);
   color: var(--text-secondary);
 }
 
@@ -735,7 +799,6 @@ body {
 .char-creation__stat-value {
   min-width: calc(var(--spacing) * 10);
   text-align: center;
-  font-size: var(--font-md);
   color: var(--accent-color);
   font-weight: 600;
 }

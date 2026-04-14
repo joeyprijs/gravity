@@ -15,8 +15,9 @@ export class CharCreationScreen {
   // onComplete: called when the player confirms character creation.
   // The "Load Save" button triggers the shared #file-upload input; its change
   // event is handled by UIManager which reveals the game and applies the save.
-  constructor(onComplete) {
+  constructor(onComplete, t) {
     this.onComplete = onComplete;
+    this.t = t;
     this.overlay = document.getElementById(EL.CHAR_CREATION);
     // Track how many points have been spent on each stat
     this.spent = Object.fromEntries(CHAR_CREATION.stats.map(s => [s.id, 0]));
@@ -37,7 +38,7 @@ export class CharCreationScreen {
     // Title
     const title = document.createElement('h1');
     title.className = CSS.CC_TITLE;
-    title.textContent = 'Create Your Character';
+    title.textContent = this.t('charCreation.title');
     panel.appendChild(title);
 
     // Name input
@@ -45,11 +46,11 @@ export class CharCreationScreen {
     nameSection.className = CSS.CC_SECTION;
     const nameLabel = document.createElement('label');
     nameLabel.className = CSS.CC_LABEL;
-    nameLabel.textContent = 'Character Name';
+    nameLabel.textContent = this.t('charCreation.nameLabel');
     const nameInput = document.createElement('input');
     nameInput.type = 'text';
     nameInput.className = CSS.CC_NAME_INPUT;
-    nameInput.placeholder = 'Enter your name…';
+    nameInput.placeholder = this.t('charCreation.namePlaceholder');
     nameInput.maxLength = 32;
     nameInput.autocomplete = 'off';
     nameInput.addEventListener('input', () => this._updateConfirmBtn());
@@ -63,7 +64,7 @@ export class CharCreationScreen {
     statsSection.className = CSS.CC_SECTION;
     const statsTitle = document.createElement('div');
     statsTitle.className = CSS.CC_LABEL;
-    statsTitle.textContent = `Stat Points`;
+    statsTitle.textContent = this.t('charCreation.statPoints');
     statsSection.appendChild(statsTitle);
 
     this.pointsEl = document.createElement('span');
@@ -79,10 +80,10 @@ export class CharCreationScreen {
       info.className = CSS.CC_STAT_INFO;
       const statLabel = document.createElement('span');
       statLabel.className = CSS.CC_STAT_LABEL;
-      statLabel.textContent = stat.label;
+      statLabel.textContent = this.t(`charCreation.stats.${stat.id}.label`);
       const statDesc = document.createElement('span');
       statDesc.className = CSS.CC_STAT_DESC;
-      statDesc.textContent = stat.description;
+      statDesc.textContent = this.t(`charCreation.stats.${stat.id}.description`);
       info.appendChild(statLabel);
       info.appendChild(statDesc);
 
@@ -141,7 +142,7 @@ export class CharCreationScreen {
     // Confirm button
     this.confirmBtn = document.createElement('button');
     this.confirmBtn.className = `${CSS.BTN} ${CSS.CC_CONFIRM_BTN}`;
-    this.confirmBtn.textContent = 'Begin Adventure';
+    this.confirmBtn.textContent = this.t('charCreation.confirmBtn');
     this.confirmBtn.disabled = true;
     this.confirmBtn.onclick = () => this._confirm();
     actions.appendChild(this.confirmBtn);
@@ -149,7 +150,7 @@ export class CharCreationScreen {
     // Load save button — lets returning players skip char creation
     const loadBtn = document.createElement('button');
     loadBtn.className = `${CSS.BTN} ${CSS.CC_LOAD_BTN}`;
-    loadBtn.textContent = 'Load Save';
+    loadBtn.textContent = this.t('charCreation.loadSaveBtn');
     loadBtn.onclick = () => document.getElementById(EL.FILE_UPLOAD).click();
     actions.appendChild(loadBtn);
 
@@ -171,7 +172,9 @@ export class CharCreationScreen {
 
   _updatePointsDisplay() {
     const remaining = this.pointsRemaining;
-    this.pointsEl.textContent = ` — ${remaining} point${remaining !== 1 ? 's' : ''} remaining`;
+    this.pointsEl.textContent = remaining === 1
+      ? this.t('charCreation.pointsRemainingOne')
+      : this.t('charCreation.pointsRemainingMany', { remaining });
   }
 
   _updateConfirmBtn() {

@@ -4,15 +4,6 @@ export const MAX_D20_ROLL = 20;
 // Fraction of an item's value that merchants pay when the player sells — 0.5 = 50%
 export const MERCHANT_SELL_RATIO = 0.5;
 
-// Determines the display order of items in the inventory panel — lower number = higher up
-export const ITEM_TYPE_ORDER = {
-  "Weapon": 1,
-  "Spell": 2,
-  "Armor": 3,
-  "Consumable": 4,
-  "Flavour": 5
-};
-
 // Action points spent to unequip an item (applies during combat only)
 export const UNEQUIP_AP_COST = 1;
 
@@ -36,20 +27,78 @@ export const STARTING_SCENE = "dungeon_start";
 // has been stored in state (e.g. player hasn't used a teleport item yet)
 export const RETURN_WORLD_FALLBACK_SCENE = "dungeon_start";
 
-// Default world canvas dimensions used when worldMapSize is absent from index.json
-export const DEFAULT_WORLD_MAP_SIZE = { width: 3000, height: 2000 };
-
-// CSS fallback background applied to map nodes that have no background defined
-// in their mapDefinitions. Must stay in sync with the --glass-bg CSS variable.
-export const MAP_NODE_DEFAULT_BG = 'var(--glass-bg)';
-
-// Size of the minimap HUD in pixels (square)
-export const MINIMAP_SIZE = 200;
-
 // Item IDs for fallback weapons used in combat when no weapon is equipped.
 // These items are defined in data/items/ like all other items.
 export const UNARMED_STRIKE_ID = 'unarmed_strike';
 export const ENEMY_CLAW_ID    = 'enemy_claw';
+
+// Determines the display order of items in the inventory panel — lower number = higher up
+export const ITEM_TYPE_ORDER = {
+  "Weapon": 1,
+  "Spell": 2,
+  "Armor": 3,
+  "Consumable": 4,
+  "Flavour": 5
+};
+
+// Starting stats and inventory for a new player.
+// 'name' starts empty — the character creation screen prompts the player for it.
+export const PLAYER_DEFAULTS = {
+  name: "",
+  level: 1,
+  xp: 0,
+  hp: 10,
+  maxHp: 10,
+  ap: 3,
+  maxAp: 3,
+  ac: 10,
+  initiative: 0,
+  gold: 0,
+  inventory: [
+    { item: "rusty_sword", amount: 1 },
+    { item: "flames", amount: 1 },
+    { item: "healing_potion", amount: 2 }
+  ],
+  equipment: {
+    "Head": null,
+    "Amulet": null,
+    "Torso": null,
+    "Left Hand": null,
+    "Right Hand": null,
+    "Legs": null
+  }
+};
+
+// Character creation configuration.
+// pointBudget: total stat points the player can spend at character creation.
+// stats: each entry defines one allocatable stat.
+//   id:            key in PLAYER_DEFAULTS to modify
+//   bonusPerPoint: how much each spent point adds to the stat
+//   min:           minimum points allocatable (always 0)
+// Label and description text for each stat live in data/locales.json
+// under charCreation.stats.<id>.label / .description.
+// To add more stats (e.g. initiative, base AC, backgrounds) later, just extend
+// this array — the character creation screen renders it dynamically.
+export const CHAR_CREATION = {
+  pointBudget: 2,
+  stats: [
+    { id: 'maxHp', bonusPerPoint: 2, min: 0 },
+    { id: 'ac',    bonusPerPoint: 1, min: 0 },
+  ]
+};
+
+// Canonical names for all built-in scene option actions.
+// Used by actions.js at registration time and by _validateData() for dev warnings.
+export const ACTIONS = {
+  LOOT:            'loot',
+  COMBAT:          'combat',
+  DIALOGUE:        'dialogue',
+  REST:            'rest',
+  RETURN_TO_WORLD: 'return_to_world',
+  FULL_REST:       'full_rest',
+  EAT_SNACK:       'eat_snack',
+  MANAGE_CHEST:    'manage_chest',
+};
 
 // CSS class names referenced from JavaScript. Centralised here so that renaming
 // a class only requires a change in this file, not a grep across all JS files.
@@ -194,61 +243,12 @@ export const MSG = {
   GAME_DATA_ERROR:    'Error loading game data.',
 };
 
-// Starting stats and inventory for a new player.
-// 'name' starts empty — the character creation screen prompts the player for it.
-export const PLAYER_DEFAULTS = {
-  name: "",
-  level: 1,
-  xp: 0,
-  hp: 10,
-  maxHp: 10,
-  ap: 3,
-  maxAp: 3,
-  ac: 10,
-  initiative: 0,
-  gold: 0,
-  inventory: [
-    { item: "rusty_sword", amount: 1 },
-    { item: "flames", amount: 1 },
-    { item: "healing_potion", amount: 2 }
-  ],
-  equipment: {
-    "Head": null,
-    "Amulet": null,
-    "Torso": null,
-    "Left Hand": null,
-    "Right Hand": null,
-    "Legs": null
-  }
-};
+// Default world canvas dimensions used when worldMapSize is absent from index.json
+export const DEFAULT_WORLD_MAP_SIZE = { width: 3000, height: 2000 };
 
-// Character creation configuration.
-// pointBudget: total stat points the player can spend at character creation.
-// stats: each entry defines one allocatable stat.
-//   id:            key in PLAYER_DEFAULTS to modify
-//   label:         display name shown in the UI
-//   description:   tooltip / helper text
-//   bonusPerPoint: how much each spent point adds to the stat
-//   min:           minimum points allocatable (always 0)
-// To add more stats (e.g. initiative, base AC, backgrounds) later, just extend
-// this array — the character creation screen renders it dynamically.
-export const CHAR_CREATION = {
-  pointBudget: 2,
-  stats: [
-    { id: 'maxHp', label: 'Max HP', description: '+2 HP per point', bonusPerPoint: 2, min: 0 },
-    { id: 'ac', label: 'AC', description: '+1 AC per point', bonusPerPoint: 1, min: 0 },
-  ]
-};
+// CSS fallback background applied to map nodes that have no background defined
+// in their mapDefinitions. Must stay in sync with the --glass-bg CSS variable.
+export const MAP_NODE_DEFAULT_BG = 'var(--glass-bg)';
 
-// Canonical names for all built-in scene option actions.
-// Used by actions.js at registration time and by _validateData() for dev warnings.
-export const ACTIONS = {
-  LOOT:            'loot',
-  COMBAT:          'combat',
-  DIALOGUE:        'dialogue',
-  REST:            'rest',
-  RETURN_TO_WORLD: 'return_to_world',
-  FULL_REST:       'full_rest',
-  EAT_SNACK:       'eat_snack',
-  MANAGE_CHEST:    'manage_chest',
-};
+// Size of the minimap HUD in pixels (square)
+export const MINIMAP_SIZE = 200;

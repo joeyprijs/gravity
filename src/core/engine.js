@@ -46,7 +46,7 @@ class RPGEngine {
 
     if (!gameState.getPlayer().name) {
       // New game — show character creation before revealing the main UI.
-      new CharCreationScreen(() => this._startGame());
+      new CharCreationScreen(() => this._startGame(), this.t.bind(this));
     } else {
       this._startGame();
     }
