@@ -64,7 +64,7 @@ export class SceneRenderer {
     }
 
     this.renderOptions(scene);
-    this.engine.narrative.scrollToBottom();
+    this.engine.scrollNarrativeToBottom();
   }
 
   renderOptions(scene) {

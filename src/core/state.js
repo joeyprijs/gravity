@@ -5,13 +5,20 @@ const MAX_LOG_ENTRIES = 200;
 // Increment when the save schema changes. loadFromObject() migrates older saves
 // forward so they remain compatible. Each migration function receives the raw
 // parsed data object and mutates it in-place.
-const SAVE_VERSION = 1;
+const SAVE_VERSION = 2;
 
 const MIGRATIONS = {
   // v0 → v1: added player.name
   1: (data) => {
     if (!data.player) data.player = {};
     if (data.player.name === undefined) data.player.name = "";
+  },
+  // v1 → v2: added museumChest, visitedScenes, log, player.baseAcBonus
+  2: (data) => {
+    if (!data.museumChest)   data.museumChest   = [];
+    if (!data.visitedScenes) data.visitedScenes = [];
+    if (!data.log)           data.log           = [];
+    if (data.player && data.player.baseAcBonus === undefined) data.player.baseAcBonus = 0;
   },
 };
 
@@ -81,10 +88,6 @@ class StateManager {
     // Run schema migrations so older saves stay compatible.
     migrate(parsedData);
 
-    // Legacy guards for arrays that were added before versioned migrations.
-    if (!parsedData.museumChest) parsedData.museumChest = [];
-    if (!parsedData.visitedScenes) parsedData.visitedScenes = [];
-    if (!parsedData.log) parsedData.log = [];
     // Strip the "game loaded" notification from the restored log so it doesn't
     // appear as a duplicate each time the player loads a save.
     parsedData.log = parsedData.log.filter(e => e.message !== MSG.GAME_LOADED);
@@ -129,7 +132,7 @@ class StateManager {
   }
 
   getFlag(flagName) { return this.state.flags[flagName] || false; }
-  setFlag(flagName, value) { this.state.flags[flagName] = value; this.notifyListeners(); }
+  setFlag(flagName, value) { this.state.flags[flagName] = value; }
 
   getPlayer() { return this.state.player; }
 
@@ -139,7 +142,7 @@ class StateManager {
     if (stat === "hp" && this.state.player.hp < 0) this.state.player.hp = 0;
     if (stat === "ap" && this.state.player.ap > this.state.player.maxAp) this.state.player.ap = this.state.player.maxAp;
     if (stat === "ap" && this.state.player.ap < 0) this.state.player.ap = 0;
-    this.notifyListeners();
+    this.notifyListeners('stats');
   }
 
   // Awards XP and handles level-up. XP threshold scales with level so each
@@ -155,17 +158,17 @@ class StateManager {
       this.state.player.hp = this.state.player.maxHp;
       threshold = this.state.player.level * XP_PER_LEVEL;
     }
-    this.notifyListeners();
+    this.notifyListeners('stats');
   }
 
-  addToInventory(itemId, amount = 1) {
+  addToInventory(itemId, amount = 1, { silent = false } = {}) {
     const existing = this.state.player.inventory.find(i => i.item === itemId);
     if (existing) existing.amount += amount;
     else this.state.player.inventory.push({ item: itemId, amount });
-    this.notifyListeners();
+    if (!silent) this.notifyListeners('inventory');
   }
 
-  removeFromInventory(itemId, amount = 1) {
+  removeFromInventory(itemId, amount = 1, { silent = false } = {}) {
     const existing = this.state.player.inventory.find(i => i.item === itemId);
     if (existing) {
       existing.amount -= amount;
@@ -173,25 +176,25 @@ class StateManager {
         this.state.player.inventory = this.state.player.inventory.filter(i => i.item !== itemId);
       }
     }
-    this.notifyListeners();
+    if (!silent) this.notifyListeners('inventory');
   }
 
   equipItem(slot, itemId) {
     if (this.state.player.equipment[slot]) {
-      this.addToInventory(this.state.player.equipment[slot], 1);
+      this.addToInventory(this.state.player.equipment[slot], 1, { silent: true });
     }
     if (itemId) {
-      this.removeFromInventory(itemId, 1);
+      this.removeFromInventory(itemId, 1, { silent: true });
     }
     this.state.player.equipment[slot] = itemId;
-    this.notifyListeners();
+    this.notifyListeners('inventory');
   }
 
   getMissionStatus(missionId) { return this.state.missions[missionId] || "not_started"; }
-  setMissionStatus(missionId, status) { this.state.missions[missionId] = status; this.notifyListeners(); }
+  setMissionStatus(missionId, status) { this.state.missions[missionId] = status; this.notifyListeners('quests'); }
 
   getCurrentSceneId() { return this.state.currentSceneId; }
-  setCurrentSceneId(sceneId) { this.state.currentSceneId = sceneId; this.notifyListeners(); }
+  setCurrentSceneId(sceneId) { this.state.currentSceneId = sceneId; this.notifyListeners('map'); }
 
   getVisitedScenes() { return this.state.visitedScenes; }
   // Intentionally no notifyListeners() — scene rendering drives its own display
@@ -203,7 +206,7 @@ class StateManager {
   }
 
   getReturnSceneId() { return this.state.returnSceneId; }
-  setReturnSceneId(sceneId) { this.state.returnSceneId = sceneId; this.notifyListeners(); }
+  setReturnSceneId(sceneId) { this.state.returnSceneId = sceneId; }
 
   getMuseumChest() { return this.state.museumChest; }
 
@@ -214,7 +217,8 @@ class StateManager {
     } else {
       this.state.museumChest.push({ item: itemId, amount: amount });
     }
-    this.removeFromInventory(itemId, amount);
+    this.removeFromInventory(itemId, amount, { silent: true });
+    this.notifyListeners('inventory');
   }
 
   withdrawFromChest(itemId, amount = 1) {
@@ -224,12 +228,13 @@ class StateManager {
     if (existing.amount <= 0) {
       this.state.museumChest = this.state.museumChest.filter(i => i.item !== itemId);
     }
-    this.addToInventory(itemId, amount);
+    this.addToInventory(itemId, amount, { silent: true });
+    this.notifyListeners('inventory');
   }
 
   subscribe(callback) { this.listeners.push(callback); }
-  notifyListeners() { this.listeners.forEach(cb => cb(this.state)); }
-  forceUpdate() { this.notifyListeners(); }
+  notifyListeners(hint) { this.listeners.forEach(cb => cb(this.state, hint)); }
+  forceUpdate(hint) { this.notifyListeners(hint); }
 }
 
 export const gameState = new StateManager();

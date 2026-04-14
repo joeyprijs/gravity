@@ -39,7 +39,7 @@ export class CombatSystem {
 
     if (!enemyDataList.length) return;
 
-    this.engine.scene.reset();
+    this.engine.resetScene();
     this.inCombat = true;
     this.isGameOver = false;
     this.enemies = enemyDataList;

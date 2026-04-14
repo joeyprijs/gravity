@@ -305,15 +305,17 @@ body {
 
 /* .game__stats */
 .game__stats {
-  display: flex;
   gap: calc(var(--spacing) * 2.5);
   align-items: center;
 }
 
 /* .stat-item */
 .stat-item {
+  display: block;
+  width: 100%;
   font-weight: 600;
   font-size: var(--font-xl);
+  margin-bottom: calc(var(--spacing) * 2);
 }
 
 .stat-item__xp-wrapper {

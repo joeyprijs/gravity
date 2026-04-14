@@ -74,29 +74,35 @@ export class UIManager {
     this.engine.narrative.setupScrollObserver();
   }
 
-  update() {
+  update(hint) {
     const player = gameState.getPlayer();
-
-    // Stats
     const t = this.engine.t.bind(this.engine);
-    document.getElementById(EL.STAT_NAME).innerText = player.name || '';
-    document.getElementById(EL.STAT_LEVEL).innerText = t('stats.level', { value: player.level });
-    document.getElementById(EL.STAT_HP).innerText = t('stats.hp', { current: player.hp, max: player.maxHp });
-    document.getElementById(EL.STAT_AP).innerText = t('stats.ap', { current: player.ap, max: player.maxAp });
-    document.getElementById(EL.STAT_AC).innerText = t('stats.ac', { value: player.ac });
-    document.getElementById(EL.STAT_INITIATIVE).innerText = t('stats.initiative', { value: player.initiative });
-    document.getElementById(EL.STAT_GOLD).innerText = t('stats.gold', { value: player.gold });
 
-    // XP bar
-    const xpPerc = (player.xp / (player.level * XP_PER_LEVEL)) * 100;
-    document.getElementById(EL.XP_BAR).style.width = `${xpPerc}%`;
+    if (!hint || hint === 'stats') {
+      document.getElementById(EL.STAT_NAME).innerText = player.name || '';
+      document.getElementById(EL.STAT_LEVEL).innerText = t('stats.level', { value: player.level });
+      document.getElementById(EL.STAT_HP).innerText = t('stats.hp', { current: player.hp, max: player.maxHp });
+      document.getElementById(EL.STAT_AP).innerText = t('stats.ap', { current: player.ap, max: player.maxAp });
+      document.getElementById(EL.STAT_AC).innerText = t('stats.ac', { value: player.ac });
+      document.getElementById(EL.STAT_INITIATIVE).innerText = t('stats.initiative', { value: player.initiative });
+      document.getElementById(EL.STAT_GOLD).innerText = t('stats.gold', { value: player.gold });
+      const xpPerc = (player.xp / (player.level * XP_PER_LEVEL)) * 100;
+      document.getElementById(EL.XP_BAR).style.width = `${xpPerc}%`;
+    }
 
-    this.inventoryUI.renderInventory(player);
-    this.inventoryUI.renderEquipment(player);
-    this.questUI.render();
-    this.map.renderMinimap();
+    if (!hint || hint === 'inventory') {
+      this.inventoryUI.renderInventory(player);
+      this.inventoryUI.renderEquipment(player);
+      this.bindItemActions();
+    }
 
-    this.bindItemActions();
+    if (!hint || hint === 'quests') {
+      this.questUI.render();
+    }
+
+    if (!hint || hint === 'map') {
+      this.map.renderMinimap();
+    }
   }
 
   // Buttons call engine game-logic methods — UI layer owns no game logic here.
@@ -126,7 +132,7 @@ export class UIManager {
     this.engine.isGameStart = true;
     clearElement(EL.SCENE_NARRATIVE);
     this.engine.currentSceneEl = null;
-    this.engine.scene.reset();
+    this.engine.resetScene();
     this.engine.recalculateAC();
     this.engine.log(LOG.SYSTEM, this.engine.t('system.loaded'), 'system', false);
     const lastDesc = this.engine.narrative.restore(gameState.getLog());

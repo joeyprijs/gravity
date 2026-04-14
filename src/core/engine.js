@@ -311,6 +311,9 @@ class RPGEngine {
     return this.scene.render(sceneId);
   }
   restoreScene(sceneId, lastDesc) { return this.scene.restoreFromSave(sceneId, lastDesc); }
+  resetScene() { return this.scene.reset(); }
+  handleQuestTrigger(trigger, state) { return this.questSystem.handleTrigger(trigger, state); }
+  scrollNarrativeToBottom() { return this.narrative.scrollToBottom(); }
 
   // --- Event system ---
   // Minimal pub/sub. Subsystems subscribe in their constructors; emitters need

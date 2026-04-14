@@ -24,7 +24,7 @@ export class DialogueSystem {
     const npc = this.engine.data.npcs[npcId];
     if (!npc) { console.warn(`[Gravity] startDialogue: unknown NPC "${npcId}"`); return; }
 
-    this.engine.scene.reset();
+    this.engine.resetScene();
     this.currentNPC = npc;
     if (npc.conversations) {
       this.renderDialogue("start");
@@ -57,7 +57,7 @@ export class DialogueSystem {
       gameState.setFlag(node.changeStateFlag.flag, node.changeStateFlag.value);
     }
     if (node.setMission) {
-      this.engine.questSystem.handleTrigger({ mission: node.setMission, status: node.setMissionStatus || 'active' });
+      this.engine.handleQuestTrigger({ mission: node.setMission, status: node.setMissionStatus || 'active' });
     }
 
     const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
@@ -82,7 +82,7 @@ export class DialogueSystem {
           this.engine.log(LOG.SYSTEM, this.engine.t('loot.receivedItem', { name }), 'loot');
         }
         if (res.setMission) {
-          this.engine.questSystem.handleTrigger({ mission: res.setMission, status: res.setMissionStatus || 'active' });
+          this.engine.handleQuestTrigger({ mission: res.setMission, status: res.setMissionStatus || 'active' });
         }
 
         if (res.goToConversation) {
