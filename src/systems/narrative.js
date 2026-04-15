@@ -15,7 +15,7 @@ export class NarrativeLog {
     // Flush scene--new from log entries before each option-btn action fires.
     // Capture phase ensures the flush runs before the button's onclick handler.
     document.addEventListener('click', e => {
-      if (e.target.closest('button')) {
+      if (e.target.closest(`.${CSS.OPTION_BTN}`)) {
         this.flushScenes();
         this.flushEntries();
       }
