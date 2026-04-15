@@ -9,8 +9,8 @@
     "confirmBtn":           "Begin Adventure",
     "loadSaveBtn":          "Load Save",
     "stats": {
-      "maxHp": { "label": "HP", "description": "+2 HP per point" },
-      "ac":    { "label": "AC", "description": "+1 AC per point"  }
+      "maxHp": { "label": "Health (HP)", "description": "+2 HP per point" },
+      "ac":    { "label": "Armor Class (AC)", "description": "+1 AC per point"  }
     }
   },
   "system": {
@@ -45,6 +45,13 @@
     "locationDialogue":    "DIALOGUE: {name}",
     "locationMerchant":    "MERCHANT: {name}",
     "locationCombat":      "Combat: {name}"
+  },
+  "itemTypes": {
+    "Weapon":     "Weapons",
+    "Spell":      "Spells",
+    "Armor":      "Armor",
+    "Consumable": "Consumables",
+    "Flavour":    "Flavour"
   },
   "inventory": {
     "useButton":        "Use",
@@ -85,7 +92,7 @@
     "initiativeEnemy":      "{name} rolled {roll}",
     "initiativeYou":        "You",
     "enemyStats":           "{name}: {hp} HP / AC {ac}",
-    "attackTarget":         "Attack {target} with {name}",
+    "attackTarget":         "Attack with {name}",
     "apCost":               "AP: {cost}",
     "endTurn":              "End Turn",
     "attackHit":            "You attack with {weapon}: {roll} (1d20{mod}) vs AC {ac} — hit! {damage} damage ({dice}: {rollStr}).",

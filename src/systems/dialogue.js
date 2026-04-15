@@ -1,5 +1,5 @@
 import { gameState } from "../core/state.js";
-import { createElement, clearElement, buildSceneDescription, buildOptionButton, applyOptionsLayout } from "../core/utils.js";
+import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "../core/utils.js";
 import { MERCHANT_SELL_RATIO, EL, CSS, LOG } from "../core/config.js";
 import { evaluateCondition } from "./condition.js";
 
@@ -96,7 +96,7 @@ export class DialogueSystem {
       container.appendChild(btn);
     });
 
-    applyOptionsLayout(container);
+    this.engine.scrollNarrativeToBottom();
   }
 
   renderDialogueFallback(overrideText = null) {
@@ -127,6 +127,7 @@ export class DialogueSystem {
       this.engine.renderScene(gameState.getCurrentSceneId());
     };
     container.appendChild(leaveBtn);
+    this.engine.scrollNarrativeToBottom();
   }
 
   renderStore(isUpdate = false) {
@@ -165,7 +166,6 @@ export class DialogueSystem {
       const group = createElement('div', CSS.OPTIONS_GROUP);
       const label = createElement('div', CSS.OPTIONS_GROUP_LABEL, this.engine.t('dialogue.buyGroup'));
       const btns = createElement('div', CSS.OPTIONS_GROUP_BUTTONS);
-      if (buyItems.length === 1) btns.classList.add(CSS.OPTIONS_GROUP_BUTTONS_SINGLE);
       group.appendChild(label);
       buyItems.forEach(({ id: itemId, item, stock, entry }) => {
         const displayName = stock !== null ? `${item.name} (x${stock})` : item.name;
@@ -198,7 +198,6 @@ export class DialogueSystem {
       const group = createElement('div', CSS.OPTIONS_GROUP);
       const label = createElement('div', CSS.OPTIONS_GROUP_LABEL, this.engine.t('dialogue.sellGroup'));
       const btns = createElement('div', CSS.OPTIONS_GROUP_BUTTONS);
-      if (sellItems.length === 1) btns.classList.add(CSS.OPTIONS_GROUP_BUTTONS_SINGLE);
       group.appendChild(label);
       sellItems.forEach(invItem => {
         const item = this.engine.data.items[invItem.item];
@@ -235,6 +234,6 @@ export class DialogueSystem {
       }
     };
     container.appendChild(leaveBtn);
-    applyOptionsLayout(container);
+    this.engine.scrollNarrativeToBottom();
   }
 }

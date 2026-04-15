@@ -71,7 +71,6 @@ export class UIManager {
     });
 
     this.map.setup();
-    this.engine.narrative.setupScrollObserver();
   }
 
   update(hint) {

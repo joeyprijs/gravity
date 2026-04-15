@@ -33,7 +33,7 @@ export class CharCreationScreen {
     this.overlay.innerHTML = '';
 
     const panel = document.createElement('div');
-    panel.className = `${CSS.CC_PANEL} ${CSS.GLASS_PANEL}`;
+    panel.className = `${CSS.CC_PANEL} ${CSS.PANEL}`;
 
     // Title
     const title = document.createElement('h1');

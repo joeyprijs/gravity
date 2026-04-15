@@ -1,5 +1,5 @@
 import { gameState } from "../core/state.js";
-import { createElement, clearElement, buildSceneDescription, buildOptionButton, applyOptionsLayout } from "../core/utils.js";
+import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "../core/utils.js";
 import { EL, CSS, LOG } from "../core/config.js";
 import { evaluateCondition, fromRequiredState } from "./condition.js";
 
@@ -97,7 +97,6 @@ export class SceneRenderer {
       optionsContainer.appendChild(btn);
     });
 
-    applyOptionsLayout(optionsContainer);
 
     if (scene.questsTriggeredOnEntry) {
       this.engine.emit('scene:entered', { sceneId: gameState.getCurrentSceneId(), scene });

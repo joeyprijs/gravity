@@ -65,19 +65,12 @@ export function buildSceneDescription(title, body = null) {
  * Pass isSell=true for the sell variant (green badge instead of muted).
  * Returns the button element — caller sets .onclick and .disabled.
  */
-/**
- * Switches the options container between list and 2-column grid layout
- * based on how many buttons it contains. Non-button children (e.g. stat bars)
- * are excluded from the count and automatically span all columns via CSS.
- * Call this after every render that populates the options container.
- */
-export function applyOptionsLayout(container, threshold = 5) {
-  const btnCount = Array.from(container.children).filter(c => c.tagName === 'BUTTON').length;
-  container.classList.toggle(CSS.SCENE_OPTIONS_GRID, btnCount >= threshold);
-}
 
 export function buildOptionButton(text, reqText = null, isSell = false) {
-  const btn = createElement('button', [CSS.BTN, CSS.OPTION_BTN]);
+  const classes = reqText !== null
+    ? [CSS.BTN, CSS.OPTION_BTN, CSS.OPTION_BTN_STACKED]
+    : [CSS.BTN, CSS.OPTION_BTN];
+  const btn = createElement('button', classes);
   btn.appendChild(createElement('span', '', text));
   if (reqText !== null) {
     const cls = isSell ? [CSS.OPTION_BTN_REQ, CSS.OPTION_BTN_REQ_SELL] : CSS.OPTION_BTN_REQ;

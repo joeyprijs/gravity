@@ -16,51 +16,50 @@
   <input type="file" id="file-upload" accept=".json" class="controls__hidden-input">
 
   <div class="game" id="game-container" hidden>
+    <header class="game__header" id="player-header">
+      <div class="game__stats" id="player-basic-stats">
+        <span class="stat-item stat-item--name" id="stat-name"></span>
+        <span class="stat-item" id="stat-hp">HP: 10/10</span>
+        <span class="stat-item" id="stat-ac">AC: 10</span>
+        <span class="stat-item" id="stat-ap">AP: 3/3</span>
+        <span class="stat-item" id="stat-initiative">Init: 0</span>
+        <span class="stat-item" id="stat-gold">Gold: 0</span>
+        <span class="stat-item" id="stat-level">Lvl 1</span>
+        <div class="stat-item__xp-wrapper">
+          <div class="stat-item__xp-bar" id="xp-bar" style="width: 0%;"></div>
+        </div>
+      </div>
+      <div class="game__controls controls">
+        <button class="button" id="btn-save">Save</button>
+        <button class="button" id="btn-load">Load</button>
+        <button class="button" id="btn-restart">Restart</button>
+      </div>
+    </header>
     <div class="game__main" id="main-content">
-      <aside class="game__sidebar glass-panel" id="left-panel">
+      <aside class="game__player" id="player-panel">
         <nav class="tabs__nav">
-          <button class="button tabs__btn" data-tab="player-tab">Player</button>
           <button class="button tabs__btn" data-tab="inventory-tab">Inventory</button>
           <button class="button tabs__btn tabs__btn--active" data-tab="equipment-tab">Equipment</button>
           <button class="button tabs__btn" data-tab="quests-tab">Quests</button>
-          <button class="button tabs__btn" data-tab="settings-tab">Settings</button>
         </nav>
-        <div class="tabs__content scrollable" id="player-tab">
-          <div class="game__stats" id="player-basic-stats">
-            <span class="stat-item stat-item--name" id="stat-name"></span>
-            <span class="stat-item" id="stat-hp">HP: 10/10</span>
-            <span class="stat-item" id="stat-ac">AC: 10</span>
-            <span class="stat-item" id="stat-ap">AP: 3/3</span>
-            <span class="stat-item" id="stat-initiative">Init: 0</span>
-            <span class="stat-item" id="stat-gold">Gold: 0</span>
-            <span class="stat-item" id="stat-level">Lvl 1</span>
-            <div class="stat-item__xp-wrapper">
-              <div class="stat-item__xp-bar" id="xp-bar" style="width: 0%;"></div>
-            </div>
-          </div>
-        </div>
         <div class="tabs__content scrollable" id="inventory-tab"></div>
         <div class="tabs__content tabs__content--active scrollable" id="equipment-tab"></div>
         <div class="tabs__content scrollable" id="quests-tab"></div>
-        <div class="tabs__content scrollable" id="settings-tab">
-          <div class="game__controls controls">
-            <button class="button" id="btn-save">Save</button>
-            <button class="button" id="btn-load">Load</button>
-            <button class="button" id="btn-restart">Restart</button>
-          </div>
-        </div>
       </aside>
 
-      <main class="game__scene glass-panel" id="scene-panel">
+      <main class="game__scene" id="scene-panel">
         <div class="minimap" id="minimap" title="Click to open full map" hidden>
           <div class="minimap__canvas" id="minimap-canvas"></div>
         </div>
         <div class="scene__narrative scrollable" id="scene-narrative"></div>
+      </main>
+
+      <div class="game__scene-options" id="scene-options-panel">
         <div class="scene__location" id="scene-location-reminder"></div>
         <div class="scene__options" id="scene-options">
           <!-- Action buttons injected here -->
         </div>
-      </main>
+      </div>
 
       <div class="fullmap-overlay" id="fullmap-overlay" hidden>
         <div class="fullmap-overlay__panel">

@@ -1,5 +1,5 @@
 import { gameState } from "../core/state.js";
-import { createElement, clearElement, buildSceneDescription, buildOptionButton, applyOptionsLayout } from "../core/utils.js";
+import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "../core/utils.js";
 import { MAX_D20_ROLL, UNARMED_STRIKE_ID, ENEMY_CLAW_ID, EL, CSS, LOG } from "../core/config.js";
 import { roll, parseDamage } from "./dice.js";
 
@@ -331,17 +331,15 @@ class CombatRenderer {
         this.cs.engine.t('combat.enemyStats', { name: target.name, hp: target.attributes.healthPoints, ac: target.attributes.armorClass })
       );
       const btns = createElement('div', CSS.OPTIONS_GROUP_BUTTONS);
-      if (attacks.length === 1) btns.classList.add(CSS.OPTIONS_GROUP_BUTTONS_SINGLE);
       group.appendChild(label);
       group.appendChild(btns);
       container.appendChild(group);
       const btnContainer = btns;
 
       attacks.forEach(att => {
-        const btn = buildOptionButton(
-          this.cs.engine.t('combat.attackTarget', { name: att.name, target: target.name }),
-          this.cs.engine.t('combat.apCost', { cost: att.actionPoints })
-        );
+        const btn = createElement('button', [CSS.BTN, CSS.OPTION_BTN, CSS.OPTION_BTN_STACKED]);
+        btn.appendChild(createElement('span', '', this.cs.engine.t('combat.attackTarget', { name: att.name })));
+        btn.appendChild(createElement('span', CSS.OPTION_BTN_SUB, this.cs.engine.t('combat.apCost', { cost: att.actionPoints })));
         if (gameState.getPlayer().ap < att.actionPoints) btn.disabled = true;
         btn.onclick = () => this.cs.playerAttack(att, target);
         btnContainer.appendChild(btn);
@@ -352,7 +350,5 @@ class CombatRenderer {
     const endBtn = buildOptionButton(this.cs.engine.t('combat.endTurn'));
     endBtn.onclick = () => this.cs.enemyTurn('after');
     container.appendChild(endBtn);
-
-    applyOptionsLayout(container);
   }
 }

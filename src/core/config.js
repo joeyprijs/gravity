@@ -118,7 +118,6 @@ export const CSS = {
   SCENE_LOG:              'scene__log',
   SCENE_OPTIONS_COMBAT:   'scene__options--combat',
   SCENE_OPTIONS_MERCHANT: 'scene__options--merchant',
-  SCENE_OPTIONS_GRID:     'scene__options--grid',
 
   // Tabs (ui.js setup)
   TABS_BTN:               'tabs__btn',
@@ -128,15 +127,15 @@ export const CSS = {
 
   // Buttons
   OPTION_BTN:                   'option-btn',
+  OPTION_BTN_STACKED:           'option-btn--stacked',
+  OPTION_BTN_SUB:               'option-btn__sub',
   OPTION_BTN_REQ:               'option-btn__req-text',
   OPTION_BTN_REQ_SELL:          'option-btn__req-text--sell',
   OPTIONS_GROUP:                'options-group',
   OPTIONS_GROUP_LABEL:          'options-group__label',
   OPTIONS_GROUP_BUTTONS:        'options-group__buttons',
-  OPTIONS_GROUP_BUTTONS_SINGLE: 'options-group__buttons--single',
   BTN:                    'button',
   BTN_ITEM:               'btn--item',
-  BTN_DEPOSIT:            'btn--deposit',
 
   // Item lists
   ITEM_LIST:              'item-list',
@@ -151,9 +150,6 @@ export const CSS = {
   ITEM_ACTIONS:           'item__actions',
 
   // Museum
-  MUSEUM_SECTION:         'museum__section',
-  MUSEUM_HEADING:         'museum__heading',
-  MUSEUM_DONE_BTN:        'museum__done-btn',
   MUSEUM_ITEM_LIST:       'museum-item-list',
 
   // Map
@@ -164,7 +160,7 @@ export const CSS = {
   FULLMAP_INNER:          'fullmap-overlay__inner',
 
   // Layout
-  GLASS_PANEL:            'glass-panel',
+  PANEL:                  'panel',
 
   // Char creation
   CC_PANEL:               'char-creation__panel',
@@ -247,8 +243,8 @@ export const MSG = {
 export const DEFAULT_WORLD_MAP_SIZE = { width: 3000, height: 2000 };
 
 // CSS fallback background applied to map nodes that have no background defined
-// in their mapDefinitions. Must stay in sync with the --glass-bg CSS variable.
-export const MAP_NODE_DEFAULT_BG = 'var(--glass-bg)';
+// in their mapDefinitions. Must stay in sync with the --panel-bg CSS variable.
+export const MAP_NODE_DEFAULT_BG = 'var(--panel-bg)';
 
 // Size of the minimap HUD in pixels (square)
 export const MINIMAP_SIZE = 200;

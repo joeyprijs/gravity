@@ -46,7 +46,7 @@ A browser-based text RPG inspired by classic choose-your-own-adventure games. Na
 |---|---|
 | Language | Vanilla JavaScript (ES modules) |
 | Markup | HTML5 |
-| Styling | Plain CSS (custom properties, glass-morphism UI) |
+| Styling | Plain CSS (custom properties, panel-based UI) |
 | Build | None — runs directly in the browser |
 | Dependencies | None |
 
@@ -630,16 +630,18 @@ The file is organised into namespaces that mirror the engine's subsystems:
 
 ```json
 {
-  "system":    { "saved": "Game Saved to Disk.", ... },
-  "stats":     { "hp": "HP: {current}/{max}", ... },
-  "ui":        { "inventoryEmpty": "Inventory is empty.", ... },
-  "inventory": { "useButton": "Use", "equipButton": "Equip", ... },
-  "loot":      { "receivedItem": "You received {name}!", ... },
-  "actions":   { "rested": "You rested and recovered HP.", ... },
-  "player":    { "equipped": "Equipped {name} to {slot}.", ... },
-  "combat":    { "attackHit": "Attack Roll with {weapon}: ...", ... },
-  "dialogue":  { "buyButton": "Buy {name}", ... },
-  "quest":     { "completed": "Quest complete: {name}!", ... }
+  "system":      { "saved": "Game Saved to Disk.", ... },
+  "charCreation":{ "stats": { "maxHp": { "label": "Health (HP)", "description": "..." }, ... } },
+  "stats":       { "hp": "HP: {current}/{max}", ... },
+  "ui":          { "inventoryEmpty": "Inventory is empty.", ... },
+  "itemTypes":   { "Weapon": "Weapons", "Spell": "Spells", ... },
+  "inventory":   { "useButton": "Use", "equipButton": "Equip", ... },
+  "loot":        { "receivedItem": "You received {name}!", ... },
+  "actions":     { "rested": "You rested and recovered HP.", ... },
+  "player":      { "equipped": "Equipped {name} to {slot}.", ... },
+  "combat":      { "attackHit": "Attack Roll with {weapon}: ...", ... },
+  "dialogue":    { "buyButton": "Buy {name}", ... },
+  "quest":       { "completed": "Quest complete: {name}!", ... }
 }
 ```
 

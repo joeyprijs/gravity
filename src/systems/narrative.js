@@ -11,10 +11,19 @@ export class NarrativeLog {
     this.el = document.getElementById(EL.SCENE_NARRATIVE);
     this.currentSceneEl = null;
     this.isGameStart = true;
+
+    // Flush scene--new from log entries before each option-btn action fires.
+    // Capture phase ensures the flush runs before the button's onclick handler.
+    document.addEventListener('click', e => {
+      if (e.target.closest('button')) {
+        this.flushScenes();
+        this.flushEntries();
+      }
+    }, true);
   }
 
   openScene(modifier = '') {
-    this.flush();
+    this.flushScenes();
     const classes = [CSS.SCENE, CSS.SCENE_NEW];
     if (modifier) classes.push(modifier);
     const scene = createElement('div', classes);
@@ -24,15 +33,21 @@ export class NarrativeLog {
     return scene;
   }
 
-  flush() {
-    if (this.isGameStart) return;
-    this.el.querySelectorAll(`.${CSS.SCENE_NEW}`).forEach(el => el.classList.remove(CSS.SCENE_NEW));
+  // Removes scene--new from .scene container divs only.
+  flushScenes() {
+    this.el.querySelectorAll(`.${CSS.SCENE}.${CSS.SCENE_NEW}`)
+      .forEach(el => el.classList.remove(CSS.SCENE_NEW));
+  }
+
+  // Removes scene--new from log <p> entries only.
+  flushEntries() {
+    this.el.querySelectorAll(`p.${CSS.SCENE_NEW}`)
+      .forEach(el => el.classList.remove(CSS.SCENE_NEW));
   }
 
   log(type, message, variant = 'system', persist = true) {
-    this.flush();
     if (!this.currentSceneEl) this.openScene();
-    const p = createElement('p', [CSS.SCENE_LOG, `${CSS.SCENE_LOG}--${variant}`]);
+    const p = createElement('p', [CSS.SCENE_LOG, `${CSS.SCENE_LOG}--${variant}`, CSS.SCENE_NEW]);
     p.innerText = `[${type}] ${message}`;
     this.currentSceneEl.appendChild(p);
     this.el.scrollTop = this.el.scrollHeight;
@@ -61,16 +76,9 @@ export class NarrativeLog {
 
   scrollToBottom() {
     requestAnimationFrame(() => {
-      this.el.scrollTop = this.el.scrollHeight;
+      requestAnimationFrame(() => {
+        this.el.scrollTop = this.el.scrollHeight;
+      });
     });
-  }
-
-  // Observes the options panel for size changes and scrolls to bottom — catches
-  // cases where new options render without the narrative itself changing size.
-  setupScrollObserver() {
-    const resizeObserver = new ResizeObserver(() => {
-      this.el.scrollTop = this.el.scrollHeight;
-    });
-    resizeObserver.observe(document.getElementById(EL.SCENE_OPTIONS));
   }
 }

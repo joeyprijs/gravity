@@ -17,10 +17,10 @@
   --ap-color: #f59e0b;
   --xp-color: #10b981;
 
-  /* Glass Panels */
-  --glass-bg: rgba(30, 41, 59, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+  /* Panels */
+  --panel-bg: rgba(30, 41, 59, 0.7);
+  --panel-border: rgba(255, 255, 255, 0.1);
+  --panel-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
 
   /* Buttons */
   --btn-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
@@ -38,11 +38,11 @@
   --list-item-hover-bg: rgba(255, 255, 255, 0.05);
 
   /* Typography */
-  --font-xs: 13px;
-  --font-sm: 14px;
-  --font-md: 16px;
-  --font-lg: 18px;
-  --font-xl: 19px;
+  --font-xs: 10px;
+  --font-sm: 12px;
+  --font-md: 14px;
+  --font-lg: 16px;
+  --font-xl: 18px;
 
   /* Spacing */
   --spacing: 8px;
@@ -134,10 +134,9 @@ body {
 }
 
 /* ==========================================================================
- LAYOUT & GRID
+ LAYOUT
  ========================================================================== */
 
-/* .game */
 .game {
   width: 100vw;
   height: 100vh;
@@ -146,58 +145,67 @@ body {
   gap: calc(var(--spacing) * 0);
 }
 
-.game__main {
-  display: grid;
-  grid-template-columns: 360px 1fr;
-  gap: calc(var(--spacing) * 0);
-  flex-grow: 1;
-  min-height: 0;
-}
+.game__header {
+  background: var(--panel-bg);
+  box-shadow: 0 0 0 1px var(--panel-border);
+  padding: calc(var(--spacing) * 2.5);
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: flex-start;
 
-@media (max-width: calc(var(--spacing) * 128)) {
-  .game__main {
-    grid-template-columns: calc(var(--spacing) * 35) 1fr;
+  .game__stats,
+  .game__controls {
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: flex-start;
   }
 }
 
-@media (max-width: calc(var(--spacing) * 96)) {
-  .game__main {
-    grid-template-columns: 1fr;
-  }
-
-  .game__sidebar {
-    display: none;
-  }
-}
-
-/* .glass-panel */
-.glass-panel {
-  background: var(--glass-bg);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 0 0 1px var(--glass-border);
+.game__scene-options,
+.game__player {
+  background: var(--panel-bg);
+  box-shadow: 0 0 0 1px var(--panel-border);
   padding: calc(var(--spacing) * 2.5);
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
 
-.game__header.glass-panel {
-  flex-direction: row;
-  justify-content: space-between;
-  min-height: unset;
-  border-bottom: none;
+.game__scene {
+  position: relative;
+  background: var(--panel-bg);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 0 1px var(--panel-border);
+  padding: calc(var(--spacing) * 2.5);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
-.game__scene.glass-panel {
-  border-left: none;
+.game__main {
+  display: grid;
+  grid-template-columns: 360px 1fr 360px;
+  gap: calc(var(--spacing) * 0);
+  flex-grow: 1;
+  min-height: 0;
 }
+
+/* .panel — dynamically created elements (char-creation, museum) */
+.panel {
+  background: var(--panel-bg);
+  box-shadow: 0 0 0 1px var(--panel-border);
+  padding: calc(var(--spacing) * 2.5);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 
 /* ==========================================================================
- GLOBAL UI COMPONENTS (Scrolling, Buttons, Controls)
+ GLOBAL UI COMPONENTS
  ========================================================================== */
 
-/* .scrollable */
 .scrollable {
   overflow-y: auto;
   flex-grow: 1;
@@ -220,7 +228,6 @@ body {
   background: var(--scrollbar-thumb-hover);
 }
 
-/* .controls */
 .controls__hidden-input {
   display: none;
 }
@@ -237,7 +244,7 @@ body {
   -webkit-appearance: none;
   appearance: none;
   background: var(--btn-bg);
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--panel-border);
   color: var(--text-primary);
   font-family: inherit;
   font-size: var(--font-md);
@@ -268,28 +275,93 @@ body {
 }
 
 /* .option-btn — scene action buttons; space-between positions req-text on the right */
-.option-btn { justify-content: space-between; }
+.option-btn {
+  justify-content: space-between;
+}
+
+.option-btn--stacked {
+  flex-direction: column;
+  align-items: flex-start;
+  height: auto;
+  text-align: left;
+}
+
+.option-btn__sub {
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  font-weight: 400;
+}
 
 .option-btn__req-text {
   color: var(--health-color);
-  background: rgba(0, 0, 0, 0.3);
-  padding: 0;
+  font-size: var(--font-sm);
+  font-weight: 400;
 }
 
 .option-btn__req-text--sell {
-  background: var(--xp-color);
-  color: #fff;
+  color: var(--xp-color);
 }
 
 /* .btn--item — inventory action buttons (Use, Equip, Unequip, Deposit) */
 .btn--item { }
 
-/* .tabs */
+/* ==========================================================================
+ HEADER: PLAYER STATS
+ ========================================================================== */
+
+.game__stats {
+  gap: calc(var(--spacing) * 2.5);
+  align-items: center;
+}
+
+.stat-item {
+  display: block;
+  font-weight: 600;
+  margin-right: calc(var(--spacing) * 2);
+}
+
+.stat-item--name {
+  color: var(--accent-color);
+  font-weight: 700;
+}
+
+.stat-item__xp-wrapper {
+  width: calc(var(--spacing) * 18.75);
+  height: calc(var(--spacing) * 1.25);
+  background: var(--layer-shadow);
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--panel-border);
+}
+
+.stat-item__xp-bar {
+  height: 100%;
+  background: var(--xp-color);
+  transition: width 0.3s ease;
+  box-shadow: 0 0 10px var(--xp-color);
+}
+
+/* ==========================================================================
+ HEADER: GAME CONTROLS
+ ========================================================================== */
+
+.game__controls {
+  margin-left: auto;
+
+  button {
+    justify-content: center;
+  }
+}
+
+/* ==========================================================================
+ SIDEBAR: TABS
+ ========================================================================== */
+
 .tabs__nav {
   display: flex;
   flex-flow: row wrap;
   margin-bottom: calc(var(--spacing) * 2.5);
-  border-bottom: 1px solid var(--glass-border);
+  border-bottom: 1px solid var(--panel-border);
   padding-bottom: calc(var(--spacing) * 2.5);
   flex: 0 0 auto;
 }
@@ -315,56 +387,9 @@ body {
 }
 
 /* ==========================================================================
- PLAYER STATS
+ SIDEBAR: INVENTORY & EQUIPMENT
  ========================================================================== */
 
-/* .game__stats */
-.game__stats {
-  gap: calc(var(--spacing) * 2.5);
-  align-items: center;
-}
-
-/* .stat-item */
-.stat-item {
-  display: block;
-  width: 100%;
-  font-weight: 600;
-  margin-bottom: calc(var(--spacing) * 2);
-}
-
-.stat-item__xp-wrapper {
-  width: calc(var(--spacing) * 18.75);
-  height: calc(var(--spacing) * 1.25);
-  background: var(--layer-shadow);
-  overflow: hidden;
-  position: relative;
-  border: 1px solid var(--glass-border);
-}
-
-.stat-item__xp-bar {
-  height: 100%;
-  background: var(--xp-color);
-  transition: width 0.3s ease;
-  box-shadow: 0 0 10px var(--xp-color);
-}
-
-/* ==========================================================================
- Game controls
- ========================================================================== */
-.game__controls {
-
-  button {
-    width: 100%;
-    justify-content: center;
-    margin-bottom: calc(var(--spacing) * 2);
-  }
-}
-
-/* ==========================================================================
- INVENTORY & EQUIPMENT
- ========================================================================== */
-
-/* .item-list */
 .item-list {
   margin-bottom: calc(var(--spacing) * 2);
 }
@@ -372,7 +397,7 @@ body {
 .item-list__title {
   margin-bottom: calc(var(--spacing) * 1.5);
   color: var(--text-primary);
-  border-bottom: calc(var(--spacing) * 0.125) solid var(--glass-border);
+  border-bottom: calc(var(--spacing) * 0.125) solid var(--panel-border);
   padding-bottom: calc(var(--spacing) * 1.5);
 }
 
@@ -392,7 +417,6 @@ body {
   opacity: 0.8;
 }
 
-/* .item */
 .item-list__item > * + *,
 .item__description > * + * {
   margin-top: var(--spacing);
@@ -425,23 +449,66 @@ body {
 }
 
 /* ==========================================================================
- SCENE NARRATIVE & LOGGING
+ MAIN: SCENE
  ========================================================================== */
 
-/* .scene__narrative */
+.scene--new {
+  border: 1px solid #FF0000;
+}
+
 .scene__narrative {
-  padding-bottom: calc(var(--spacing) * 10);
+  padding-bottom: 20vh;
+  padding-right: calc(200px + var(--spacing) * 4);
   margin-bottom: calc(var(--spacing) * 2.5);
 }
+
+.scene__location {
+  padding-bottom: calc(var(--spacing) * 2);
+  border-bottom: 1px solid var(--panel-border);
+  margin-bottom: calc(var(--spacing) * 2);
+}
+
+.scene + .scene {
+  margin-top: calc(var(--spacing) * 3);
+  padding-top: calc(var(--spacing) * 3);
+  border-top: 1px solid var(--panel-border);
+}
+
+.scene__description {  }
+
+.scene__body {
+  line-height: calc(var(--spacing) * 3);
+  margin-top: calc(var(--spacing) * 3);
+}
+
+.scene__title--game-over {
+  color: var(--health-color);
+}
+
+.scene__log {
+  margin-top: calc(var(--spacing) * 3);
+}
+
+.scene__log:not(.scene--new) {
+  opacity: 0.4;
+}
+
+.scene__log--choice  { color: var(--text-primary); }
+.scene__log--loot    { color: var(--gold-color); }
+.scene__log--damage  { color: var(--health-color); }
+.scene__log--combat  { color: var(--accent-color); }
+.scene__log--quest   { color: var(--gold-color); }
+
+/* ==========================================================================
+ MAIN: SCENE ACTIONS
+ ========================================================================== */
 
 .scene__options {
   display: flex;
   flex-direction: column;
-  flex: 0 0 auto;
-  margin-top: auto;
-  max-height: 40vh;
+  flex-grow: 1;
   overflow-y: auto;
-  padding-right: calc(var(--spacing) * 0.5);
+  min-height: 0;
 }
 
 .scene__options:not(:has(.options-group)) {
@@ -452,15 +519,6 @@ body {
 .scene__options--merchant:has(.options-group) {
 }
 
-.scene__options--grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-}
-
-/* Non-button children (stat bars, gold display) always span full width */
-.scene__options--grid > :not(button) {
-  grid-column: 1 / -1;
-}
 
 /* .options-group: labelled section of related buttons */
 .options-group {
@@ -475,65 +533,20 @@ body {
 }
 
 .options-group__buttons {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: calc(var(--spacing) * 2);
-}
-
-.options-group__buttons--single {
-  grid-template-columns: 1fr;
 }
 
 .options-group:last-of-type .options-group__buttons {
   padding-bottom: calc(var(--spacing) * 2);
-  border-bottom: 1px solid var(--glass-border);
+  border-bottom: 1px solid var(--panel-border);
 }
-
-.scene__location {
-  padding-bottom: calc(var(--spacing) * 2);
-  border-bottom: 1px solid var(--glass-border);
-  margin-bottom: calc(var(--spacing) * 2);
-}
-
-/* .scene */
-.scene + .scene {
-  margin-top: calc(var(--spacing) * 3);
-  padding-top: calc(var(--spacing) * 3);
-  border-top: 1px solid var(--glass-border);
-}
-
-.scene__description {  }
-
-.scene__body {
-  line-height: calc(var(--spacing) * 3);
-  margin-top: calc(var(--spacing) * 3);
-}
-
-.scene__title--game-over {
-  color: var(--health-color);
-}
-
-/* .scene__log */
-.scene__log {
-  margin-top: calc(var(--spacing) * 3);
-}
-
-.scene__log--choice  { color: var(--text-primary); }
-.scene__log--loot    { color: var(--gold-color); }
-.scene__log--damage  { color: var(--health-color); }
-.scene__log--combat  { color: var(--accent-color); }
-.scene__log--quest   { color: var(--gold-color); }
-
 
 /* ==========================================================================
- MINIMAP & FULL MAP
+ MAIN: MINIMAP
  ========================================================================== */
 
-.game__scene {
-  position: relative;
-}
-
-/* Minimap HUD */
 .minimap {
   position: absolute;
   top: calc(var(--spacing) * 2.5);
@@ -542,7 +555,7 @@ body {
   height: 200px;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.55);
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--panel-border);
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
   cursor: pointer;
@@ -564,7 +577,6 @@ body {
   position: relative;
 }
 
-/* Map scene nodes */
 .map-node {
   position: absolute;
   border: 1px solid rgba(255, 255, 255, 0.18);
@@ -592,7 +604,10 @@ body {
   line-height: 1.2;
 }
 
-/* Full map overlay */
+/* ==========================================================================
+ OVERLAY: FULL MAP
+ ========================================================================== */
+
 .fullmap-overlay {
   position: fixed;
   inset: 0;
@@ -615,7 +630,7 @@ body {
   width: 90vw;
   height: 90vh;
   background: rgba(5, 10, 20, 0.97);
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--panel-border);
 }
 
 .fullmap-overlay__header {
@@ -623,7 +638,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
-  border-bottom: 1px solid var(--glass-border);
+  border-bottom: 1px solid var(--panel-border);
   flex-shrink: 0;
 }
 
@@ -638,7 +653,7 @@ body {
   min-height: 0;
   padding: calc(var(--spacing) * 2);
   scrollbar-width: thin;
-  scrollbar-color: var(--accent-color) var(--glass-bg);
+  scrollbar-color: var(--accent-color) var(--panel-bg);
   overscroll-behavior: contain;
 }
 
@@ -648,7 +663,7 @@ body {
 }
 
 .fullmap-overlay__inner::-webkit-scrollbar-track {
-  background: var(--glass-bg);
+  background: var(--panel-bg);
   border-radius: 4px;
 }
 
@@ -658,7 +673,7 @@ body {
 }
 
 .fullmap-overlay__inner::-webkit-scrollbar-corner {
-  background: var(--glass-bg);
+  background: var(--panel-bg);
 }
 
 .fullmap__canvas {
@@ -672,36 +687,16 @@ body {
 }
 
 /* ==========================================================================
-   MUSEUM ROOM UI
-   ========================================================================== */
+ OVERLAY: MUSEUM
+ ========================================================================== */
 
-/* Section heading inside the museum chest panel */
-.museum__heading {
-  color: var(--text-primary);
-  margin-bottom: 10px;
-}
-
-/* Spacing between the chest section and the inventory section */
-.museum__section + .museum__section {
-  margin-top: 10px;
-}
-
-/* .btn--deposit — deposit to chest action button */
-.btn--deposit { }
-
-/* museum__done-btn: bottom-of-panel close button uses .option-btn sizing */
-.museum__done-btn {
-  margin-top: 15px;
-}
-
-/* Highlighted item list inside the museum description (descriptionHook) */
 .museum-item-list {
   color: var(--gold-color);
 }
 
 /* ==========================================================================
-   CHARACTER CREATION SCREEN
-   ========================================================================== */
+ OVERLAY: CHARACTER CREATION
+ ========================================================================== */
 
 .char-creation-overlay {
   position: fixed;
@@ -750,7 +745,7 @@ body {
   -webkit-appearance: none;
   appearance: none;
   background: var(--list-item-bg);
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--panel-border);
   color: var(--text-primary);
   padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2);
   font-family: inherit;
@@ -812,9 +807,3 @@ body {
 .char-creation__confirm-btn { }
 
 .char-creation__load-btn { }
-
-/* Player name in game header */
-.stat-item--name {
-  color: var(--accent-color);
-  font-weight: 700;
-}

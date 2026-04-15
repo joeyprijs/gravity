@@ -1,5 +1,5 @@
 import { gameState } from "../core/state.js";
-import { createElement } from "../core/utils.js";
+import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "../core/utils.js";
 import { CSS, EL, LOG } from "../core/config.js";
 
 // MuseumUI handles the museum chest deposit/withdraw interface.
@@ -8,63 +8,74 @@ export class MuseumUI {
     this.engine = engine;
   }
 
-  render() {
-    const optionsContainer = document.getElementById(EL.SCENE_OPTIONS);
-    optionsContainer.innerHTML = '';
-
+  render(isUpdate = false) {
     const chest = gameState.getMuseumChest();
     const pInv = gameState.getPlayer().inventory;
 
-    const buildMuseumRow = (b, btnLabel, isDeposit, onClickFn) => {
-      const itemData = this.engine.data.items[b.item];
-      const name = itemData?.name || b.item;
-      const label = b.amount > 1 ? `${name} (x${b.amount})` : name;
-      const row = createElement('div', CSS.ITEM_LIST_ITEM);
-      const descDiv = createElement('div', CSS.ITEM_DESCRIPTION);
-      descDiv.appendChild(createElement('strong', CSS.ITEM_TITLE, label));
-      row.appendChild(descDiv);
-      const btn = createElement('button', isDeposit ? [CSS.BTN, CSS.BTN_ITEM, CSS.BTN_DEPOSIT] : [CSS.BTN, CSS.BTN_ITEM], btnLabel);
-      btn.onclick = onClickFn;
-      row.appendChild(btn);
-      return row;
-    };
+    if (!isUpdate) {
+      this.engine.openScene(CSS.SCENE_DIALOGUE);
+      const chestNames = chest.map(b => this.engine.data.items[b.item]?.name || b.item).join(', ');
+      this.engine.currentSceneEl.appendChild(
+        buildSceneDescription(
+          this.engine.t('ui.museumTitle'),
+          chest.length > 0
+            ? this.engine.t('actions.museumDisplayedWithin', { names: chestNames })
+            : this.engine.t('actions.museumRoomEmpty')
+        )
+      );
+    }
 
-    const chestDiv = createElement('div', [CSS.GLASS_PANEL, CSS.MUSEUM_SECTION]);
-    chestDiv.appendChild(createElement('h3', CSS.MUSEUM_HEADING, this.engine.t('ui.museumTitle')));
-    if (chest && chest.length > 0) {
+    const container = document.getElementById(EL.SCENE_OPTIONS);
+    clearElement(container);
+
+    // Chest section
+    const chestGroup = createElement('div', CSS.OPTIONS_GROUP);
+    chestGroup.appendChild(createElement('div', CSS.OPTIONS_GROUP_LABEL, this.engine.t('ui.museumTitle')));
+    const chestBtns = createElement('div', CSS.OPTIONS_GROUP_BUTTONS);
+    if (chest.length > 0) {
       chest.forEach(b => {
-        const itemData = this.engine.data.items[b.item];
-        chestDiv.appendChild(buildMuseumRow(b, this.engine.t('ui.museumTake'), false, () => {
+        const name = this.engine.data.items[b.item]?.name || b.item;
+        const label = b.amount > 1 ? `${name} (x${b.amount})` : name;
+        const btn = buildOptionButton(label);
+        btn.onclick = () => {
           gameState.withdrawFromChest(b.item, 1);
-          this.engine.log(LOG.SYSTEM, this.engine.t('actions.museumTook', { name: itemData?.name || b.item }));
-          this.render();
-        }));
+          this.engine.log(LOG.SYSTEM, this.engine.t('actions.museumTook', { name }));
+          this.render(true);
+        };
+        chestBtns.appendChild(btn);
       });
     } else {
-      chestDiv.appendChild(createElement('p', CSS.ITEM_TYPE, this.engine.t('ui.museumEmpty')));
+      chestBtns.appendChild(createElement('p', CSS.ITEM_TYPE, this.engine.t('ui.museumEmpty')));
     }
+    chestGroup.appendChild(chestBtns);
+    container.appendChild(chestGroup);
 
-    const invDiv = createElement('div', [CSS.GLASS_PANEL, CSS.MUSEUM_SECTION]);
-    invDiv.appendChild(createElement('h3', CSS.MUSEUM_HEADING, this.engine.t('ui.inventoryTitle')));
-    if (pInv && pInv.length > 0) {
+    // Inventory section
+    const invGroup = createElement('div', CSS.OPTIONS_GROUP);
+    invGroup.appendChild(createElement('div', CSS.OPTIONS_GROUP_LABEL, this.engine.t('ui.inventoryTitle')));
+    const invBtns = createElement('div', CSS.OPTIONS_GROUP_BUTTONS);
+    if (pInv.length > 0) {
       pInv.forEach(b => {
-        const itemData = this.engine.data.items[b.item];
-        invDiv.appendChild(buildMuseumRow(b, this.engine.t('ui.museumDisplay'), true, () => {
+        const name = this.engine.data.items[b.item]?.name || b.item;
+        const label = b.amount > 1 ? `${name} (x${b.amount})` : name;
+        const btn = buildOptionButton(label);
+        btn.onclick = () => {
           gameState.depositToChest(b.item, 1);
-          this.engine.log(LOG.SYSTEM, this.engine.t('actions.museumDisplayed', { name: itemData?.name || b.item }));
-          this.render();
-        }));
+          this.engine.log(LOG.SYSTEM, this.engine.t('actions.museumDisplayed', { name }));
+          this.render(true);
+        };
+        invBtns.appendChild(btn);
       });
     } else {
-      invDiv.appendChild(createElement('p', CSS.ITEM_TYPE, this.engine.t('ui.inventoryEmpty')));
+      invBtns.appendChild(createElement('p', CSS.ITEM_TYPE, this.engine.t('ui.inventoryEmpty')));
     }
+    invGroup.appendChild(invBtns);
+    container.appendChild(invGroup);
 
-    const closeBtn = createElement('button', [CSS.BTN, CSS.OPTION_BTN, CSS.MUSEUM_DONE_BTN]);
-    closeBtn.appendChild(createElement('span', '', this.engine.t('ui.museumDone')));
-    closeBtn.onclick = () => this.engine.renderScene(gameState.getCurrentSceneId());
+    const doneBtn = buildOptionButton(this.engine.t('ui.museumDone'));
+    doneBtn.onclick = () => this.engine.renderScene(gameState.getCurrentSceneId());
+    container.appendChild(doneBtn);
 
-    optionsContainer.appendChild(chestDiv);
-    optionsContainer.appendChild(invDiv);
-    optionsContainer.appendChild(closeBtn);
+    this.engine.scrollNarrativeToBottom();
   }
 }

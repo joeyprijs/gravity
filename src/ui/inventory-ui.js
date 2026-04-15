@@ -33,7 +33,7 @@ export class InventoryUI {
       if (itemData.type !== currentType) {
         currentType = itemData.type;
         currentGroup = createElement('div', CSS.ITEM_LIST);
-        currentGroup.appendChild(createElement('h3', CSS.ITEM_LIST_TITLE, itemData.type));
+        currentGroup.appendChild(createElement('h3', CSS.ITEM_LIST_TITLE, this.engine.t(`itemTypes.${itemData.type}`)));
         currentUl = createElement('ul', CSS.ITEM_LIST_ITEMS);
         currentGroup.appendChild(currentUl);
         invTab.appendChild(currentGroup);

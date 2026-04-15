@@ -16,7 +16,6 @@ test('CHAR_CREATION: pointBudget is a positive integer', () => {
 test('CHAR_CREATION: every stat entry has required fields', () => {
   for (const stat of CHAR_CREATION.stats) {
     assert.ok(typeof stat.id === 'string', `${stat.id}: id must be string`);
-    assert.ok(typeof stat.label === 'string', `${stat.id}: label must be string`);
     assert.ok(typeof stat.bonusPerPoint === 'number', `${stat.id}: bonusPerPoint must be number`);
     assert.ok(stat.bonusPerPoint > 0, `${stat.id}: bonusPerPoint must be positive`);
     assert.ok(typeof stat.min === 'number', `${stat.id}: min must be number`);
