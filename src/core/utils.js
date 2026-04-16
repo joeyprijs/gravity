@@ -59,7 +59,7 @@ export function buildSceneDescription(title, body = null) {
 
 /**
  * Builds an option button:
- *   button.option-btn > span[text] + optional span.option-btn__req-text[--sell]
+ *   button.option-btn > span[text] + optional span.option-btn__badge[--cost|--sell]
  *
  * Pass reqText to show a requirement/cost badge on the right.
  * Pass isSell=true for the sell variant (green badge instead of muted).
@@ -73,7 +73,7 @@ export function buildOptionButton(text, reqText = null, isSell = false) {
   const btn = createElement('button', classes);
   btn.appendChild(createElement('span', '', text));
   if (reqText !== null) {
-    const cls = isSell ? [CSS.OPTION_BTN_REQ, CSS.OPTION_BTN_REQ_SELL] : CSS.OPTION_BTN_REQ;
+    const cls = isSell ? [CSS.OPTION_BTN_BADGE, CSS.OPTION_BTN_BADGE_SELL] : [CSS.OPTION_BTN_BADGE, CSS.OPTION_BTN_BADGE_COST];
     btn.appendChild(createElement('span', cls, reqText));
   }
   return btn;

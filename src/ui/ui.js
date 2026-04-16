@@ -23,6 +23,10 @@ export class UIManager {
         document.querySelectorAll(`.${CSS.TABS_CONTENT}`).forEach(c => c.classList.remove(CSS.TABS_CONTENT_ACTIVE));
         e.target.classList.add(CSS.TABS_BTN_ACTIVE);
         document.getElementById(e.target.dataset.tab).classList.add(CSS.TABS_CONTENT_ACTIVE);
+        if (e.target.dataset.tab === 'map-tab') {
+          this.map.invalidateMinimap();
+          this.map.renderMinimap();
+        }
       });
     });
 
@@ -84,6 +88,7 @@ export class UIManager {
       document.getElementById(EL.STAT_AP).innerText = t('stats.ap', { current: player.ap, max: player.maxAp });
       document.getElementById(EL.STAT_AC).innerText = t('stats.ac', { value: player.ac });
       document.getElementById(EL.STAT_INITIATIVE).innerText = t('stats.initiative', { value: player.initiative });
+      document.getElementById(EL.STAT_PERCEPTION).innerText = t('stats.perception', { value: player.perception || 0 });
       document.getElementById(EL.STAT_GOLD).innerText = t('stats.gold', { value: player.gold });
       const xpPerc = (player.xp / (player.level * XP_PER_LEVEL)) * 100;
       document.getElementById(EL.XP_BAR).style.width = `${xpPerc}%`;

@@ -53,6 +53,7 @@ export const PLAYER_DEFAULTS = {
   maxAp: 3,
   ac: 10,
   initiative: 0,
+  perception: 0,
   gold: 0,
   inventory: [
     { item: "rusty_sword", amount: 1 },
@@ -80,10 +81,11 @@ export const PLAYER_DEFAULTS = {
 // To add more stats (e.g. initiative, base AC, backgrounds) later, just extend
 // this array — the character creation screen renders it dynamically.
 export const CHAR_CREATION = {
-  pointBudget: 2,
+  pointBudget: 3,
   stats: [
-    { id: 'maxHp', bonusPerPoint: 2, min: 0 },
-    { id: 'ac',    bonusPerPoint: 1, min: 0 },
+    { id: 'maxHp',       bonusPerPoint: 2, min: 0 },
+    { id: 'ac',          bonusPerPoint: 1, min: 0 },
+    { id: 'perception',  bonusPerPoint: 1, min: 0 },
   ]
 };
 
@@ -128,9 +130,9 @@ export const CSS = {
   // Buttons
   OPTION_BTN:                   'option-btn',
   OPTION_BTN_STACKED:           'option-btn--stacked',
-  OPTION_BTN_SUB:               'option-btn__sub',
-  OPTION_BTN_REQ:               'option-btn__req-text',
-  OPTION_BTN_REQ_SELL:          'option-btn__req-text--sell',
+  OPTION_BTN_BADGE:             'option-btn__badge',
+  OPTION_BTN_BADGE_COST:        'option-btn__badge--cost',
+  OPTION_BTN_BADGE_SELL:        'option-btn__badge--sell',
   OPTIONS_GROUP:                'options-group',
   OPTIONS_GROUP_LABEL:          'options-group__label',
   OPTIONS_GROUP_BUTTONS:        'options-group__buttons',
@@ -201,6 +203,7 @@ export const EL = {
   STAT_AP:                 'stat-ap',
   STAT_AC:                 'stat-ac',
   STAT_INITIATIVE:         'stat-initiative',
+  STAT_PERCEPTION:         'stat-perception',
   STAT_GOLD:               'stat-gold',
   XP_BAR:                  'xp-bar',
 

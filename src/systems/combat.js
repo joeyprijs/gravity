@@ -339,7 +339,7 @@ class CombatRenderer {
       attacks.forEach(att => {
         const btn = createElement('button', [CSS.BTN, CSS.OPTION_BTN, CSS.OPTION_BTN_STACKED]);
         btn.appendChild(createElement('span', '', this.cs.engine.t('combat.attackTarget', { name: att.name })));
-        btn.appendChild(createElement('span', CSS.OPTION_BTN_SUB, this.cs.engine.t('combat.apCost', { cost: att.actionPoints })));
+        btn.appendChild(createElement('span', CSS.OPTION_BTN_BADGE, this.cs.engine.t('combat.apCost', { cost: att.actionPoints })));
         if (gameState.getPlayer().ap < att.actionPoints) btn.disabled = true;
         btn.onclick = () => this.cs.playerAttack(att, target);
         btnContainer.appendChild(btn);

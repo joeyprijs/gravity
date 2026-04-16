@@ -1,7 +1,8 @@
 import { gameState } from "../core/state.js";
 import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "../core/utils.js";
-import { EL, CSS, LOG } from "../core/config.js";
+import { EL, CSS, LOG, MAX_D20_ROLL } from "../core/config.js";
 import { evaluateCondition, fromRequiredState } from "./condition.js";
+import { roll } from "./dice.js";
 
 // SceneRenderer handles navigating to scenes, resolving their descriptions,
 // and rendering their option buttons. It is the main driver of scene-to-scene
@@ -75,6 +76,9 @@ export class SceneRenderer {
     optionsContainer.classList.remove(CSS.SCENE_OPTIONS_COMBAT, CSS.SCENE_OPTIONS_MERCHANT);
     clearElement(optionsContainer);
 
+    const lookBtn = this._buildLookAroundButton(scene);
+    if (lookBtn) optionsContainer.appendChild(lookBtn);
+
     (scene.options || []).forEach(opt => {
       // Hide options whose condition is not currently met.
       // Supports both the legacy requiredState shorthand and the full condition tree.
@@ -132,6 +136,80 @@ export class SceneRenderer {
     } else if (opt.destination) {
       this.engine.renderScene(opt.destination);
     }
+  }
+
+  // Builds the "Look Around" button for a scene, or returns null when done.
+  // State (current DCs + found flags) is persisted in a gameState flag so it
+  // survives saves. On fail the button stays and each unfound item's DC rises
+  // by its own increment. Disappears only once all items are found.
+  _buildLookAroundButton(scene) {
+    const sceneId = gameState.getCurrentSceneId();
+    const stateKey = `look_around_${sceneId}`;
+
+    if (!scene.hiddenLoot?.items?.length) {
+      // No hidden items — one-shot flavor only.
+      if (gameState.getFlag(stateKey)) return null;
+      const btn = buildOptionButton(this.engine.t('actions.lookAround'));
+      btn.onclick = () => {
+        this.engine.isGameStart = false;
+        gameState.setFlag(stateKey, true);
+        this.engine.log(LOG.PLAYER, this.engine.t('actions.lookAround'), 'choice');
+        this.engine.log(LOG.SYSTEM, this.engine.t('actions.lookAroundEmpty'));
+        this.renderOptions(scene);
+      };
+      return btn;
+    }
+
+    // Initialize or restore per-item state.
+    let state = gameState.getFlag(stateKey);
+    if (!state) {
+      state = {
+        dcs:   scene.hiddenLoot.items.map(item => item.dc ?? 10),
+        found: scene.hiddenLoot.items.map(() => false),
+      };
+    }
+
+    if (state.found.every(f => f)) return null;
+
+    const btn = buildOptionButton(this.engine.t('actions.lookAround'));
+    btn.onclick = () => {
+      this.engine.isGameStart = false;
+      this.engine.log(LOG.PLAYER, this.engine.t('actions.lookAround'), 'choice');
+
+      const mod = gameState.getPlayer().perception || 0;
+      const hitRoll = roll(1, MAX_D20_ROLL) + mod;
+
+      const newlyFound = [];
+      scene.hiddenLoot.items.forEach((l, i) => {
+        if (state.found[i]) return;
+        if (hitRoll >= state.dcs[i]) {
+          state.found[i] = true;
+          newlyFound.push(l);
+        } else {
+          state.dcs[i] += l.increment ?? 1;
+        }
+      });
+
+      const anyFound = newlyFound.length > 0;
+      const variant = anyFound ? 'loot' : 'system';
+      const key = anyFound ? 'actions.lookAroundFound' : 'actions.lookAroundFail';
+      this.engine.log(LOG.SYSTEM, this.engine.t(key, { roll: hitRoll, mod }), variant);
+
+      newlyFound.forEach(l => {
+        if (l.item === 'gold') {
+          gameState.modifyPlayerStat('gold', l.amount);
+          this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundGold', { amount: l.amount }), 'loot');
+        } else {
+          gameState.addToInventory(l.item, l.amount || 1);
+          const name = this.engine.data.items[l.item]?.name || l.item;
+          this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundItem', { name }), 'loot');
+        }
+      });
+
+      gameState.setFlag(stateKey, state);
+      this.renderOptions(scene);
+    };
+    return btn;
   }
 
   // Returns the description string to display for a scene.

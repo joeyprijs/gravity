@@ -9,8 +9,9 @@
     "confirmBtn":           "Begin Adventure",
     "loadSaveBtn":          "Load Save",
     "stats": {
-      "maxHp": { "label": "Health (HP)", "description": "+2 HP per point" },
-      "ac":    { "label": "Armor Class (AC)", "description": "+1 AC per point"  }
+      "maxHp":      { "label": "Health (HP)",       "description": "+2 HP per point" },
+      "ac":         { "label": "Armor Class (AC)",  "description": "+1 AC per point" },
+      "perception": { "label": "Perception",        "description": "+1 Perception per point" }
     }
   },
   "system": {
@@ -24,8 +25,9 @@
     "hp":         "HP: {current}/{max}",
     "ap":         "AP: {current}/{max}",
     "ac":         "AC: {value}",
-    "initiative": "Init: {value}",
-    "gold":       "Gold: {value}"
+    "initiative":  "Init: {value}",
+    "perception":  "Perc: {value}",
+    "gold":        "Gold: {value}"
   },
   "ui": {
     "inventoryEmpty":      "Inventory is empty.",
@@ -73,7 +75,11 @@
     "museumTook":            "You retrieved {name} from the display.",
     "museumDisplayed":       "You proudly displayed {name}.",
     "museumRoomEmpty":       "The room is currently devoid of trophies.",
-    "museumDisplayedWithin": "Displayed within the room: {names}."
+    "museumDisplayedWithin": "Displayed within the room: {names}.",
+    "lookAround":            "Look Around",
+    "lookAroundEmpty":       "You look around carefully. Nothing catches your eye.",
+    "lookAroundFound":       "You search the area ({roll}, 1d20+{mod}) — your keen eye spots something!",
+    "lookAroundFail":        "You search the area ({roll}, 1d20+{mod}) — nothing hidden here."
   },
   "player": {
     "equipped":          "Equipped {name} to {slot}.",

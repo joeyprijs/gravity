@@ -172,7 +172,6 @@ body {
 }
 
 .game__scene {
-  position: relative;
   background: var(--panel-bg);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
@@ -254,7 +253,7 @@ body {
 }
 
 .button {
-  padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2);
+  padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 1.75);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -286,19 +285,19 @@ body {
   text-align: left;
 }
 
-.option-btn__sub {
+.option-btn__badge {
+  display: block;
   color: var(--text-secondary);
   font-size: var(--font-sm);
   font-weight: 400;
+  margin-top: var(--spacing);
 }
 
-.option-btn__req-text {
+.option-btn__badge--cost {
   color: var(--health-color);
-  font-size: var(--font-sm);
-  font-weight: 400;
 }
 
-.option-btn__req-text--sell {
+.option-btn__badge--sell {
   color: var(--xp-color);
 }
 
@@ -346,6 +345,7 @@ body {
  ========================================================================== */
 
 .game__controls {
+  gap: calc(var(--spacing) * 2);
   margin-left: auto;
 
   button {
@@ -452,13 +452,8 @@ body {
  MAIN: SCENE
  ========================================================================== */
 
-.scene--new {
-  border: 1px solid #FF0000;
-}
-
 .scene__narrative {
   padding-bottom: 20vh;
-  padding-right: calc(200px + var(--spacing) * 4);
   margin-bottom: calc(var(--spacing) * 2.5);
 }
 
@@ -487,10 +482,6 @@ body {
 
 .scene__log {
   margin-top: calc(var(--spacing) * 3);
-}
-
-.scene__log:not(.scene--new) {
-  opacity: 0.4;
 }
 
 .scene__log--choice  { color: var(--text-primary); }
@@ -548,18 +539,12 @@ body {
  ========================================================================== */
 
 .minimap {
-  position: absolute;
-  top: calc(var(--spacing) * 2.5);
-  right: calc(var(--spacing) * 2.5);
-  width: 200px;
-  height: 200px;
+  width: 100%;
+  aspect-ratio: 1;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.55);
   border: 1px solid var(--panel-border);
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
   cursor: pointer;
-  z-index: 10;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 

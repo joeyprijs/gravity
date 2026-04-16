@@ -52,7 +52,8 @@ export class MapManager {
     const padding = 40;
     const bboxW = (bbox.maxRight - bbox.minLeft) + padding * 2;
     const bboxH = (bbox.maxBottom - bbox.minTop) + padding * 2;
-    const scale = MINIMAP_SIZE / Math.max(bboxW, bboxH);
+    const size = minimapEl.offsetWidth || MINIMAP_SIZE;
+    const scale = size / Math.max(bboxW, bboxH);
 
     // Build a fresh canvas div and swap it in with replaceWith() — this forces
     // Safari to flush its compositor layer cache, which can otherwise show a
@@ -114,6 +115,10 @@ export class MapManager {
 
   closeFullMap() {
     document.getElementById(EL.FULLMAP_OVERLAY).hidden = true;
+  }
+
+  invalidateMinimap() {
+    this._minimapCacheKey = null;
   }
 
   // Returns all visited scenes that have mapDefinitions, across all regions.

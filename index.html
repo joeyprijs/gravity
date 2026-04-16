@@ -23,6 +23,7 @@
         <span class="stat-item" id="stat-ac">AC: 10</span>
         <span class="stat-item" id="stat-ap">AP: 3/3</span>
         <span class="stat-item" id="stat-initiative">Init: 0</span>
+        <span class="stat-item" id="stat-perception">Perc: 0</span>
         <span class="stat-item" id="stat-gold">Gold: 0</span>
         <span class="stat-item" id="stat-level">Lvl 1</span>
         <div class="stat-item__xp-wrapper">
@@ -41,16 +42,19 @@
           <button class="button tabs__btn" data-tab="inventory-tab">Inventory</button>
           <button class="button tabs__btn tabs__btn--active" data-tab="equipment-tab">Equipment</button>
           <button class="button tabs__btn" data-tab="quests-tab">Quests</button>
+          <button class="button tabs__btn" data-tab="map-tab">Map</button>
         </nav>
         <div class="tabs__content scrollable" id="inventory-tab"></div>
         <div class="tabs__content tabs__content--active scrollable" id="equipment-tab"></div>
         <div class="tabs__content scrollable" id="quests-tab"></div>
+        <div class="tabs__content" id="map-tab">
+          <div class="minimap" id="minimap" title="Click to open full map" hidden>
+            <div class="minimap__canvas" id="minimap-canvas"></div>
+          </div>
+        </div>
       </aside>
 
       <main class="game__scene" id="scene-panel">
-        <div class="minimap" id="minimap" title="Click to open full map" hidden>
-          <div class="minimap__canvas" id="minimap-canvas"></div>
-        </div>
         <div class="scene__narrative scrollable" id="scene-narrative"></div>
       </main>
 
