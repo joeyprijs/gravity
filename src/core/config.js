@@ -213,7 +213,6 @@ export const EL = {
   // Sidebar tabs
   TAB_PLAYER:              'player-tab',
   TAB_INVENTORY:           'inventory-tab',
-  TAB_EQUIPMENT:           'equipment-tab',
   TAB_QUESTS:              'quests-tab',
   TAB_SETTINGS:            'settings-tab',
 

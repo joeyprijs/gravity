@@ -16,6 +16,17 @@ export class UIManager {
   }
 
   setup() {
+    // Tab labels from locale
+    const tabLabels = {
+      'inventory-tab': 'ui.tabInventory',
+      'quests-tab':    'ui.tabQuests',
+      'map-tab':       'ui.tabMap',
+    };
+    document.querySelectorAll(`.${CSS.TABS_BTN}`).forEach(btn => {
+      const key = tabLabels[btn.dataset.tab];
+      if (key) btn.textContent = this.engine.t(key);
+    });
+
     // Tab switching
     document.querySelectorAll(`.${CSS.TABS_BTN}`).forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -96,7 +107,6 @@ export class UIManager {
 
     if (!hint || hint === 'inventory') {
       this.inventoryUI.renderInventory(player);
-      this.inventoryUI.renderEquipment(player);
       this.bindItemActions();
     }
 

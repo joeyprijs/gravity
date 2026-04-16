@@ -453,7 +453,7 @@ body {
  ========================================================================== */
 
 .scene__narrative {
-  padding-bottom: 20vh;
+  padding-bottom: 10vh;
   margin-bottom: calc(var(--spacing) * 2.5);
 }
 

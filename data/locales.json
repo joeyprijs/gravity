@@ -41,8 +41,13 @@
     "museumDone":          "Done Managing",
     "museumTake":          "Take",
     "museumDisplay":       "Display",
+    "tabInventory":        "Inventory",
+    "tabQuests":           "Quests",
+    "tabMap":              "Map",
+    "equippedSection":     "Equipped",
+    "equippedTo":          "Equipped: {slot}",
+    "armorSlot":           "Slot: {slot}",
     "worldMapTitle":       "World Map",
-    "equipmentTypeFormat": "{type}: {description}",
     "itemRequires":        "Requires: {name}",
     "locationDialogue":    "DIALOGUE: {name}",
     "locationMerchant":    "MERCHANT: {name}",
@@ -78,8 +83,8 @@
     "museumDisplayedWithin": "Displayed within the room: {names}.",
     "lookAround":            "Look Around",
     "lookAroundEmpty":       "You look around carefully. Nothing catches your eye.",
-    "lookAroundFound":       "You search the area ({roll}, 1d20+{mod}) — your keen eye spots something!",
-    "lookAroundFail":        "You search the area ({roll}, 1d20+{mod}) — nothing hidden here."
+    "lookAroundFound":       "You search the area ({roll}, 1d20 + {mod} Perception) — your keen eye spots something!",
+    "lookAroundFail":        "You search the area ({roll}, 1d20 + {mod} Perception) — nothing reveals itself, yet you sense there's something you're missing."
   },
   "player": {
     "equipped":          "Equipped {name} to {slot}.",

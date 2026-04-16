@@ -8,43 +8,73 @@ export class InventoryUI {
   }
 
   renderInventory(player) {
-    const sortedInv = [...player.inventory].sort((a, b) => {
-      const typeA = this.engine.data.items[a.item]?.type || "Flavour";
-      const typeB = this.engine.data.items[b.item]?.type || "Flavour";
-      return (ITEM_TYPE_ORDER[typeA] || 99) - (ITEM_TYPE_ORDER[typeB] || 99);
-    });
-
     const invTab = document.getElementById(EL.TAB_INVENTORY);
     invTab.innerHTML = '';
 
-    if (sortedInv.length === 0) {
+    const equippedEntries = Object.entries(player.equipment).filter(([, id]) => id);
+    const sortedInv = [...player.inventory].sort((a, b) => {
+      const typeA = this.engine.data.items[a.item]?.type || 'Flavour';
+      const typeB = this.engine.data.items[b.item]?.type || 'Flavour';
+      return (ITEM_TYPE_ORDER[typeA] || 99) - (ITEM_TYPE_ORDER[typeB] || 99);
+    });
+
+    if (equippedEntries.length === 0 && sortedInv.length === 0) {
       invTab.appendChild(createElement('p', CSS.ITEM_TYPE, this.engine.t('ui.inventoryEmpty')));
       return;
     }
 
-    let currentType = null;
-    let currentGroup = null;
-    let currentUl = null;
+    // Equipped section
+    if (equippedEntries.length > 0) {
+      const group = createElement('div', CSS.ITEM_LIST);
+      group.appendChild(createElement('h3', CSS.ITEM_LIST_TITLE, this.engine.t('ui.equippedSection')));
+      const ul = createElement('ul', CSS.ITEM_LIST_ITEMS);
+      equippedEntries.forEach(([slot, itemId]) => {
+        const itemData = this.engine.data.items[itemId];
+        if (!itemData) return;
+        const li = createElement('li', CSS.ITEM_LIST_ITEM);
+        const descDiv = createElement('div', CSS.ITEM_DESCRIPTION);
+        descDiv.appendChild(createElement('strong', CSS.ITEM_TITLE, itemData.name));
+        descDiv.appendChild(createElement('div', CSS.ITEM_TYPE, itemData.description));
+        descDiv.appendChild(createElement('div', CSS.ITEM_TYPE, this.engine.t('ui.equippedTo', { slot })));
+        const statsEl = this.buildItemStatsEl(itemData);
+        if (statsEl) descDiv.appendChild(statsEl);
+        const actionsDiv = createElement('div', CSS.ITEM_ACTIONS);
+        const btn = createElement('button', [CSS.BTN, CSS.BTN_ITEM], this.engine.t('inventory.unequipButton'));
+        btn.dataset.action = 'unequip';
+        btn.dataset.slot = slot;
+        actionsDiv.appendChild(btn);
+        li.appendChild(descDiv);
+        li.appendChild(actionsDiv);
+        ul.appendChild(li);
+      });
+      group.appendChild(ul);
+      invTab.appendChild(group);
+    }
 
+    // Unequipped items, grouped by type
+    let currentType = null;
+    let currentUl = null;
     sortedInv.forEach(invItem => {
       const itemData = this.engine.data.items[invItem.item];
       if (!itemData) return;
 
       if (itemData.type !== currentType) {
         currentType = itemData.type;
-        currentGroup = createElement('div', CSS.ITEM_LIST);
-        currentGroup.appendChild(createElement('h3', CSS.ITEM_LIST_TITLE, this.engine.t(`itemTypes.${itemData.type}`)));
+        const group = createElement('div', CSS.ITEM_LIST);
+        group.appendChild(createElement('h3', CSS.ITEM_LIST_TITLE, this.engine.t(`itemTypes.${itemData.type}`)));
         currentUl = createElement('ul', CSS.ITEM_LIST_ITEMS);
-        currentGroup.appendChild(currentUl);
-        invTab.appendChild(currentGroup);
+        group.appendChild(currentUl);
+        invTab.appendChild(group);
       }
 
       const li = createElement('li', CSS.ITEM_LIST_ITEM);
       const label = `${itemData.name}${invItem.amount > 1 ? ` (x${invItem.amount})` : ''}`;
-
       const descDiv = createElement('div', CSS.ITEM_DESCRIPTION);
       descDiv.appendChild(createElement('strong', CSS.ITEM_TITLE, label));
       descDiv.appendChild(createElement('div', CSS.ITEM_TYPE, itemData.description));
+      if (itemData.type === 'Armor' && itemData.slot) {
+        descDiv.appendChild(createElement('div', CSS.ITEM_TYPE, this.engine.t('ui.armorSlot', { slot: itemData.slot })));
+      }
       const statsEl = this.buildItemStatsEl(itemData);
       if (statsEl) descDiv.appendChild(statsEl);
 
@@ -74,38 +104,6 @@ export class InventoryUI {
       li.appendChild(actionsDiv);
       currentUl.appendChild(li);
     });
-  }
-
-  renderEquipment(player) {
-    const equipTab = document.getElementById(EL.TAB_EQUIPMENT);
-    equipTab.innerHTML = '';
-    for (const slot in player.equipment) {
-      const group = createElement('div', CSS.ITEM_LIST);
-      group.appendChild(createElement('h3', CSS.ITEM_LIST_TITLE, slot));
-      const ul = createElement('ul', CSS.ITEM_LIST_ITEMS);
-      const li = createElement('li', CSS.ITEM_LIST_ITEM);
-      const itemId = player.equipment[slot];
-      if (itemId) {
-        const itemData = this.engine.data.items[itemId];
-        const descDiv = createElement('div', CSS.ITEM_DESCRIPTION);
-        descDiv.appendChild(createElement('strong', CSS.ITEM_TITLE, itemData.name));
-        descDiv.appendChild(createElement('div', CSS.ITEM_TYPE, this.engine.t('ui.equipmentTypeFormat', { type: itemData.type, description: itemData.description })));
-        const statsEl = this.buildItemStatsEl(itemData);
-        if (statsEl) descDiv.appendChild(statsEl);
-
-        const unequipBtn = createElement('button', [CSS.BTN, CSS.BTN_ITEM], this.engine.t('inventory.unequipButton'));
-        unequipBtn.dataset.action = 'unequip';
-        unequipBtn.dataset.slot = slot;
-
-        li.appendChild(descDiv);
-        li.appendChild(createElement('div', CSS.ITEM_ACTIONS)).appendChild(unequipBtn);
-      } else {
-        li.appendChild(createElement('span', CSS.ITEM_TYPE, this.engine.t('ui.slotEmpty')));
-      }
-      ul.appendChild(li);
-      group.appendChild(ul);
-      equipTab.appendChild(group);
-    }
   }
 
   // Returns a div.item__stats element, or null if the item has no displayable stats.
