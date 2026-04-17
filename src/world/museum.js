@@ -30,10 +30,13 @@ export class MuseumUI {
     clearElement(container);
     if (reminder) container.appendChild(reminder);
 
+    // Done at top — always reachable without scrolling
+    const doneBtn = buildOptionButton(this.engine.t('ui.museumDone'));
+    doneBtn.onclick = () => this.engine.renderScene(gameState.getCurrentSceneId());
+    container.appendChild(doneBtn);
+
     // Chest section
-    const chestGroup = createElement('div', CSS.OPTIONS_GROUP);
-    chestGroup.appendChild(createElement('div', CSS.OPTIONS_GROUP_LABEL, this.engine.t('ui.museumTitle')));
-    const chestBtns = createElement('div', CSS.OPTIONS_GROUP_BUTTONS);
+    container.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('ui.museumTitle')));
     if (chest.length > 0) {
       chest.forEach(b => {
         const name = this.engine.data.items[b.item]?.name || b.item;
@@ -44,18 +47,14 @@ export class MuseumUI {
           this.engine.log(LOG.SYSTEM, this.engine.t('actions.museumTook', { name }));
           this.render(true);
         };
-        chestBtns.appendChild(btn);
+        container.appendChild(btn);
       });
     } else {
-      chestBtns.appendChild(createElement('p', CSS.ITEM_TYPE, this.engine.t('ui.museumEmpty')));
+      container.appendChild(createElement('p', CSS.ITEM_TYPE, this.engine.t('ui.museumEmpty')));
     }
-    chestGroup.appendChild(chestBtns);
-    container.appendChild(chestGroup);
 
     // Inventory section
-    const invGroup = createElement('div', CSS.OPTIONS_GROUP);
-    invGroup.appendChild(createElement('div', CSS.OPTIONS_GROUP_LABEL, this.engine.t('ui.inventoryTitle')));
-    const invBtns = createElement('div', CSS.OPTIONS_GROUP_BUTTONS);
+    container.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('ui.inventoryTitle')));
     if (pInv.length > 0) {
       pInv.forEach(b => {
         const name = this.engine.data.items[b.item]?.name || b.item;
@@ -66,17 +65,11 @@ export class MuseumUI {
           this.engine.log(LOG.SYSTEM, this.engine.t('actions.museumDisplayed', { name }));
           this.render(true);
         };
-        invBtns.appendChild(btn);
+        container.appendChild(btn);
       });
     } else {
-      invBtns.appendChild(createElement('p', CSS.ITEM_TYPE, this.engine.t('ui.inventoryEmpty')));
+      container.appendChild(createElement('p', CSS.ITEM_TYPE, this.engine.t('ui.inventoryEmpty')));
     }
-    invGroup.appendChild(invBtns);
-    container.appendChild(invGroup);
-
-    const doneBtn = buildOptionButton(this.engine.t('ui.museumDone'));
-    doneBtn.onclick = () => this.engine.renderScene(gameState.getCurrentSceneId());
-    container.appendChild(doneBtn);
 
     this.engine.scrollNarrativeToBottom();
   }

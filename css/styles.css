@@ -482,38 +482,18 @@ body {
   min-height: 0;
 }
 
+.scene__options--skills {
+  flex-grow: 0;
+}
+
+.scene__options + .scene__options { }
+
 .scene__section-heading {
   padding-bottom: calc(var(--spacing) * 2);
   border-bottom: 1px solid var(--panel-border);
 }
 
-.scene__options--combat .scene__section-heading:not(:first-child) {
-  margin-top: calc(var(--spacing) * 2.5);
-}
-
-.scene__options + .scene__options { }
-
-.scene__options:not(:has(.options-group)) { }
-
-.scene__options--skills {
-  flex-grow: 0;
-}
-
-/* .options-group: labelled section of related buttons */
-.options-group { }
-
-.options-group__label {
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.options-group__buttons {
-  display: flex;
-  flex-direction: column;
-}
-
-.options-group:last-of-type .options-group__buttons { }
+.scene__options .scene__section-heading:not(:first-child) { }
 
 
 /* ==========================================================================

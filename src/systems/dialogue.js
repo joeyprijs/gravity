@@ -201,7 +201,6 @@ export class DialogueSystem {
       }
       this.storeOpen = true;
       this.engine.openScene(CSS.SCENE_MERCHANT);
-      document.getElementById(EL.SCENE_OPTIONS).classList.add(CSS.SCENE_OPTIONS_MERCHANT);
       this.engine.currentSceneEl.appendChild(
         buildSceneDescription(
           this.engine.t('dialogue.merchantWaresTitle', { name: this.currentNPC.name }),
@@ -222,6 +221,23 @@ export class DialogueSystem {
     clearElement(skillsContainer);
     skillsContainer.setAttribute('hidden', '');
 
+    // Never mind at top — always reachable without scrolling
+    const neverMind = this.engine.t('dialogue.neverMind');
+    const leaveBtn = buildOptionButton(neverMind);
+    leaveBtn.onclick = () => {
+      this.storeOpen = false;
+      this.activeDiscount = 0;
+      this.engine.log(LOG.PLAYER, neverMind, 'choice');
+
+      const exitStr = this.currentNPC.storeExitText || this.engine.t('dialogue.comeAgain');
+      if (this.currentNPC.conversations) {
+        this.renderDialogue("start", exitStr);
+      } else {
+        this.renderDialogueFallback(exitStr);
+      }
+    };
+    container.appendChild(leaveBtn);
+
     // Buy items
     // carriedItems entries are either a plain string (unlimited stock) or
     // { item, amount } (limited stock). amount is decremented in-memory on
@@ -236,10 +252,7 @@ export class DialogueSystem {
       .filter(({ item, stock }) => item && stock !== 0);
 
     if (buyItems.length) {
-      const group = createElement('div', CSS.OPTIONS_GROUP);
-      const label = createElement('div', CSS.OPTIONS_GROUP_LABEL, this.engine.t('dialogue.buyGroup'));
-      const btns = createElement('div', CSS.OPTIONS_GROUP_BUTTONS);
-      group.appendChild(label);
+      container.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('dialogue.buyGroup')));
       buyItems.forEach(({ id: itemId, item, stock, entry }) => {
         const displayName = stock !== null ? `${item.name} (x${stock})` : item.name;
         const price = this.activeDiscount > 0 ? Math.floor(item.value * (1 - this.activeDiscount)) : item.value;
@@ -255,10 +268,8 @@ export class DialogueSystem {
           this.engine.log(LOG.PLAYER, this.engine.t('dialogue.bought', { name: item.name, price }), 'loot');
           this.renderStore(true);
         };
-        btns.appendChild(btn);
+        container.appendChild(btn);
       });
-      group.appendChild(btns);
-      container.appendChild(group);
     }
 
     // Sell items
@@ -269,10 +280,7 @@ export class DialogueSystem {
     });
 
     if (sellItems.length) {
-      const group = createElement('div', CSS.OPTIONS_GROUP);
-      const label = createElement('div', CSS.OPTIONS_GROUP_LABEL, this.engine.t('dialogue.sellGroup'));
-      const btns = createElement('div', CSS.OPTIONS_GROUP_BUTTONS);
-      group.appendChild(label);
+      container.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('dialogue.sellGroup')));
       sellItems.forEach(invItem => {
         const item = this.engine.data.items[invItem.item];
         const sellValue = Math.floor(item.value * MERCHANT_SELL_RATIO);
@@ -287,28 +295,10 @@ export class DialogueSystem {
           this.engine.log(LOG.PLAYER, this.engine.t('dialogue.sold', { name: item.name, price: sellValue }), 'loot');
           this.renderStore(true);
         };
-        btns.appendChild(btn);
+        container.appendChild(btn);
       });
-      group.appendChild(btns);
-      container.appendChild(group);
     }
 
-    const neverMind = this.engine.t('dialogue.neverMind');
-    const leaveBtn = buildOptionButton(neverMind);
-    leaveBtn.onclick = () => {
-      this.storeOpen = false;
-      this.activeDiscount = 0;
-      document.getElementById(EL.SCENE_OPTIONS).classList.remove(CSS.SCENE_OPTIONS_MERCHANT);
-      this.engine.log(LOG.PLAYER, neverMind, 'choice');
-
-      const exitStr = this.currentNPC.storeExitText || this.engine.t('dialogue.comeAgain');
-      if (this.currentNPC.conversations) {
-        this.renderDialogue("start", exitStr);
-      } else {
-        this.renderDialogueFallback(exitStr);
-      }
-    };
-    container.appendChild(leaveBtn);
     this.engine.scrollNarrativeToBottom();
   }
 }

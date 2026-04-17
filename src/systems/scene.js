@@ -85,7 +85,7 @@ export class SceneRenderer {
 
   renderOptions(scene) {
     const optionsContainer = document.getElementById(EL.SCENE_OPTIONS);
-    optionsContainer.classList.remove(CSS.SCENE_OPTIONS_COMBAT, CSS.SCENE_OPTIONS_MERCHANT);
+    optionsContainer.classList.remove(CSS.SCENE_OPTIONS_COMBAT);
 
     const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
     clearElement(optionsContainer);

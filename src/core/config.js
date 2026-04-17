@@ -121,7 +121,6 @@ export const CSS = {
   SCENE_BODY:             'scene__body',
   SCENE_LOG:              'scene__log',
   SCENE_OPTIONS_COMBAT:   'scene__options--combat',
-  SCENE_OPTIONS_MERCHANT: 'scene__options--merchant',
   SCENE_SECTION_HEADING:  'scene__section-heading',
 
   // Tabs (ui.js setup)
@@ -136,9 +135,6 @@ export const CSS = {
   OPTION_BTN_BADGE:             'option-btn__badge',
   OPTION_BTN_BADGE_COST:        'option-btn__badge--cost',
   OPTION_BTN_BADGE_SELL:        'option-btn__badge--sell',
-  OPTIONS_GROUP:                'options-group',
-  OPTIONS_GROUP_LABEL:          'options-group__label',
-  OPTIONS_GROUP_BUTTONS:        'options-group__buttons',
   BTN:                    'button',
   BTN_ITEM:               'btn--item',
 
