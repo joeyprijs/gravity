@@ -1,8 +1,8 @@
 {
-  "door_unlocked":            false,
-  "defeated_goblin_guard":    false,
-  "goblins_pacified":         false,
-  "chamber_rested":           false,
+  "door_unlocked":             false,
+  "defeated_goblin_guard":     false,
+  "goblins_pacified":          false,
+  "chamber_rested":            false,
   "stranger_reputation_known": false,
-  "received_brons_charm":     false
+  "received_brons_charm":      false
 }
