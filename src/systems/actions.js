@@ -14,9 +14,6 @@ function handleLoot(opt, engine) {
     gameState.addXP(param.xpReward);
     engine.log(LOG.SYSTEM, engine.t('loot.xpGained', { amount: param.xpReward }), 'loot');
   }
-  if (param.hideAfter && opt.requiredState) {
-    gameState.setFlag(opt.requiredState.flag, !opt.requiredState.value);
-  }
   engine.renderScene(opt.destination || gameState.getCurrentSceneId());
 }
 
@@ -38,9 +35,6 @@ function handleDialogue(opt, engine) {
 function handleRest(opt, engine) {
   gameState.modifyPlayerStat('hp', opt.actionDetails?.heal || REST_HEAL_AMOUNT);
   engine.log(LOG.SYSTEM, engine.t('actions.rested'));
-  if (opt.actionDetails?.hideAfter && opt.requiredState) {
-    gameState.setFlag(opt.requiredState.flag, !opt.requiredState.value);
-  }
   engine.renderScene(opt.destination || gameState.getCurrentSceneId());
 }
 

@@ -43,7 +43,7 @@
     "survived_dungeon": {
       "npcText": "You made it out? Ha! Wasn't sure you had it in ya. Most don't come back from that place. Here — take this. Old wayfinder's charm. Kept me alive more times than I care to count.",
       "giveItem": "wayfinder_charm",
-      "changeStateFlag": { "flag": "received_brons_charm", "value": true },
+      "setFlag": { "flag": "received_brons_charm", "value": true },
       "responses": [
         { "text": "Thank you, Bron.", "goToConversation": "charm_given" }
       ]

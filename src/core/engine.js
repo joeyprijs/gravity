@@ -82,26 +82,18 @@ class RPGEngine {
         return results;
       };
 
-      const [items, npcs, scenes, missions] = await Promise.all([
+      const [items, npcs, scenes, missions, flags] = await Promise.all([
         loadCategory(manifest.items),
         loadCategory(manifest.npcs),
         loadCategory(manifest.scenes),
-        loadCategory(manifest.missions)
+        loadCategory(manifest.missions),
+        manifest.flags ? fetch(manifest.flags).then(r => r.json()).catch(() => ({})) : Promise.resolve({})
       ]);
 
       this.data = { items, npcs, scenes, missions, regions: manifest.regions || {}, worldMapSize: manifest.worldMapSize || DEFAULT_WORLD_MAP_SIZE, locale: this.data.locale };
 
-      // Auto-register flags declared in scene JSON so state.js needs no manual entries
-      const sceneFlags = {};
-      Object.values(scenes).forEach(scene => {
-        (scene.options || []).forEach(opt => {
-          if (opt.requiredState && !(opt.requiredState.flag in sceneFlags)) {
-            sceneFlags[opt.requiredState.flag] = opt.requiredState.value;
-          }
-        });
-      });
       gameState.registerMissions(missions);
-      gameState.registerSceneFlags(sceneFlags);
+      gameState.registerSceneFlags(flags);
       this._validateData();
     } catch (e) {
       console.error("Failed to load game data:", e);
@@ -139,6 +131,10 @@ class RPGEngine {
     const warn = (msg) => console.warn(`[Gravity] ${msg}`);
 
     for (const [sceneId, scene] of Object.entries(scenes)) {
+      for (const skill of (scene.skills || [])) {
+        if (skill.condition)
+          this._validateCondition(skill.condition, `Scene "${sceneId}": skill "${skill.text}"`, items, warn);
+      }
       for (const opt of (scene.options || [])) {
         if (opt.destination && !scenes[opt.destination])
           warn(`Scene "${sceneId}": option "${opt.text}" → unknown destination "${opt.destination}"`);

@@ -9,11 +9,11 @@ export class QuestSystem {
     this.engine = engine;
 
     this.engine.on('scene:entered', ({ scene }) => {
-      if (scene.questsTriggeredOnEntry) this.handleTrigger(scene.questsTriggeredOnEntry);
+      if (scene.questTrigger) this.handleTrigger(scene.questTrigger);
     });
   }
 
-  // Called when a scene has a questsTriggeredOnEntry block.
+  // Called when a scene has a questTrigger block.
   // triggerData: { mission: <id>, status: "active" | "complete" }
   // Returns true if a transition occurred, false if the trigger was skipped.
   handleTrigger(triggerData) {

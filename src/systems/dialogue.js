@@ -30,7 +30,7 @@ export class DialogueSystem {
     this.engine.resetScene();
     this.currentNPC = npc;
     this.currentNPCId = npcId;
-    gameState.setFlag(`charisma_dc_${npcId}`, false);
+    gameState.setFlag(`charisma_dc_${npcId}`, {});
     if (npc.conversations) {
       this.renderDialogue("start");
     } else {
@@ -59,11 +59,11 @@ export class DialogueSystem {
         const name = this.engine.data.items[node.giveItem]?.name || node.giveItem;
         this.engine.log(LOG.SYSTEM, this.engine.t('loot.receivedItem', { name }), 'loot');
       }
-      if (node.changeStateFlag) {
-        gameState.setFlag(node.changeStateFlag.flag, node.changeStateFlag.value);
+      if (node.setFlag) {
+        gameState.setFlag(node.setFlag.flag, node.setFlag.value);
       }
-      if (node.setMission) {
-        this.engine.handleQuestTrigger({ mission: node.setMission, status: node.setMissionStatus || 'active' });
+      if (node.questTrigger) {
+        this.engine.handleQuestTrigger(node.questTrigger);
       }
     }
 
@@ -113,16 +113,16 @@ export class DialogueSystem {
           }
         }
 
-        if (res.changeStateFlag) {
-          gameState.setFlag(res.changeStateFlag.flag, res.changeStateFlag.value);
+        if (res.setFlag) {
+          gameState.setFlag(res.setFlag.flag, res.setFlag.value);
         }
         if (res.giveItem) {
           gameState.addToInventory(res.giveItem, res.giveItemAmount || 1);
           const name = this.engine.data.items[res.giveItem]?.name || res.giveItem;
           this.engine.log(LOG.SYSTEM, this.engine.t('loot.receivedItem', { name }), 'loot');
         }
-        if (res.setMission) {
-          this.engine.handleQuestTrigger({ mission: res.setMission, status: res.setMissionStatus || 'active' });
+        if (res.questTrigger) {
+          this.engine.handleQuestTrigger(res.questTrigger);
         }
 
         if (res.goToConversation) {

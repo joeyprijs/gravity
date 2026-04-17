@@ -11,17 +11,11 @@
   "description": [
     {
       "text": "The hallway is lined with flickering torches. The bloody corpses of a goblin guard and its grunt lie on the floor.",
-      "requiredState": {
-        "flag": "defeated_goblin_guard",
-        "value": true
-      }
+      "condition": { "flag": "defeated_goblin_guard", "value": true }
     },
     {
       "text": "The hallway is lined with flickering torches. The goblin guard eyes you warily but steps aside, its grunt shuffling along behind it.",
-      "requiredState": {
-        "flag": "goblins_pacified",
-        "value": true
-      }
+      "condition": { "flag": "goblins_pacified", "value": true }
     },
     {
       "text": "The hallway is lined with flickering torches. A goblin guard and its scraggly grunt companion spot you and draw their weapons!"
@@ -29,30 +23,12 @@
   ],
   "options": [
     {
-      "text": "Look Around",
-      "perceptionCheck": true
-    },
-    {
-      "text": "Easy. I mean no harm. Let's not do this.",
-      "charismaCheck": true,
-      "dc": 18,
-      "increment": 2,
-      "npcName": "Goblin Guard",
-      "changeStateFlag": { "flag": "goblins_pacified", "value": true },
-      "condition": {
-        "and": [
-          { "flag": "defeated_goblin_guard", "value": false },
-          { "flag": "goblins_pacified", "value": false }
-        ]
-      }
-    },
-    {
       "text": "Prepare to fight!",
       "action": "combat",
       "actionDetails": {
         "enemies": ["goblin_guard", "goblin_grunt"]
       },
-      "victoryFlag": { "flag": "defeated_goblin_guard", "value": true },
+      "setFlag": { "flag": "defeated_goblin_guard", "value": true },
       "condition": {
         "and": [
           { "flag": "defeated_goblin_guard", "value": false },
@@ -73,6 +49,27 @@
     {
       "text": "Retreat to the cellar",
       "destination": "dungeon_start"
+    }
+  ],
+  "skills": [
+    {
+      "text": "Look Around",
+      "perceptionCheck": true
+    },
+    {
+      "text": "Easy. I mean no harm. Let's not do this.",
+      "charismaCheck": true,
+      "dc": 18,
+      "increment": 2,
+      "npcName": "Goblin Guard",
+      "setFlag": { "flag": "goblins_pacified", "value": true },
+      "destination": "dungeon_hallway",
+      "condition": {
+        "and": [
+          { "flag": "defeated_goblin_guard", "value": false },
+          { "flag": "goblins_pacified", "value": false }
+        ]
+      }
     }
   ]
 }

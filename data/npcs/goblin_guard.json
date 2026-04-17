@@ -1,7 +1,6 @@
 {
   "name": "Cave Goblin Guard",
   "description": "The scrawny cave goblin, clad in filthy rags that barely cover its knobby green skin, bares its jagged yellow teeth in a vicious snarl and jabs its crude spear in your direction, eyes gleaming with feral hostility.",
-  "alwaysHostile": true,
   "attributes": {
     "healthPoints": 5,
     "armorClass": 7,

@@ -134,7 +134,7 @@ class StateManager {
     });
   }
 
-  // Called once on startup with all requiredState flags collected from scene JSON.
+  // Called once on startup with the flags declared in data/flags.json.
   // Only sets flags that don't yet exist in state so loaded saves are preserved.
   // Also keeps a copy in this.sceneFlags so reset() can re-apply them.
   registerSceneFlags(flagsMap) {
@@ -152,7 +152,7 @@ class StateManager {
     this.notifyListeners();
   }
 
-  getFlag(flagName) { return this.state.flags[flagName] || false; }
+  getFlag(flagName) { return this.state.flags[flagName] ?? false; }
   setFlag(flagName, value) { this.state.flags[flagName] = value; }
 
   getPlayer() { return this.state.player; }

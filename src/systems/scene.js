@@ -1,6 +1,6 @@
 import { gameState } from "../core/state.js";
 import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "../core/utils.js";
-import { EL, CSS, LOG, MAX_D20_ROLL } from "../core/config.js";
+import { EL, CSS, LOG, MAX_D20_ROLL, ACTIONS } from "../core/config.js";
 import { evaluateCondition, fromRequiredState } from "./condition.js";
 import { roll } from "./dice.js";
 
@@ -65,10 +65,10 @@ export class SceneRenderer {
     }
 
     // Reset skill-check DCs on re-entry. Found items persist; escalated DCs reset.
-    if ((scene.options || []).some(opt => opt.charismaCheck)) {
+    if ((scene.skills || []).some(opt => opt.charismaCheck)) {
       gameState.setFlag(`scene_charisma_${sceneId}`, {});
     }
-    const perceptionOpt = (scene.options || []).find(opt => opt.perceptionCheck && opt.items?.length);
+    const perceptionOpt = (scene.skills || []).find(opt => opt.perceptionCheck && opt.items?.length);
     if (perceptionOpt) {
       const state = gameState.getFlag(`look_around_${sceneId}`);
       if (state?.dcs) {
@@ -104,10 +104,6 @@ export class SceneRenderer {
       const cond = opt.condition ?? fromRequiredState(opt.requiredState);
       if (!evaluateCondition(cond, gameState)) return;
 
-      // Skill-check options (perceptionCheck / charismaCheck) are rendered in
-      // the skills section, not here.
-      if (opt.charismaCheck || opt.perceptionCheck) return;
-
       let reqText = null;
       let disabled = false;
       if (opt.requirements?.item) {
@@ -129,8 +125,7 @@ export class SceneRenderer {
     const charismaKey = `scene_charisma_${sceneId}`;
     const lookAroundKey = `look_around_${sceneId}`;
 
-    (scene.options || []).forEach((opt, i) => {
-      if (!opt.perceptionCheck && !opt.charismaCheck) return;
+    (scene.skills || []).forEach((opt, i) => {
       const cond = opt.condition ?? fromRequiredState(opt.requiredState);
       if (!evaluateCondition(cond, gameState)) return;
 
@@ -204,7 +199,7 @@ export class SceneRenderer {
             success ? 'loot' : 'system'
           );
           if (success) {
-            if (opt.changeStateFlag) gameState.setFlag(opt.changeStateFlag.flag, opt.changeStateFlag.value);
+            if (opt.setFlag) gameState.setFlag(opt.setFlag.flag, opt.setFlag.value);
             this.engine.renderScene(opt.destination || gameState.getCurrentSceneId());
           } else {
             charismaState[i] = dc + (opt.increment ?? 1);
@@ -223,7 +218,7 @@ export class SceneRenderer {
       skillsContainer.removeAttribute('hidden');
     }
 
-    if (scene.questsTriggeredOnEntry) {
+    if (scene.questTrigger) {
       this.engine.emit('scene:entered', { sceneId: gameState.getCurrentSceneId(), scene });
     }
 
@@ -243,8 +238,9 @@ export class SceneRenderer {
     this.engine.isGameStart = false;
     this.engine.log(LOG.PLAYER, opt.text, 'choice');
 
-    if (opt.changeStateFlag) {
-      gameState.setFlag(opt.changeStateFlag.flag, opt.changeStateFlag.value);
+    // Combat's setFlag is a victory flag — handled in endCombat, not here.
+    if (opt.setFlag && opt.action !== ACTIONS.COMBAT) {
+      gameState.setFlag(opt.setFlag.flag, opt.setFlag.value);
     }
 
     if (opt.action) {

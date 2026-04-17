@@ -9,15 +9,8 @@
     "background": "rgba(30, 30, 50, 0.9)"
   },
   "description": "You enter a grand chamber. Sunlight streams in from a crack in the ceiling. A mysterious stranger stands near the exit.",
-  "questsTriggeredOnEntry": {
-    "mission": "escape_dungeon",
-    "status": "complete"
-  },
+  "questTrigger": { "mission": "escape_dungeon", "status": "complete" },
   "options": [
-    {
-      "text": "Look Around",
-      "perceptionCheck": true
-    },
     {
       "text": "Talk to the stranger",
       "action": "dialogue",
@@ -29,18 +22,20 @@
       "text": "Rest here (Restore HP)",
       "action": "rest",
       "actionDetails": {
-        "heal": 10,
-        "cost": 0,
-        "hideAfter": true
+        "heal": 10
       },
-      "requiredState": {
-        "flag": "chamber_rested",
-        "value": false
-      }
+      "setFlag": { "flag": "chamber_rested", "value": true },
+      "condition": { "flag": "chamber_rested", "value": false }
     },
     {
       "text": "Retreat to the Hallway",
       "destination": "dungeon_hallway"
+    }
+  ],
+  "skills": [
+    {
+      "text": "Look Around",
+      "perceptionCheck": true
     }
   ]
 }

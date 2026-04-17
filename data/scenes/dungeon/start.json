@@ -8,17 +8,11 @@
     "height": 60,
     "background": "rgba(60, 40, 20, 0.9)"
   },
-  "questsTriggeredOnEntry": {
-    "mission": "escape_dungeon",
-    "status": "active"
-  },
+  "questTrigger": { "mission": "escape_dungeon", "status": "active" },
   "description": [
     {
       "text": "You are back in the dimly lit cellar. The heavy wooden door stands wide open to the north.",
-      "requiredState": {
-        "flag": "door_unlocked",
-        "value": true
-      }
+      "condition": { "flag": "door_unlocked", "value": true }
     },
     {
       "text": "You awake in a dimly lit cellar. The smell of damp earth fills the air. A heavy wooden door stands locked to the north."
@@ -26,34 +20,27 @@
   ],
   "options": [
     {
-      "text": "Look Around",
-      "perceptionCheck": true,
-      "items": [
-        { "item": "cellar_key", "amount": 1, "dc": 10, "increment": 1 }
-      ]
-    },
-    {
       "text": "Unlock the door",
       "destination": "dungeon_hallway",
       "requirements": {
         "item": "cellar_key"
       },
-      "changeStateFlag": {
-        "flag": "door_unlocked",
-        "value": true
-      },
-      "requiredState": {
-        "flag": "door_unlocked",
-        "value": false
-      }
+      "setFlag": { "flag": "door_unlocked", "value": true },
+      "condition": { "flag": "door_unlocked", "value": false }
     },
     {
       "text": "Go through the open door",
       "destination": "dungeon_hallway",
-      "requiredState": {
-        "flag": "door_unlocked",
-        "value": true
-      }
+      "condition": { "flag": "door_unlocked", "value": true }
+    }
+  ],
+  "skills": [
+    {
+      "text": "Look Around",
+      "perceptionCheck": true,
+      "items": [
+        { "item": "cellar_key", "amount": 1, "dc": 10, "increment": 1 }
+      ]
     }
   ]
 }

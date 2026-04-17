@@ -1,7 +1,6 @@
 {
   "name": "Goblin Grunt",
   "description": "A smaller, scrappier goblin, all teeth and desperation.",
-  "alwaysHostile": true,
   "attributes": {
     "healthPoints": 3,
     "armorClass": 6,

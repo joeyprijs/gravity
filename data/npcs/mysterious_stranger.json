@@ -11,39 +11,26 @@
   ],
   "conversations": {
     "start": {
-      "npcText": "Greetings, traveler. I am the Mysterious Stranger.",
+      "npcText": "Greetings, traveler. I am the Mysterious Stranger. A wandering trader.",
       "responses": [
         {
           "text": "Let's trade.",
           "action": "trade"
         },
         {
-          "text": "I've heard of you. I think we could do good business together.",
+          "text": "How about a discount?",
           "charismaCheck": true,
           "dc": 10,
           "increment": 3,
           "condition": { "not": { "flag": "stranger_reputation_known", "value": true } },
-          "goToConversation": "reputation_known"
-        },
-        {
-          "text": "I must be going.",
-          "action": "leave"
-        }
-      ]
-    },
-    "reputation_known": {
-      "npcText": "Word travels fast. You've made quite the impression. I respect that — take this, on the house. Now, let's see what else I can do for you.",
-      "giveItem": "healing_potion",
-      "changeStateFlag": { "flag": "stranger_reputation_known", "value": true },
-      "responses": [
-        {
-          "text": "Much appreciated.",
+          "giveItem": "healing_potion",
+          "setFlag": { "flag": "stranger_reputation_known", "value": true },
           "action": "trade",
           "tradeDiscount": 10,
           "persistDiscount": true
         },
         {
-          "text": "Another time.",
+          "text": "I must be going.",
           "action": "leave"
         }
       ]

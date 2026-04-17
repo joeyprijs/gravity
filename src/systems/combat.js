@@ -12,7 +12,7 @@ export class CombatSystem {
     this.isGameOver = false;
     this.enemies = [];
     // originOption is the scene option that triggered this combat. On victory,
-    // its requiredState flag is flipped so the fight option disappears.
+    // its setFlag is applied so the fight option disappears.
     this.originOption = null;
 
     this.playerInit = 0;
@@ -244,11 +244,8 @@ export class CombatSystem {
         }
       });
 
-      // Flag flip — victoryFlag is explicit; requiredState is the legacy fallback.
-      if (this.originOption?.victoryFlag) {
-        gameState.setFlag(this.originOption.victoryFlag.flag, this.originOption.victoryFlag.value);
-      } else if (this.originOption?.requiredState) {
-        gameState.setFlag(this.originOption.requiredState.flag, !this.originOption.requiredState.value);
+      if (this.originOption?.setFlag) {
+        gameState.setFlag(this.originOption.setFlag.flag, this.originOption.setFlag.value);
       }
 
       // Reset AP after combat
