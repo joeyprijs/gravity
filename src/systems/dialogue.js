@@ -209,17 +209,20 @@ export class DialogueSystem {
       );
     }
 
+    const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
     const container = document.getElementById(EL.SCENE_OPTIONS);
+    const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
     const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
+
     clearElement(container);
+    clearElement(skillsContainer);
+    skillsContainer.setAttribute('hidden', '');
+    panel.querySelectorAll(`.${CSS.SCENE_OPTIONS_SECTION}`).forEach(el => el.remove());
+
     if (reminder) {
       reminder.innerText = this.engine.t('ui.locationMerchant', { name: this.currentNPC.name });
       container.appendChild(reminder);
     }
-
-    const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
-    clearElement(skillsContainer);
-    skillsContainer.setAttribute('hidden', '');
 
     // Never mind at top — always reachable without scrolling
     const neverMind = this.engine.t('dialogue.neverMind');
@@ -252,7 +255,8 @@ export class DialogueSystem {
       .filter(({ item, stock }) => item && stock !== 0);
 
     if (buyItems.length) {
-      container.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('dialogue.buyGroup')));
+      const buySection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);
+      buySection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('dialogue.buyGroup')));
       buyItems.forEach(({ id: itemId, item, stock, entry }) => {
         const displayName = stock !== null ? `${item.name} (x${stock})` : item.name;
         const price = this.activeDiscount > 0 ? Math.floor(item.value * (1 - this.activeDiscount)) : item.value;
@@ -268,8 +272,9 @@ export class DialogueSystem {
           this.engine.log(LOG.PLAYER, this.engine.t('dialogue.bought', { name: item.name, price }), 'loot');
           this.renderStore(true);
         };
-        container.appendChild(btn);
+        buySection.appendChild(btn);
       });
+      panel.insertBefore(buySection, skillsContainer);
     }
 
     // Sell items
@@ -280,7 +285,8 @@ export class DialogueSystem {
     });
 
     if (sellItems.length) {
-      container.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('dialogue.sellGroup')));
+      const sellSection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);
+      sellSection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('dialogue.sellGroup')));
       sellItems.forEach(invItem => {
         const item = this.engine.data.items[invItem.item];
         const sellValue = Math.floor(item.value * MERCHANT_SELL_RATIO);
@@ -295,8 +301,9 @@ export class DialogueSystem {
           this.engine.log(LOG.PLAYER, this.engine.t('dialogue.sold', { name: item.name, price: sellValue }), 'loot');
           this.renderStore(true);
         };
-        container.appendChild(btn);
+        sellSection.appendChild(btn);
       });
+      panel.insertBefore(sellSection, skillsContainer);
     }
 
     this.engine.scrollNarrativeToBottom();

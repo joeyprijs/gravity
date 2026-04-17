@@ -120,7 +120,8 @@ export const CSS = {
   SCENE_TITLE_GAME_OVER:  'scene__title--game-over',
   SCENE_BODY:             'scene__body',
   SCENE_LOG:              'scene__log',
-  SCENE_OPTIONS_COMBAT:   'scene__options--combat',
+  SCENE_OPTIONS:          'scene__options',
+  SCENE_OPTIONS_SECTION:  'scene__options--section',
   SCENE_SECTION_HEADING:  'scene__section-heading',
 
   // Tabs (ui.js setup)
@@ -186,6 +187,7 @@ export const CSS = {
 export const EL = {
   // Narrative / scene
   SCENE_NARRATIVE:         'scene-narrative',
+  SCENE_OPTIONS_PANEL:     'scene-options-panel',
   SCENE_OPTIONS:           'scene-options',
   SCENE_OPTIONS_SKILLS:    'scene-options-skills',
   SCENE_LOCATION_REMINDER: 'scene-location-reminder',

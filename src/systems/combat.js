@@ -52,7 +52,6 @@ export class CombatSystem {
     const names = this.enemies.map(e => e.name).join(' & ');
 
     this.engine.openScene(CSS.SCENE_COMBAT);
-    document.getElementById(EL.SCENE_OPTIONS).classList.add(CSS.SCENE_OPTIONS_COMBAT);
     this.engine.currentSceneEl.appendChild(
       buildSceneDescription(
         this.engine.t('combat.fightingTitle', { names }),
@@ -316,17 +315,20 @@ class CombatRenderer {
   render() {
     const livingEnemies = this.cs.enemies.filter(e => e.attributes.healthPoints > 0);
 
+    const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
     const container = document.getElementById(EL.SCENE_OPTIONS);
+    const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
     const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
+
     clearElement(container);
+    clearElement(skillsContainer);
+    skillsContainer.setAttribute('hidden', '');
+    panel.querySelectorAll(`.${CSS.SCENE_OPTIONS_SECTION}`).forEach(el => el.remove());
+
     if (reminder) {
       reminder.innerText = this.cs.engine.t('ui.locationCombat');
       container.appendChild(reminder);
     }
-
-    const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
-    clearElement(skillsContainer);
-    skillsContainer.setAttribute('hidden', '');
 
     const attacks = this.getAvailableAttacks();
 
@@ -335,21 +337,21 @@ class CombatRenderer {
     endBtn.onclick = () => this.cs.enemyTurn('after');
     container.appendChild(endBtn);
 
-    // Each living enemy gets a section heading followed by its attack buttons.
+    // Each living enemy gets its own section.
     livingEnemies.forEach(target => {
-      const heading = createElement('div', CSS.SCENE_SECTION_HEADING,
+      const section = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);
+      section.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING,
         this.cs.engine.t('combat.enemyStats', { name: target.name, hp: target.attributes.healthPoints, ac: target.attributes.armorClass })
-      );
-      container.appendChild(heading);
-
+      ));
       attacks.forEach(att => {
         const btn = createElement('button', [CSS.BTN, CSS.OPTION_BTN, CSS.OPTION_BTN_STACKED]);
         btn.appendChild(createElement('span', '', this.cs.engine.t('combat.attackTarget', { name: att.name })));
         btn.appendChild(createElement('span', CSS.OPTION_BTN_BADGE, this.cs.engine.t('combat.apCost', { cost: att.actionPoints })));
         if (gameState.getPlayer().ap < att.actionPoints) btn.disabled = true;
         btn.onclick = () => this.cs.playerAttack(att, target);
-        container.appendChild(btn);
+        section.appendChild(btn);
       });
+      panel.insertBefore(section, skillsContainer);
     });
   }
 }
