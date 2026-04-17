@@ -342,16 +342,6 @@ body {
  SIDEBAR: INVENTORY & EQUIPMENT
  ========================================================================== */
 
-.item-list {
-  margin-bottom: calc(var(--spacing) * 2);
-}
-
-.item-list__title {
-  margin-bottom: calc(var(--spacing) * 1.5);
-  color: var(--text-primary);
-  border-bottom: calc(var(--spacing) * 0.125) solid var(--panel-border);
-  padding-bottom: calc(var(--spacing) * 1.5);
-}
 
 .item-list__items {
   line-height: calc(var(--spacing) * 2.5);
@@ -468,7 +458,7 @@ body {
   flex-grow: 0;
 }
 
-#scene-options-panel .scene__options + .scene__options {
+.scene__options + .scene__options {
   margin-top: calc(var(--spacing) * 2.5);
 }
 

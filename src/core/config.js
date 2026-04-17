@@ -137,8 +137,6 @@ export const CSS = {
   BTN_ITEM:               'btn--item',
 
   // Item lists
-  ITEM_LIST:              'item-list',
-  ITEM_LIST_TITLE:        'item-list__title',
   ITEM_LIST_ITEMS:        'item-list__items',
   ITEM_LIST_ITEM:         'item-list__item',
   ITEM_LIST_ITEM_DONE:    'item-list__item--completed',
@@ -211,8 +209,8 @@ export const EL = {
 
   // Sidebar tabs
   PLAYER_PANEL:            'player-panel',
-  TAB_INVENTORY:           'inventory-content',
-  TAB_QUESTS:              'quests-content',
+  TAB_INVENTORY:           'inventory-tab',
+  TAB_QUESTS:              'quests-tab',
 
   // Map
   MINIMAP:                 'minimap',

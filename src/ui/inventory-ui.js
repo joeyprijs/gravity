@@ -8,8 +8,8 @@ export class InventoryUI {
   }
 
   renderInventory(player) {
-    const invTab = document.getElementById(EL.TAB_INVENTORY);
-    invTab.innerHTML = '';
+    const panel = document.getElementById(EL.TAB_INVENTORY);
+    panel.innerHTML = '';
 
     const equippedEntries = Object.entries(player.equipment).filter(([, id]) => id);
     const sortedInv = [...player.inventory].sort((a, b) => {
@@ -19,14 +19,16 @@ export class InventoryUI {
     });
 
     if (equippedEntries.length === 0 && sortedInv.length === 0) {
-      invTab.appendChild(createElement('p', CSS.ITEM_TYPE, this.engine.t('ui.inventoryEmpty')));
+      const section = createElement('div', CSS.SCENE_OPTIONS);
+      section.appendChild(createElement('p', CSS.ITEM_TYPE, this.engine.t('ui.inventoryEmpty')));
+      panel.appendChild(section);
       return;
     }
 
     // Equipped section
     if (equippedEntries.length > 0) {
-      const group = createElement('div', CSS.ITEM_LIST);
-      group.appendChild(createElement('h3', CSS.ITEM_LIST_TITLE, this.engine.t('ui.equippedSection')));
+      const section = createElement('div', CSS.SCENE_OPTIONS);
+      section.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('ui.equippedSection')));
       const ul = createElement('ul', CSS.ITEM_LIST_ITEMS);
       equippedEntries.forEach(([slot, itemId]) => {
         const itemData = this.engine.data.items[itemId];
@@ -47,12 +49,13 @@ export class InventoryUI {
         li.appendChild(actionsDiv);
         ul.appendChild(li);
       });
-      group.appendChild(ul);
-      invTab.appendChild(group);
+      section.appendChild(ul);
+      panel.appendChild(section);
     }
 
     // Unequipped items, grouped by type
     let currentType = null;
+    let currentSection = null;
     let currentUl = null;
     sortedInv.forEach(invItem => {
       const itemData = this.engine.data.items[invItem.item];
@@ -60,11 +63,11 @@ export class InventoryUI {
 
       if (itemData.type !== currentType) {
         currentType = itemData.type;
-        const group = createElement('div', CSS.ITEM_LIST);
-        group.appendChild(createElement('h3', CSS.ITEM_LIST_TITLE, this.engine.t(`itemTypes.${itemData.type}`)));
+        currentSection = createElement('div', CSS.SCENE_OPTIONS);
+        currentSection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t(`itemTypes.${itemData.type}`)));
         currentUl = createElement('ul', CSS.ITEM_LIST_ITEMS);
-        group.appendChild(currentUl);
-        invTab.appendChild(group);
+        currentSection.appendChild(currentUl);
+        panel.appendChild(currentSection);
       }
 
       const li = createElement('li', CSS.ITEM_LIST_ITEM);

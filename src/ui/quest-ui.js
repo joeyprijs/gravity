@@ -1,5 +1,5 @@
 import { gameState } from "../core/state.js";
-import { createElement, clearElement } from "../core/utils.js";
+import { createElement } from "../core/utils.js";
 import { CSS, EL } from "../core/config.js";
 
 // QuestUI renders the quest log sidebar panel.
@@ -9,9 +9,9 @@ export class QuestUI {
   }
 
   render() {
-    const container = document.getElementById(EL.TAB_QUESTS);
-    if (!container) return;
-    clearElement(container);
+    const panel = document.getElementById(EL.TAB_QUESTS);
+    if (!panel) return;
+    panel.innerHTML = '';
 
     const activeList = [];
     const completedList = [];
@@ -35,23 +35,25 @@ export class QuestUI {
     }
 
     if (activeList.length > 0) {
-      const group = createElement('div', CSS.ITEM_LIST);
-      group.appendChild(createElement('h3', CSS.ITEM_LIST_TITLE, this.engine.t('ui.questsActive')));
+      const section = createElement('div', CSS.SCENE_OPTIONS);
+      section.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('ui.questsActive')));
       const ul = createElement('ul', CSS.ITEM_LIST_ITEMS);
       activeList.forEach(li => ul.appendChild(li));
-      group.appendChild(ul);
-      container.appendChild(group);
+      section.appendChild(ul);
+      panel.appendChild(section);
     }
     if (completedList.length > 0) {
-      const group = createElement('div', CSS.ITEM_LIST);
-      group.appendChild(createElement('h3', CSS.ITEM_LIST_TITLE, this.engine.t('ui.questsCompleted')));
+      const section = createElement('div', CSS.SCENE_OPTIONS);
+      section.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('ui.questsCompleted')));
       const ul = createElement('ul', CSS.ITEM_LIST_ITEMS);
       completedList.forEach(li => ul.appendChild(li));
-      group.appendChild(ul);
-      container.appendChild(group);
+      section.appendChild(ul);
+      panel.appendChild(section);
     }
     if (activeList.length === 0 && completedList.length === 0) {
-      container.appendChild(createElement('p', CSS.ITEM_TYPE, this.engine.t('ui.questsNone')));
+      const section = createElement('div', CSS.SCENE_OPTIONS);
+      section.appendChild(createElement('p', CSS.ITEM_TYPE, this.engine.t('ui.questsNone')));
+      panel.appendChild(section);
     }
   }
 }
