@@ -127,13 +127,12 @@ export const CSS = {
   // Tabs (ui.js setup)
   TABS_BTN:               'tabs__btn',
   TABS_BTN_ACTIVE:        'tabs__btn--active',
-  TABS_CONTENT:           'tabs__content',
-  TABS_CONTENT_ACTIVE:    'tabs__content--active',
+  TABS_PANEL:             'tabs__panel',
 
   // Buttons
-  OPTION_BTN:                   'option-btn',
-  OPTION_BTN_STACKED:           'option-btn--stacked',
-  OPTION_BTN_BADGE:             'option-btn__badge',
+  OPTION_BTN:             'option-btn',
+  OPTION_BTN_STACKED:     'option-btn--stacked',
+  OPTION_BTN_BADGE:       'option-btn__badge',
   BTN:                    'button',
   BTN_ITEM:               'btn--item',
 
@@ -211,10 +210,9 @@ export const EL = {
   CHAR_CREATION:           'char-creation',
 
   // Sidebar tabs
-  TAB_PLAYER:              'player-tab',
-  TAB_INVENTORY:           'inventory-tab',
-  TAB_QUESTS:              'quests-tab',
-  TAB_SETTINGS:            'settings-tab',
+  PLAYER_PANEL:            'player-panel',
+  TAB_INVENTORY:           'inventory-content',
+  TAB_QUESTS:              'quests-content',
 
   // Map
   MINIMAP:                 'minimap',

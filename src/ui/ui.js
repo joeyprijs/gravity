@@ -31,9 +31,9 @@ export class UIManager {
     document.querySelectorAll(`.${CSS.TABS_BTN}`).forEach(btn => {
       btn.addEventListener('click', (e) => {
         document.querySelectorAll(`.${CSS.TABS_BTN}`).forEach(b => b.classList.remove(CSS.TABS_BTN_ACTIVE));
-        document.querySelectorAll(`.${CSS.TABS_CONTENT}`).forEach(c => c.classList.remove(CSS.TABS_CONTENT_ACTIVE));
+        document.querySelectorAll(`#${EL.PLAYER_PANEL} .${CSS.TABS_PANEL}`).forEach(c => { c.hidden = true; });
         e.target.classList.add(CSS.TABS_BTN_ACTIVE);
-        document.getElementById(e.target.dataset.tab).classList.add(CSS.TABS_CONTENT_ACTIVE);
+        document.getElementById(e.target.dataset.tab).hidden = false;
         if (e.target.dataset.tab === 'map-tab') {
           this.map.invalidateMinimap();
           this.map.renderMinimap();

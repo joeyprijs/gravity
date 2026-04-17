@@ -41,17 +41,23 @@
           <button class="button tabs__btn" data-tab="quests-tab">Quests</button>
           <button class="button tabs__btn" data-tab="map-tab">Map</button>
         </nav>
-        <div class="tabs__content tabs__content--active scrollable" id="inventory-tab"></div>
-        <div class="tabs__content scrollable" id="quests-tab"></div>
-        <div class="tabs__content" id="map-tab">
-          <div class="minimap" id="minimap" title="Click to open full map" hidden>
-            <div class="minimap__canvas" id="minimap-canvas"></div>
+        <div class="tabs__panel" id="inventory-tab">
+          <div class="scene__options" id="inventory-content"></div>
+        </div>
+        <div class="tabs__panel" id="quests-tab" hidden>
+          <div class="scene__options" id="quests-content"></div>
+        </div>
+        <div class="tabs__panel" id="map-tab" hidden>
+          <div class="scene__options">
+            <div class="minimap" id="minimap" title="Click to open full map" hidden>
+              <div class="minimap__canvas" id="minimap-canvas"></div>
+            </div>
           </div>
         </div>
       </aside>
 
       <main class="game__scene" id="scene-panel">
-        <div class="scene__narrative scrollable" id="scene-narrative"></div>
+        <div class="scene__narrative" id="scene-narrative"></div>
       </main>
 
       <div class="game__scene-options" id="scene-options-panel">

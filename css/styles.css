@@ -171,7 +171,8 @@ body {
   min-height: 0;
 }
 
-.game__scene-options {
+.game__scene-options,
+.game__player {
   overflow-y: auto;
 }
 
@@ -209,27 +210,6 @@ body {
  GLOBAL UI COMPONENTS
  ========================================================================== */
 
-.scrollable {
-  overflow-y: auto;
-  flex-grow: 1;
-  min-height: 0;
-}
-
-.scrollable::-webkit-scrollbar {
-  width: calc(var(--spacing) * 0.75);
-}
-
-.scrollable::-webkit-scrollbar-track {
-  background: var(--scrollbar-track);
-}
-
-.scrollable::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb);
-}
-
-.scrollable::-webkit-scrollbar-thumb:hover {
-  background: var(--scrollbar-thumb-hover);
-}
 
 .controls__hidden-input {
   display: none;
@@ -358,17 +338,6 @@ body {
   background: rgba(56, 189, 248, 0.1);
 }
 
-.tabs__content {
-  display: none;
-  flex-grow: 1;
-  padding-bottom: 10vh;
-}
-
-.tabs__content--active {
-  display: flex;
-  flex-direction: column;
-}
-
 /* ==========================================================================
  SIDEBAR: INVENTORY & EQUIPMENT
  ========================================================================== */
@@ -436,8 +405,27 @@ body {
  ========================================================================== */
 
 .scene__narrative {
+  overflow-y: auto;
+  flex-grow: 1;
+  min-height: 0;
   padding-bottom: 20vh;
   margin-bottom: calc(var(--spacing) * 2.5);
+}
+
+.scene__narrative::-webkit-scrollbar {
+  width: calc(var(--spacing) * 0.75);
+}
+
+.scene__narrative::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+.scene__narrative::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+}
+
+.scene__narrative::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
 }
 
 .scene + .scene {
@@ -480,7 +468,7 @@ body {
   flex-grow: 0;
 }
 
-.scene__options + .scene__options {
+#scene-options-panel .scene__options + .scene__options {
   margin-top: calc(var(--spacing) * 2.5);
 }
 
