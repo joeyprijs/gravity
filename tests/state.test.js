@@ -104,6 +104,31 @@ test('getFlag: missing flag returns false', () => {
   assert.equal(gameState.getFlag('no_such_flag'), false);
 });
 
+test('getFlag: stored falsy non-boolean value is preserved (not coerced to false)', () => {
+  gameState.setFlag('count', 0);
+  assert.equal(gameState.getFlag('count'), 0);
+  assert.notEqual(gameState.getFlag('count'), false);
+});
+
+test('registerSceneFlags: initialises flags not yet in state', () => {
+  gameState.registerSceneFlags({ door_open: false, boss_killed: false });
+  assert.equal(gameState.getFlag('door_open'), false);
+  assert.equal(gameState.getFlag('boss_killed'), false);
+});
+
+test('registerSceneFlags: does not overwrite flags already set in state', () => {
+  gameState.setFlag('door_open', true);
+  gameState.registerSceneFlags({ door_open: false });
+  assert.equal(gameState.getFlag('door_open'), true);
+});
+
+test('reset: re-applies registered scene flags to their initial values', () => {
+  gameState.registerSceneFlags({ door_open: false });
+  gameState.setFlag('door_open', true);
+  gameState.reset();
+  assert.equal(gameState.getFlag('door_open'), false);
+});
+
 test('setMissionStatus / getMissionStatus round-trips', () => {
   gameState.setMissionStatus('test_mission', 'active');
   assert.equal(gameState.getMissionStatus('test_mission'), 'active');

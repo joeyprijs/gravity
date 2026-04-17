@@ -12,9 +12,12 @@ A browser-based text RPG inspired by classic choose-your-own-adventure games. Na
 - [Running Locally](#running-locally)
 - [Content Authoring Reference](#content-authoring-reference)
   - [Manifest](#manifest--dataindexjson)
+  - [Flags](#flags--dataflagsjson)
   - [Scenes](#scenes)
     - [Conditional descriptions](#conditional-descriptions)
     - [Options](#options)
+    - [Skills](#skills)
+    - [Conditions](#conditions)
   - [Actions](#actions)
     - [loot](#loot--give-the-player-an-item)
     - [combat](#combat--start-a-combat-encounter)
@@ -34,9 +37,10 @@ A browser-based text RPG inspired by classic choose-your-own-adventure games. Na
 
 - **Character creation** — name your character and distribute stat points before your adventure begins; designed to be extended with backgrounds and feats
 - **Scene system** — branching narrative driven by JSON scene definitions; choices can require items, check state flags, trigger quests, and more
+- **Skill checks** — perception (Look Around) and charisma checks shown in a separate panel; DCs escalate on failure and reset on re-entry
 - **D&D-style combat** — turn-based fights using HP, Armor Class, Action Points, Initiative, and Level/XP
 - **Inventory & equipment** — collect, equip, and use items across weapons, armor, spells, and consumables
-- **Quest log** — missions triggered by scene entry, tracked as active or completed
+- **Quest log** — missions triggered by scene entry or NPC dialogue, tracked as active or completed
 - **World map** — minimap HUD showing your current region, click to open a scrollable full world map
 - **Save / Load** — export and import save files to persist progress across sessions; versioned schema with forward-migration
 
@@ -85,11 +89,12 @@ gravity/
 ├── tests/
 │   ├── dice.test.js          # Tests for roll() and parseDamage()
 │   ├── condition.test.js     # Tests for the condition tree evaluator
-│   ├── state.test.js         # Tests for StateManager (XP, inventory, log cap)
+│   ├── state.test.js         # Tests for StateManager (XP, inventory, flags, log cap)
 │   ├── combat.test.js        # Tests for combat logic (attacks, turns, initiative)
 │   └── char-creation.test.js # Tests for char creation (point budget, bonuses, migration)
 └── data/
-    ├── index.json      # Manifest — regions, world map size
+    ├── index.json      # Manifest — regions, world map size, file paths
+    ├── flags.json      # All game-level flags with their initial values
     ├── locales.json    # All player-visible strings (UI labels, log messages, button text)
     ├── scenes/         # Scene definitions (grouped by region)
     ├── items/          # Item definitions
@@ -134,9 +139,10 @@ The central registry. Every data file must be listed here before the engine can 
 ```json
 {
   "worldMapSize": { "width": 3000, "height": 2000 },
+  "flags": "data/flags.json",
   "regions": {
-    "dungeon": { "name": "The Dungeon", "order": 1 },
-    "player_home": { "name": "Player Home", "order": 2 }
+    "dungeon": { "name": "The Dungeon" },
+    "player_home": { "name": "Player Home" }
   },
   "scenes": {
     "dungeon_start": "data/scenes/dungeon/start.json"
@@ -157,13 +163,29 @@ The central registry. Every data file must be listed here before the engine can 
 |---|---|---|---|
 | `worldMapSize.width` | Number | No | World canvas width in px (default: 3000) |
 | `worldMapSize.height` | Number | No | World canvas height in px (default: 2000) |
+| `flags` | String | No | Path to the flags declaration file (see [Flags](#flags--dataflagsjson)) |
 | `regions` | Object | No | Map of region keys to region definitions |
 | `regions[key].name` | String | Yes | Human-readable region name shown on the map |
-| `regions[key].order` | Number | Yes | Sort order for regions |
 | `scenes` | Object | Yes | Map of scene IDs to file paths |
 | `items` | Object | Yes | Map of item IDs to file paths |
 | `npcs` | Object | Yes | Map of NPC IDs to file paths |
 | `missions` | Object | Yes | Map of mission IDs to file paths |
+
+---
+
+### Flags — `data/flags.json`
+
+Declares all game-level boolean flags and their initial values. The engine registers these on startup so options that depend on flag state are displayed correctly from the very first scene.
+
+```json
+{
+  "door_unlocked":        false,
+  "defeated_goblin_guard": false,
+  "goblins_pacified":     false
+}
+```
+
+Every flag that appears in a `condition`, `setFlag`, or scene `description` array should be listed here. Flags not listed here are implicitly `false` until set. The engine does not overwrite existing save-file values on load, so changing an initial value only affects new games.
 
 ---
 
@@ -186,23 +208,24 @@ Scenes are the core unit of the game. Each scene is a location the player can vi
 | `mapDefinitions.width` | Number | Yes | Width of the scene block on the map (pixels). |
 | `mapDefinitions.height` | Number | Yes | Height of the scene block on the map (pixels). |
 | `mapDefinitions.background` | String | Yes | CSS colour for the map block (e.g. `"rgba(30, 30, 50, 0.9)"`). |
-| `questsTriggeredOnEntry` | Object | No | Triggers a mission status change every time this scene is entered. |
-| `questsTriggeredOnEntry.mission` | String | Yes | Mission ID to update. |
-| `questsTriggeredOnEntry.status` | String | Yes | New status: `"active"` or `"complete"`. |
-| `xpReward` | Number | No | XP awarded the first time the player visits this scene. Only granted once per save (tracked by an internal flag). |
-| `options` | Array | No | List of choices shown to the player. See Options below. |
+| `questTrigger` | Object | No | Triggers a mission status change every time this scene is entered. |
+| `questTrigger.mission` | String | Yes | Mission ID to update. |
+| `questTrigger.status` | String | Yes | New status: `"active"` or `"complete"`. |
+| `xpReward` | Number | No | XP awarded the first time the player visits this scene. Only granted once per save. |
+| `options` | Array | No | Standard choices shown to the player. See [Options](#options) below. |
+| `skills` | Array | No | Skill-check choices (perception / charisma). See [Skills](#skills) below. |
 
 *One of `name` or `title` is required.
 
 #### Conditional descriptions
 
-`description` can be an array of objects to show different text based on game state:
+`description` can be an array of objects to show different text based on game state. The engine displays the first entry whose `condition` matches; an entry with no `condition` is the fallback.
 
 ```json
 "description": [
   {
     "text": "The heavy door stands wide open to the north.",
-    "requiredState": { "flag": "door_unlocked", "value": true }
+    "condition": { "flag": "door_unlocked", "value": true }
   },
   {
     "text": "You awake in a dimly lit cellar. A heavy wooden door stands locked to the north."
@@ -210,26 +233,22 @@ Scenes are the core unit of the game. Each scene is a location the player can vi
 ]
 ```
 
-The engine evaluates each entry in order and displays the first one whose `requiredState` matches the current flag value. An entry with no `requiredState` acts as the fallback.
-
 | Field | Type | Description |
 |---|---|---|
 | `text` | String | The description text to display. |
-| `requiredState` | Object | Optional condition. If omitted, this entry is the fallback. |
-| `requiredState.flag` | String | Flag name to check. |
-| `requiredState.value` | Any | Expected flag value. Shown only when the flag equals this value. |
+| `condition` | Object | Optional condition tree. If omitted, this entry is the fallback. See [Conditions](#conditions). |
 
 #### Options
 
-Each entry in the `options` array renders as a button the player can click.
+Each entry in the `options` array renders as a clickable button. Options are for navigation and actions. For perception or charisma checks, use [`skills`](#skills) instead.
 
 ```json
 {
   "text": "Unlock the door",
   "destination": "dungeon_hallway",
   "requirements": { "item": "cellar_key" },
-  "requiredState": { "flag": "door_unlocked", "value": false },
-  "changeStateFlag": { "flag": "door_unlocked", "value": true }
+  "condition": { "flag": "door_unlocked", "value": false },
+  "setFlag": { "flag": "door_unlocked", "value": true }
 }
 ```
 
@@ -237,25 +256,63 @@ Each entry in the `options` array renders as a button the player can click.
 |---|---|---|---|
 | `text` | String | Yes | Button label shown to the player. |
 | `destination` | String | No | Scene ID to navigate to after the action resolves. |
-| `action` | String | No | Action to execute. See **Actions** below. |
+| `action` | String | No | Action to execute. See [Actions](#actions) below. |
 | `actionDetails` | Object | No | Parameters for the action. Shape depends on `action` type. |
 | `requirements.item` | String | No | Item ID that must be in the player's inventory. Option is disabled (greyed out) if the item is missing. |
-| `requiredState` | Object | No | Simple flag condition (shorthand). Option is hidden when not met. See also `condition`. |
-| `requiredState.flag` | String | Yes | Flag name to evaluate. |
-| `requiredState.value` | Any | Yes | The option is shown only when this flag equals this value. |
-| `condition` | Object | No | Full condition tree. Overrides `requiredState` when present. Supports `and`/`or`/`not` combinators and `flag`/`item`/`level`/`gold` leaf types. See **Conditions** below. |
-| `changeStateFlag` | Object | No | Sets a flag when this option is chosen. Processed before the scene re-renders. |
-| `changeStateFlag.flag` | String | Yes | Flag name to set. |
-| `changeStateFlag.value` | Any | Yes | Value to assign. |
+| `condition` | Object | No | Condition tree. Option is hidden when not met. See [Conditions](#conditions). |
+| `setFlag` | Object | No | Sets a flag when this option is chosen, before the action or navigation runs. Shape: `{ "flag": "name", "value": true }`. Not applied for `combat` options (those use `setFlag` only on victory). |
 
-#### Conditions
+#### Skills
 
-`condition` replaces `requiredState` when you need more than a single flag check. Scene options, conditional description entries, and dialogue responses all support it.
+The `skills` array holds options that require a dice roll. They are rendered in a separate panel below the main options and support escalating DCs on failure. DCs reset each time the player re-enters the scene.
+
+**Perception check** (`perceptionCheck: true`) — rolls 1d20 + Perception vs the item's DC. Items not yet found remain available; items already found are removed from the check.
 
 ```json
 {
-  "text": "Slip past the guard",
+  "text": "Look Around",
+  "perceptionCheck": true,
+  "items": [
+    { "item": "cellar_key", "amount": 1, "dc": 10, "increment": 1 }
+  ]
+}
+```
+
+Omit `items` for a flavour-only check that disappears after one use.
+
+**Charisma check** (`charismaCheck: true`) — rolls 1d20 + Charisma vs DC.
+
+```json
+{
+  "text": "Talk your way past the guard",
+  "charismaCheck": true,
+  "dc": 15,
+  "increment": 2,
+  "npcName": "Guard",
+  "setFlag": { "flag": "guard_persuaded", "value": true },
   "destination": "dungeon_hallway",
+  "condition": { "flag": "guard_persuaded", "value": false }
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `perceptionCheck` | Boolean | Triggers a Perception roll. |
+| `charismaCheck` | Boolean | Triggers a Charisma (social) roll. |
+| `dc` | Number | Difficulty class. The player must roll ≥ DC to succeed. |
+| `increment` | Number | DC increase on each failure (makes repeated attempts harder). |
+| `npcName` | String | Name shown in the success/failure log message (charisma checks). |
+| `items` | Array | Items to search for (perception checks). Each entry: `{ item, amount, dc, increment }`. |
+| `setFlag` | Object | Flag to set on success: `{ "flag": "name", "value": true }`. |
+| `destination` | String | Scene to navigate to on success (defaults to current scene). |
+| `condition` | Object | Condition tree to show/hide this skill option. |
+
+#### Conditions
+
+The `condition` field supports a full boolean tree. It is used on options, skills, dialogue responses, and conditional description entries.
+
+```json
+{
   "condition": {
     "and": [
       { "flag": "guard_distracted", "value": true },
@@ -272,12 +329,11 @@ Each entry in the `options` array renders as a button the player can click.
 | `{ "flag": "name", "value": true }` | Flag equals value |
 | `{ "item": "item_id" }` | Player has item in inventory |
 | `{ "level": 3 }` | Player level ≥ value |
+| `{ "charisma": 2 }` | Player charisma ≥ value |
 | `{ "gold": 50 }` | Player gold ≥ value |
 | `{ "mission": "mission_id", "status": "complete" }` | Mission is in the given status (`"not_started"`, `"active"`, or `"complete"`) |
 
 **Combinators:** `and` (array, all must pass), `or` (array, any must pass), `not` (single child, inverted).
-
-`requiredState` still works as a shorthand for a single flag check and is fully supported.
 
 ---
 
@@ -289,15 +345,15 @@ The `action` field on an option triggers engine behaviour beyond simple navigati
 
 ```json
 {
-  "text": "Search the room",
+  "text": "Search the chest",
   "action": "loot",
   "actionDetails": {
     "item": "cellar_key",
     "amount": 1,
-    "xpReward": 10,
-    "hideAfter": true
+    "xpReward": 10
   },
-  "requiredState": { "flag": "searched_room", "value": false }
+  "setFlag": { "flag": "chest_searched", "value": true },
+  "condition": { "flag": "chest_searched", "value": false }
 }
 ```
 
@@ -306,7 +362,8 @@ The `action` field on an option triggers engine behaviour beyond simple navigati
 | `item` | String | Yes | Item ID to add to the player's inventory. |
 | `amount` | Number | No | Quantity to add (default: 1). |
 | `xpReward` | Number | No | XP to award alongside the item. |
-| `hideAfter` | Boolean | No | When `true`, flips the option's `requiredState` flag after use, hiding the option on subsequent visits. Requires a `requiredState` to be defined on the option. |
+
+To make a loot option disappear after use, add a `setFlag` and a matching `condition` on the option (see example above).
 
 #### `combat` — Start a combat encounter
 
@@ -315,7 +372,8 @@ The `action` field on an option triggers engine behaviour beyond simple navigati
   "text": "Prepare to fight!",
   "action": "combat",
   "actionDetails": { "enemies": ["goblin_guard", "goblin_grunt"] },
-  "requiredState": { "flag": "defeated_goblin_guard", "value": false }
+  "setFlag": { "flag": "defeated_goblin_guard", "value": true },
+  "condition": { "flag": "defeated_goblin_guard", "value": false }
 }
 ```
 
@@ -326,7 +384,7 @@ The `action` field on an option triggers engine behaviour beyond simple navigati
 
 *One of `enemies` or `enemy` is required.
 
-On victory the engine automatically flips the option's `requiredState` flag (e.g. `defeated_goblin_guard` → `true`), hiding the combat option on the next visit. Loot and XP are aggregated from all defeated enemies.
+`setFlag` on a combat option is applied **only on victory** — not before the fight starts. Loot and XP are aggregated from all defeated enemies.
 
 #### `dialogue` — Start an NPC conversation
 
@@ -346,17 +404,19 @@ On victory the engine automatically flips the option's `requiredState` flag (e.g
 
 ```json
 {
-  "text": "Rest here",
+  "text": "Rest here (Restore HP)",
   "action": "rest",
-  "actionDetails": { "heal": 10, "hideAfter": true },
-  "requiredState": { "flag": "chamber_rested", "value": false }
+  "actionDetails": { "heal": 10 },
+  "setFlag": { "flag": "chamber_rested", "value": true },
+  "condition": { "flag": "chamber_rested", "value": false }
 }
 ```
 
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `heal` | Number | No | HP to restore (default: 15). Capped at the player's max HP. |
-| `hideAfter` | Boolean | No | Flips the `requiredState` flag after use, hiding the option. |
+
+To make the rest option disappear after use, add a `setFlag` and a matching `condition` on the option (see example above).
 
 #### `full_rest` — Fully restore HP and AP
 
@@ -578,25 +638,39 @@ NPCs serve two roles depending on their fields: **enemies** (combat encounters) 
 
 | Field | Type | Description |
 |---|---|---|
-| `npcText` | String | What the NPC says. |
-| `responses` | Array | Player's reply options. |
-| `responses[].text` | String | Button text for this reply. |
-| `responses[].goToConversation` | String | Node ID to navigate to next. |
-| `responses[].action` | String | `"trade"` — opens the merchant UI. `"leave"` — ends dialogue and returns to the scene. |
-| `responses[].condition` | Object | [Condition tree](#conditions) — hides this response if the condition is not met. |
-| `responses[].changeStateFlag` | Object | `{ "flag": "name", "value": true }` — sets a flag when this response is chosen. |
-| `responses[].giveItem` | String | Item ID to give the player when this response is chosen. |
-| `responses[].giveItemAmount` | Number | Quantity to give (default: 1). |
-| `responses[].setMission` | String | Mission ID to activate or complete. |
-| `responses[].setMissionStatus` | String | `"active"` or `"complete"` (default: `"active"`). |
+| `npcText` | String | What the NPC says when this node is reached. |
+| `giveItem` | String | Item ID to give the player when this node is reached. |
+| `giveItemAmount` | Number | Quantity to give (default: 1). |
+| `setFlag` | Object | Flag to set when this node is reached: `{ "flag": "name", "value": true }`. |
+| `questTrigger` | Object | Quest to activate or complete: `{ "mission": "id", "status": "active" }`. |
+| `responses` | Array | Player's reply options for this node. |
 
-A response can have either `goToConversation` or `action`. Side effects (`changeStateFlag`, `giveItem`, `setMission`) fire before navigation.
+**Response fields:**
+
+| Field | Type | Description |
+|---|---|---|
+| `text` | String | Button text for this reply. |
+| `goToConversation` | String | Node ID to navigate to next. |
+| `action` | String | `"trade"` — opens the merchant UI. `"leave"` — ends dialogue and returns to the scene. |
+| `condition` | Object | [Condition tree](#conditions) — hides this response when not met. |
+| `charismaCheck` | Boolean | Requires a Charisma roll (1d20 + Charisma ≥ DC) before the response fires. |
+| `dc` | Number | Difficulty class for the charisma check. |
+| `increment` | Number | DC increase on each failure. |
+| `setFlag` | Object | Flag to set when this response is chosen: `{ "flag": "name", "value": true }`. |
+| `giveItem` | String | Item ID to give the player when this response is chosen. |
+| `giveItemAmount` | Number | Quantity to give (default: 1). |
+| `questTrigger` | Object | Quest to activate or complete: `{ "mission": "id", "status": "active" }`. |
+| `makeFriendly` | Boolean | On a successful charisma check, sets `friendly_<npcId>` to `true`. Combat options filter out friendly NPCs. |
+| `tradeDiscount` | Number | Percentage discount applied to the merchant's prices when this response opens the store (e.g. `10` = 10% off). |
+| `persistDiscount` | Boolean | Saves the discount to the player's save file so it applies to all future visits. |
+
+A response fires side effects (`setFlag`, `giveItem`, `questTrigger`) before navigation (`goToConversation` or `action`).
 
 ---
 
 ### Missions
 
-Missions (quests) live in `data/missions/`. They are triggered by scenes and tracked through a one-way status progression.
+Missions (quests) live in `data/missions/`. They are triggered by scenes or NPC dialogue and tracked through a one-way status progression.
 
 ```json
 {
@@ -618,7 +692,7 @@ Missions (quests) live in `data/missions/`. They are triggered by scenes and tra
 
 **Status lifecycle:** `not_started` → `active` → `complete`
 
-Status transitions are triggered by a scene's `questsTriggeredOnEntry`. The progression is one-way — a completed mission cannot be reactivated.
+Transitions are triggered by a scene's `questTrigger` field or a dialogue node/response's `questTrigger`. The progression is one-way — a completed mission cannot be reactivated.
 
 ---
 
@@ -653,61 +727,56 @@ Strings can include `{placeholder}` tokens. The engine substitutes them at runti
 
 Flags are the engine's core mechanism for persistent per-save state. They power conditional descriptions, option visibility, one-time events, and combat outcomes.
 
-#### How flags work
+#### Declaring flags
 
-Flags are arbitrary key/value pairs stored in the save file. Any string can be a flag name; any JSON-serialisable value can be its value (most commonly `true`/`false`).
+All game-level flags live in `data/flags.json` with their initial values:
 
-Flags are automatically initialised the first time a scene is rendered: the engine scans every option's `requiredState` and registers any unknown flags using the declared `value` as the initial value.
+```json
+{
+  "door_unlocked":        false,
+  "defeated_goblin_guard": false
+}
+```
 
-#### Showing/hiding options with `requiredState`
+The engine registers these on startup. A flag not listed here is implicitly `false` until set. Adding a new flag-gated option requires adding the flag to `flags.json` first so the initial state is predictable across new games and resets.
 
-An option with `requiredState` is only visible when the flag matches:
+#### Showing/hiding options with `condition`
+
+An option with a `condition` is only visible when it evaluates to `true`:
 
 ```json
 {
   "text": "Unlock the door",
-  "requiredState": { "flag": "door_unlocked", "value": false }
+  "condition": { "flag": "door_unlocked", "value": false }
 }
 ```
 
-This option disappears once `door_unlocked` becomes `true`.
+This option disappears once `door_unlocked` becomes `true`. The same `condition` field works on description array entries and dialogue responses.
 
-The same syntax works for conditional descriptions — a description entry with `requiredState` is only displayed when the condition is met.
-
-#### Mutating flags with `changeStateFlag`
+#### Mutating flags with `setFlag`
 
 Set a flag when an option is chosen:
 
 ```json
 {
   "text": "Unlock the door",
-  "changeStateFlag": { "flag": "door_unlocked", "value": true }
+  "setFlag": { "flag": "door_unlocked", "value": true }
 }
 ```
 
-The flag is set before the scene re-renders, so the updated state is immediately reflected in which options and description variants are shown.
+The flag is set before the scene re-renders, so the updated state is immediately reflected in which options and descriptions are shown.
 
-#### Hiding one-time options with `hideAfter`
+For `combat` options, `setFlag` is applied **only on victory** (handled inside the combat system after the fight ends), not when the option is clicked.
 
-On `loot` and `rest` actions, setting `hideAfter: true` automatically flips the option's `requiredState` flag after use — no need to manually write a `changeStateFlag`. This is the standard pattern for "search the room" style options:
+#### System-managed flags
 
-```json
-{
-  "text": "Search the room",
-  "action": "loot",
-  "actionDetails": { "item": "cellar_key", "hideAfter": true },
-  "requiredState": { "flag": "searched_room", "value": false }
-}
-```
+The engine creates some flags automatically at runtime. These do not need to be listed in `flags.json`.
 
-After the player searches, `searched_room` is flipped to `true` and the option disappears.
-
-#### System-generated flags
-
-The engine creates some flags automatically:
-
-| Flag | When set | Value |
+| Flag pattern | When set | Value |
 |---|---|---|
 | `xp_awarded_{sceneId}` | First visit to a scene with `xpReward` | `true` |
-| The option's `requiredState.flag` | On winning a `combat` action | `true` |
-| The option's `requiredState.flag` | When `hideAfter: true` triggers | `!previousValue` |
+| `friendly_{npcId}` | Successful `makeFriendly` charisma check in dialogue | `true` |
+| `trade_discount_{npcId}` | Response with `persistDiscount: true` opens trade | Discount % |
+| `look_around_{sceneId}` | Runtime state for perception check progress | Object |
+| `scene_charisma_{sceneId}` | Runtime state for scene-level charisma DC escalation | Object |
+| `charisma_dc_{npcId}` | Runtime state for NPC dialogue charisma DC escalation | Object |
