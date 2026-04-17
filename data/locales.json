@@ -54,7 +54,7 @@
     "itemRequires":        "Requires: {name}",
     "locationDialogue":    "DIALOGUE: {name}",
     "locationMerchant":    "MERCHANT: {name}",
-    "locationCombat":      "Combat: {name}"
+    "locationCombat":      "Combat"
   },
   "itemTypes": {
     "Weapon":     "Weapons",

@@ -444,19 +444,6 @@ body {
   margin-bottom: calc(var(--spacing) * 2.5);
 }
 
-.scene__location {
-  padding-bottom: calc(var(--spacing) * 2);
-  border-bottom: 1px solid var(--panel-border);
-  margin-bottom: calc(var(--spacing) * 2);
-}
-
-.scene__skills-heading {
-  margin-top: calc(var(--spacing) * 2);
-  padding-bottom: calc(var(--spacing) * 2);
-  border-bottom: 1px solid var(--panel-border);
-  margin-bottom: calc(var(--spacing) * 2);
-}
-
 .scene + .scene {
   margin-top: calc(var(--spacing) * 3);
   padding-top: calc(var(--spacing) * 3);
@@ -495,40 +482,39 @@ body {
   min-height: 0;
 }
 
-.scene__options + .scene__options {
-  margin-top: calc(var(--spacing) * 2);
+.scene__section-heading {
+  padding-bottom: calc(var(--spacing) * 2);
+  border-bottom: 1px solid var(--panel-border);
 }
 
-.scene__options:not(:has(.options-group)) {
-  gap: calc(var(--spacing) * 1);
+.scene__options--combat .scene__section-heading:not(:first-child) {
+  margin-top: calc(var(--spacing) * 2.5);
 }
+
+.scene__options + .scene__options { }
+
+.scene__options:not(:has(.options-group)) { }
 
 .scene__options--skills {
   flex-grow: 0;
 }
 
 /* .options-group: labelled section of related buttons */
-.options-group {
-  margin-bottom: calc(var(--spacing) * 2);
-}
+.options-group { }
 
 .options-group__label {
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-bottom: calc(var(--spacing) * 1);
 }
 
 .options-group__buttons {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--spacing) * 2);
 }
 
-.options-group:last-of-type .options-group__buttons {
-  padding-bottom: calc(var(--spacing) * 2);
-  border-bottom: 1px solid var(--panel-border);
-}
+.options-group:last-of-type .options-group__buttons { }
+
 
 /* ==========================================================================
  MAIN: MINIMAP

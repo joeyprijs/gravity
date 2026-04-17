@@ -320,7 +320,7 @@ class CombatRenderer {
     const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
     clearElement(container);
     if (reminder) {
-      reminder.innerText = this.cs.engine.t('ui.locationCombat', { name: livingEnemies.map(e => e.name).join(' & ') });
+      reminder.innerText = this.cs.engine.t('ui.locationCombat');
       container.appendChild(reminder);
     }
 
@@ -330,18 +330,17 @@ class CombatRenderer {
 
     const attacks = this.getAvailableAttacks();
 
-    // Each enemy gets its own labelled group. The label includes HP/AC inline
-    // so the player always knows enemy status without a separate stat bar.
+    // End Turn at the top so it's always reachable without scrolling.
+    const endBtn = buildOptionButton(this.cs.engine.t('combat.endTurn'));
+    endBtn.onclick = () => this.cs.enemyTurn('after');
+    container.appendChild(endBtn);
+
+    // Each living enemy gets a section heading followed by its attack buttons.
     livingEnemies.forEach(target => {
-      const group = createElement('div', CSS.OPTIONS_GROUP);
-      const label = createElement('div', CSS.OPTIONS_GROUP_LABEL,
+      const heading = createElement('div', CSS.SCENE_SECTION_HEADING,
         this.cs.engine.t('combat.enemyStats', { name: target.name, hp: target.attributes.healthPoints, ac: target.attributes.armorClass })
       );
-      const btns = createElement('div', CSS.OPTIONS_GROUP_BUTTONS);
-      group.appendChild(label);
-      group.appendChild(btns);
-      container.appendChild(group);
-      const btnContainer = btns;
+      container.appendChild(heading);
 
       attacks.forEach(att => {
         const btn = createElement('button', [CSS.BTN, CSS.OPTION_BTN, CSS.OPTION_BTN_STACKED]);
@@ -349,13 +348,8 @@ class CombatRenderer {
         btn.appendChild(createElement('span', CSS.OPTION_BTN_BADGE, this.cs.engine.t('combat.apCost', { cost: att.actionPoints })));
         if (gameState.getPlayer().ap < att.actionPoints) btn.disabled = true;
         btn.onclick = () => this.cs.playerAttack(att, target);
-        btnContainer.appendChild(btn);
+        container.appendChild(btn);
       });
     });
-
-    // End turn button
-    const endBtn = buildOptionButton(this.cs.engine.t('combat.endTurn'));
-    endBtn.onclick = () => this.cs.enemyTurn('after');
-    container.appendChild(endBtn);
   }
 }

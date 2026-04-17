@@ -122,7 +122,7 @@ export const CSS = {
   SCENE_LOG:              'scene__log',
   SCENE_OPTIONS_COMBAT:   'scene__options--combat',
   SCENE_OPTIONS_MERCHANT: 'scene__options--merchant',
-  SCENE_SKILLS_HEADING:   'scene__skills-heading',
+  SCENE_SECTION_HEADING:  'scene__section-heading',
 
   // Tabs (ui.js setup)
   TABS_BTN:               'tabs__btn',
