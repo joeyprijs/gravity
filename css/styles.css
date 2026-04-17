@@ -291,18 +291,10 @@ body {
 
 .option-btn__badge {
   display: block;
-  color: var(--text-secondary);
+  color: var(--accent-color);
   font-size: var(--font-sm);
   font-weight: 400;
   margin-top: var(--spacing);
-}
-
-.option-btn__badge--cost {
-  color: var(--health-color);
-}
-
-.option-btn__badge--sell {
-  color: var(--xp-color);
 }
 
 /* .btn--item — inventory action buttons (Use, Equip, Unequip, Deposit) */

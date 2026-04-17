@@ -69,7 +69,7 @@ export class MuseumUI {
       pInv.forEach(b => {
         const name = this.engine.data.items[b.item]?.name || b.item;
         const label = b.amount > 1 ? `${name} (x${b.amount})` : name;
-        const btn = buildOptionButton(label, this.engine.t('ui.museumDisplay'), true);
+        const btn = buildOptionButton(label, this.engine.t('ui.museumDisplay'));
         btn.onclick = () => {
           gameState.depositToChest(b.item, 1);
           this.engine.log(LOG.SYSTEM, this.engine.t('actions.museumDisplayed', { name }));

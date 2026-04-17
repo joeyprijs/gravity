@@ -132,7 +132,7 @@
     "merchantGreeting":   "[{name}] Take a look!",
     "yourGold":           "Your Gold: {amount}",
     "buyButton":          "Buy {name}",
-    "buyPrice":           "{amount} Gold",
+    "buyPrice":           "-{amount} Gold",
     "bought":             "Bought {name} for {price} Gold.",
     "sellButton":         "Sell {name} (x{count})",
     "sellPrice":          "+{amount} Gold",

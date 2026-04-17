@@ -66,15 +66,14 @@ export function buildSceneDescription(title, body = null) {
  * Returns the button element — caller sets .onclick and .disabled.
  */
 
-export function buildOptionButton(text, reqText = null, isSell = false) {
+export function buildOptionButton(text, reqText = null) {
   const classes = reqText !== null
     ? [CSS.BTN, CSS.OPTION_BTN, CSS.OPTION_BTN_STACKED]
     : [CSS.BTN, CSS.OPTION_BTN];
   const btn = createElement('button', classes);
   btn.appendChild(createElement('span', '', text));
   if (reqText !== null) {
-    const cls = isSell ? [CSS.OPTION_BTN_BADGE, CSS.OPTION_BTN_BADGE_SELL] : [CSS.OPTION_BTN_BADGE, CSS.OPTION_BTN_BADGE_COST];
-    btn.appendChild(createElement('span', cls, reqText));
+    btn.appendChild(createElement('span', CSS.OPTION_BTN_BADGE, reqText));
   }
   return btn;
 }

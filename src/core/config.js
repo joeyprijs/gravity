@@ -134,8 +134,6 @@ export const CSS = {
   OPTION_BTN:                   'option-btn',
   OPTION_BTN_STACKED:           'option-btn--stacked',
   OPTION_BTN_BADGE:             'option-btn__badge',
-  OPTION_BTN_BADGE_COST:        'option-btn__badge--cost',
-  OPTION_BTN_BADGE_SELL:        'option-btn__badge--sell',
   BTN:                    'button',
   BTN_ITEM:               'btn--item',
 

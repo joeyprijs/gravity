@@ -292,8 +292,7 @@ export class DialogueSystem {
         const sellValue = Math.floor(item.value * MERCHANT_SELL_RATIO);
         const btn = buildOptionButton(
           this.engine.t('dialogue.sellButton', { name: item.name, count: invItem.amount }),
-          this.engine.t('dialogue.sellPrice', { amount: sellValue }),
-          true
+          this.engine.t('dialogue.sellPrice', { amount: sellValue })
         );
         btn.onclick = () => {
           gameState.removeFromInventory(invItem.item, 1);
