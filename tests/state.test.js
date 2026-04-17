@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import { gameState } from '../src/core/state.js';
 
 // Reset to defaults before each test so singleton state is clean.
-// PLAYER_DEFAULTS starts with: hp/maxHp=10, ap/maxAp=3, level=1, xp=0, gold=0
+// PLAYER_DEFAULTS starts with: hp/maxHp=10, ap/maxAp=3, charisma=1, level=1, xp=0, gold=0
 // inventory: rusty_sword×1, flames×1, healing_potion×2
 beforeEach(() => gameState.reset());
 
-test('addXP: levels up at threshold, carries surplus', () => {
+test('addXP: level increases at threshold, carries surplus', () => {
   // Level 1 threshold = 1 × 100 = 100 XP
   gameState.addXP(150);
   const player = gameState.getPlayer();
@@ -15,8 +15,8 @@ test('addXP: levels up at threshold, carries surplus', () => {
   assert.equal(player.xp, 50);
 });
 
-test('addXP: multiple level-ups in one call', () => {
-  // 350 XP: level1→2 costs 100, level2→3 costs 200, 50 left over
+test('addXP: multiple level increases in one call', () => {
+  // 350 XP: lvl1→2 costs 100, lvl2→3 costs 200, 50 left over
   gameState.addXP(350);
   const player = gameState.getPlayer();
   assert.equal(player.level, 3);

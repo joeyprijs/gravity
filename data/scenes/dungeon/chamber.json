@@ -15,6 +15,10 @@
   },
   "options": [
     {
+      "text": "Look Around",
+      "perceptionCheck": true
+    },
+    {
       "text": "Talk to the stranger",
       "action": "dialogue",
       "actionDetails": {

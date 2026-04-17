@@ -1,6 +1,6 @@
 {
   "name": "Bron",
-  "disposition": "Friendly",
+  "disposition": 8,
   "isMerchant": false,
   "conversations": {
     "start": {

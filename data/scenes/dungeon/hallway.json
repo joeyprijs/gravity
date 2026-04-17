@@ -17,27 +17,57 @@
       }
     },
     {
+      "text": "The hallway is lined with flickering torches. The goblin guard eyes you warily but steps aside, its grunt shuffling along behind it.",
+      "requiredState": {
+        "flag": "goblins_pacified",
+        "value": true
+      }
+    },
+    {
       "text": "The hallway is lined with flickering torches. A goblin guard and its scraggly grunt companion spot you and draw their weapons!"
     }
   ],
   "options": [
+    {
+      "text": "Look Around",
+      "perceptionCheck": true
+    },
+    {
+      "text": "Easy. I mean no harm. Let's not do this.",
+      "charismaCheck": true,
+      "dc": 18,
+      "increment": 2,
+      "npcName": "Goblin Guard",
+      "changeStateFlag": { "flag": "goblins_pacified", "value": true },
+      "condition": {
+        "and": [
+          { "flag": "defeated_goblin_guard", "value": false },
+          { "flag": "goblins_pacified", "value": false }
+        ]
+      }
+    },
     {
       "text": "Prepare to fight!",
       "action": "combat",
       "actionDetails": {
         "enemies": ["goblin_guard", "goblin_grunt"]
       },
-      "requiredState": {
-        "flag": "defeated_goblin_guard",
-        "value": false
+      "victoryFlag": { "flag": "defeated_goblin_guard", "value": true },
+      "condition": {
+        "and": [
+          { "flag": "defeated_goblin_guard", "value": false },
+          { "flag": "goblins_pacified", "value": false }
+        ]
       }
     },
     {
       "text": "Proceed deeper into the dungeon",
       "destination": "dungeon_chamber",
-      "requiredState": {
-        "flag": "defeated_goblin_guard",
-        "value": true
+      "condition": {
+        "or": [
+          { "flag": "defeated_goblin_guard", "value": true },
+          { "flag": "goblins_pacified", "value": true }
+        ]
       }
     },
     {

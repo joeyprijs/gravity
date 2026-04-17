@@ -1,11 +1,11 @@
-import { LEVELUP_HP_BONUS, XP_PER_LEVEL, PLAYER_DEFAULTS, STARTING_SCENE, MSG } from "./config.js";
+import { LEVEL_UP_HP_BONUS, XP_PER_LEVEL, PLAYER_DEFAULTS, STARTING_SCENE, MSG } from "./config.js";
 
 const MAX_LOG_ENTRIES = 200;
 
 // Increment when the save schema changes. loadFromObject() migrates older saves
 // forward so they remain compatible. Each migration function receives the raw
 // parsed data object and mutates it in-place.
-const SAVE_VERSION = 3;
+const SAVE_VERSION = 6;
 
 const MIGRATIONS = {
   // v0 → v1: added player.name
@@ -22,6 +22,24 @@ const MIGRATIONS = {
   // v2 → v3: removed baseAcBonus (AC is now stored directly on player.ac)
   3: (data) => {
     if (data.player) delete data.player.baseAcBonus;
+  },
+  // v3 → v4: renamed player.level → player.reputation
+  4: (data) => {
+    if (data.player && data.player.level !== undefined) {
+      data.player.reputation = data.player.level;
+      delete data.player.level;
+    }
+  },
+  // v4 → v5: re-introduced player.level as separate progression stat
+  5: (data) => {
+    if (data.player && data.player.level === undefined) data.player.level = 1;
+  },
+  // v5 → v6: renamed player.reputation → player.charisma
+  6: (data) => {
+    if (data.player && data.player.reputation !== undefined) {
+      data.player.charisma = data.player.reputation;
+      delete data.player.reputation;
+    }
   },
 };
 
@@ -157,7 +175,7 @@ class StateManager {
     while (this.state.player.xp >= threshold) {
       this.state.player.xp -= threshold;
       this.state.player.level++;
-      this.state.player.maxHp += LEVELUP_HP_BONUS;
+      this.state.player.maxHp += LEVEL_UP_HP_BONUS;
       this.state.player.hp = this.state.player.maxHp;
       threshold = this.state.player.level * XP_PER_LEVEL;
     }

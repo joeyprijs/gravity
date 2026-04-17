@@ -21,8 +21,13 @@ function handleLoot(opt, engine) {
 }
 
 function handleCombat(opt, engine) {
-  const enemies = opt.actionDetails?.enemies
+  const allEnemies = opt.actionDetails?.enemies
     || (opt.actionDetails?.enemy ? [opt.actionDetails.enemy] : []);
+  const enemies = allEnemies.filter(id => !gameState.getFlag(`friendly_${id}`));
+  if (enemies.length === 0) {
+    engine.log(LOG.SYSTEM, engine.t('combat.avoided'), 'system');
+    return;
+  }
   engine.combatSystem.startCombat(enemies, opt);
 }
 

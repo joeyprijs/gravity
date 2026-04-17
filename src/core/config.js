@@ -14,7 +14,7 @@ export const REST_HEAL_AMOUNT = 10;
 export const SNACK_HEAL_AMOUNT = 2;
 
 // Max HP gained per level-up
-export const LEVELUP_HP_BONUS = 5;
+export const LEVEL_UP_HP_BONUS = 5;
 
 // XP required to level up, multiplied by the player's current level
 // e.g. level 1 needs 100 XP, level 2 needs 200 XP, etc.
@@ -54,6 +54,7 @@ export const PLAYER_DEFAULTS = {
   ac: 10,
   initiative: 0,
   perception: 0,
+  charisma: 0,
   gold: 0,
   inventory: [
     { item: "rusty_sword", amount: 1 },
@@ -83,9 +84,10 @@ export const PLAYER_DEFAULTS = {
 export const CHAR_CREATION = {
   pointBudget: 3,
   stats: [
-    { id: 'maxHp',       bonusPerPoint: 2, min: 0 },
-    { id: 'ac',          bonusPerPoint: 1, min: 0 },
-    { id: 'perception',  bonusPerPoint: 1, min: 0 },
+    { id: 'maxHp',      bonusPerPoint: 2, min: 0 },
+    { id: 'ac',         bonusPerPoint: 1, min: 0 },
+    { id: 'perception', bonusPerPoint: 1, min: 0 },
+    { id: 'charisma',   bonusPerPoint: 1, min: 0 },
   ]
 };
 
@@ -120,6 +122,7 @@ export const CSS = {
   SCENE_LOG:              'scene__log',
   SCENE_OPTIONS_COMBAT:   'scene__options--combat',
   SCENE_OPTIONS_MERCHANT: 'scene__options--merchant',
+  SCENE_SKILLS_HEADING:   'scene__skills-heading',
 
   // Tabs (ui.js setup)
   TABS_BTN:               'tabs__btn',
@@ -188,6 +191,7 @@ export const EL = {
   // Narrative / scene
   SCENE_NARRATIVE:         'scene-narrative',
   SCENE_OPTIONS:           'scene-options',
+  SCENE_OPTIONS_SKILLS:    'scene-options-skills',
   SCENE_LOCATION_REMINDER: 'scene-location-reminder',
 
   // Toolbar buttons & file input
@@ -199,13 +203,13 @@ export const EL = {
   // Stat display
   STAT_NAME:               'stat-name',
   STAT_LEVEL:              'stat-level',
+  STAT_CHARISMA:           'stat-charisma',
   STAT_HP:                 'stat-hp',
   STAT_AP:                 'stat-ap',
   STAT_AC:                 'stat-ac',
   STAT_INITIATIVE:         'stat-initiative',
   STAT_PERCEPTION:         'stat-perception',
   STAT_GOLD:               'stat-gold',
-  XP_BAR:                  'xp-bar',
 
   // Character creation overlay
   CHAR_CREATION:           'char-creation',

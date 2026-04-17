@@ -26,7 +26,9 @@ export class MuseumUI {
     }
 
     const container = document.getElementById(EL.SCENE_OPTIONS);
+    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
     clearElement(container);
+    if (reminder) container.appendChild(reminder);
 
     // Chest section
     const chestGroup = createElement('div', CSS.OPTIONS_GROUP);

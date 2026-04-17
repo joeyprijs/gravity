@@ -244,8 +244,10 @@ export class CombatSystem {
         }
       });
 
-      // Flag flip
-      if (this.originOption && this.originOption.requiredState) {
+      // Flag flip — victoryFlag is explicit; requiredState is the legacy fallback.
+      if (this.originOption?.victoryFlag) {
+        gameState.setFlag(this.originOption.victoryFlag.flag, this.originOption.victoryFlag.value);
+      } else if (this.originOption?.requiredState) {
         gameState.setFlag(this.originOption.requiredState.flag, !this.originOption.requiredState.value);
       }
 
@@ -270,7 +272,9 @@ export class CombatSystem {
       this.engine.currentSceneEl.appendChild(desc);
 
       const container = document.getElementById(EL.SCENE_OPTIONS);
+      const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
       clearElement(container);
+      if (reminder) container.appendChild(reminder);
       const loadBtn = buildOptionButton(this.engine.t('combat.loadLastSave'));
       loadBtn.onclick = () => document.getElementById(EL.BTN_LOAD).click();
       container.appendChild(loadBtn);
@@ -315,11 +319,17 @@ class CombatRenderer {
   render() {
     const livingEnemies = this.cs.enemies.filter(e => e.attributes.healthPoints > 0);
 
-    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
-    if (reminder) reminder.innerText = this.cs.engine.t('ui.locationCombat', { name: livingEnemies.map(e => e.name).join(' & ') });
-
     const container = document.getElementById(EL.SCENE_OPTIONS);
+    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
     clearElement(container);
+    if (reminder) {
+      reminder.innerText = this.cs.engine.t('ui.locationCombat', { name: livingEnemies.map(e => e.name).join(' & ') });
+      container.appendChild(reminder);
+    }
+
+    const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
+    clearElement(skillsContainer);
+    skillsContainer.setAttribute('hidden', '');
 
     const attacks = this.getAvailableAttacks();
 

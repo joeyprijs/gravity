@@ -24,12 +24,14 @@
       "text": "You awake in a dimly lit cellar. The smell of damp earth fills the air. A heavy wooden door stands locked to the north."
     }
   ],
-  "hiddenLoot": {
-    "items": [
-      { "item": "cellar_key", "amount": 1, "dc": 10, "increment": 1 }
-    ]
-  },
   "options": [
+    {
+      "text": "Look Around",
+      "perceptionCheck": true,
+      "items": [
+        { "item": "cellar_key", "amount": 1, "dc": 10, "increment": 1 }
+      ]
+    },
     {
       "text": "Unlock the door",
       "destination": "dungeon_hallway",

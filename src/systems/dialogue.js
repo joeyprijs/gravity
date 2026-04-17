@@ -1,7 +1,8 @@
 import { gameState } from "../core/state.js";
 import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "../core/utils.js";
-import { MERCHANT_SELL_RATIO, EL, CSS, LOG } from "../core/config.js";
+import { MERCHANT_SELL_RATIO, MAX_D20_ROLL, EL, CSS, LOG } from "../core/config.js";
 import { evaluateCondition } from "./condition.js";
+import { roll } from "./dice.js";
 
 // DialogueSystem handles NPC conversations and the merchant buy/sell interface.
 // Conversations are driven by a node graph defined in NPC JSON files. If an NPC
@@ -10,7 +11,9 @@ export class DialogueSystem {
   constructor(engine) {
     this.engine = engine;
     this.currentNPC = null;
+    this.currentNPCId = null;
     this.storeOpen = false;
+    this.activeDiscount = 0;
 
     // Re-render the store on any state change so gold and inventory stay in
     // sync — removing the need for UIManager to know the store exists.
@@ -26,6 +29,8 @@ export class DialogueSystem {
 
     this.engine.resetScene();
     this.currentNPC = npc;
+    this.currentNPCId = npcId;
+    gameState.setFlag(`charisma_dc_${npcId}`, false);
     if (npc.conversations) {
       this.renderDialogue("start");
     } else {
@@ -33,45 +38,80 @@ export class DialogueSystem {
     }
   }
 
-  renderDialogue(nodeId = "start", overrideText = null) {
+  renderDialogue(nodeId = "start", overrideText = null, optionsOnly = false) {
     const node = this.currentNPC.conversations[nodeId];
     if (!node) { console.warn(`[Gravity] renderDialogue: unknown node "${nodeId}" on NPC "${this.currentNPC.name}"`); return; }
 
-    const displayString = overrideText || node.npcText;
+    if (!optionsOnly) {
+      const displayString = overrideText || node.npcText;
 
-    if (nodeId === "start") {
-      this.engine.openScene(CSS.SCENE_DIALOGUE);
-      this.engine.currentSceneEl.appendChild(
-        buildSceneDescription(this.currentNPC.name, `[${this.currentNPC.name}] ${displayString}`)
-      );
-    } else {
-      this.engine.log(this.currentNPC.name, displayString);
-    }
+      if (nodeId === "start") {
+        this.engine.openScene(CSS.SCENE_DIALOGUE);
+        this.engine.currentSceneEl.appendChild(
+          buildSceneDescription(this.currentNPC.name, `[${this.currentNPC.name}] ${displayString}`)
+        );
+      } else {
+        this.engine.log(this.currentNPC.name, displayString);
+      }
 
-    if (node.giveItem) {
-      gameState.addToInventory(node.giveItem, node.giveItemAmount || 1);
-      const name = this.engine.data.items[node.giveItem]?.name || node.giveItem;
-      this.engine.log(LOG.SYSTEM, this.engine.t('loot.receivedItem', { name }), 'loot');
+      if (node.giveItem) {
+        gameState.addToInventory(node.giveItem, node.giveItemAmount || 1);
+        const name = this.engine.data.items[node.giveItem]?.name || node.giveItem;
+        this.engine.log(LOG.SYSTEM, this.engine.t('loot.receivedItem', { name }), 'loot');
+      }
+      if (node.changeStateFlag) {
+        gameState.setFlag(node.changeStateFlag.flag, node.changeStateFlag.value);
+      }
+      if (node.setMission) {
+        this.engine.handleQuestTrigger({ mission: node.setMission, status: node.setMissionStatus || 'active' });
+      }
     }
-    if (node.changeStateFlag) {
-      gameState.setFlag(node.changeStateFlag.flag, node.changeStateFlag.value);
-    }
-    if (node.setMission) {
-      this.engine.handleQuestTrigger({ mission: node.setMission, status: node.setMissionStatus || 'active' });
-    }
-
-    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
-    if (reminder) reminder.innerText = this.engine.t('ui.locationDialogue', { name: this.currentNPC.name });
 
     const container = document.getElementById(EL.SCENE_OPTIONS);
+    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
     clearElement(container);
+    if (reminder) {
+      reminder.innerText = this.engine.t('ui.locationDialogue', { name: this.currentNPC.name });
+      container.appendChild(reminder);
+    }
 
-    (node.responses || []).forEach(res => {
+    const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
+    clearElement(skillsContainer);
+    skillsContainer.setAttribute('hidden', '');
+
+    const charismaStateKey = `charisma_dc_${this.currentNPCId}`;
+    const npcCharismaState = gameState.getFlag(charismaStateKey) || {};
+    const skillResponses = [];
+
+    (node.responses || []).forEach((res, i) => {
       if (!evaluateCondition(res.condition ?? null, gameState)) return;
 
-      const btn = buildOptionButton(res.text);
+      const needsCheck = !!res.charismaCheck && res.dc > 0;
+      const resKey = `${nodeId}_${i}`;
+      const dc = needsCheck ? (npcCharismaState[resKey] || res.dc) : 0;
+
+      const badge = needsCheck ? this.engine.t('dialogue.socialCheckBadge', { dc }) : null;
+      const btn = buildOptionButton(res.text, badge);
+
       btn.onclick = () => {
         this.engine.log(LOG.PLAYER, res.text, 'choice');
+
+        if (needsCheck) {
+          const mod = gameState.getPlayer().charisma || 0;
+          const rolled = roll(1, MAX_D20_ROLL) + mod;
+          const success = rolled >= dc;
+          const logKey = success ? 'dialogue.socialSuccess' : 'dialogue.socialFail';
+          this.engine.log(LOG.SYSTEM, this.engine.t(logKey, { roll: rolled, mod, dc, name: this.currentNPC.name }), success ? 'loot' : 'system');
+          if (!success) {
+            npcCharismaState[resKey] = dc + (res.increment ?? 1);
+            gameState.setFlag(charismaStateKey, npcCharismaState);
+            this.renderDialogue(nodeId, null, true);
+            return;
+          }
+          if (res.makeFriendly) {
+            gameState.setFlag(`friendly_${this.currentNPCId}`, true);
+          }
+        }
 
         if (res.changeStateFlag) {
           gameState.setFlag(res.changeStateFlag.flag, res.changeStateFlag.value);
@@ -88,13 +128,30 @@ export class DialogueSystem {
         if (res.goToConversation) {
           this.renderDialogue(res.goToConversation);
         } else if (res.action === "trade") {
+          const pct = typeof res.tradeDiscount === 'string' ? parseFloat(res.tradeDiscount) : (res.tradeDiscount || 0);
+          this.activeDiscount = pct / 100;
+          if (res.persistDiscount && pct > 0) {
+            gameState.setFlag(`trade_discount_${this.currentNPCId}`, pct);
+          }
           this.renderStore();
         } else if (res.action === "leave") {
           this.engine.renderScene(gameState.getCurrentSceneId());
         }
       };
-      container.appendChild(btn);
+
+      if (needsCheck) {
+        skillResponses.push(btn);
+      } else {
+        container.appendChild(btn);
+      }
     });
+
+    if (skillResponses.length > 0) {
+      const heading = createElement('div', CSS.SCENE_SKILLS_HEADING, this.engine.t('ui.skillsHeading'));
+      skillsContainer.appendChild(heading);
+      skillResponses.forEach(btn => skillsContainer.appendChild(btn));
+      skillsContainer.removeAttribute('hidden');
+    }
 
     this.engine.scrollNarrativeToBottom();
   }
@@ -107,11 +164,17 @@ export class DialogueSystem {
       buildSceneDescription(this.currentNPC.name, `[${this.currentNPC.name}] ${displayString}`)
     );
 
-    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
-    if (reminder) reminder.innerText = this.engine.t('ui.locationDialogue', { name: this.currentNPC.name });
-
     const container = document.getElementById(EL.SCENE_OPTIONS);
+    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
     clearElement(container);
+    if (reminder) {
+      reminder.innerText = this.engine.t('ui.locationDialogue', { name: this.currentNPC.name });
+      container.appendChild(reminder);
+    }
+
+    const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
+    clearElement(skillsContainer);
+    skillsContainer.setAttribute('hidden', '');
 
     if (this.currentNPC.isMerchant) {
       const tradeBtn = buildOptionButton(this.engine.t('dialogue.trade'));
@@ -132,6 +195,10 @@ export class DialogueSystem {
 
   renderStore(isUpdate = false) {
     if (!isUpdate) {
+      if (this.activeDiscount === 0) {
+        const saved = gameState.getFlag(`trade_discount_${this.currentNPCId}`);
+        if (saved) this.activeDiscount = saved / 100;
+      }
       this.storeOpen = true;
       this.engine.openScene(CSS.SCENE_MERCHANT);
       document.getElementById(EL.SCENE_OPTIONS).classList.add(CSS.SCENE_OPTIONS_MERCHANT);
@@ -143,11 +210,17 @@ export class DialogueSystem {
       );
     }
 
-    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
-    if (reminder) reminder.innerText = this.engine.t('ui.locationMerchant', { name: this.currentNPC.name });
-
     const container = document.getElementById(EL.SCENE_OPTIONS);
+    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
     clearElement(container);
+    if (reminder) {
+      reminder.innerText = this.engine.t('ui.locationMerchant', { name: this.currentNPC.name });
+      container.appendChild(reminder);
+    }
+
+    const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
+    clearElement(skillsContainer);
+    skillsContainer.setAttribute('hidden', '');
 
     // Buy items
     // carriedItems entries are either a plain string (unlimited stock) or
@@ -169,16 +242,17 @@ export class DialogueSystem {
       group.appendChild(label);
       buyItems.forEach(({ id: itemId, item, stock, entry }) => {
         const displayName = stock !== null ? `${item.name} (x${stock})` : item.name;
+        const price = this.activeDiscount > 0 ? Math.floor(item.value * (1 - this.activeDiscount)) : item.value;
         const btn = buildOptionButton(
           this.engine.t('dialogue.buyButton', { name: displayName }),
-          this.engine.t('dialogue.buyPrice', { amount: item.value })
+          this.engine.t('dialogue.buyPrice', { amount: price })
         );
-        if (gameState.getPlayer().gold < item.value) btn.disabled = true;
+        if (gameState.getPlayer().gold < price) btn.disabled = true;
         btn.onclick = () => {
           if (stock !== null) entry.amount--;
-          gameState.modifyPlayerStat('gold', -item.value);
+          gameState.modifyPlayerStat('gold', -price);
           gameState.addToInventory(itemId, 1);
-          this.engine.log(LOG.PLAYER, this.engine.t('dialogue.bought', { name: item.name, price: item.value }), 'loot');
+          this.engine.log(LOG.PLAYER, this.engine.t('dialogue.bought', { name: item.name, price }), 'loot');
           this.renderStore(true);
         };
         btns.appendChild(btn);
@@ -223,6 +297,7 @@ export class DialogueSystem {
     const leaveBtn = buildOptionButton(neverMind);
     leaveBtn.onclick = () => {
       this.storeOpen = false;
+      this.activeDiscount = 0;
       document.getElementById(EL.SCENE_OPTIONS).classList.remove(CSS.SCENE_OPTIONS_MERCHANT);
       this.engine.log(LOG.PLAYER, neverMind, 'choice');
 

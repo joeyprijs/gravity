@@ -11,7 +11,8 @@
     "stats": {
       "maxHp":      { "label": "Health (HP)",       "description": "+2 HP per point" },
       "ac":         { "label": "Armor Class (AC)",  "description": "+1 AC per point" },
-      "perception": { "label": "Perception",        "description": "+1 Perception per point" }
+      "perception": { "label": "Perception",        "description": "+1 Perception per point" },
+      "charisma":   { "label": "Charisma",          "description": "+1 Charisma per point" }
     }
   },
   "system": {
@@ -21,7 +22,8 @@
     "dataError":  "Error loading game data."
   },
   "stats": {
-    "level":      "Lvl {value}",
+    "level":      "Level: {value} ({xp}/{needed} XP)",
+    "charisma":   "Cha: {value}",
     "hp":         "HP: {current}/{max}",
     "ap":         "AP: {current}/{max}",
     "ac":         "AC: {value}",
@@ -41,6 +43,7 @@
     "museumDone":          "Done Managing",
     "museumTake":          "Take",
     "museumDisplay":       "Display",
+    "skillsHeading":       "Skills",
     "tabInventory":        "Inventory",
     "tabQuests":           "Quests",
     "tabMap":              "Map",
@@ -68,10 +71,10 @@
     "rightHandButton":  "Right hand"
   },
   "loot": {
-    "receivedItem": "You received {name}!",
-    "foundGold":    "Found {amount} Gold.",
-    "foundItem":    "Found {name}.",
-    "xpGained":     "+{amount} XP"
+    "receivedItem":   "You received {name}!",
+    "foundGold":      "Found {amount} Gold.",
+    "foundItem":      "Found {name}.",
+    "xpGained":       "+{amount} XP"
   },
   "actions": {
     "rested":                "You rested and recovered HP.",
@@ -82,6 +85,7 @@
     "museumRoomEmpty":       "The room is currently devoid of trophies.",
     "museumDisplayedWithin": "Displayed within the room: {names}.",
     "lookAround":            "Look Around",
+    "lookAroundBadge":       "Skill: Perception",
     "lookAroundEmpty":       "You look around carefully. Nothing catches your eye.",
     "lookAroundFound":       "You search the area ({roll}, 1d20 + {mod} Perception) — your keen eye spots something!",
     "lookAroundFail":        "You search the area ({roll}, 1d20 + {mod} Perception) — nothing reveals itself, yet you sense there's something you're missing."
@@ -117,6 +121,7 @@
     "victory":              "You defeated {names}!",
     "gameOverTitle":        "Game Over",
     "gameOverBody":         "Your adventure ends here.",
+    "avoided":              "They regard you peacefully.",
     "loadLastSave":         "Load Last Save",
     "restartGame":          "Restart Game"
   },
@@ -132,6 +137,9 @@
     "sellButton":         "Sell {name} (x{count})",
     "sellPrice":          "+{amount} Gold",
     "sold":               "Sold {name} for {price} Gold.",
+    "socialCheckBadge":   "DC {dc}, Skill: Charisma",
+    "socialSuccess":      "({roll}, 1d20 + {mod} Cha) — {name} takes note of your charisma.",
+    "socialFail":         "({roll}, 1d20 + {mod} Cha) — {name} remains guarded.",
     "neverMind":          "Never mind.",
     "buyGroup":           "Buy",
     "sellGroup":          "Sell",
@@ -139,9 +147,9 @@
     "leave":              "Leave"
   },
   "quest": {
-    "started":     "{name}: {description}",
-    "completed":   "Quest complete: {name}!",
-    "earnedXP":    "Earned {amount} XP.",
-    "earnedGold":  "Earned {amount} Gold."
+    "started":         "{name}: {description}",
+    "completed":       "Quest complete: {name}!",
+    "earnedXP":        "Earned {amount} XP.",
+    "earnedGold":      "Earned {amount} Gold."
   }
 }

@@ -19,16 +19,14 @@
     <header class="game__header" id="player-header">
       <div class="game__stats" id="player-basic-stats">
         <span class="stat-item stat-item--name" id="stat-name"></span>
+        <span class="stat-item" id="stat-level">Lvl: 1</span>
         <span class="stat-item" id="stat-hp">HP: 10/10</span>
         <span class="stat-item" id="stat-ac">AC: 10</span>
         <span class="stat-item" id="stat-ap">AP: 3/3</span>
         <span class="stat-item" id="stat-initiative">Init: 0</span>
         <span class="stat-item" id="stat-perception">Perc: 0</span>
+        <span class="stat-item" id="stat-charisma">Cha: 1</span>
         <span class="stat-item" id="stat-gold">Gold: 0</span>
-        <span class="stat-item" id="stat-level">Lvl 1</span>
-        <div class="stat-item__xp-wrapper">
-          <div class="stat-item__xp-bar" id="xp-bar" style="width: 0%;"></div>
-        </div>
       </div>
       <div class="game__controls controls">
         <button class="button" id="btn-save">Save</button>
@@ -57,10 +55,11 @@
       </main>
 
       <div class="game__scene-options" id="scene-options-panel">
-        <div class="scene__location" id="scene-location-reminder"></div>
         <div class="scene__options" id="scene-options">
+          <div class="scene__location" id="scene-location-reminder"></div>
           <!-- Action buttons injected here -->
         </div>
+        <div class="scene__options scene__options--skills" id="scene-options-skills" hidden></div>
       </div>
 
       <div class="fullmap-overlay" id="fullmap-overlay" hidden>

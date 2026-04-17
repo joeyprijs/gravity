@@ -11,6 +11,7 @@ export class NarrativeLog {
     this.el = document.getElementById(EL.SCENE_NARRATIVE);
     this.currentSceneEl = null;
     this.isGameStart = true;
+    this._scrollRaf = undefined;
 
     // Flush scene--new from log entries before each option-btn action fires.
     // Capture phase ensures the flush runs before the button's onclick handler.
@@ -28,7 +29,7 @@ export class NarrativeLog {
     if (modifier) classes.push(modifier);
     const scene = createElement('div', classes);
     this.el.appendChild(scene);
-    this.el.scrollTop = this.el.scrollHeight;
+    this.scrollToBottom();
     this.currentSceneEl = scene;
     return scene;
   }
@@ -50,7 +51,7 @@ export class NarrativeLog {
     const p = createElement('p', [CSS.SCENE_LOG, `${CSS.SCENE_LOG}--${variant}`, CSS.SCENE_NEW]);
     p.innerText = `[${type}] ${message}`;
     this.currentSceneEl.appendChild(p);
-    this.el.scrollTop = this.el.scrollHeight;
+    this.scrollToBottom();
     if (persist) gameState.appendLog({ type, message, variant });
   }
 
@@ -70,15 +71,14 @@ export class NarrativeLog {
         this.currentSceneEl.appendChild(p);
       }
     });
-    this.el.scrollTop = this.el.scrollHeight;
+    this.scrollToBottom();
     return lastDesc;
   }
 
   scrollToBottom() {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        this.el.scrollTop = this.el.scrollHeight;
-      });
+    cancelAnimationFrame(this._scrollRaf);
+    this._scrollRaf = requestAnimationFrame(() => {
+      this.el.scrollTop = this.el.scrollHeight;
     });
   }
 }

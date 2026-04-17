@@ -324,28 +324,13 @@ body {
   font-weight: 700;
 }
 
-.stat-item__xp-wrapper {
-  width: calc(var(--spacing) * 18.75);
-  height: calc(var(--spacing) * 1.25);
-  background: var(--layer-shadow);
-  overflow: hidden;
-  position: relative;
-  border: 1px solid var(--panel-border);
-}
-
-.stat-item__xp-bar {
-  height: 100%;
-  background: var(--xp-color);
-  transition: width 0.3s ease;
-  box-shadow: 0 0 10px var(--xp-color);
-}
 
 /* ==========================================================================
  HEADER: GAME CONTROLS
  ========================================================================== */
 
 .game__controls {
-  gap: calc(var(--spacing) * 2);
+  gap: calc(var(--spacing) * 1);
   margin-left: auto;
 
   button {
@@ -363,6 +348,7 @@ body {
   margin-bottom: calc(var(--spacing) * 2.5);
   border-bottom: 1px solid var(--panel-border);
   padding-bottom: calc(var(--spacing) * 2.5);
+  gap: var(--spacing);
   flex: 0 0 auto;
 }
 
@@ -379,6 +365,7 @@ body {
 .tabs__content {
   display: none;
   flex-grow: 1;
+  padding-bottom: 10vh;
 }
 
 .tabs__content--active {
@@ -453,11 +440,18 @@ body {
  ========================================================================== */
 
 .scene__narrative {
-  padding-bottom: 10vh;
+  padding-bottom: 20vh;
   margin-bottom: calc(var(--spacing) * 2.5);
 }
 
 .scene__location {
+  padding-bottom: calc(var(--spacing) * 2);
+  border-bottom: 1px solid var(--panel-border);
+  margin-bottom: calc(var(--spacing) * 2);
+}
+
+.scene__skills-heading {
+  margin-top: calc(var(--spacing) * 2);
   padding-bottom: calc(var(--spacing) * 2);
   border-bottom: 1px solid var(--panel-border);
   margin-bottom: calc(var(--spacing) * 2);
@@ -497,19 +491,21 @@ body {
 .scene__options {
   display: flex;
   flex-direction: column;
-  flex-grow: 1;
   overflow-y: auto;
   min-height: 0;
 }
 
+.scene__options + .scene__options {
+  margin-top: calc(var(--spacing) * 2);
+}
+
 .scene__options:not(:has(.options-group)) {
-  gap: calc(var(--spacing) * 2);
+  gap: calc(var(--spacing) * 1);
 }
 
-.scene__options--combat:has(.options-group),
-.scene__options--merchant:has(.options-group) {
+.scene__options--skills {
+  flex-grow: 0;
 }
-
 
 /* .options-group: labelled section of related buttons */
 .options-group {

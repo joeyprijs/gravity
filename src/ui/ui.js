@@ -94,15 +94,14 @@ export class UIManager {
 
     if (!hint || hint === 'stats') {
       document.getElementById(EL.STAT_NAME).innerText = player.name || '';
-      document.getElementById(EL.STAT_LEVEL).innerText = t('stats.level', { value: player.level });
+      document.getElementById(EL.STAT_LEVEL).innerText = t('stats.level', { value: player.level, xp: player.xp, needed: player.level * XP_PER_LEVEL });
+      document.getElementById(EL.STAT_CHARISMA).innerText = t('stats.charisma', { value: player.charisma });
       document.getElementById(EL.STAT_HP).innerText = t('stats.hp', { current: player.hp, max: player.maxHp });
       document.getElementById(EL.STAT_AP).innerText = t('stats.ap', { current: player.ap, max: player.maxAp });
       document.getElementById(EL.STAT_AC).innerText = t('stats.ac', { value: player.ac });
       document.getElementById(EL.STAT_INITIATIVE).innerText = t('stats.initiative', { value: player.initiative });
       document.getElementById(EL.STAT_PERCEPTION).innerText = t('stats.perception', { value: player.perception || 0 });
       document.getElementById(EL.STAT_GOLD).innerText = t('stats.gold', { value: player.gold });
-      const xpPerc = (player.xp / (player.level * XP_PER_LEVEL)) * 100;
-      document.getElementById(EL.XP_BAR).style.width = `${xpPerc}%`;
     }
 
     if (!hint || hint === 'inventory') {

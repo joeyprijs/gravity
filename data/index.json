@@ -1,8 +1,8 @@
 {
   "worldMapSize": { "width": 3000, "height": 2000 },
   "regions": {
-    "dungeon": { "name": "The Dungeon", "order": 1 },
-    "player_home": { "name": "Player Home", "order": 2 }
+    "dungeon": { "name": "The Dungeon" },
+    "player_home": { "name": "Player Home" }
   },
   "items": {
     "unarmed_strike": "data/items/unarmed_strike.json",
