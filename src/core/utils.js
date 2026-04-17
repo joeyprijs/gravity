@@ -59,10 +59,9 @@ export function buildSceneDescription(title, body = null) {
 
 /**
  * Builds an option button:
- *   button.option-btn > span[text] + optional span.option-btn__badge[--cost|--sell]
+ *   button.option-btn > span[text] + optional span.option-btn__badge
  *
- * Pass reqText to show a requirement/cost badge on the right.
- * Pass isSell=true for the sell variant (green badge instead of muted).
+ * Pass reqText to show a badge on the right (AP cost, price, skill DC, etc.).
  * Returns the button element — caller sets .onclick and .disabled.
  */
 

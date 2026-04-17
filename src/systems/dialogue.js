@@ -67,9 +67,11 @@ export class DialogueSystem {
       }
     }
 
+    const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
     const container = document.getElementById(EL.SCENE_OPTIONS);
     const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
     clearElement(container);
+    panel.querySelectorAll(`.${CSS.SCENE_OPTIONS_SECTION}`).forEach(el => el.remove());
     if (reminder) {
       reminder.innerText = this.engine.t('ui.locationDialogue', { name: this.currentNPC.name });
       container.appendChild(reminder);
@@ -164,9 +166,11 @@ export class DialogueSystem {
       buildSceneDescription(this.currentNPC.name, `[${this.currentNPC.name}] ${displayString}`)
     );
 
+    const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
     const container = document.getElementById(EL.SCENE_OPTIONS);
     const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
     clearElement(container);
+    panel.querySelectorAll(`.${CSS.SCENE_OPTIONS_SECTION}`).forEach(el => el.remove());
     if (reminder) {
       reminder.innerText = this.engine.t('ui.locationDialogue', { name: this.currentNPC.name });
       container.appendChild(reminder);
