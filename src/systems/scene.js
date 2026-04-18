@@ -172,7 +172,7 @@ export class SceneRenderer {
           const giveItem = (resolved) => {
             if (resolved.item === 'gold') {
               gameState.modifyPlayerStat('gold', resolved.amount ?? 1);
-              this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundGold', { amount: resolved.amount }), 'loot');
+              this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundGold', { amount: resolved.amount ?? 1 }), 'loot');
             } else {
               gameState.addToInventory(resolved.item, resolved.amount || 1);
               this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundItem', { name: this.engine.data.items[resolved.item]?.name || resolved.item }), 'loot');
