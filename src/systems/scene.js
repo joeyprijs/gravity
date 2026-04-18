@@ -171,7 +171,7 @@ export class SceneRenderer {
           this.engine.log(LOG.SYSTEM, this.engine.t(anyFound ? 'actions.lookAroundFound' : 'actions.lookAroundFail', { roll: hitRoll, mod }), anyFound ? 'loot' : 'system');
           const giveItem = (resolved) => {
             if (resolved.item === 'gold') {
-              gameState.modifyPlayerStat('gold', resolved.amount);
+              gameState.modifyPlayerStat('gold', resolved.amount ?? 1);
               this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundGold', { amount: resolved.amount }), 'loot');
             } else {
               gameState.addToInventory(resolved.item, resolved.amount || 1);
@@ -180,8 +180,8 @@ export class SceneRenderer {
           };
           newlyFound.forEach(l => {
             if (l.table) {
-              const count = l.count ?? 1;
-              for (let i = 0; i < count; i++) {
+              const rolls = l.rolls ?? 1;
+              for (let i = 0; i < rolls; i++) {
                 const resolved = this._rollTable(l.table);
                 if (resolved) giveItem(resolved);
               }
