@@ -54,7 +54,10 @@
   "skills": [
     {
       "text": "Look Around",
-      "perceptionCheck": true
+      "perceptionCheck": true,
+      "items": [
+        { "table": "basic_loot", "dc": 12, "increment": 2 }
+      ]
     },
     {
       "text": "Easy. I mean no harm. Let's not do this.",

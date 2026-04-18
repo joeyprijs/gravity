@@ -9,12 +9,16 @@
     "unarmed_strike": "data/items/unarmed_strike.json",
     "enemy_claw": "data/items/enemy_claw.json",
     "rusty_sword": "data/items/rusty_sword.json",
+    "simple_dagger": "data/items/simple_dagger.json",
     "healing_potion": "data/items/healing_potion.json",
     "leather_armor": "data/items/leather_armor.json",
     "cellar_key": "data/items/cellar_key.json",
     "flames": "data/items/flames.json",
     "home_rune": "data/items/home_rune.json",
     "wayfinder_charm": "data/items/wayfinder_charm.json"
+  },
+  "tables": {
+    "basic_loot": "data/tables/basic_loot.json"
   },
   "npcs": {
     "goblin_guard": "data/npcs/goblin_guard.json",

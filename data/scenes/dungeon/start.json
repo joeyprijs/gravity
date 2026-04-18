@@ -39,7 +39,8 @@
       "text": "Look Around",
       "perceptionCheck": true,
       "items": [
-        { "item": "cellar_key", "amount": 1, "dc": 10, "increment": 1 }
+        { "item": "cellar_key", "amount": 1, "dc": 10, "increment": 1 },
+        { "table": "basic_loot",              "dc": 14, "increment": 2 }
       ]
     }
   ]

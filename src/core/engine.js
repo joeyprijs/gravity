@@ -19,7 +19,7 @@ class RPGEngine {
   constructor() {
     // Populated by loadData(). Kept as an empty shell here so subsystems
     // constructed below can safely reference this.engine.data without null checks.
-    this.data = { items: {}, npcs: {}, scenes: {}, missions: {}, regions: {}, worldMapSize: DEFAULT_WORLD_MAP_SIZE, locale: {} };
+    this.data = { items: {}, npcs: {}, scenes: {}, missions: {}, tables: {}, regions: {}, worldMapSize: DEFAULT_WORLD_MAP_SIZE, locale: {} };
 
     this._actionRegistry = new Map();
     this._descriptionHooks = new Map();
@@ -82,15 +82,16 @@ class RPGEngine {
         return results;
       };
 
-      const [items, npcs, scenes, missions, flags] = await Promise.all([
+      const [items, npcs, scenes, missions, tables, flags] = await Promise.all([
         loadCategory(manifest.items),
         loadCategory(manifest.npcs),
         loadCategory(manifest.scenes),
         loadCategory(manifest.missions),
+        manifest.tables ? loadCategory(manifest.tables) : Promise.resolve({}),
         manifest.flags ? fetch(manifest.flags).then(r => r.json()).catch(() => ({})) : Promise.resolve({})
       ]);
 
-      this.data = { items, npcs, scenes, missions, regions: manifest.regions || {}, worldMapSize: manifest.worldMapSize || DEFAULT_WORLD_MAP_SIZE, locale: this.data.locale };
+      this.data = { items, npcs, scenes, missions, tables, regions: manifest.regions || {}, worldMapSize: manifest.worldMapSize || DEFAULT_WORLD_MAP_SIZE, locale: this.data.locale };
 
       gameState.registerMissions(missions);
       gameState.registerSceneFlags(flags);
@@ -130,10 +131,21 @@ class RPGEngine {
     const { items, npcs, scenes } = this.data;
     const warn = (msg) => console.warn(`[Gravity] ${msg}`);
 
+    for (const [tableId, table] of Object.entries(this.data.tables || {})) {
+      for (const entry of (table.entries || [])) {
+        if (entry.item && entry.item !== 'gold' && !items[entry.item])
+          warn(`Table "${tableId}": entry references unknown item "${entry.item}"`);
+      }
+    }
+
     for (const [sceneId, scene] of Object.entries(scenes)) {
       for (const skill of (scene.skills || [])) {
         if (skill.condition)
           this._validateCondition(skill.condition, `Scene "${sceneId}": skill "${skill.text}"`, items, warn);
+        for (const item of (skill.items || [])) {
+          if (item.table && !this.data.tables[item.table])
+            warn(`Scene "${sceneId}": skill "${skill.text}" references unknown table "${item.table}"`);
+        }
       }
       for (const opt of (scene.options || [])) {
         if (opt.destination && !scenes[opt.destination])

@@ -1,0 +1,11 @@
+{
+  "name": "Simple Dagger",
+  "type": "Weapon",
+  "description": "A plain iron dagger. Nothing fancy, but sharp enough.",
+  "value": 8,
+  "actionPoints": 1,
+  "bonusHitChance": 1,
+  "attributes": {
+    "damageRoll": "1d4+1"
+  }
+}
