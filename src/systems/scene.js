@@ -169,15 +169,24 @@ export class SceneRenderer {
           });
           const anyFound = newlyFound.length > 0;
           this.engine.log(LOG.SYSTEM, this.engine.t(anyFound ? 'actions.lookAroundFound' : 'actions.lookAroundFail', { roll: hitRoll, mod }), anyFound ? 'loot' : 'system');
-          newlyFound.forEach(l => {
-            const resolved = l.table ? this._rollTable(l.table) : l;
-            if (!resolved) return;
+          const giveItem = (resolved) => {
             if (resolved.item === 'gold') {
               gameState.modifyPlayerStat('gold', resolved.amount);
               this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundGold', { amount: resolved.amount }), 'loot');
             } else {
               gameState.addToInventory(resolved.item, resolved.amount || 1);
               this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundItem', { name: this.engine.data.items[resolved.item]?.name || resolved.item }), 'loot');
+            }
+          };
+          newlyFound.forEach(l => {
+            if (l.table) {
+              const count = l.count ?? 1;
+              for (let i = 0; i < count; i++) {
+                const resolved = this._rollTable(l.table);
+                if (resolved) giveItem(resolved);
+              }
+            } else {
+              giveItem(l);
             }
           });
           gameState.setFlag(lookAroundKey, state);
@@ -263,13 +272,7 @@ export class SceneRenderer {
   _rollTable(tableId) {
     const table = this.engine.data.tables[tableId];
     if (!table?.entries?.length) return null;
-    const total = table.entries.reduce((sum, e) => sum + (e.weight ?? 1), 0);
-    let rand = Math.random() * total;
-    for (const entry of table.entries) {
-      rand -= entry.weight ?? 1;
-      if (rand <= 0) return entry;
-    }
-    return table.entries[table.entries.length - 1];
+    return table.entries[Math.floor(Math.random() * table.entries.length)];
   }
 
   // Returns the description string to display for a scene.
