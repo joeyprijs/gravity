@@ -169,24 +169,30 @@ export class SceneRenderer {
           });
           const anyFound = newlyFound.length > 0;
           this.engine.log(LOG.SYSTEM, this.engine.t(anyFound ? 'actions.lookAroundFound' : 'actions.lookAroundFail', { roll: hitRoll, mod }), anyFound ? 'loot' : 'system');
-          const giveItem = (resolved) => {
-            if (resolved.item === 'gold') {
-              gameState.modifyPlayerStat('gold', resolved.amount ?? 1);
-              this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundGold', { amount: resolved.amount ?? 1 }), 'loot');
-            } else {
-              gameState.addToInventory(resolved.item, resolved.amount || 1);
-              this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundItem', { name: this.engine.data.items[resolved.item]?.name || resolved.item }), 'loot');
-            }
-          };
+          const drops = [];
           newlyFound.forEach(l => {
             if (l.table) {
-              const rolls = l.itemDrops ?? 1;
-              for (let i = 0; i < rolls; i++) {
+              for (let i = 0; i < (l.itemDrops ?? 1); i++) {
                 const resolved = this._rollTable(l.table);
-                if (resolved) giveItem(resolved);
+                if (resolved) drops.push(resolved);
               }
             } else {
-              giveItem(l);
+              drops.push(l);
+            }
+          });
+          const aggregated = new Map();
+          drops.forEach(d => {
+            const existing = aggregated.get(d.item);
+            if (existing) existing.amount += (d.amount ?? 1);
+            else aggregated.set(d.item, { item: d.item, amount: d.amount ?? 1 });
+          });
+          aggregated.forEach(d => {
+            if (d.item === 'gold') {
+              gameState.modifyPlayerStat('gold', d.amount);
+              this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundGold', { amount: d.amount }), 'loot');
+            } else {
+              gameState.addToInventory(d.item, d.amount);
+              this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundItem', { name: this.engine.data.items[d.item]?.name || d.item }), 'loot');
             }
           });
           gameState.setFlag(lookAroundKey, state);
