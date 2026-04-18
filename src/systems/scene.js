@@ -180,7 +180,7 @@ export class SceneRenderer {
           };
           newlyFound.forEach(l => {
             if (l.table) {
-              const rolls = l.rolls ?? 1;
+              const rolls = l.itemDrops ?? 1;
               for (let i = 0; i < rolls; i++) {
                 const resolved = this._rollTable(l.table);
                 if (resolved) giveItem(resolved);
