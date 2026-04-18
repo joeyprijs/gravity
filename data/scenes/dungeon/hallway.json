@@ -56,7 +56,7 @@
       "text": "Look Around",
       "perceptionCheck": true,
       "items": [
-        { "table": "basic_loot", "dc": 12, "increment": 2 }
+        { "table": "basic_loot", "dc": 12, "increment": 2, "itemDrops": 2 }
       ]
     },
     {
