@@ -81,14 +81,14 @@ export class DialogueSystem {
     clearElement(skillsContainer);
     skillsContainer.setAttribute('hidden', '');
 
-    const charismaStateKey = `charisma_dc_${this.currentNPCId}`;
+    const charismaStateKey = `skill_dc_charisma_${this.currentNPCId}`;
     const npcCharismaState = gameState.getFlag(charismaStateKey) || {};
     const skillResponses = [];
 
     (node.responses || []).forEach((res, i) => {
       if (!evaluateCondition(res.condition ?? null, gameState)) return;
 
-      const needsCheck = !!res.charismaCheck && res.dc > 0;
+      const needsCheck = !!res.skillCheck && res.dc > 0;
       const resKey = `${nodeId}_${i}`;
       const dc = needsCheck ? (npcCharismaState[resKey] || res.dc) : 0;
 

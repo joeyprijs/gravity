@@ -15,9 +15,10 @@ export class CharCreationScreen {
   // onComplete: called when the player confirms character creation.
   // The "Load Save" button triggers the shared #file-upload input; its change
   // event is handled by UIManager which reveals the game and applies the save.
-  constructor(onComplete, t) {
+  constructor(onComplete, t, names = []) {
     this.onComplete = onComplete;
     this.t = t;
+    this.names = names;
     this.overlay = document.getElementById(EL.CHAR_CREATION);
     // Track how many points have been spent on each stat
     this.spent = Object.fromEntries(CHAR_CREATION.stats.map(s => [s.id, 0]));
@@ -54,6 +55,9 @@ export class CharCreationScreen {
     nameInput.maxLength = 32;
     nameInput.autocomplete = 'off';
     nameInput.addEventListener('input', () => this._updateConfirmBtn());
+    if (this.names.length) {
+      nameInput.value = this.names[Math.floor(Math.random() * this.names.length)];
+    }
     nameSection.appendChild(nameLabel);
     nameSection.appendChild(nameInput);
     panel.appendChild(nameSection);
@@ -143,8 +147,8 @@ export class CharCreationScreen {
     this.confirmBtn = document.createElement('button');
     this.confirmBtn.className = `${CSS.BTN} ${CSS.CC_CONFIRM_BTN}`;
     this.confirmBtn.textContent = this.t('charCreation.confirmBtn');
-    this.confirmBtn.disabled = true;
     this.confirmBtn.onclick = () => this._confirm();
+    this._updateConfirmBtn();
     actions.appendChild(this.confirmBtn);
 
     // Load save button — lets returning players skip char creation

@@ -42,26 +42,41 @@
       "condition": {
         "or": [
           { "flag": "defeated_goblin_guard", "value": true },
-          { "flag": "goblins_pacified", "value": true }
+          { "flag": "goblins_pacified", "value": true },
+          { "flag": "goblins_snuck_past", "value": true }
         ]
       }
     },
     {
-      "text": "Retreat to the cellar",
-      "destination": "dungeon_start"
+      "text": "Retreat to the corridor",
+      "destination": "dungeon_corridor"
     }
   ],
   "skills": [
     {
       "text": "Look Around",
-      "perceptionCheck": true,
+      "skillCheck": "perception",
       "items": [
         { "table": "basic_loot", "dc": 12, "increment": 2, "itemDrops": 2 }
       ]
     },
     {
+      "text": "Slip past the goblins undetected.",
+      "skillCheck": "sneak",
+      "dc": 14,
+      "increment": 2,
+      "setFlag": { "flag": "goblins_snuck_past", "value": true },
+      "destination": "dungeon_chamber",
+      "condition": {
+        "and": [
+          { "flag": "defeated_goblin_guard", "value": false },
+          { "flag": "goblins_pacified", "value": false }
+        ]
+      }
+    },
+    {
       "text": "Easy. I mean no harm. Let's not do this.",
-      "charismaCheck": true,
+      "skillCheck": "charisma",
       "dc": 18,
       "increment": 2,
       "npcName": "Goblin Guard",

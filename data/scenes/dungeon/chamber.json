@@ -35,7 +35,7 @@
   "skills": [
     {
       "text": "Look Around",
-      "perceptionCheck": true,
+      "skillCheck": "perception",
       "items": [
         { "table": "basic_loot", "dc": 14, "increment": 2, "itemDrops": 2 }
       ]

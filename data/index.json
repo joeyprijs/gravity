@@ -18,10 +18,12 @@
     "wayfinder_charm": "data/items/wayfinder_charm.json"
   },
   "tables": {
-    "basic_loot": "data/tables/basic_loot.json"
+    "basic_loot": "data/tables/basic_loot.json",
+    "names": "data/tables/names.json"
   },
   "npcs": {
     "lost_wanderer": "data/npcs/lost_wanderer.json",
+    "wandering_scribe": "data/npcs/wandering_scribe.json",
     "goblin_guard": "data/npcs/goblin_guard.json",
     "goblin_grunt": "data/npcs/goblin_grunt.json",
     "mysterious_stranger": "data/npcs/mysterious_stranger.json",

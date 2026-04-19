@@ -55,6 +55,7 @@ export const PLAYER_DEFAULTS = {
   initiative: 0,
   perception: 0,
   charisma: 0,
+  sneak: 0,
   gold: 0,
   inventory: [
     { item: "rusty_sword", amount: 1 },
@@ -88,6 +89,7 @@ export const CHAR_CREATION = {
     { id: 'ac',         bonusPerPoint: 1, min: 0 },
     { id: 'perception', bonusPerPoint: 1, min: 0 },
     { id: 'charisma',   bonusPerPoint: 1, min: 0 },
+    { id: 'sneak',      bonusPerPoint: 1, min: 0 },
   ]
 };
 

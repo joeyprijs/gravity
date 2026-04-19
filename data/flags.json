@@ -3,6 +3,7 @@
   "wanderer_defeated":         false,
   "defeated_goblin_guard":     false,
   "goblins_pacified":          false,
+  "goblins_snuck_past":        false,
   "chamber_rested":            false,
   "stranger_reputation_known": false,
   "received_brons_charm":      false

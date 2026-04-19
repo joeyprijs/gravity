@@ -65,19 +65,20 @@ export class SceneRenderer {
     }
 
     // Reset skill-check DCs on re-entry. Found items persist; escalated DCs reset.
-    if ((scene.skills || []).some(opt => opt.charismaCheck)) {
-      gameState.setFlag(`scene_charisma_${sceneId}`, {});
-    }
-    const perceptionOpt = (scene.skills || []).find(opt => opt.perceptionCheck && opt.items?.length);
-    if (perceptionOpt) {
-      const state = gameState.getFlag(`look_around_${sceneId}`);
-      if (state?.dcs) {
-        gameState.setFlag(`look_around_${sceneId}`, {
-          dcs:   perceptionOpt.items.map(item => item.dc ?? 10),
-          found: state.found,
-        });
+    (scene.skills || []).forEach(opt => {
+      if (!opt.skillCheck) return;
+      const key = `skill_dc_${opt.skillCheck}_${sceneId}`;
+      if (opt.items?.length) {
+        // Item-discovery: reset escalated DCs but preserve which items were already found.
+        const state = gameState.getFlag(key);
+        if (state?.dcs) {
+          gameState.setFlag(key, { dcs: opt.items.map(item => item.dc ?? 10), found: state.found });
+        }
+      } else if (opt.dc) {
+        // Pass/fail: reset DC escalation so a re-entered scene starts fresh.
+        gameState.setFlag(key, {});
       }
-    }
+    });
 
     this.renderOptions(scene);
 
@@ -136,43 +137,29 @@ export class SceneRenderer {
 
     const skillBtns = [];
     const sceneId = gameState.getCurrentSceneId();
-    const charismaKey = `scene_charisma_${sceneId}`;
-    const lookAroundKey = `look_around_${sceneId}`;
 
     (scene.skills || []).forEach((opt, i) => {
+      if (!opt.skillCheck) return;
       const cond = opt.condition ?? fromRequiredState(opt.requiredState);
       if (!evaluateCondition(cond, gameState)) return;
 
-      if (opt.perceptionCheck) {
-        const items = opt.items || [];
+      const skillKey = `skill_dc_${opt.skillCheck}_${sceneId}`;
+      const items = opt.items || [];
 
-        if (!items.length) {
-          // Flavor-only: show once, then disappear
-          if (gameState.getFlag(lookAroundKey)) return;
-          const btn = buildOptionButton(opt.text, this.engine.t('actions.lookAroundBadge'));
-          btn.onclick = () => {
-            this.engine.isGameStart = false;
-            gameState.setFlag(lookAroundKey, true);
-            this.engine.log(LOG.PLAYER, opt.text, 'choice');
-            this.engine.log(LOG.SYSTEM, this.engine.t('actions.lookAroundEmpty'));
-            this.renderOptions(scene);
-          };
-          skillBtns.push(btn);
-          return;
-        }
-
-        let state = gameState.getFlag(lookAroundKey);
+      if (items.length) {
+        // Item-discovery mode: roll against per-item DCs, track what's been found.
+        let state = gameState.getFlag(skillKey);
         if (!state || !state.dcs) {
           state = { dcs: items.map(l => l.dc ?? 10), found: items.map(() => false) };
         }
         if (state.found.every(f => f)) return;
 
         const lowestDc = Math.min(...state.dcs.filter((_, idx) => !state.found[idx]));
-        const btn = buildOptionButton(opt.text, this.engine.t('actions.lookAroundBadgeDc', { dc: lowestDc }));
+        const btn = buildOptionButton(opt.text, this.engine.t(`actions.skillBadge.${opt.skillCheck}`, { dc: lowestDc }));
         btn.onclick = () => {
           this.engine.isGameStart = false;
           this.engine.log(LOG.PLAYER, opt.text, 'choice');
-          const mod = gameState.getPlayer().perception || 0;
+          const mod = gameState.getPlayer()[opt.skillCheck] || 0;
           const hitRoll = roll(1, MAX_D20_ROLL) + mod;
           const newlyFound = [];
           items.forEach((l, idx) => {
@@ -212,34 +199,47 @@ export class SceneRenderer {
               this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundItem', { name: this.engine.data.items[d.item]?.name || d.item }), 'loot');
             }
           });
-          gameState.setFlag(lookAroundKey, state);
+          gameState.setFlag(skillKey, state);
+          this.renderOptions(scene);
+        };
+        skillBtns.push(btn);
+
+      } else if (!opt.dc) {
+        // Flavor-only: no roll, show once then disappear.
+        if (gameState.getFlag(skillKey)) return;
+        const btn = buildOptionButton(opt.text, this.engine.t('actions.lookAroundBadge'));
+        btn.onclick = () => {
+          this.engine.isGameStart = false;
+          gameState.setFlag(skillKey, true);
+          this.engine.log(LOG.PLAYER, opt.text, 'choice');
+          this.engine.log(LOG.SYSTEM, this.engine.t('actions.lookAroundEmpty'));
           this.renderOptions(scene);
         };
         skillBtns.push(btn);
 
       } else {
-        // charismaCheck
-        const charismaState = gameState.getFlag(charismaKey) || {};
-        const dc = charismaState[i] ?? opt.dc;
-        const btn = buildOptionButton(opt.text, this.engine.t('dialogue.socialCheckBadge', { dc }));
+        // Pass/fail mode: single roll against escalating DC (charisma, sneak, etc.).
+        const skillState = gameState.getFlag(skillKey) || {};
+        const dc = skillState[i] ?? opt.dc;
+        const btn = buildOptionButton(opt.text, this.engine.t(`actions.skillBadge.${opt.skillCheck}`, { dc }));
         btn.onclick = () => {
           this.engine.isGameStart = false;
           this.engine.log(LOG.PLAYER, opt.text, 'choice');
-          const mod = gameState.getPlayer().charisma || 0;
+          const mod = gameState.getPlayer()[opt.skillCheck] || 0;
           const rolled = roll(1, MAX_D20_ROLL) + mod;
           const success = rolled >= dc;
           this.engine.log(
             LOG.SYSTEM,
-            this.engine.t(success ? 'dialogue.socialSuccess' : 'dialogue.socialFail',
-              { roll: rolled, mod, dc, name: opt.npcName || '...' }),
+            this.engine.t(success ? 'actions.skillSuccess' : 'actions.skillFail',
+              { roll: rolled, mod, dc, skill: opt.skillCheck }),
             success ? 'loot' : 'system'
           );
           if (success) {
             if (opt.setFlag) gameState.setFlag(opt.setFlag.flag, opt.setFlag.value);
             this.engine.renderScene(opt.destination || gameState.getCurrentSceneId());
           } else {
-            charismaState[i] = dc + (opt.increment ?? 1);
-            gameState.setFlag(charismaKey, charismaState);
+            skillState[i] = dc + (opt.increment ?? 1);
+            gameState.setFlag(skillKey, skillState);
             this.renderOptions(scene);
           }
         };

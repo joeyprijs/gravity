@@ -20,7 +20,6 @@
   "autoAttack": {
     "enemies": ["lost_wanderer"],
     "setFlag": { "flag": "wanderer_defeated", "value": true },
-    "destination": "dungeon_hallway",
     "condition": { "flag": "wanderer_defeated", "value": false }
   },
   "options": [

@@ -8,7 +8,7 @@
     "height": 100,
     "background": "rgba(30, 60, 40, 0.9)"
   },
-  "description": "You enter the home and find yourself inside a cozy living room with a roaring hearth. Multiple wooden doors are visible leading deeper into the house. A gruff dwarf is sitting in a worn armchair, completely fixated on a strange scrying box emitting colorful moving pictures.",
+  "description": "You enter the home and find yourself inside a cozy living room with a roaring hearth. Multiple wooden doors are visible leading deeper into the house. A gruff dwarf is sitting in a worn armchair, completely fixated on a strange scrying box emitting colorful moving pictures. In the corner, a young woman scribbles in a leather journal, glancing up as you enter.",
   "options": [
     {
       "text": "Enter Kitchen",
@@ -26,6 +26,11 @@
       "text": "Talk to Bron",
       "action": "dialogue",
       "actionDetails": { "npc": "dwarf_innkeeper" }
+    },
+    {
+      "text": "Talk to Sera",
+      "action": "dialogue",
+      "actionDetails": { "npc": "wandering_scribe" }
     },
     {
       "text": "Leave House",

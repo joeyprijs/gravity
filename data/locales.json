@@ -12,7 +12,8 @@
       "maxHp":      { "label": "Health (HP)",       "description": "+2 HP per point" },
       "ac":         { "label": "Armor Class (AC)",  "description": "+1 AC per point" },
       "perception": { "label": "Perception",        "description": "+1 Perception per point" },
-      "charisma":   { "label": "Charisma",          "description": "+1 Charisma per point" }
+      "charisma":   { "label": "Charisma",          "description": "+1 Charisma per point" },
+      "sneak":      { "label": "Sneak",             "description": "+1 Sneak per point" }
     }
   },
   "system": {
@@ -86,7 +87,13 @@
     "museumDisplayedWithin": "Displayed within the room: {names}.",
     "lookAround":            "Look Around",
     "lookAroundBadge":       "Skill: Perception",
-    "lookAroundBadgeDc":     "DC {dc}, Skill: Perception",
+    "skillBadge": {
+      "perception": "DC {dc}, Skill: Perception",
+      "charisma":   "DC {dc}, Skill: Charisma",
+      "sneak":      "DC {dc}, Skill: Sneak"
+    },
+    "skillSuccess": "({roll}, 1d20 + {mod} {skill}) — success!",
+    "skillFail":    "({roll}, 1d20 + {mod} {skill}) — failure.",
     "lookAroundEmpty":       "You look around carefully. Nothing catches your eye.",
     "lookAroundFound":       "You search the area ({roll}, 1d20 + {mod} Perception) — your keen eye spots something!",
     "lookAroundFoundMore":   "You search the area ({roll}, 1d20 + {mod} Perception) — your keen eye spots something, though you sense the area still holds more.",

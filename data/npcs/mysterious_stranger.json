@@ -19,7 +19,7 @@
         },
         {
           "text": "Trader, huh? How about a discount?!",
-          "charismaCheck": true,
+          "skillCheck": "charisma",
           "dc": 10,
           "increment": 3,
           "condition": { "not": { "flag": "stranger_reputation_known", "value": true } },
