@@ -1,0 +1,19 @@
+{
+  "name": "Lost Wanderer",
+  "description": "A hollow-eyed figure in tattered rags, wild with fear. Before you can speak, they lunge.",
+  "disposition": "Hostile",
+  "attributes": {
+    "healthPoints": 8,
+    "armorClass": 8,
+    "actionPoints": 2,
+    "initiative": 3,
+    "xpReward": 35
+  },
+  "equipment": {
+    "Right Hand": "simple_dagger"
+  },
+  "droppedLoot": [
+    { "item": "gold", "amount": 5 },
+    { "item": "healing_potion", "amount": 1 }
+  ]
+}

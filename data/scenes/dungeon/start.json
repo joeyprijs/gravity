@@ -2,7 +2,7 @@
   "title": "The Awakening",
   "region": "dungeon",
   "mapDefinitions": {
-    "top": 220,
+    "top": 245,
     "left": 175,
     "width": 50,
     "height": 60,
@@ -21,7 +21,7 @@
   "options": [
     {
       "text": "Unlock the door",
-      "destination": "dungeon_hallway",
+      "destination": "dungeon_corridor",
       "requirements": {
         "item": "cellar_key"
       },
@@ -30,7 +30,7 @@
     },
     {
       "text": "Go through the open door",
-      "destination": "dungeon_hallway",
+      "destination": "dungeon_corridor",
       "condition": { "flag": "door_unlocked", "value": true }
     }
   ],

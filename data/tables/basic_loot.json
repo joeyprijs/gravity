@@ -1,8 +1,8 @@
 {
   "entries": [
-    { "item": "gold",           "amount": 3  },
-    { "item": "gold",           "amount": 50 },
-    { "item": "healing_potion"               },
-    { "item": "simple_dagger"                }
+    { "item": "gold", "amount": 3  },
+    { "item": "gold", "amount": 50 },
+    { "item": "healing_potion" },
+    { "item": "simple_dagger" }
   ]
 }

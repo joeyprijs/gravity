@@ -353,6 +353,10 @@ body {
   font-weight: 400;
   padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2);
   margin-bottom: calc(var(--spacing) * 1.25);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
 }
 
 .item-list__item--completed {

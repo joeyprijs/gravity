@@ -21,6 +21,7 @@
     "basic_loot": "data/tables/basic_loot.json"
   },
   "npcs": {
+    "lost_wanderer": "data/npcs/lost_wanderer.json",
     "goblin_guard": "data/npcs/goblin_guard.json",
     "goblin_grunt": "data/npcs/goblin_grunt.json",
     "mysterious_stranger": "data/npcs/mysterious_stranger.json",
@@ -28,6 +29,7 @@
   },
   "scenes": {
     "dungeon_start": "data/scenes/dungeon/start.json",
+    "dungeon_corridor": "data/scenes/dungeon/corridor.json",
     "dungeon_hallway": "data/scenes/dungeon/hallway.json",
     "dungeon_chamber": "data/scenes/dungeon/chamber.json",
     "home_door": "data/scenes/player_home/door.json",

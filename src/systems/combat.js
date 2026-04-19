@@ -103,11 +103,11 @@ export class CombatSystem {
       }), 'damage');
 
       if (targetEnemy.attributes.healthPoints <= 0) {
-        this.engine.log(LOG.COMBAT, this.engine.t('combat.enemyDefeated', { name: targetEnemy.name }), 'loot');
         if (this.enemies.every(e => e.attributes.healthPoints <= 0)) {
           this.endCombat(true);
           return;
         }
+        this.engine.log(LOG.COMBAT, this.engine.t('combat.enemyDefeated', { name: targetEnemy.name }), 'loot');
       }
     } else {
       this.engine.log(LOG.PLAYER, this.engine.t('combat.attackMiss', {
@@ -267,8 +267,13 @@ export class CombatSystem {
       desc.querySelector('h2').classList.add(CSS.SCENE_TITLE_GAME_OVER);
       this.engine.currentSceneEl.appendChild(desc);
 
+      const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
       const container = document.getElementById(EL.SCENE_OPTIONS);
+      const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
       const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
+      panel.querySelectorAll(`.${CSS.SCENE_OPTIONS_SECTION}`).forEach(el => el.remove());
+      clearElement(skillsContainer);
+      skillsContainer.setAttribute('hidden', '');
       clearElement(container);
       if (reminder) container.appendChild(reminder);
       const loadBtn = buildOptionButton(this.engine.t('combat.loadLastSave'));
@@ -278,6 +283,8 @@ export class CombatSystem {
       const restartBtn = buildOptionButton(this.engine.t('combat.restartGame'));
       restartBtn.onclick = () => document.getElementById(EL.BTN_RESTART).click();
       container.appendChild(restartBtn);
+
+      document.querySelectorAll(`.${CSS.BTN_ITEM}`).forEach(btn => { btn.disabled = true; });
     }
   }
 }

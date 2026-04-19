@@ -80,6 +80,18 @@ export class SceneRenderer {
     }
 
     this.renderOptions(scene);
+
+    if (scene.autoAttack) {
+      const cond = scene.autoAttack.condition ?? null;
+      if (!cond || evaluateCondition(cond, gameState)) {
+        this.engine.combatSystem.startCombat(
+          scene.autoAttack.enemies,
+          { setFlag: scene.autoAttack.setFlag, destination: scene.autoAttack.destination }
+        );
+        return;
+      }
+    }
+
     this.engine.scrollNarrativeToBottom();
   }
 
@@ -155,7 +167,8 @@ export class SceneRenderer {
         }
         if (state.found.every(f => f)) return;
 
-        const btn = buildOptionButton(opt.text, this.engine.t('actions.lookAroundBadge'));
+        const lowestDc = Math.min(...state.dcs.filter((_, idx) => !state.found[idx]));
+        const btn = buildOptionButton(opt.text, this.engine.t('actions.lookAroundBadgeDc', { dc: lowestDc }));
         btn.onclick = () => {
           this.engine.isGameStart = false;
           this.engine.log(LOG.PLAYER, opt.text, 'choice');
@@ -168,7 +181,11 @@ export class SceneRenderer {
             else { state.dcs[idx] += l.increment ?? 1; }
           });
           const anyFound = newlyFound.length > 0;
-          this.engine.log(LOG.SYSTEM, this.engine.t(anyFound ? 'actions.lookAroundFound' : 'actions.lookAroundFail', { roll: hitRoll, mod }), anyFound ? 'loot' : 'system');
+          const stillMore = anyFound && !state.found.every(f => f);
+          const msgKey = anyFound
+            ? (stillMore ? 'actions.lookAroundFoundMore' : 'actions.lookAroundFound')
+            : 'actions.lookAroundFail';
+          this.engine.log(LOG.SYSTEM, this.engine.t(msgKey, { roll: hitRoll, mod }), anyFound ? 'loot' : 'system');
           const drops = [];
           newlyFound.forEach(l => {
             if (l.table) {

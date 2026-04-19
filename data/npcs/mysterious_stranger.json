@@ -18,7 +18,7 @@
           "action": "trade"
         },
         {
-          "text": "How about a discount?",
+          "text": "Trader, huh? How about a discount?!",
           "charismaCheck": true,
           "dc": 10,
           "increment": 3,

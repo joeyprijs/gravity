@@ -1,0 +1,37 @@
+{
+  "title": "Narrow Corridor",
+  "region": "dungeon",
+  "mapDefinitions": {
+    "top": 220,
+    "left": 175,
+    "width": 50,
+    "height": 25,
+    "background": "rgba(30, 30, 50, 0.9)"
+  },
+  "description": [
+    {
+      "text": "The corridor is quiet now, lit by a single guttering torch. The path north leads to the stone hallway.",
+      "condition": { "flag": "wanderer_defeated", "value": true }
+    },
+    {
+      "text": "A narrow corridor stretches north toward the stone hallway. A disheveled figure lurches out of the shadows — hollow-eyed, wild with fear. They raise a blade before you can say a word."
+    }
+  ],
+  "autoAttack": {
+    "enemies": ["lost_wanderer"],
+    "setFlag": { "flag": "wanderer_defeated", "value": true },
+    "destination": "dungeon_hallway",
+    "condition": { "flag": "wanderer_defeated", "value": false }
+  },
+  "options": [
+    {
+      "text": "Proceed to the Stone Hallway",
+      "destination": "dungeon_hallway",
+      "condition": { "flag": "wanderer_defeated", "value": true }
+    },
+    {
+      "text": "Retreat to the cellar",
+      "destination": "dungeon_start"
+    }
+  ]
+}

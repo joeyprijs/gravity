@@ -86,8 +86,10 @@
     "museumDisplayedWithin": "Displayed within the room: {names}.",
     "lookAround":            "Look Around",
     "lookAroundBadge":       "Skill: Perception",
+    "lookAroundBadgeDc":     "DC {dc}, Skill: Perception",
     "lookAroundEmpty":       "You look around carefully. Nothing catches your eye.",
     "lookAroundFound":       "You search the area ({roll}, 1d20 + {mod} Perception) — your keen eye spots something!",
+    "lookAroundFoundMore":   "You search the area ({roll}, 1d20 + {mod} Perception) — your keen eye spots something, though you sense the area still holds more.",
     "lookAroundFail":        "You search the area ({roll}, 1d20 + {mod} Perception) — nothing reveals itself, yet you sense there's something you're missing."
   },
   "player": {
@@ -138,8 +140,8 @@
     "sellPrice":          "+{amount} Gold",
     "sold":               "Sold {name} for {price} Gold.",
     "socialCheckBadge":   "DC {dc}, Skill: Charisma",
-    "socialSuccess":      "({roll}, 1d20 + {mod} Cha) — {name} takes note of your charisma.",
-    "socialFail":         "({roll}, 1d20 + {mod} Cha) — {name} remains guarded.",
+    "socialSuccess":      "({roll}, 1d20 + {mod} Charisma) — {name} takes note of your charisma.",
+    "socialFail":         "({roll}, 1d20 + {mod} Charisma) — {name} remains guarded.",
     "neverMind":          "Never mind.",
     "buyGroup":           "Buy",
     "sellGroup":          "Sell",
