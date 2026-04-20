@@ -18,15 +18,54 @@
   <div class="game" id="game-container" hidden>
     <header class="game__header" id="player-header">
       <div class="game__stats" id="player-basic-stats">
-        <span class="stat-item stat-item--name" id="stat-name"></span>
-        <span class="stat-item" id="stat-level">Lvl: 1</span>
-        <span class="stat-item" id="stat-hp">HP: 10/10</span>
-        <span class="stat-item" id="stat-ac">AC: 10</span>
-        <span class="stat-item" id="stat-ap">AP: 3/3</span>
-        <span class="stat-item" id="stat-initiative">Init: 0</span>
-        <span class="stat-item" id="stat-perception">Perc: 0</span>
-        <span class="stat-item" id="stat-charisma">Cha: 1</span>
-        <span class="stat-item" id="stat-gold">Gold: 0</span>
+        <div class="stat-group">
+          <span class="stat-item stat-item--name" id="stat-name"></span>
+        </div>
+
+        <div class="stat-group">
+          <div class="stat-item">
+            <span class="stat-item__label">LVL</span>
+            <span class="stat-item__value" id="stat-level"></span>
+          </div>
+          <div class="stat-item stat-item--hp">
+            <span class="stat-item__label">HP</span>
+            <span class="stat-item__value" id="stat-hp"></span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-item__label">AC</span>
+            <span class="stat-item__value" id="stat-ac"></span>
+          </div>
+          <div class="stat-item stat-item--ap">
+            <span class="stat-item__label">AP</span>
+            <span class="stat-item__value" id="stat-ap"></span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-item__label">INIT</span>
+            <span class="stat-item__value" id="stat-initiative"></span>
+          </div>
+        </div>
+
+        <div class="stat-group">
+          <div class="stat-item">
+            <span class="stat-item__label">PERC</span>
+            <span class="stat-item__value" id="stat-perception"></span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-item__label">CHA</span>
+            <span class="stat-item__value" id="stat-charisma"></span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-item__label">SNK</span>
+            <span class="stat-item__value" id="stat-sneak"></span>
+          </div>
+        </div>
+
+        <div class="stat-group">
+          <div class="stat-item stat-item--gold">
+            <span class="stat-item__label">GOLD</span>
+            <span class="stat-item__value" id="stat-gold"></span>
+          </div>
+        </div>
       </div>
       <div class="game__controls controls">
         <button class="button" id="btn-save">Save</button>

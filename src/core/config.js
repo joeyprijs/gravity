@@ -204,6 +204,7 @@ export const EL = {
   STAT_AC:                 'stat-ac',
   STAT_INITIATIVE:         'stat-initiative',
   STAT_PERCEPTION:         'stat-perception',
+  STAT_SNEAK:              'stat-sneak',
   STAT_GOLD:               'stat-gold',
 
   // Character creation overlay

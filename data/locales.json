@@ -23,14 +23,15 @@
     "dataError":  "Error loading game data."
   },
   "stats": {
-    "level":      "Level: {value} ({xp}/{needed} XP)",
-    "charisma":   "Cha: {value}",
-    "hp":         "HP: {current}/{max}",
-    "ap":         "AP: {current}/{max}",
-    "ac":         "AC: {value}",
-    "initiative":  "Init: {value}",
-    "perception":  "Perc: {value}",
-    "gold":        "Gold: {value}"
+    "level":      "{value}",
+    "charisma":   "{value}",
+    "hp":         "{current}/{max}",
+    "ap":         "{current}/{max}",
+    "ac":         "{value}",
+    "initiative": "{value}",
+    "perception": "{value}",
+    "sneak":      "{value}",
+    "gold":       "{value}"
   },
   "ui": {
     "inventoryEmpty":      "Inventory is empty.",

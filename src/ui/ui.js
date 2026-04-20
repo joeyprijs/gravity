@@ -101,6 +101,7 @@ export class UIManager {
       document.getElementById(EL.STAT_AC).innerText = t('stats.ac', { value: player.ac });
       document.getElementById(EL.STAT_INITIATIVE).innerText = t('stats.initiative', { value: player.initiative });
       document.getElementById(EL.STAT_PERCEPTION).innerText = t('stats.perception', { value: player.perception || 0 });
+      document.getElementById(EL.STAT_SNEAK).innerText = t('stats.sneak', { value: player.sneak || 0 });
       document.getElementById(EL.STAT_GOLD).innerText = t('stats.gold', { value: player.gold });
     }
 

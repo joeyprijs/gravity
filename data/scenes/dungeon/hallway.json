@@ -42,8 +42,7 @@
       "condition": {
         "or": [
           { "flag": "defeated_goblin_guard", "value": true },
-          { "flag": "goblins_pacified", "value": true },
-          { "flag": "goblins_snuck_past", "value": true }
+          { "flag": "goblins_pacified", "value": true }
         ]
       }
     },
