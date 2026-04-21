@@ -12,12 +12,16 @@
   "options": [
     {
       "text": "Go Inside",
-      "destination": "home_living_room"
+      "actions": [
+        { "type": "navigate", "destination": "home_living_room" }
+      ]
     },
     {
       "text": "Return via Teleport",
-      "action": "return_to_world",
-      "requirements": { "item": "home_rune" }
+      "requirements": { "item": "home_rune" },
+      "actions": [
+        { "type": "return_to_world" }
+      ]
     }
   ]
 }

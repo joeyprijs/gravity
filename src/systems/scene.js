@@ -1,6 +1,6 @@
 import { gameState } from "../core/state.js";
 import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "../core/utils.js";
-import { EL, CSS, LOG, MAX_D20_ROLL, ACTIONS } from "../core/config.js";
+import { EL, CSS, LOG, MAX_D20_ROLL } from "../core/config.js";
 import { evaluateCondition, fromRequiredState } from "./condition.js";
 import { roll } from "./dice.js";
 
@@ -159,7 +159,7 @@ export class SceneRenderer {
         btn.onclick = () => {
           this.engine.isGameStart = false;
           this.engine.log(LOG.PLAYER, opt.text, 'choice');
-          const mod = gameState.getPlayer()[opt.skillCheck] || 0;
+          const mod = gameState.getPlayer().attributes[opt.skillCheck] || 0;
           const hitRoll = roll(1, MAX_D20_ROLL) + mod;
           const newlyFound = [];
           items.forEach((l, idx) => {
@@ -225,7 +225,7 @@ export class SceneRenderer {
         btn.onclick = () => {
           this.engine.isGameStart = false;
           this.engine.log(LOG.PLAYER, opt.text, 'choice');
-          const mod = gameState.getPlayer()[opt.skillCheck] || 0;
+          const mod = gameState.getPlayer().attributes[opt.skillCheck] || 0;
           const rolled = roll(1, MAX_D20_ROLL) + mod;
           const success = rolled >= dc;
           this.engine.log(
@@ -274,20 +274,23 @@ export class SceneRenderer {
     this.engine.isGameStart = false;
     this.engine.log(LOG.PLAYER, opt.text, 'choice');
 
-    // Combat's setFlag is a victory flag — handled in endCombat, not here.
-    if (opt.setFlag && opt.action !== ACTIONS.COMBAT) {
-      gameState.setFlag(opt.setFlag.flag, opt.setFlag.value);
+    for (const action of (opt.actions || [])) {
+      const handler = this.engine.getActionHandler(action.type);
+      if (handler) {
+        handler(action, this.engine);
+      } else {
+        console.warn(`[Gravity] handleOption: no handler for action type "${action.type}"`);
+      }
     }
 
-    if (opt.action) {
-      const handler = this.engine.getActionHandler(opt.action);
-      if (handler) {
-        handler(opt, this.engine);
-      } else {
-        console.warn(`[Gravity] handleOption: no handler for action "${opt.action}"`);
-      }
-    } else if (opt.destination) {
-      this.engine.renderScene(opt.destination);
+    // If no navigation-triggering action ran, refresh option buttons so any
+    // flag changes take effect immediately (e.g. hiding a one-time option).
+    const navigated = (opt.actions || []).some(a =>
+      ['navigate', 'combat', 'dialogue', 'return_to_world', 'manage_chest'].includes(a.type)
+    );
+    if (!navigated) {
+      const scene = this.engine.data.scenes[gameState.getCurrentSceneId()];
+      if (scene) this.renderOptions(scene);
     }
   }
 

@@ -12,11 +12,15 @@
   "options": [
     {
       "text": "Sleep (Full Rest)",
-      "action": "full_rest"
+      "actions": [
+        { "type": "full_rest" }
+      ]
     },
     {
       "text": "Return to Living Room",
-      "destination": "home_living_room"
+      "actions": [
+        { "type": "navigate", "destination": "home_living_room" }
+      ]
     }
   ]
 }

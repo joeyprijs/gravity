@@ -15,7 +15,7 @@
       "responses": [
         {
           "text": "Let's trade.",
-          "action": "trade"
+          "actions": [{ "type": "trade" }]
         },
         {
           "text": "Trader, huh? How about a discount?!",
@@ -23,15 +23,15 @@
           "dc": 10,
           "increment": 3,
           "condition": { "not": { "flag": "stranger_reputation_known", "value": true } },
-          "giveItem": "healing_potion",
-          "setFlag": { "flag": "stranger_reputation_known", "value": true },
-          "action": "trade",
-          "tradeDiscount": 10,
-          "persistDiscount": true
+          "actions": [
+            { "type": "loot", "item": "healing_potion" },
+            { "type": "setFlag", "flag": "stranger_reputation_known", "value": true },
+            { "type": "trade", "tradeDiscount": 10, "persistDiscount": true }
+          ]
         },
         {
           "text": "I must be going.",
-          "action": "leave"
+          "actions": [{ "type": "leave" }]
         }
       ]
     }

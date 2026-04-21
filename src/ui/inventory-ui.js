@@ -1,5 +1,5 @@
 import { createElement } from "../core/utils.js";
-import { ITEM_TYPE_ORDER, EL, CSS } from "../core/config.js";
+import { EL, CSS } from "../core/config.js";
 
 // InventoryUI renders the inventory and equipment sidebar panels.
 export class InventoryUI {
@@ -12,10 +12,11 @@ export class InventoryUI {
     panel.innerHTML = '';
 
     const equippedEntries = Object.entries(player.equipment).filter(([, id]) => id);
+    const typeOrder = this.engine.data.rules?.itemTypeOrder || {};
     const sortedInv = [...player.inventory].sort((a, b) => {
       const typeA = this.engine.data.items[a.item]?.type || 'Flavour';
       const typeB = this.engine.data.items[b.item]?.type || 'Flavour';
-      return (ITEM_TYPE_ORDER[typeA] || 99) - (ITEM_TYPE_ORDER[typeB] || 99);
+      return (typeOrder[typeA] || 99) - (typeOrder[typeB] || 99);
     });
 
     if (equippedEntries.length === 0 && sortedInv.length === 0) {

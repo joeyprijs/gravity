@@ -25,12 +25,16 @@
   "options": [
     {
       "text": "Proceed to the Stone Hallway",
-      "destination": "dungeon_hallway",
-      "condition": { "flag": "wanderer_defeated", "value": true }
+      "condition": { "flag": "wanderer_defeated", "value": true },
+      "actions": [
+        { "type": "navigate", "destination": "dungeon_hallway" }
+      ]
     },
     {
       "text": "Retreat to the cellar",
-      "destination": "dungeon_start"
+      "actions": [
+        { "type": "navigate", "destination": "dungeon_start" }
+      ]
     }
   ]
 }

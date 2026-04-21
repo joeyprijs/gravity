@@ -1,98 +1,6 @@
 // Maximum value of a d20 roll — used for hit chance and initiative rolls
 export const MAX_D20_ROLL = 20;
 
-// Fraction of an item's value that merchants pay when the player sells — 0.5 = 50%
-export const MERCHANT_SELL_RATIO = 0.5;
-
-// Action points spent to unequip an item (applies during combat only)
-export const UNEQUIP_AP_COST = 1;
-
-// HP restored when using a rest point (scene action: "rest")
-export const REST_HEAL_AMOUNT = 10;
-
-// HP restored when eating a snack in the kitchen (scene action: "eat_snack")
-export const SNACK_HEAL_AMOUNT = 2;
-
-// Max HP gained per level-up
-export const LEVEL_UP_HP_BONUS = 5;
-
-// XP required to level up, multiplied by the player's current level
-// e.g. level 1 needs 100 XP, level 2 needs 200 XP, etc.
-export const XP_PER_LEVEL = 100;
-
-// The scene ID loaded when starting a new game
-export const STARTING_SCENE = "dungeon_start";
-
-// Fallback scene used by the "return_to_world" action when no returnSceneId
-// has been stored in state (e.g. player hasn't used a teleport item yet)
-export const RETURN_WORLD_FALLBACK_SCENE = "dungeon_start";
-
-// Item IDs for fallback weapons used in combat when no weapon is equipped.
-// These items are defined in data/items/ like all other items.
-export const UNARMED_STRIKE_ID = 'unarmed_strike';
-export const ENEMY_CLAW_ID    = 'enemy_claw';
-
-// Determines the display order of items in the inventory panel — lower number = higher up
-export const ITEM_TYPE_ORDER = {
-  "Weapon": 1,
-  "Spell": 2,
-  "Armor": 3,
-  "Consumable": 4,
-  "Flavour": 5
-};
-
-// Starting stats and inventory for a new player.
-// 'name' starts empty — the character creation screen prompts the player for it.
-export const PLAYER_DEFAULTS = {
-  name: "",
-  level: 1,
-  xp: 0,
-  hp: 10,
-  maxHp: 10,
-  ap: 3,
-  maxAp: 3,
-  ac: 10,
-  initiative: 0,
-  perception: 0,
-  charisma: 0,
-  sneak: 0,
-  gold: 0,
-  inventory: [
-    { item: "rusty_sword", amount: 1 },
-    { item: "flames", amount: 1 },
-    { item: "healing_potion", amount: 2 }
-  ],
-  equipment: {
-    "Head": null,
-    "Amulet": null,
-    "Torso": null,
-    "Left Hand": null,
-    "Right Hand": null,
-    "Legs": null
-  }
-};
-
-// Character creation configuration.
-// pointBudget: total stat points the player can spend at character creation.
-// stats: each entry defines one allocatable stat.
-//   id:            key in PLAYER_DEFAULTS to modify
-//   bonusPerPoint: how much each spent point adds to the stat
-//   min:           minimum points allocatable (always 0)
-// Label and description text for each stat live in data/locales.json
-// under charCreation.stats.<id>.label / .description.
-// To add more stats (e.g. initiative, base AC, backgrounds) later, just extend
-// this array — the character creation screen renders it dynamically.
-export const CHAR_CREATION = {
-  pointBudget: 3,
-  stats: [
-    { id: 'maxHp',      bonusPerPoint: 2, min: 0 },
-    { id: 'ac',         bonusPerPoint: 1, min: 0 },
-    { id: 'perception', bonusPerPoint: 1, min: 0 },
-    { id: 'charisma',   bonusPerPoint: 1, min: 0 },
-    { id: 'sneak',      bonusPerPoint: 1, min: 0 },
-  ]
-};
-
 // Canonical names for all built-in scene option actions.
 // Used by actions.js at registration time and by _validateData() for dev warnings.
 export const ACTIONS = {
@@ -104,6 +12,9 @@ export const ACTIONS = {
   FULL_REST:       'full_rest',
   EAT_SNACK:       'eat_snack',
   MANAGE_CHEST:    'manage_chest',
+  NAVIGATE:        'navigate',
+  SET_FLAG:        'setFlag',
+  LOG:             'log',
 };
 
 // CSS class names referenced from JavaScript. Centralised here so that renaming
@@ -194,18 +105,6 @@ export const EL = {
   BTN_LOAD:                'btn-load',
   BTN_RESTART:             'btn-restart',
   FILE_UPLOAD:             'file-upload',
-
-  // Stat display
-  STAT_NAME:               'stat-name',
-  STAT_LEVEL:              'stat-level',
-  STAT_CHARISMA:           'stat-charisma',
-  STAT_HP:                 'stat-hp',
-  STAT_AP:                 'stat-ap',
-  STAT_AC:                 'stat-ac',
-  STAT_INITIATIVE:         'stat-initiative',
-  STAT_PERCEPTION:         'stat-perception',
-  STAT_SNEAK:              'stat-sneak',
-  STAT_GOLD:               'stat-gold',
 
   // Character creation overlay
   CHAR_CREATION:           'char-creation',

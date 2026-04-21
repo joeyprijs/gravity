@@ -13,11 +13,15 @@
   "options": [
     {
       "text": "Manage Museum Chest",
-      "action": "manage_chest"
+      "actions": [
+        { "type": "manage_chest" }
+      ]
     },
     {
       "text": "Return to Living Room",
-      "destination": "home_living_room"
+      "actions": [
+        { "type": "navigate", "destination": "home_living_room" }
+      ]
     }
   ]
 }

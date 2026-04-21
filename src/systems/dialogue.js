@@ -1,6 +1,6 @@
 import { gameState } from "../core/state.js";
 import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "../core/utils.js";
-import { MERCHANT_SELL_RATIO, MAX_D20_ROLL, EL, CSS, LOG } from "../core/config.js";
+import { MAX_D20_ROLL, EL, CSS, LOG } from "../core/config.js";
 import { evaluateCondition } from "./condition.js";
 import { roll } from "./dice.js";
 
@@ -38,6 +38,46 @@ export class DialogueSystem {
     }
   }
 
+  // Runs an actions[] pipeline through the global action registry first, then
+  // handles dialogue-specific action types (goToConversation, trade, leave,
+  // makeFriendly, questTrigger) that only make sense within a conversation.
+  _runActions(actions) {
+    for (const action of (actions || [])) {
+      const globalHandler = this.engine.getActionHandler(action.type);
+      if (globalHandler) {
+        globalHandler(action, this.engine);
+        continue;
+      }
+      switch (action.type) {
+        case 'goToConversation':
+          this.renderDialogue(action.node);
+          break;
+        case 'trade': {
+          const pct = typeof action.tradeDiscount === 'string'
+            ? parseFloat(action.tradeDiscount)
+            : (action.tradeDiscount || 0);
+          this.activeDiscount = pct / 100;
+          if (action.persistDiscount && pct > 0) {
+            gameState.setFlag(`trade_discount_${this.currentNPCId}`, pct);
+          }
+          this.renderStore();
+          break;
+        }
+        case 'leave':
+          this.engine.renderScene(gameState.getCurrentSceneId());
+          break;
+        case 'makeFriendly':
+          gameState.setFlag(`friendly_${this.currentNPCId}`, true);
+          break;
+        case 'questTrigger':
+          this.engine.handleQuestTrigger(action);
+          break;
+        default:
+          console.warn(`[Gravity] dialogue: unknown action type "${action.type}"`);
+      }
+    }
+  }
+
   renderDialogue(nodeId = "start", overrideText = null, optionsOnly = false) {
     const node = this.currentNPC.conversations[nodeId];
     if (!node) { console.warn(`[Gravity] renderDialogue: unknown node "${nodeId}" on NPC "${this.currentNPC.name}"`); return; }
@@ -54,17 +94,7 @@ export class DialogueSystem {
         this.engine.log(this.currentNPC.name, displayString);
       }
 
-      if (node.giveItem) {
-        gameState.addToInventory(node.giveItem, node.giveItemAmount || 1);
-        const name = this.engine.data.items[node.giveItem]?.name || node.giveItem;
-        this.engine.log(LOG.SYSTEM, this.engine.t('loot.receivedItem', { name }), 'loot');
-      }
-      if (node.setFlag) {
-        gameState.setFlag(node.setFlag.flag, node.setFlag.value);
-      }
-      if (node.questTrigger) {
-        this.engine.handleQuestTrigger(node.questTrigger);
-      }
+      this._runActions(node.actions || []);
     }
 
     const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
@@ -99,7 +129,7 @@ export class DialogueSystem {
         this.engine.log(LOG.PLAYER, res.text, 'choice');
 
         if (needsCheck) {
-          const mod = gameState.getPlayer().charisma || 0;
+          const mod = gameState.getPlayer().attributes.charisma || 0;
           const rolled = roll(1, MAX_D20_ROLL) + mod;
           const success = rolled >= dc;
           const logKey = success ? 'dialogue.socialSuccess' : 'dialogue.socialFail';
@@ -110,35 +140,9 @@ export class DialogueSystem {
             this.renderDialogue(nodeId, null, true);
             return;
           }
-          if (res.makeFriendly) {
-            gameState.setFlag(`friendly_${this.currentNPCId}`, true);
-          }
         }
 
-        if (res.setFlag) {
-          gameState.setFlag(res.setFlag.flag, res.setFlag.value);
-        }
-        if (res.giveItem) {
-          gameState.addToInventory(res.giveItem, res.giveItemAmount || 1);
-          const name = this.engine.data.items[res.giveItem]?.name || res.giveItem;
-          this.engine.log(LOG.SYSTEM, this.engine.t('loot.receivedItem', { name }), 'loot');
-        }
-        if (res.questTrigger) {
-          this.engine.handleQuestTrigger(res.questTrigger);
-        }
-
-        if (res.goToConversation) {
-          this.renderDialogue(res.goToConversation);
-        } else if (res.action === "trade") {
-          const pct = typeof res.tradeDiscount === 'string' ? parseFloat(res.tradeDiscount) : (res.tradeDiscount || 0);
-          this.activeDiscount = pct / 100;
-          if (res.persistDiscount && pct > 0) {
-            gameState.setFlag(`trade_discount_${this.currentNPCId}`, pct);
-          }
-          this.renderStore();
-        } else if (res.action === "leave") {
-          this.engine.renderScene(gameState.getCurrentSceneId());
-        }
+        this._runActions(res.actions || []);
       };
 
       if (needsCheck) {
@@ -246,10 +250,6 @@ export class DialogueSystem {
     container.appendChild(leaveBtn);
 
     // Buy items
-    // carriedItems entries are either a plain string (unlimited stock) or
-    // { item, amount } (limited stock). amount is decremented in-memory on
-    // purchase; entries at 0 are filtered out so the item disappears from
-    // the store. Stock resets when the game is reloaded (standard behaviour).
     const buyItems = (this.currentNPC.carriedItems || [])
       .map(entry => {
         const id = typeof entry === 'string' ? entry : entry.item;
@@ -268,7 +268,7 @@ export class DialogueSystem {
           this.engine.t('dialogue.buyButton', { name: displayName }),
           this.engine.t('dialogue.buyPrice', { amount: price })
         );
-        if (gameState.getPlayer().gold < price) btn.disabled = true;
+        if (gameState.getPlayer().resources.gold < price) btn.disabled = true;
         btn.onclick = () => {
           if (stock !== null) entry.amount--;
           gameState.modifyPlayerStat('gold', -price);
@@ -283,9 +283,10 @@ export class DialogueSystem {
 
     // Sell items
     const player = gameState.getPlayer();
+    const sellRatio = this.engine.data.rules?.merchantSellRatio ?? 0.5;
     const sellItems = player.inventory.filter(invItem => {
       const item = this.engine.data.items[invItem.item];
-      return item && item.value > 0 && Math.floor(item.value * MERCHANT_SELL_RATIO) > 0;
+      return item && item.value > 0 && Math.floor(item.value * sellRatio) > 0;
     });
 
     if (sellItems.length) {
@@ -293,7 +294,7 @@ export class DialogueSystem {
       sellSection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('dialogue.sellGroup')));
       sellItems.forEach(invItem => {
         const item = this.engine.data.items[invItem.item];
-        const sellValue = Math.floor(item.value * MERCHANT_SELL_RATIO);
+        const sellValue = Math.floor(item.value * sellRatio);
         const btn = buildOptionButton(
           this.engine.t('dialogue.sellButton', { name: item.name, count: invItem.amount }),
           this.engine.t('dialogue.sellPrice', { amount: sellValue })

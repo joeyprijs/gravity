@@ -24,31 +24,33 @@
   "options": [
     {
       "text": "Prepare to fight!",
-      "action": "combat",
-      "actionDetails": {
-        "enemies": ["goblin_guard", "goblin_grunt"]
-      },
-      "setFlag": { "flag": "defeated_goblin_guard", "value": true },
       "condition": {
         "and": [
           { "flag": "defeated_goblin_guard", "value": false },
           { "flag": "goblins_pacified", "value": false }
         ]
-      }
+      },
+      "actions": [
+        { "type": "combat", "enemies": ["goblin_guard", "goblin_grunt"], "setFlag": { "flag": "defeated_goblin_guard", "value": true } }
+      ]
     },
     {
       "text": "Proceed deeper into the dungeon",
-      "destination": "dungeon_chamber",
       "condition": {
         "or": [
           { "flag": "defeated_goblin_guard", "value": true },
           { "flag": "goblins_pacified", "value": true }
         ]
-      }
+      },
+      "actions": [
+        { "type": "navigate", "destination": "dungeon_chamber" }
+      ]
     },
     {
       "text": "Retreat to the corridor",
-      "destination": "dungeon_corridor"
+      "actions": [
+        { "type": "navigate", "destination": "dungeon_corridor" }
+      ]
     }
   ],
   "skills": [

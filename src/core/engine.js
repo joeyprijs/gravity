@@ -5,12 +5,10 @@ import { QuestSystem } from "../systems/quests.js";
 import { NarrativeLog } from "../systems/narrative.js";
 import { UIManager } from "../ui/ui.js";
 import { SceneRenderer } from "../systems/scene.js";
-import { UNEQUIP_AP_COST, DEFAULT_WORLD_MAP_SIZE, MSG, LOG, UNARMED_STRIKE_ID, ENEMY_CLAW_ID } from "./config.js";
+import { DEFAULT_WORLD_MAP_SIZE, LOG } from "./config.js";
 import { registerBuiltinActions } from "../systems/actions.js";
 import { parseDamage } from "../systems/dice.js";
 import { CharCreationScreen } from "../screens/char-creation.js";
-// MSG is still imported for the state.js log filter (MSG.GAME_LOADED).
-// All display strings now come from data/locales.json via this.t().
 
 // RPGEngine is the central orchestrator. It owns all subsystems, loads game
 // data from JSON, and exposes a thin delegate API so subsystems can call each
@@ -19,7 +17,7 @@ class RPGEngine {
   constructor() {
     // Populated by loadData(). Kept as an empty shell here so subsystems
     // constructed below can safely reference this.engine.data without null checks.
-    this.data = { items: {}, npcs: {}, scenes: {}, missions: {}, tables: {}, regions: {}, worldMapSize: DEFAULT_WORLD_MAP_SIZE, locale: {} };
+    this.data = { items: {}, npcs: {}, scenes: {}, missions: {}, tables: {}, regions: {}, worldMapSize: DEFAULT_WORLD_MAP_SIZE, locale: {}, rules: null, flags: {} };
 
     this._actionRegistry = new Map();
     this._descriptionHooks = new Map();
@@ -38,15 +36,32 @@ class RPGEngine {
   async init() {
     this.isGameStart = true;
     registerBuiltinActions(this);
-    await this.loadData();
+    const manifest = await this.loadData();
+
+    // Load plugins before initialising state so they can register migrations.
+    if (manifest?.plugins?.length) {
+      await Promise.all(
+        manifest.plugins.map(url =>
+          import(url)
+            .then(m => m.default?.(this))
+            .catch(e => console.warn(`[Gravity] Plugin failed: ${url}`, e))
+        )
+      );
+    }
+
+    // Initialise state from rules, then register missions and flags on it.
+    gameState.init(this.data.rules);
+    gameState.registerMissions(this.data.missions);
+    gameState.registerSceneFlags(this.data.flags);
+
     this.ui.setup();
     // Every state change triggers a full UI update. Subsystems mutate state
     // and the reactive UI re-renders — no manual refresh calls needed.
-    gameState.subscribe(() => this.ui.update());
+    gameState.subscribe((_state, hint) => this.ui.update(hint));
 
     if (!gameState.getPlayer().name) {
       // New game — show character creation before revealing the main UI.
-      new CharCreationScreen(() => this._startGame(), this.t.bind(this), this.data.tables.names?.entries || []);
+      new CharCreationScreen(() => this._startGame(), this.t.bind(this), this.data.tables.names?.entries || [], this.data.rules);
     } else {
       this._startGame();
     }
@@ -59,6 +74,7 @@ class RPGEngine {
     this.renderScene(gameState.getCurrentSceneId());
   }
 
+  // Returns the manifest object so init() can read manifest.plugins.
   async loadData() {
     // Load locale first — must be available before the try-catch below so
     // error messages can still be translated if game data fails to load.
@@ -82,23 +98,26 @@ class RPGEngine {
         return results;
       };
 
-      const [items, npcs, scenes, missions, tables, flags] = await Promise.all([
+      const [items, npcs, scenes, missions, tables, flags, rules] = await Promise.all([
         loadCategory(manifest.items),
         loadCategory(manifest.npcs),
         loadCategory(manifest.scenes),
         loadCategory(manifest.missions),
         manifest.tables ? loadCategory(manifest.tables) : Promise.resolve({}),
-        manifest.flags ? fetch(manifest.flags).then(r => r.json()).catch(() => ({})) : Promise.resolve({})
+        manifest.flags ? fetch(manifest.flags).then(r => r.json()).catch(() => ({})) : Promise.resolve({}),
+        manifest.rules ? fetch(manifest.rules).then(r => r.json()).catch(() => null) : Promise.resolve(null)
       ]);
 
-      this.data = { items, npcs, scenes, missions, tables, regions: manifest.regions || {}, worldMapSize: manifest.worldMapSize || DEFAULT_WORLD_MAP_SIZE, locale: this.data.locale };
+      this.data = { items, npcs, scenes, missions, tables, regions: manifest.regions || {}, worldMapSize: manifest.worldMapSize || DEFAULT_WORLD_MAP_SIZE, locale: this.data.locale, rules, flags };
 
-      gameState.registerMissions(missions);
-      gameState.registerSceneFlags(flags);
+      // Note: registerMissions and registerSceneFlags are called by init()
+      // after gameState.init(rules) — they must NOT be called here.
       this._validateData();
+      return manifest;
     } catch (e) {
       console.error("Failed to load game data:", e);
       this.log(LOG.SYSTEM, this.t('system.dataError'));
+      return null;
     }
   }
 
@@ -128,7 +147,7 @@ class RPGEngine {
   // Validates cross-references in game data after load and warns about broken links.
   // Developer tooling only — logs to console, no in-game effect.
   _validateData() {
-    const { items, npcs, scenes } = this.data;
+    const { items, npcs, scenes, rules } = this.data;
     const warn = (msg) => console.warn(`[Gravity] ${msg}`);
 
     for (const [tableId, table] of Object.entries(this.data.tables || {})) {
@@ -148,23 +167,23 @@ class RPGEngine {
         }
       }
       for (const opt of (scene.options || [])) {
-        if (opt.destination && !scenes[opt.destination])
-          warn(`Scene "${sceneId}": option "${opt.text}" → unknown destination "${opt.destination}"`);
         if (opt.condition)
           this._validateCondition(opt.condition, `Scene "${sceneId}": option "${opt.text}"`, items, warn);
         if (opt.requirements?.item && !items[opt.requirements.item])
           warn(`Scene "${sceneId}": option "${opt.text}" requires unknown item "${opt.requirements.item}"`);
-        if (opt.action && !this._actionRegistry.has(opt.action))
-          warn(`Scene "${sceneId}": option "${opt.text}" has unknown action "${opt.action}"`);
-        if (opt.action === 'loot' && opt.actionDetails?.item && opt.actionDetails.item !== 'gold' && !items[opt.actionDetails.item])
-          warn(`Scene "${sceneId}": loot option → unknown item "${opt.actionDetails.item}"`);
-        if (opt.action === 'dialogue' && opt.actionDetails?.npc && !npcs[opt.actionDetails.npc])
-          warn(`Scene "${sceneId}": dialogue option → unknown NPC "${opt.actionDetails.npc}"`);
-        if (opt.action === 'combat') {
-          const ids = opt.actionDetails?.enemies || (opt.actionDetails?.enemy ? [opt.actionDetails.enemy] : []);
-          ids.forEach(id => {
-            if (!npcs[id]) warn(`Scene "${sceneId}": combat option → unknown enemy "${id}"`);
-          });
+        for (const action of (opt.actions || [])) {
+          if (!this._actionRegistry.has(action.type))
+            warn(`Scene "${sceneId}": option "${opt.text}" has unknown action type "${action.type}"`);
+          if (action.type === 'navigate' && action.destination && !scenes[action.destination])
+            warn(`Scene "${sceneId}": navigate → unknown destination "${action.destination}"`);
+          if (action.type === 'loot' && action.item && action.item !== 'gold' && !items[action.item])
+            warn(`Scene "${sceneId}": loot → unknown item "${action.item}"`);
+          if (action.type === 'dialogue' && action.npc && !npcs[action.npc])
+            warn(`Scene "${sceneId}": dialogue → unknown NPC "${action.npc}"`);
+          if (action.type === 'combat') {
+            const ids = action.enemies || (action.enemy ? [action.enemy] : []);
+            ids.forEach(id => { if (!npcs[id]) warn(`Scene "${sceneId}": combat → unknown enemy "${id}"`); });
+          }
         }
       }
     }
@@ -180,10 +199,12 @@ class RPGEngine {
         if (itemId && !items[itemId]) warn(`NPC "${npcId}": equipment[${slot}] → unknown item "${itemId}"`);
     }
 
-    if (!items[UNARMED_STRIKE_ID])
-      warn(`Missing required fallback item "${UNARMED_STRIKE_ID}" — add to data/items/ and index.json`);
-    if (!items[ENEMY_CLAW_ID])
-      warn(`Missing required fallback item "${ENEMY_CLAW_ID}" — add to data/items/ and index.json`);
+    const playerFallback = rules?.fallbackWeapons?.player;
+    const enemyFallback  = rules?.fallbackWeapons?.enemy;
+    if (playerFallback && !items[playerFallback])
+      warn(`Missing required fallback item "${playerFallback}" — add to data/items/ and index.json`);
+    if (enemyFallback && !items[enemyFallback])
+      warn(`Missing required fallback item "${enemyFallback}" — add to data/items/ and index.json`);
   }
 
   // --- Item action methods ---
@@ -196,7 +217,7 @@ class RPGEngine {
     if (!itemData) return;
 
     const apCost = itemData.actionPoints || 0;
-    if (this.inCombat && gameState.getPlayer().ap < apCost) {
+    if (this.inCombat && gameState.getPlayer().resources.ap.current < apCost) {
       this.log(LOG.SYSTEM, this.t('player.notEnoughAP', { cost: apCost }));
       return;
     }
@@ -239,7 +260,7 @@ class RPGEngine {
     if (!itemData || !targetSlot) return;
 
     const apCost = itemData.actionPoints || 0;
-    if (this.inCombat && gameState.getPlayer().ap < apCost) {
+    if (this.inCombat && gameState.getPlayer().resources.ap.current < apCost) {
       this.log(LOG.SYSTEM, this.t('player.notEnoughAP', { cost: apCost }));
       return;
     }
@@ -255,8 +276,9 @@ class RPGEngine {
 
   unequipItem(slot) {
     if (this.isGameOver) return;
-    if (this.inCombat && gameState.getPlayer().ap < UNEQUIP_AP_COST) {
-      this.log(LOG.SYSTEM, this.t('player.notEnoughAP', { cost: UNEQUIP_AP_COST }));
+    const unequipCost = this.data.rules?.unequipApCost ?? 1;
+    if (this.inCombat && gameState.getPlayer().resources.ap.current < unequipCost) {
+      this.log(LOG.SYSTEM, this.t('player.notEnoughAP', { cost: unequipCost }));
       return;
     }
     const itemId = gameState.getPlayer().equipment[slot];
@@ -265,7 +287,7 @@ class RPGEngine {
     gameState.equipItem(slot, null);
     if (bonus !== 0) gameState.modifyPlayerStat('ac', -bonus);
     this.log(LOG.PLAYER, this.t('player.unequipped', { name: itemName, slot }));
-    this._spendAP(UNEQUIP_AP_COST);
+    this._spendAP(unequipCost);
   }
 
   // Deducts AP in combat. Returns false (blocking the action) if insufficient.
@@ -274,12 +296,12 @@ class RPGEngine {
   _spendAP(cost) {
     if (!this.inCombat) return true;
     const player = gameState.getPlayer();
-    if (player.ap < cost) {
+    if (player.resources.ap.current < cost) {
       this.log(LOG.SYSTEM, this.t('player.notEnoughAP', { cost }));
       return false;
     }
     gameState.modifyPlayerStat('ap', -cost);
-    this.emit('player:apSpent', { remaining: gameState.getPlayer().ap });
+    this.emit('player:apSpent', { remaining: gameState.getPlayer().resources.ap.current });
     return true;
   }
 
@@ -298,7 +320,11 @@ class RPGEngine {
   set currentSceneEl(v) { this.narrative.currentSceneEl = v; }
 
   openScene(modifier) { return this.narrative.openScene(modifier); }
-  log(type, message, variant, persist) { return this.narrative.log(type, message, variant, persist); }
+  log(type, message, variant, persist) {
+    const localeKey = 'log.' + type;
+    const label = this.t(localeKey) !== localeKey ? this.t(localeKey) : type;
+    return this.narrative.log(label, message, variant, persist);
+  }
   renderScene(sceneId) {
     this.dialogueSystem.storeOpen = false;
     return this.scene.render(sceneId);

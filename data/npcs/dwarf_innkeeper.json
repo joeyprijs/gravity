@@ -5,8 +5,8 @@
     "start": {
       "npcText": "Aye, you look like you've had a rough time. The dungeon'll do that to ya.",
       "responses": [
-        { "text": "Who are you?", "goToConversation": "who_are_you" },
-        { "text": "What do you know about this place?", "goToConversation": "about_place" },
+        { "text": "Who are you?", "actions": [{ "type": "goToConversation", "node": "who_are_you" }] },
+        { "text": "What do you know about this place?", "actions": [{ "type": "goToConversation", "node": "about_place" }] },
         {
           "text": "I made it out of the dungeon.",
           "condition": {
@@ -15,48 +15,50 @@
               { "not": { "flag": "received_brons_charm", "value": true } }
             ]
           },
-          "goToConversation": "survived_dungeon"
+          "actions": [{ "type": "goToConversation", "node": "survived_dungeon" }]
         },
         {
           "text": "Staying out of trouble.",
           "condition": { "flag": "received_brons_charm", "value": true },
-          "goToConversation": "after_charm"
+          "actions": [{ "type": "goToConversation", "node": "after_charm" }]
         },
-        { "text": "Goodbye.", "action": "leave" }
+        { "text": "Goodbye.", "actions": [{ "type": "leave" }] }
       ]
     },
     "who_are_you": {
       "npcText": "Name's Bron. Retired adventurer. Decided sitting by fires beats dying in dungeons.",
       "responses": [
-        { "text": "Sounds wise.", "goToConversation": "start" },
-        { "text": "Goodbye.", "action": "leave" }
+        { "text": "Sounds wise.", "actions": [{ "type": "goToConversation", "node": "start" }] },
+        { "text": "Goodbye.", "actions": [{ "type": "leave" }] }
       ]
     },
     "about_place": {
       "npcText": "This used to be a waystation for adventurers. Now it's just me and my drink.",
       "responses": [
-        { "text": "Thanks for the info.", "goToConversation": "start" },
-        { "text": "Goodbye.", "action": "leave" }
+        { "text": "Thanks for the info.", "actions": [{ "type": "goToConversation", "node": "start" }] },
+        { "text": "Goodbye.", "actions": [{ "type": "leave" }] }
       ]
     },
     "survived_dungeon": {
       "npcText": "You made it out? Ha! Wasn't sure you had it in ya. Most don't come back from that place. Here — take this. Old wayfinder's charm. Kept me alive more times than I care to count.",
-      "giveItem": "wayfinder_charm",
-      "setFlag": { "flag": "received_brons_charm", "value": true },
+      "actions": [
+        { "type": "loot", "item": "wayfinder_charm" },
+        { "type": "setFlag", "flag": "received_brons_charm", "value": true }
+      ],
       "responses": [
-        { "text": "Thank you, Bron.", "goToConversation": "charm_given" }
+        { "text": "Thank you, Bron.", "actions": [{ "type": "goToConversation", "node": "charm_given" }] }
       ]
     },
     "charm_given": {
       "npcText": "Don't mention it. Just don't go dyin' on me now.",
       "responses": [
-        { "text": "I won't. Thanks, Bron.", "action": "leave" }
+        { "text": "I won't. Thanks, Bron.", "actions": [{ "type": "leave" }] }
       ]
     },
     "after_charm": {
       "npcText": "Good. That charm'll keep the worst of it off ya. Trust me.",
       "responses": [
-        { "text": "Cheers, Bron.", "action": "leave" }
+        { "text": "Cheers, Bron.", "actions": [{ "type": "leave" }] }
       ]
     }
   }

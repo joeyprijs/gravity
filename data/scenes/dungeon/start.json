@@ -21,17 +21,19 @@
   "options": [
     {
       "text": "Unlock the door",
-      "destination": "dungeon_corridor",
-      "requirements": {
-        "item": "cellar_key"
-      },
-      "setFlag": { "flag": "door_unlocked", "value": true },
-      "condition": { "flag": "door_unlocked", "value": false }
+      "condition": { "flag": "door_unlocked", "value": false },
+      "requirements": { "item": "cellar_key" },
+      "actions": [
+        { "type": "setFlag", "flag": "door_unlocked", "value": true },
+        { "type": "navigate", "destination": "dungeon_corridor" }
+      ]
     },
     {
       "text": "Go through the open door",
-      "destination": "dungeon_corridor",
-      "condition": { "flag": "door_unlocked", "value": true }
+      "condition": { "flag": "door_unlocked", "value": true },
+      "actions": [
+        { "type": "navigate", "destination": "dungeon_corridor" }
+      ]
     }
   ],
   "skills": [

@@ -156,6 +156,12 @@
     "trade":              "Trade",
     "leave":              "Leave"
   },
+  "log": {
+    "System": "System",
+    "Player": "Player",
+    "Combat": "Combat",
+    "Quest":  "Quest"
+  },
   "quest": {
     "started":         "{name}: {description}",
     "completed":       "Quest complete: {name}!",

@@ -1,6 +1,25 @@
 import { CSS } from "./config.js";
 
 /**
+ * Reads a value from a nested object using a dot-separated path.
+ * e.g. getByPath(player, 'resources.hp.current') → player.resources.hp.current
+ */
+export function getByPath(obj, path) {
+  return path.split('.').reduce((cur, key) => cur?.[key], obj);
+}
+
+/**
+ * Sets a value on a nested object using a dot-separated path.
+ * e.g. setByPath(player, 'resources.hp.max', 15)
+ */
+export function setByPath(obj, path, value) {
+  const parts = path.split('.');
+  let cur = obj;
+  for (let i = 0; i < parts.length - 1; i++) cur = cur[parts[i]];
+  cur[parts[parts.length - 1]] = value;
+}
+
+/**
 * Creates a new DOM element.
 * @param {string} tag - The HTML tag name.
 * @param {string|string[]} [className] - Optional CSS class names.

@@ -1,6 +1,6 @@
 import { gameState } from "../core/state.js";
 import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "../core/utils.js";
-import { MAX_D20_ROLL, UNARMED_STRIKE_ID, ENEMY_CLAW_ID, EL, CSS, LOG } from "../core/config.js";
+import { MAX_D20_ROLL, EL, CSS, LOG } from "../core/config.js";
 import { roll, parseDamage } from "./dice.js";
 
 // CombatSystem manages the full lifecycle of a turn-based combat encounter:
@@ -47,7 +47,7 @@ export class CombatSystem {
 
     // Restore player AP to full at the start of every combat encounter
     const player = gameState.getPlayer();
-    gameState.modifyPlayerStat('ap', player.maxAp - player.ap);
+    gameState.modifyPlayerStat('ap', player.resources.ap.max - player.resources.ap.current);
 
     const names = this.enemies.map(e => e.name).join(' & ');
 
@@ -63,7 +63,7 @@ export class CombatSystem {
 
     // Each enemy rolls initiative separately; enemies who beat the player go before the player,
     // enemies the player beats go after. playerInit is stored for phase filtering each round.
-    this.playerInit = roll(1, MAX_D20_ROLL) + (player.initiative || 0);
+    this.playerInit = roll(1, MAX_D20_ROLL) + (player.attributes.initiative || 0);
     let highestEnemyInit = 0;
     this.enemies.forEach(e => {
       e.initiativeRoll = roll(1, MAX_D20_ROLL) + (e.attributes.initiative || 0);
@@ -117,7 +117,7 @@ export class CombatSystem {
 
     // Let the apSpent handler decide renderCombatUI vs enemyTurn — consistent
     // with how item/equip AP costs are handled during combat.
-    if (this.inCombat) this.engine.emit('player:apSpent', { remaining: player.ap });
+    if (this.inCombat) this.engine.emit('player:apSpent', { remaining: player.resources.ap.current });
   }
 
   // phase='before': enemies who outrolled the player (act before the player each round)
@@ -152,7 +152,7 @@ export class CombatSystem {
         this.engine.log(LOG.COMBAT, summary, 'damage');
       }
 
-      if (player.hp <= 0) {
+      if (player.resources.hp.current <= 0) {
         this.endCombat(false);
         return;
       }
@@ -163,7 +163,7 @@ export class CombatSystem {
       this.renderer.render();
     } else {
       // Low-initiative enemies done — start next round
-      gameState.modifyPlayerStat('ap', player.maxAp - player.ap);
+      gameState.modifyPlayerStat('ap', player.resources.ap.max - player.resources.ap.current);
       const hasBeforeEnemies = this.enemies.some(e => e.attributes.healthPoints > 0 && (e.initiativeRoll || 0) > this.playerInit);
       if (hasBeforeEnemies) {
         this.enemyTurn('before');
@@ -179,7 +179,8 @@ export class CombatSystem {
   _resolveEnemyWeapon(enemy) {
     const equipped = enemy.equipment?.['Right Hand'];
     const item = equipped ? this.engine.data.items[equipped] : null;
-    return item || this.engine.data.items[ENEMY_CLAW_ID] || null;
+    const fallbackId = this.engine.data.rules?.fallbackWeapons?.enemy;
+    return item || (fallbackId ? this.engine.data.items[fallbackId] : null) || null;
   }
 
   // Executes all enemy attacks for one turn and returns a roll summary.
@@ -191,7 +192,7 @@ export class CombatSystem {
     let attackCount = 0, hits = 0, misses = 0, totalDamage = 0;
     const hitRolls = [], missRolls = [], damageRolls = [];
 
-    while (eAP >= eWeapon.actionPoints && player.hp > 0 && enemy.attributes.healthPoints > 0) {
+    while (eAP >= eWeapon.actionPoints && player.resources.hp.current > 0 && enemy.attributes.healthPoints > 0) {
       eAP -= eWeapon.actionPoints;
       attackCount++;
 
@@ -200,7 +201,7 @@ export class CombatSystem {
       const hitRoll = baseRoll + hitModifier;
       const modStr = hitModifier !== 0 ? (hitModifier > 0 ? `+${hitModifier}` : hitModifier) : "";
 
-      if (hitRoll >= player.ac) {
+      if (hitRoll >= player.attributes.ac) {
         hits++;
         hitRolls.push(`${hitRoll} (1d20${modStr})`);
         const dmgResult = parseDamage(eWeapon.attributes.damageRoll);
@@ -211,7 +212,7 @@ export class CombatSystem {
         misses++;
         missRolls.push(`${hitRoll} (1d20${modStr})`);
       }
-      if (player.hp <= 0) break;
+      if (player.resources.hp.current <= 0) break;
     }
 
     return { attackCount, hits, misses, totalDamage, hitRolls, missRolls, damageRolls };
@@ -249,7 +250,7 @@ export class CombatSystem {
 
       // Reset AP after combat
       const player = gameState.getPlayer();
-      gameState.modifyPlayerStat('ap', player.maxAp - player.ap);
+      gameState.modifyPlayerStat('ap', player.resources.ap.max - player.resources.ap.current);
 
       // Return to scene
       if (this.originOption.destination) {
@@ -313,7 +314,8 @@ class CombatRenderer {
     });
 
     if (!hasWeapon) {
-      const unarmed = this.cs.engine.data.items[UNARMED_STRIKE_ID];
+      const fallbackId = this.cs.engine.data.rules?.fallbackWeapons?.player;
+      const unarmed = fallbackId ? this.cs.engine.data.items[fallbackId] : null;
       if (unarmed) attacks.push(unarmed);
     }
     return attacks;
@@ -354,7 +356,7 @@ class CombatRenderer {
         const btn = createElement('button', [CSS.BTN, CSS.OPTION_BTN, CSS.OPTION_BTN_STACKED]);
         btn.appendChild(createElement('span', '', this.cs.engine.t('combat.attackTarget', { name: att.name })));
         btn.appendChild(createElement('span', CSS.OPTION_BTN_BADGE, this.cs.engine.t('combat.apCost', { cost: att.actionPoints })));
-        if (gameState.getPlayer().ap < att.actionPoints) btn.disabled = true;
+        if (gameState.getPlayer().resources.ap.current < att.actionPoints) btn.disabled = true;
         btn.onclick = () => this.cs.playerAttack(att, target);
         section.appendChild(btn);
       });

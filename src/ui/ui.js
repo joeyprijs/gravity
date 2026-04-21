@@ -1,6 +1,6 @@
 import { gameState } from "../core/state.js";
-import { clearElement } from "../core/utils.js";
-import { XP_PER_LEVEL, EL, CSS, LOG } from "../core/config.js";
+import { clearElement, getByPath } from "../core/utils.js";
+import { EL, CSS, LOG } from "../core/config.js";
 import { MapManager } from "../world/map.js";
 import { MuseumUI } from "../world/museum.js";
 import { QuestUI } from "./quest-ui.js";
@@ -16,30 +16,8 @@ export class UIManager {
   }
 
   setup() {
-    // Tab labels from locale
-    const tabLabels = {
-      'inventory-tab': 'ui.tabInventory',
-      'quests-tab':    'ui.tabQuests',
-      'map-tab':       'ui.tabMap',
-    };
-    document.querySelectorAll(`.${CSS.TABS_BTN}`).forEach(btn => {
-      const key = tabLabels[btn.dataset.tab];
-      if (key) btn.textContent = this.engine.t(key);
-    });
-
-    // Tab switching
-    document.querySelectorAll(`.${CSS.TABS_BTN}`).forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        document.querySelectorAll(`.${CSS.TABS_BTN}`).forEach(b => b.classList.remove(CSS.TABS_BTN_ACTIVE));
-        document.querySelectorAll(`#${EL.PLAYER_PANEL} .${CSS.TABS_PANEL}`).forEach(c => { c.hidden = true; });
-        e.target.classList.add(CSS.TABS_BTN_ACTIVE);
-        document.getElementById(e.target.dataset.tab).hidden = false;
-        if (e.target.dataset.tab === 'map-tab') {
-          this.map.invalidateMinimap();
-          this.map.renderMinimap();
-        }
-      });
-    });
+    this._buildTabs();
+    this.map.setup();
 
     // Save
     document.getElementById(EL.BTN_SAVE).addEventListener('click', () => {
@@ -84,25 +62,68 @@ export class UIManager {
       gameState.reset();
       window.location.reload();
     });
+  }
 
-    this.map.setup();
+  // Reads rules.tabs and generates tab nav buttons + panel divs inside #player-panel.
+  // Buttons are appended to the existing <nav class="tabs__nav">.
+  // Panel divs are appended directly to #player-panel.
+  // Map tab panels get their minimap inner structure injected automatically.
+  _buildTabs() {
+    const rules = this.engine.data.rules;
+    if (!rules?.tabs) return;
+
+    const nav = document.querySelector('.tabs__nav');
+    const playerPanel = document.getElementById(EL.PLAYER_PANEL);
+
+    // Remove any pre-existing tab panels so the HTML can be left empty
+    playerPanel.querySelectorAll(`.${CSS.TABS_PANEL}`).forEach(p => p.remove());
+
+    rules.tabs.forEach(tab => {
+      // Nav button
+      const btn = document.createElement('button');
+      const classes = [CSS.BTN, CSS.TABS_BTN];
+      if (tab.default) classes.push(CSS.TABS_BTN_ACTIVE);
+      btn.className = classes.join(' ');
+      btn.dataset.tab = tab.id;
+      btn.textContent = this.engine.t(tab.localeKey);
+      nav.appendChild(btn);
+
+      // Panel div
+      const panel = document.createElement('div');
+      panel.className = CSS.TABS_PANEL;
+      panel.id = tab.id;
+      if (!tab.default) panel.hidden = true;
+
+      // Map widget: inject minimap structure so MapManager.setup() can find it
+      if (tab.widget === 'map') {
+        panel.innerHTML = `<div class="scene__options"><div class="minimap" id="minimap" title="Click to open full map" hidden><div class="minimap__canvas" id="minimap-canvas"></div></div></div>`;
+      }
+
+      playerPanel.appendChild(panel);
+    });
+
+    // Tab switching
+    nav.querySelectorAll(`.${CSS.TABS_BTN}`).forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        nav.querySelectorAll(`.${CSS.TABS_BTN}`).forEach(b => b.classList.remove(CSS.TABS_BTN_ACTIVE));
+        document.querySelectorAll(`#${EL.PLAYER_PANEL} .${CSS.TABS_PANEL}`).forEach(c => { c.hidden = true; });
+        e.target.classList.add(CSS.TABS_BTN_ACTIVE);
+        document.getElementById(e.target.dataset.tab).hidden = false;
+        if (e.target.dataset.tab === 'map-tab') {
+          this.map.invalidateMinimap();
+          this.map.renderMinimap();
+        }
+      });
+    });
   }
 
   update(hint) {
     const player = gameState.getPlayer();
-    const t = this.engine.t.bind(this.engine);
 
     if (!hint || hint === 'stats') {
-      document.getElementById(EL.STAT_NAME).innerText = player.name || '';
-      document.getElementById(EL.STAT_LEVEL).innerText = t('stats.level', { value: player.level, xp: player.xp, needed: player.level * XP_PER_LEVEL });
-      document.getElementById(EL.STAT_CHARISMA).innerText = t('stats.charisma', { value: player.charisma });
-      document.getElementById(EL.STAT_HP).innerText = t('stats.hp', { current: player.hp, max: player.maxHp });
-      document.getElementById(EL.STAT_AP).innerText = t('stats.ap', { current: player.ap, max: player.maxAp });
-      document.getElementById(EL.STAT_AC).innerText = t('stats.ac', { value: player.ac });
-      document.getElementById(EL.STAT_INITIATIVE).innerText = t('stats.initiative', { value: player.initiative });
-      document.getElementById(EL.STAT_PERCEPTION).innerText = t('stats.perception', { value: player.perception || 0 });
-      document.getElementById(EL.STAT_SNEAK).innerText = t('stats.sneak', { value: player.sneak || 0 });
-      document.getElementById(EL.STAT_GOLD).innerText = t('stats.gold', { value: player.gold });
+      document.querySelectorAll('[data-stat-bind]').forEach(el => {
+        el.textContent = getByPath(player, el.dataset.statBind) ?? '';
+      });
     }
 
     if (!hint || hint === 'inventory') {

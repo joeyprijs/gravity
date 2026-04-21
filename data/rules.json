@@ -1,0 +1,66 @@
+{
+  "startingScene": "dungeon_start",
+  "merchantSellRatio": 0.5,
+  "unequipApCost": 1,
+  "restHealAmount": 10,
+  "snackHealAmount": 2,
+  "levelUpHpBonus": 5,
+  "xpPerLevel": 100,
+  "levelingCurve": "linear",
+  "fallbackWeapons": {
+    "player": "unarmed_strike",
+    "enemy": "enemy_claw"
+  },
+  "itemTypeOrder": {
+    "Weapon": 1,
+    "Spell": 2,
+    "Armor": 3,
+    "Consumable": 4,
+    "Flavour": 5
+  },
+  "playerDefaults": {
+    "name": "",
+    "level": 1,
+    "xp": 0,
+    "resources": {
+      "hp":   { "current": 10, "max": 10 },
+      "ap":   { "current": 3,  "max": 3  },
+      "gold": 0
+    },
+    "attributes": {
+      "ac": 10,
+      "initiative": 0,
+      "perception": 0,
+      "charisma": 0,
+      "sneak": 0
+    },
+    "inventory": [
+      { "item": "rusty_sword",    "amount": 1 },
+      { "item": "flames",         "amount": 1 },
+      { "item": "healing_potion", "amount": 2 }
+    ],
+    "equipment": {
+      "Head": null,
+      "Amulet": null,
+      "Torso": null,
+      "Left Hand": null,
+      "Right Hand": null,
+      "Legs": null
+    }
+  },
+  "charCreation": {
+    "pointBudget": 3,
+    "stats": [
+      { "id": "resources.hp.max",      "localeKey": "maxHp",      "bonusPerPoint": 2, "min": 0 },
+      { "id": "attributes.ac",         "localeKey": "ac",         "bonusPerPoint": 1, "min": 0 },
+      { "id": "attributes.perception", "localeKey": "perception", "bonusPerPoint": 1, "min": 0 },
+      { "id": "attributes.charisma",   "localeKey": "charisma",   "bonusPerPoint": 1, "min": 0 },
+      { "id": "attributes.sneak",      "localeKey": "sneak",      "bonusPerPoint": 1, "min": 0 }
+    ]
+  },
+  "tabs": [
+    { "id": "inventory-tab", "localeKey": "ui.tabInventory", "default": true },
+    { "id": "quests-tab",    "localeKey": "ui.tabQuests" },
+    { "id": "map-tab",       "localeKey": "ui.tabMap",       "widget": "map" }
+  ]
+}

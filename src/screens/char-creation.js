@@ -1,33 +1,35 @@
-import { CHAR_CREATION, CSS, PLAYER_DEFAULTS, EL } from "../core/config.js";
+import { CSS, EL } from "../core/config.js";
 import { gameState } from "../core/state.js";
+import { getByPath, setByPath } from "../core/utils.js";
 
 // CharCreationScreen manages the pre-game character creation overlay.
 // It lets the player enter a name and distribute a small point budget across
-// the stats defined in CHAR_CREATION.stats (see config.js).
+// the stats defined in rules.charCreation.stats (see data/rules.json).
 //
 // When the player confirms, the chosen bonuses are applied to the game state
 // and the overlay is hidden so the main game can start.
 //
-// To add more allocatable stats, backgrounds, feats, etc. in the future:
-//   - Extend CHAR_CREATION.stats in config.js
-//   - No changes to this file are needed — the UI renders dynamically.
+// To add more allocatable stats, change rules.json charCreation.stats —
+// no changes to this file are needed.
 export class CharCreationScreen {
   // onComplete: called when the player confirms character creation.
   // The "Load Save" button triggers the shared #file-upload input; its change
   // event is handled by UIManager which reveals the game and applies the save.
-  constructor(onComplete, t, names = []) {
+  constructor(onComplete, t, names = [], rules = {}) {
     this.onComplete = onComplete;
     this.t = t;
     this.names = names;
+    this.rules = rules;
     this.overlay = document.getElementById(EL.CHAR_CREATION);
+    const stats = rules.charCreation?.stats || [];
     // Track how many points have been spent on each stat
-    this.spent = Object.fromEntries(CHAR_CREATION.stats.map(s => [s.id, 0]));
+    this.spent = Object.fromEntries(stats.map(s => [s.id, 0]));
     this._render();
   }
 
   get pointsRemaining() {
     const used = Object.values(this.spent).reduce((a, b) => a + b, 0);
-    return CHAR_CREATION.pointBudget - used;
+    return (this.rules.charCreation?.pointBudget || 0) - used;
   }
 
   _render() {
@@ -76,7 +78,8 @@ export class CharCreationScreen {
     this._updatePointsDisplay();
     statsTitle.appendChild(this.pointsEl);
 
-    CHAR_CREATION.stats.forEach(stat => {
+    const stats = this.rules.charCreation?.stats || [];
+    stats.forEach(stat => {
       const row = document.createElement('div');
       row.className = CSS.CC_STAT_ROW;
 
@@ -84,10 +87,11 @@ export class CharCreationScreen {
       info.className = CSS.CC_STAT_INFO;
       const statLabel = document.createElement('span');
       statLabel.className = CSS.CC_STAT_LABEL;
-      statLabel.textContent = this.t(`charCreation.stats.${stat.id}.label`);
+      // Use localeKey for locale lookup (avoids dot-path traversal issues)
+      statLabel.textContent = this.t(`charCreation.stats.${stat.localeKey}.label`);
       const statDesc = document.createElement('span');
       statDesc.className = CSS.CC_STAT_DESC;
-      statDesc.textContent = this.t(`charCreation.stats.${stat.id}.description`);
+      statDesc.textContent = this.t(`charCreation.stats.${stat.localeKey}.description`);
       info.appendChild(statLabel);
       info.appendChild(statDesc);
 
@@ -98,7 +102,7 @@ export class CharCreationScreen {
       decrementBtn.className = `${CSS.BTN} ${CSS.CC_STAT_BTN}`;
       decrementBtn.textContent = '−';
       decrementBtn.onclick = () => {
-        if (this.spent[stat.id] > stat.min) {
+        if (this.spent[stat.id] > (stat.min ?? 0)) {
           this.spent[stat.id]--;
           this._updateStatRow(stat, valueEl, decrementBtn, incrementBtn);
           this._updatePointsDisplay();
@@ -163,14 +167,15 @@ export class CharCreationScreen {
   }
 
   _setStatValueText(el, stat) {
-    const base = stat.base ?? PLAYER_DEFAULTS[stat.id];
+    // stat.id is a dotted path (e.g. 'resources.hp.max') — use getByPath to resolve
+    const base = getByPath(this.rules.playerDefaults, stat.id) ?? 0;
     const bonus = this.spent[stat.id] * stat.bonusPerPoint;
     el.textContent = bonus > 0 ? `${base} + ${bonus}` : `${base}`;
   }
 
   _updateStatRow(stat, valueEl, decrementBtn, incrementBtn) {
     this._setStatValueText(valueEl, stat);
-    decrementBtn.disabled = this.spent[stat.id] <= stat.min;
+    decrementBtn.disabled = this.spent[stat.id] <= (stat.min ?? 0);
     incrementBtn.disabled = this.pointsRemaining <= 0;
   }
 
@@ -184,7 +189,8 @@ export class CharCreationScreen {
   _updateConfirmBtn() {
     this.confirmBtn.disabled = !this.nameInput.value.trim();
     // Also refresh all increment buttons since points may have changed
-    CHAR_CREATION.stats.forEach(stat => {
+    const stats = this.rules.charCreation?.stats || [];
+    stats.forEach(stat => {
       if (stat._incrementBtn) stat._incrementBtn.disabled = this.pointsRemaining <= 0;
     });
   }
@@ -196,13 +202,17 @@ export class CharCreationScreen {
     const player = gameState.getPlayer();
     player.name = name;
 
-    // Apply stat bonuses — update both current value and the max
-    CHAR_CREATION.stats.forEach(stat => {
+    // Apply stat bonuses using dotted paths (e.g. 'resources.hp.max')
+    const stats = this.rules.charCreation?.stats || [];
+    stats.forEach(stat => {
       const bonus = this.spent[stat.id] * stat.bonusPerPoint;
       if (bonus > 0) {
-        player[stat.id] += bonus;
-        // For HP: also set current hp to the new max so the player starts at full health
-        if (stat.id === 'maxHp') player.hp = player.maxHp;
+        const current = getByPath(player, stat.id) ?? 0;
+        setByPath(player, stat.id, current + bonus);
+        // For maxHp: also update current hp so the player starts at full health
+        if (stat.id === 'resources.hp.max') {
+          player.resources.hp.current = player.resources.hp.max;
+        }
       }
     });
 

@@ -1,5 +1,7 @@
 {
   "worldMapSize": { "width": 3000, "height": 2000 },
+  "rules": "data/rules.json",
+  "plugins": [],
   "flags": "data/flags.json",
   "regions": {
     "dungeon": { "name": "The Dungeon" },

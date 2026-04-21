@@ -487,13 +487,11 @@ body {
   margin-top: calc(var(--spacing) * 3);
 }
 
-/*
 .scene__log--choice  { color: var(--text-primary); }
 .scene__log--loot    { color: var(--gold-color); }
 .scene__log--damage  { color: var(--health-color); }
 .scene__log--combat  { color: var(--accent-color); }
 .scene__log--quest   { color: var(--gold-color); }
-*/
 
 /* ==========================================================================
  MAIN: SCENE ACTIONS

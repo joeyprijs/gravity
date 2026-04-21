@@ -13,23 +13,23 @@
   "options": [
     {
       "text": "Talk to the stranger",
-      "action": "dialogue",
-      "actionDetails": {
-        "npc": "mysterious_stranger"
-      }
+      "actions": [
+        { "type": "dialogue", "npc": "mysterious_stranger" }
+      ]
     },
     {
       "text": "Rest here (Restore HP)",
-      "action": "rest",
-      "actionDetails": {
-        "heal": 10
-      },
-      "setFlag": { "flag": "chamber_rested", "value": true },
-      "condition": { "flag": "chamber_rested", "value": false }
+      "condition": { "flag": "chamber_rested", "value": false },
+      "actions": [
+        { "type": "setFlag", "flag": "chamber_rested", "value": true },
+        { "type": "rest", "heal": 10 }
+      ]
     },
     {
       "text": "Retreat to the Hallway",
-      "destination": "dungeon_hallway"
+      "actions": [
+        { "type": "navigate", "destination": "dungeon_hallway" }
+      ]
     }
   ],
   "skills": [

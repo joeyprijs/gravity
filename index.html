@@ -19,51 +19,48 @@
     <header class="game__header" id="player-header">
       <div class="game__stats" id="player-basic-stats">
         <div class="stat-group">
-          <span class="stat-item stat-item--name" id="stat-name"></span>
+          <span class="stat-item stat-item--name" data-stat-bind="name"></span>
         </div>
-
         <div class="stat-group">
           <div class="stat-item">
             <span class="stat-item__label">LVL</span>
-            <span class="stat-item__value" id="stat-level"></span>
+            <span class="stat-item__value" data-stat-bind="level"></span>
           </div>
           <div class="stat-item stat-item--hp">
             <span class="stat-item__label">HP</span>
-            <span class="stat-item__value" id="stat-hp"></span>
+            <span class="stat-item__value"><span data-stat-bind="resources.hp.current"></span>/<span data-stat-bind="resources.hp.max"></span></span>
           </div>
           <div class="stat-item">
             <span class="stat-item__label">AC</span>
-            <span class="stat-item__value" id="stat-ac"></span>
+            <span class="stat-item__value" data-stat-bind="attributes.ac"></span>
           </div>
           <div class="stat-item stat-item--ap">
             <span class="stat-item__label">AP</span>
-            <span class="stat-item__value" id="stat-ap"></span>
+            <span class="stat-item__value"><span data-stat-bind="resources.ap.current"></span>/<span data-stat-bind="resources.ap.max"></span></span>
           </div>
           <div class="stat-item">
             <span class="stat-item__label">INIT</span>
-            <span class="stat-item__value" id="stat-initiative"></span>
+            <span class="stat-item__value" data-stat-bind="attributes.initiative"></span>
           </div>
         </div>
-
         <div class="stat-group">
           <div class="stat-item">
             <span class="stat-item__label">PERC</span>
-            <span class="stat-item__value" id="stat-perception"></span>
+            <span class="stat-item__value" data-stat-bind="attributes.perception"></span>
           </div>
           <div class="stat-item">
             <span class="stat-item__label">CHA</span>
-            <span class="stat-item__value" id="stat-charisma"></span>
+            <span class="stat-item__value" data-stat-bind="attributes.charisma"></span>
           </div>
           <div class="stat-item">
             <span class="stat-item__label">SNK</span>
-            <span class="stat-item__value" id="stat-sneak"></span>
+            <span class="stat-item__value" data-stat-bind="attributes.sneak"></span>
           </div>
         </div>
-
         <div class="stat-group">
           <div class="stat-item stat-item--gold">
             <span class="stat-item__label">GOLD</span>
-            <span class="stat-item__value" id="stat-gold"></span>
+            <span class="stat-item__value" data-stat-bind="resources.gold"></span>
           </div>
         </div>
       </div>
@@ -75,20 +72,8 @@
     </header>
     <div class="game__main" id="main-content">
       <aside class="game__player" id="player-panel">
-        <nav class="tabs__nav">
-          <button class="button tabs__btn tabs__btn--active" data-tab="inventory-tab">Inventory</button>
-          <button class="button tabs__btn" data-tab="quests-tab">Quests</button>
-          <button class="button tabs__btn" data-tab="map-tab">Map</button>
-        </nav>
-        <div class="tabs__panel" id="inventory-tab"></div>
-        <div class="tabs__panel" id="quests-tab" hidden></div>
-        <div class="tabs__panel" id="map-tab" hidden>
-          <div class="scene__options">
-            <div class="minimap" id="minimap" title="Click to open full map" hidden>
-              <div class="minimap__canvas" id="minimap-canvas"></div>
-            </div>
-          </div>
-        </div>
+        <!-- Tab buttons and panels are generated dynamically from rules.json tabs -->
+        <nav class="tabs__nav"></nav>
       </aside>
 
       <main class="game__scene" id="scene-panel">

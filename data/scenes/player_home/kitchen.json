@@ -12,11 +12,15 @@
   "options": [
     {
       "text": "Eat a Snack",
-      "action": "eat_snack"
+      "actions": [
+        { "type": "eat_snack" }
+      ]
     },
     {
       "text": "Return to Living Room",
-      "destination": "home_living_room"
+      "actions": [
+        { "type": "navigate", "destination": "home_living_room" }
+      ]
     }
   ]
 }

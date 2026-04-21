@@ -12,29 +12,39 @@
   "options": [
     {
       "text": "Enter Kitchen",
-      "destination": "home_kitchen"
+      "actions": [
+        { "type": "navigate", "destination": "home_kitchen" }
+      ]
     },
     {
       "text": "Enter Bedroom",
-      "destination": "home_bedroom"
+      "actions": [
+        { "type": "navigate", "destination": "home_bedroom" }
+      ]
     },
     {
       "text": "Enter Museum Room",
-      "destination": "home_museum"
+      "actions": [
+        { "type": "navigate", "destination": "home_museum" }
+      ]
     },
     {
       "text": "Talk to Bron",
-      "action": "dialogue",
-      "actionDetails": { "npc": "dwarf_innkeeper" }
+      "actions": [
+        { "type": "dialogue", "npc": "dwarf_innkeeper" }
+      ]
     },
     {
       "text": "Talk to Sera",
-      "action": "dialogue",
-      "actionDetails": { "npc": "wandering_scribe" }
+      "actions": [
+        { "type": "dialogue", "npc": "wandering_scribe" }
+      ]
     },
     {
       "text": "Leave House",
-      "destination": "home_door"
+      "actions": [
+        { "type": "navigate", "destination": "home_door" }
+      ]
     }
   ]
 }

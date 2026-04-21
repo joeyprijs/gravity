@@ -1,11 +1,11 @@
-import { LEVEL_UP_HP_BONUS, XP_PER_LEVEL, PLAYER_DEFAULTS, STARTING_SCENE, MSG } from "./config.js";
+import { MSG } from "./config.js";
 
 const MAX_LOG_ENTRIES = 200;
 
 // Increment when the save schema changes. loadFromObject() migrates older saves
 // forward so they remain compatible. Each migration function receives the raw
 // parsed data object and mutates it in-place.
-const SAVE_VERSION = 6;
+const SAVE_VERSION = 7;
 
 const MIGRATIONS = {
   // v0 → v1: added player.name
@@ -23,6 +23,9 @@ const MIGRATIONS = {
   3: (data) => {
     if (data.player) delete data.player.baseAcBonus;
   },
+  // --- D&D prototype historical debt (v3–v6) ---
+  // These migrations are game-specific and would be omitted in a clean engine
+  // distribution. Plugin-based games should use registerMigration() instead.
   // v3 → v4: renamed player.level → player.reputation
   4: (data) => {
     if (data.player && data.player.level !== undefined) {
@@ -41,35 +44,87 @@ const MIGRATIONS = {
       delete data.player.reputation;
     }
   },
+  // v6 → v7: restructure flat player stats into resources/attributes sub-objects
+  7: (data) => {
+    const p = data.player;
+    if (!p || p.resources) return; // already migrated or no player
+    p.resources = {
+      hp:   { current: p.hp   ?? 10, max: p.maxHp ?? 10 },
+      ap:   { current: p.ap   ?? 3,  max: p.maxAp ?? 3  },
+      gold: p.gold ?? 0
+    };
+    p.attributes = {
+      ac:         p.ac         ?? 10,
+      initiative: p.initiative ?? 0,
+      perception: p.perception ?? 0,
+      charisma:   p.charisma   ?? 0,
+      sneak:      p.sneak      ?? 0
+    };
+    ['hp', 'maxHp', 'ap', 'maxAp', 'gold', 'ac', 'initiative', 'perception', 'charisma', 'sneak']
+      .forEach(k => delete p[k]);
+  },
 };
 
-function migrate(data) {
+function migrate(data, extraMigrations = {}) {
   const from = data.saveVersion ?? 0;
-  for (let v = from + 1; v <= SAVE_VERSION; v++) {
-    if (MIGRATIONS[v]) MIGRATIONS[v](data);
+  const allMigrations = { ...MIGRATIONS, ...extraMigrations };
+  const maxVersion = Math.max(SAVE_VERSION, ...Object.keys(extraMigrations).map(Number));
+  for (let v = from + 1; v <= maxVersion; v++) {
+    if (allMigrations[v]) allMigrations[v](data);
   }
-  data.saveVersion = SAVE_VERSION;
+  data.saveVersion = maxVersion;
 }
 
-const DEFAULT_STATE = {
-  saveVersion: SAVE_VERSION,
-  player: PLAYER_DEFAULTS,
-  flags: {},
-  missions: {},
-  currentSceneId: STARTING_SCENE,
-  returnSceneId: null,
-  museumChest: [],
-  visitedScenes: [],
-  log: []
-};
+function makeDefaultState(rules) {
+  return {
+    saveVersion: SAVE_VERSION,
+    player: JSON.parse(JSON.stringify(rules.playerDefaults)),
+    flags: {},
+    missions: {},
+    currentSceneId: rules.startingScene || null,
+    returnSceneId: null,
+    museumChest: [],
+    visitedScenes: [],
+    log: []
+  };
+}
 
 // StateManager is the single source of truth for all mutable game data.
 // All writes go through its methods, which call notifyListeners() so the UI
 // stays in sync automatically. The state object is serialised for save files.
 class StateManager {
   constructor() {
-    this.state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+    // Minimal skeleton state. Properly initialised by init(rules) once
+    // rules.json is loaded. This skeleton is sufficient for registerMissions()
+    // and registerSceneFlags() which are called during data loading.
+    this.state = {
+      saveVersion: SAVE_VERSION,
+      player: {},
+      flags: {},
+      missions: {},
+      currentSceneId: null,
+      returnSceneId: null,
+      museumChest: [],
+      visitedScenes: [],
+      log: []
+    };
     this.listeners = [];
+    this._rules = null;
+    this._extraMigrations = {};
+  }
+
+  // Called by the engine after rules.json is loaded. Replaces the skeleton
+  // state with a proper default state derived from the rules. Must be called
+  // before any gameplay code accesses the player object.
+  init(rules) {
+    this._rules = rules;
+    this.state = makeDefaultState(rules);
+  }
+
+  // Plugin hook: register a migration for a version above the core SAVE_VERSION.
+  // Plugins that change their own save data call this during their register() fn.
+  registerMigration(version, fn) {
+    this._extraMigrations[version] = fn;
   }
 
   downloadSave() {
@@ -107,7 +162,7 @@ class StateManager {
 
   loadFromObject(parsedData) {
     // Run schema migrations so older saves stay compatible.
-    migrate(parsedData);
+    migrate(parsedData, this._extraMigrations);
 
     // Strip the "game loaded" notification from the restored log so it doesn't
     // appear as a duplicate each time the player loads a save.
@@ -147,7 +202,7 @@ class StateManager {
   // Wipes all state back to defaults and re-applies the scene flags so that
   // the initial option visibility is correct immediately after a restart.
   reset() {
-    this.state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+    this.state = makeDefaultState(this._rules);
     if (this.sceneFlags) Object.assign(this.state.flags, this.sceneFlags);
     this.notifyListeners();
   }
@@ -157,27 +212,49 @@ class StateManager {
 
   getPlayer() { return this.state.player; }
 
+  // Modifies a player stat by the given amount.
+  // Accepts convenience names ('hp', 'ap', 'maxHp', 'maxAp', 'gold') or any
+  // attribute name ('ac', 'charisma', 'perception', etc.). Resources are clamped.
   modifyPlayerStat(stat, amount) {
-    this.state.player[stat] += amount;
-    if (stat === "hp" && this.state.player.hp > this.state.player.maxHp) this.state.player.hp = this.state.player.maxHp;
-    if (stat === "hp" && this.state.player.hp < 0) this.state.player.hp = 0;
-    if (stat === "ap" && this.state.player.ap > this.state.player.maxAp) this.state.player.ap = this.state.player.maxAp;
-    if (stat === "ap" && this.state.player.ap < 0) this.state.player.ap = 0;
+    const p = this.state.player;
+    switch (stat) {
+      case 'hp':
+        p.resources.hp.current = Math.max(0, Math.min(p.resources.hp.current + amount, p.resources.hp.max));
+        break;
+      case 'maxHp':
+        p.resources.hp.max += amount;
+        break;
+      case 'ap':
+        p.resources.ap.current = Math.max(0, Math.min(p.resources.ap.current + amount, p.resources.ap.max));
+        break;
+      case 'maxAp':
+        p.resources.ap.max += amount;
+        break;
+      case 'gold':
+        p.resources.gold += amount;
+        break;
+      default:
+        if (p.attributes && stat in p.attributes) {
+          p.attributes[stat] += amount;
+        }
+        break;
+    }
     this.notifyListeners('stats');
   }
 
   // Awards XP and handles level-up. XP threshold scales with level so each
-  // level requires more XP than the last (threshold = level × XP_PER_LEVEL).
+  // level requires more XP than the last (threshold = level × xpPerLevel).
   // Surplus XP carries over and can trigger multiple level-ups in one call.
   addXP(amount) {
-    this.state.player.xp += amount;
-    let threshold = this.state.player.level * XP_PER_LEVEL;
-    while (this.state.player.xp >= threshold) {
-      this.state.player.xp -= threshold;
-      this.state.player.level++;
-      this.state.player.maxHp += LEVEL_UP_HP_BONUS;
-      this.state.player.hp = this.state.player.maxHp;
-      threshold = this.state.player.level * XP_PER_LEVEL;
+    const p = this.state.player;
+    p.xp += amount;
+    let threshold = p.level * this._rules.xpPerLevel;
+    while (p.xp >= threshold) {
+      p.xp -= threshold;
+      p.level++;
+      p.resources.hp.max += this._rules.levelUpHpBonus;
+      p.resources.hp.current = p.resources.hp.max;
+      threshold = p.level * this._rules.xpPerLevel;
     }
     this.notifyListeners('stats');
   }

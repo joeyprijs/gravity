@@ -24,9 +24,9 @@ export function evaluateCondition(condition, gameState) {
   // Leaf types
   if ('flag' in condition) return gameState.getFlag(condition.flag) === condition.value;
   if ('item' in condition) return !!gameState.getPlayer().inventory.find(i => i.item === condition.item);
-  if ('level' in condition)   return gameState.getPlayer().level >= condition.level;
-  if ('charisma' in condition) return gameState.getPlayer().charisma >= condition.charisma;
-  if ('gold' in condition)  return gameState.getPlayer().gold >= condition.gold;
+  if ('level' in condition)    return gameState.getPlayer().level >= condition.level;
+  if ('charisma' in condition) return gameState.getPlayer().attributes.charisma >= condition.charisma;
+  if ('gold' in condition)     return gameState.getPlayer().resources.gold >= condition.gold;
   if ('mission' in condition) return gameState.getMissionStatus(condition.mission) === condition.status;
 
   console.warn('[Gravity] evaluateCondition: unrecognised condition shape', condition);
