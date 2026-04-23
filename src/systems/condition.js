@@ -58,10 +58,3 @@ export function evaluateCondition(condition, gameState) {
   console.warn('[Gravity] evaluateCondition: unrecognised condition shape', condition);
   return true;
 }
-
-// Converts a legacy requiredState object to a condition node so callers
-// can always work with the unified condition format.
-export function fromRequiredState(requiredState) {
-  if (!requiredState) return null;
-  return { flag: requiredState.flag, value: requiredState.value };
-}

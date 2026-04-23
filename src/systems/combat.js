@@ -249,12 +249,9 @@ export class CombatSystem {
       gameState.modifyPlayerStat('ap', player.resources.ap.max - player.resources.ap.current);
 
       // Run onVictory action pipeline
-      const onVictory = this.originOption?.onVictory || [];
-      for (const action of onVictory) {
-        const handler = this.engine.getActionHandler(action.type);
-        if (handler) handler(action, this.engine);
-      }
-      const didNavigate = onVictory.some(a => ['navigate', 'return'].includes(a.type));
+      const sceneIdBefore = gameState.getCurrentSceneId();
+      this.engine.runActions(this.originOption?.onVictory || []);
+      const didNavigate = gameState.getCurrentSceneId() !== sceneIdBefore;
       if (!didNavigate) this.engine.renderScene(gameState.getCurrentSceneId());
 
     } else {

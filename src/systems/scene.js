@@ -1,7 +1,7 @@
 import { gameState } from "../core/state.js";
 import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "../core/utils.js";
 import { EL, CSS, LOG, MAX_D20_ROLL } from "../core/config.js";
-import { evaluateCondition, fromRequiredState } from "./condition.js";
+import { evaluateCondition } from "./condition.js";
 import { roll } from "./dice.js";
 
 // SceneRenderer handles navigating to scenes, resolving their descriptions,
@@ -116,7 +116,7 @@ export class SceneRenderer {
     (scene.options || []).forEach(opt => {
       // Hide options whose condition is not currently met.
       // Supports both the legacy requiredState shorthand and the full condition tree.
-      const cond = opt.condition ?? fromRequiredState(opt.requiredState);
+      const cond = opt.condition ?? null;
       if (!evaluateCondition(cond, gameState)) return;
 
       let reqText = null;
@@ -140,7 +140,7 @@ export class SceneRenderer {
 
     (scene.skills || []).forEach((opt, i) => {
       if (!opt.skillCheck) return;
-      const cond = opt.condition ?? fromRequiredState(opt.requiredState);
+      const cond = opt.condition ?? null;
       if (!evaluateCondition(cond, gameState)) return;
 
       const skillKey = `skill_dc_${opt.skillCheck}_${sceneId}`;
@@ -235,10 +235,9 @@ export class SceneRenderer {
             success ? 'loot' : 'system'
           );
           if (success) {
-            this._runActions(opt.onSuccess || []);
-            const didNavigate = (opt.onSuccess || []).some(a =>
-              ['navigate', 'combat', 'dialogue', 'return'].includes(a.type)
-            );
+            const sceneIdBefore = gameState.getCurrentSceneId();
+            this.engine.runActions(opt.onSuccess || []);
+            const didNavigate = gameState.getCurrentSceneId() !== sceneIdBefore || this.engine.inCombat;
             if (!didNavigate) this.engine.renderScene(gameState.getCurrentSceneId());
           } else {
             skillState[i] = dc + (opt.increment ?? 1);
@@ -273,25 +272,17 @@ export class SceneRenderer {
     }
   }
 
-  _runActions(actions) {
-    for (const action of actions) {
-      const handler = this.engine.getActionHandler(action.type);
-      if (handler) handler(action, this.engine);
-      else console.warn(`[Gravity] _runActions: no handler for action type "${action.type}"`);
-    }
-  }
-
   handleOption(opt) {
     this.engine.isGameStart = false;
     this.engine.log(LOG.PLAYER, opt.text, 'choice');
 
-    this._runActions(opt.actions || []);
+    const sceneIdBefore = gameState.getCurrentSceneId();
+    this.engine.runActions(opt.actions || []);
 
-    // If no navigation-triggering action ran, refresh option buttons so any
-    // flag changes take effect immediately (e.g. hiding a one-time option).
-    const navigated = (opt.actions || []).some(a =>
-      ['navigate', 'combat', 'dialogue', 'return'].includes(a.type)
-    );
+    // Re-render options if nothing caused navigation, so flag changes take
+    // effect immediately. Checking sceneId and inCombat covers all action types
+    // including plugins, without maintaining a hardcoded list.
+    const navigated = gameState.getCurrentSceneId() !== sceneIdBefore || this.engine.inCombat;
     if (!navigated) {
       const scene = this.engine.data.scenes[gameState.getCurrentSceneId()];
       if (scene) this.renderOptions(scene);
@@ -319,7 +310,7 @@ export class SceneRenderer {
       // with the first conditional entry whose flag condition is met.
       desc = scene.description.find(d => !d.requiredState && !d.condition)?.text || '';
       for (const d of scene.description) {
-        const cond = d.condition ?? fromRequiredState(d.requiredState);
+        const cond = d.condition ?? null;
         if (cond && evaluateCondition(cond, gameState)) {
           desc = d.text;
           break;

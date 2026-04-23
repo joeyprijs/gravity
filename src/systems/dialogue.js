@@ -30,7 +30,7 @@ export class DialogueSystem {
     this.engine.resetScene();
     this.currentNPC = npc;
     this.currentNPCId = npcId;
-    gameState.setFlag(`charisma_dc_${npcId}`, {});
+    gameState.setFlag(`dialogue_dc_${npcId}`, {});
     if (npc.conversations) {
       this.renderDialogue("start");
     } else {
@@ -111,32 +111,32 @@ export class DialogueSystem {
     clearElement(skillsContainer);
     skillsContainer.setAttribute('hidden', '');
 
-    const charismaStateKey = `skill_dc_charisma_${this.currentNPCId}`;
-    const npcCharismaState = gameState.getFlag(charismaStateKey) || {};
+    const dcStateKey = `dialogue_dc_${this.currentNPCId}`;
+    const dcState = gameState.getFlag(dcStateKey) || {};
     const skillResponses = [];
 
     (node.responses || []).forEach((res, i) => {
       if (!evaluateCondition(res.condition ?? null, gameState)) return;
 
       const needsCheck = !!res.skillCheck && res.dc > 0;
-      const resKey = `${nodeId}_${i}`;
-      const dc = needsCheck ? (npcCharismaState[resKey] || res.dc) : 0;
+      const resKey = `${res.skillCheck}_${nodeId}_${i}`;
+      const dc = needsCheck ? (dcState[resKey] || res.dc) : 0;
 
-      const badge = needsCheck ? this.engine.t('dialogue.socialCheckBadge', { dc }) : null;
+      const badge = needsCheck ? this.engine.t(`actions.skillBadge.${res.skillCheck}`, { dc }) : null;
       const btn = buildOptionButton(res.text, badge);
 
       btn.onclick = () => {
         this.engine.log(LOG.PLAYER, res.text, 'choice');
 
         if (needsCheck) {
-          const mod = gameState.getPlayer().attributes.charisma || 0;
+          const mod = gameState.getPlayer().attributes[res.skillCheck] || 0;
           const rolled = roll(1, MAX_D20_ROLL) + mod;
           const success = rolled >= dc;
-          const logKey = success ? 'dialogue.socialSuccess' : 'dialogue.socialFail';
-          this.engine.log(LOG.SYSTEM, this.engine.t(logKey, { roll: rolled, mod, dc, name: this.currentNPC.name }), success ? 'loot' : 'system');
+          const logKey = success ? 'actions.skillSuccess' : 'actions.skillFail';
+          this.engine.log(LOG.SYSTEM, this.engine.t(logKey, { roll: rolled, mod, dc, skill: res.skillCheck }), success ? 'loot' : 'system');
           if (!success) {
-            npcCharismaState[resKey] = dc + (res.increment ?? 1);
-            gameState.setFlag(charismaStateKey, npcCharismaState);
+            dcState[resKey] = dc + (res.increment ?? 1);
+            gameState.setFlag(dcStateKey, dcState);
             this.renderDialogue(nodeId, null, true);
             return;
           }

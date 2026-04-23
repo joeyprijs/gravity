@@ -325,6 +325,16 @@ class RPGEngine {
     const label = this.t(localeKey) !== localeKey ? this.t(localeKey) : type;
     return this.narrative.log(label, message, variant, persist);
   }
+  // Runs an action pipeline through the registered action handlers.
+  // Shared by SceneRenderer, CombatSystem, and any plugin that needs it.
+  runActions(actions) {
+    for (const action of (actions || [])) {
+      const handler = this.getActionHandler(action.type);
+      if (handler) handler(action, this);
+      else console.warn(`[Gravity] runActions: no handler for action type "${action.type}"`);
+    }
+  }
+
   renderScene(sceneId) {
     this.dialogueSystem.storeOpen = false;
     return this.scene.render(sceneId);
