@@ -5,65 +5,9 @@ const MAX_LOG_ENTRIES = 200;
 // Increment when the save schema changes. loadFromObject() migrates older saves
 // forward so they remain compatible. Each migration function receives the raw
 // parsed data object and mutates it in-place.
-const SAVE_VERSION = 7;
+const SAVE_VERSION = 1;
 
-const MIGRATIONS = {
-  // v0 → v1: added player.name
-  1: (data) => {
-    if (!data.player) data.player = {};
-    if (data.player.name === undefined) data.player.name = "";
-  },
-  // v1 → v2: added museumChest, visitedScenes, log
-  2: (data) => {
-    if (!data.museumChest)   data.museumChest   = [];
-    if (!data.visitedScenes) data.visitedScenes = [];
-    if (!data.log)           data.log           = [];
-  },
-  // v2 → v3: removed baseAcBonus (AC is now stored directly on player.ac)
-  3: (data) => {
-    if (data.player) delete data.player.baseAcBonus;
-  },
-  // --- D&D prototype historical debt (v3–v6) ---
-  // These migrations are game-specific and would be omitted in a clean engine
-  // distribution. Plugin-based games should use registerMigration() instead.
-  // v3 → v4: renamed player.level → player.reputation
-  4: (data) => {
-    if (data.player && data.player.level !== undefined) {
-      data.player.reputation = data.player.level;
-      delete data.player.level;
-    }
-  },
-  // v4 → v5: re-introduced player.level as separate progression stat
-  5: (data) => {
-    if (data.player && data.player.level === undefined) data.player.level = 1;
-  },
-  // v5 → v6: renamed player.reputation → player.charisma
-  6: (data) => {
-    if (data.player && data.player.reputation !== undefined) {
-      data.player.charisma = data.player.reputation;
-      delete data.player.reputation;
-    }
-  },
-  // v6 → v7: restructure flat player stats into resources/attributes sub-objects
-  7: (data) => {
-    const p = data.player;
-    if (!p || p.resources) return; // already migrated or no player
-    p.resources = {
-      hp:   { current: p.hp   ?? 10, max: p.maxHp ?? 10 },
-      ap:   { current: p.ap   ?? 3,  max: p.maxAp ?? 3  },
-      gold: p.gold ?? 0
-    };
-    p.attributes = {
-      ac:         p.ac         ?? 10,
-      initiative: p.initiative ?? 0,
-      perception: p.perception ?? 0,
-      charisma:   p.charisma   ?? 0,
-      stealth:      p.stealth      ?? 0
-    };
-    ['hp', 'maxHp', 'ap', 'maxAp', 'gold', 'ac', 'initiative', 'perception', 'charisma', 'stealth']
-      .forEach(k => delete p[k]);
-  },
-};
+const MIGRATIONS = {};
 
 function migrate(data, extraMigrations = {}) {
   const from = data.saveVersion ?? 0;

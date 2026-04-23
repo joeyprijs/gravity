@@ -2,16 +2,31 @@
 // Used by SceneRenderer to show/hide options and description variants.
 //
 // Leaf types:
-//   { "flag": "name", "value": true }              — flag equals value
-//   { "item": "item_id" }                          — player has item in inventory
-//   { "stealth": 2 }                              — any player attribute >= value (works for all custom attributes)
-//   { "gold": 50 }                                 — player gold >= value
-//   { "mission": "id", "status": "complete" }      — mission is in the given status
+//   { "flag": "name", "value": true }               — flag equals value
+//   { "item": "item_id" }                           — player has item in inventory
+//   { "item": "item_id", "count": 3 }              — player has >= 3 of item
+//   { "gold": 50 }                                  — player gold >= 50 (shorthand for gte)
+//   { "gold": { "lt": 10 } }                       — supports gte/gt/lte/lt/eq operators
+//   { "level": 3 }                                  — player level >= 3
+//   { "stealth": 2 }                               — any player attribute >= 2 (shorthand for gte)
+//   { "stealth": { "gt": 1 } }                     — attribute with explicit operator
+//   { "mission": "id", "status": "complete" }       — mission is in the given status
 //
 // Combinators:
 //   { "and": [ ...conditions ] }
 //   { "or":  [ ...conditions ] }
 //   { "not": condition }
+
+// Compares actual against operand. Bare number = >=. Object = explicit operator.
+function compare(actual, operand) {
+  if (typeof operand === 'number') return actual >= operand;
+  if ('gte' in operand) return actual >= operand.gte;
+  if ('gt'  in operand) return actual >  operand.gt;
+  if ('lte' in operand) return actual <= operand.lte;
+  if ('lt'  in operand) return actual <  operand.lt;
+  if ('eq'  in operand) return actual === operand.eq;
+  return false;
+}
 
 export function evaluateCondition(condition, gameState) {
   if (!condition) return true;
@@ -22,16 +37,23 @@ export function evaluateCondition(condition, gameState) {
   if (condition.not) return !evaluateCondition(condition.not, gameState);
 
   // Leaf types
-  if ('flag' in condition) return gameState.getFlag(condition.flag) === condition.value;
-  if ('item' in condition) return !!gameState.getPlayer().inventory.find(i => i.item === condition.item);
+  if ('flag' in condition)    return gameState.getFlag(condition.flag) === condition.value;
+  if ('mission' in condition) return gameState.getMissionStatus(condition.mission) === condition.status;
+
+  if ('item' in condition) {
+    const entry = gameState.getPlayer().inventory.find(i => i.item === condition.item);
+    if (!entry) return false;
+    return condition.count ? entry.amount >= condition.count : true;
+  }
+
   const player = gameState.getPlayer();
-  if ('level' in condition) return player.level >= condition.level;
-  if ('gold' in condition)  return player.resources.gold >= condition.gold;
+  if ('level' in condition) return compare(player.level, condition.level);
+  if ('gold'  in condition) return compare(player.resources.gold, condition.gold);
+
   const attrs = player.attributes ?? {};
   for (const key of Object.keys(attrs)) {
-    if (key in condition) return attrs[key] >= condition[key];
+    if (key in condition) return compare(attrs[key], condition[key]);
   }
-  if ('mission' in condition) return gameState.getMissionStatus(condition.mission) === condition.status;
 
   console.warn('[Gravity] evaluateCondition: unrecognised condition shape', condition);
   return true;

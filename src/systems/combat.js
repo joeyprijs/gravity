@@ -11,8 +11,8 @@ export class CombatSystem {
     this.inCombat = false;
     this.isGameOver = false;
     this.enemies = [];
-    // originOption is the scene option that triggered this combat. On victory,
-    // its setFlag is applied so the fight option disappears.
+    // originOption is the action object that triggered this combat.
+    // Its onVictory array is executed as an action pipeline on victory.
     this.originOption = null;
 
     this.playerInit = 0;
@@ -244,20 +244,18 @@ export class CombatSystem {
         }
       });
 
-      if (this.originOption?.setFlag) {
-        gameState.setFlag(this.originOption.setFlag.flag, this.originOption.setFlag.value);
-      }
-
       // Reset AP after combat
       const player = gameState.getPlayer();
       gameState.modifyPlayerStat('ap', player.resources.ap.max - player.resources.ap.current);
 
-      // Return to scene
-      if (this.originOption.destination) {
-        this.engine.renderScene(this.originOption.destination);
-      } else {
-        this.engine.renderScene(gameState.getCurrentSceneId());
+      // Run onVictory action pipeline
+      const onVictory = this.originOption?.onVictory || [];
+      for (const action of onVictory) {
+        const handler = this.engine.getActionHandler(action.type);
+        if (handler) handler(action, this.engine);
       }
+      const didNavigate = onVictory.some(a => ['navigate', 'return'].includes(a.type));
+      if (!didNavigate) this.engine.renderScene(gameState.getCurrentSceneId());
 
     } else {
       this.engine.openScene();

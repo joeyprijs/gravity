@@ -31,7 +31,13 @@
         ]
       },
       "actions": [
-        { "type": "combat", "enemies": ["goblin_guard", "goblin_grunt"], "setFlag": { "flag": "defeated_goblin_guard", "value": true } }
+        {
+          "type": "combat",
+          "enemies": ["goblin_guard", "goblin_grunt"],
+          "onVictory": [
+            { "type": "set_flag", "flag": "defeated_goblin_guard", "value": true }
+          ]
+        }
       ]
     },
     {
@@ -66,14 +72,16 @@
       "skillCheck": "stealth",
       "dc": 14,
       "increment": 2,
-      "setFlag": { "flag": "goblins_snuck_past", "value": true },
-      "destination": "dungeon_chamber",
       "condition": {
         "and": [
           { "flag": "defeated_goblin_guard", "value": false },
           { "flag": "goblins_pacified", "value": false }
         ]
-      }
+      },
+      "onSuccess": [
+        { "type": "set_flag", "flag": "goblins_snuck_past", "value": true },
+        { "type": "navigate", "destination": "dungeon_chamber" }
+      ]
     },
     {
       "text": "Easy. I mean no harm. Let's not do this.",
@@ -81,14 +89,16 @@
       "dc": 18,
       "increment": 2,
       "npcName": "Goblin Guard",
-      "setFlag": { "flag": "goblins_pacified", "value": true },
-      "destination": "dungeon_hallway",
       "condition": {
         "and": [
           { "flag": "defeated_goblin_guard", "value": false },
           { "flag": "goblins_pacified", "value": false }
         ]
-      }
+      },
+      "onSuccess": [
+        { "type": "set_flag", "flag": "goblins_pacified", "value": true },
+        { "type": "navigate", "destination": "dungeon_hallway" }
+      ]
     }
   ]
 }

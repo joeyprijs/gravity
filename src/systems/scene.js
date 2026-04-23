@@ -235,8 +235,11 @@ export class SceneRenderer {
             success ? 'loot' : 'system'
           );
           if (success) {
-            if (opt.setFlag) gameState.setFlag(opt.setFlag.flag, opt.setFlag.value);
-            this.engine.renderScene(opt.destination || gameState.getCurrentSceneId());
+            this._runActions(opt.onSuccess || []);
+            const didNavigate = (opt.onSuccess || []).some(a =>
+              ['navigate', 'combat', 'dialogue', 'return'].includes(a.type)
+            );
+            if (!didNavigate) this.engine.renderScene(gameState.getCurrentSceneId());
           } else {
             skillState[i] = dc + (opt.increment ?? 1);
             gameState.setFlag(skillKey, skillState);
@@ -270,23 +273,24 @@ export class SceneRenderer {
     }
   }
 
+  _runActions(actions) {
+    for (const action of actions) {
+      const handler = this.engine.getActionHandler(action.type);
+      if (handler) handler(action, this.engine);
+      else console.warn(`[Gravity] _runActions: no handler for action type "${action.type}"`);
+    }
+  }
+
   handleOption(opt) {
     this.engine.isGameStart = false;
     this.engine.log(LOG.PLAYER, opt.text, 'choice');
 
-    for (const action of (opt.actions || [])) {
-      const handler = this.engine.getActionHandler(action.type);
-      if (handler) {
-        handler(action, this.engine);
-      } else {
-        console.warn(`[Gravity] handleOption: no handler for action type "${action.type}"`);
-      }
-    }
+    this._runActions(opt.actions || []);
 
     // If no navigation-triggering action ran, refresh option buttons so any
     // flag changes take effect immediately (e.g. hiding a one-time option).
     const navigated = (opt.actions || []).some(a =>
-      ['navigate', 'combat', 'dialogue', 'return', 'manage_chest'].includes(a.type)
+      ['navigate', 'combat', 'dialogue', 'return'].includes(a.type)
     );
     if (!navigated) {
       const scene = this.engine.data.scenes[gameState.getCurrentSceneId()];

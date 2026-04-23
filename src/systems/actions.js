@@ -1,5 +1,5 @@
 import { gameState } from "../core/state.js";
-import { LOG, ACTIONS, CSS } from "../core/config.js";
+import { LOG, ACTIONS } from "../core/config.js";
 
 // Built-in action handlers for the scene option action pipeline.
 // Each handler receives (action, engine) — the action object from the pipeline
@@ -53,7 +53,6 @@ function handleFullRest(action, engine) {
     const msg = typeof action.log === 'string' ? action.log : engine.t('actions.fullRest');
     engine.log(LOG.SYSTEM, msg);
   }
-  if (action.destination) engine.renderScene(action.destination);
 }
 
 function handleHeal(action, engine) {
@@ -63,10 +62,6 @@ function handleHeal(action, engine) {
     const msg = typeof action.log === 'string' ? action.log : engine.t('actions.heal', { amount });
     engine.log(LOG.SYSTEM, msg, 'loot');
   }
-}
-
-function handleManageChest(_action, engine) {
-  engine.ui.renderMuseumChestUI();
 }
 
 // --- Pipeline utility actions ---
@@ -83,21 +78,6 @@ function handleLog(action, engine) {
   engine.log(LOG.SYSTEM, action.message || '');
 }
 
-// --- Description hook ---
-
-function museumChestContentsHook(engine) {
-  const chest = gameState.getMuseumChest();
-  if (chest && chest.length > 0) {
-    const nameList = chest.map(b => {
-      const name = engine.data.items[b.item]?.name || b.item;
-      return b.amount > 1 ? `${name} (x${b.amount})` : name;
-    }).join(", ");
-    const names = `<span class="${CSS.MUSEUM_ITEM_LIST}">${nameList}</span>`;
-    return `<br><br>${engine.t('actions.museumDisplayedWithin', { names })}`;
-  }
-  return `<br><br>${engine.t('actions.museumRoomEmpty')}`;
-}
-
 export function registerBuiltinActions(engine) {
   engine.registerAction(ACTIONS.LOOT,            handleLoot);
   engine.registerAction(ACTIONS.COMBAT,          handleCombat);
@@ -105,9 +85,7 @@ export function registerBuiltinActions(engine) {
   engine.registerAction(ACTIONS.RETURN,          handleReturn);
   engine.registerAction(ACTIONS.FULL_REST,       handleFullRest);
   engine.registerAction(ACTIONS.HEAL,            handleHeal);
-  engine.registerAction(ACTIONS.MANAGE_CHEST,    handleManageChest);
   engine.registerAction(ACTIONS.NAVIGATE,        handleNavigate);
   engine.registerAction(ACTIONS.SET_FLAG,        handleSetFlag);
   engine.registerAction(ACTIONS.LOG,             handleLog);
-  engine.registerDescriptionHook('museumChestContents', museumChestContentsHook);
 }

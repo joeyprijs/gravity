@@ -19,7 +19,9 @@
   ],
   "autoAttack": {
     "enemies": ["lost_wanderer"],
-    "setFlag": { "flag": "wanderer_defeated", "value": true },
+    "onVictory": [
+      { "type": "set_flag", "flag": "wanderer_defeated", "value": true }
+    ],
     "condition": { "flag": "wanderer_defeated", "value": false }
   },
   "options": [

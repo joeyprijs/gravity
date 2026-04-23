@@ -10,7 +10,6 @@ export const ACTIONS = {
   RETURN:          'return',
   FULL_REST:       'full_rest',
   HEAL:            'heal',
-  MANAGE_CHEST:    'manage_chest',
   NAVIGATE:        'navigate',
   SET_FLAG:        'set_flag',
   LOG:             'log',
