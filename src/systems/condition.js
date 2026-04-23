@@ -4,7 +4,7 @@
 // Leaf types:
 //   { "flag": "name", "value": true }              — flag equals value
 //   { "item": "item_id" }                          — player has item in inventory
-//   { "charisma": 3 }                              — player charisma >= value
+//   { "stealth": 2 }                              — any player attribute >= value (works for all custom attributes)
 //   { "gold": 50 }                                 — player gold >= value
 //   { "mission": "id", "status": "complete" }      — mission is in the given status
 //
@@ -24,9 +24,13 @@ export function evaluateCondition(condition, gameState) {
   // Leaf types
   if ('flag' in condition) return gameState.getFlag(condition.flag) === condition.value;
   if ('item' in condition) return !!gameState.getPlayer().inventory.find(i => i.item === condition.item);
-  if ('level' in condition)    return gameState.getPlayer().level >= condition.level;
-  if ('charisma' in condition) return gameState.getPlayer().attributes.charisma >= condition.charisma;
-  if ('gold' in condition)     return gameState.getPlayer().resources.gold >= condition.gold;
+  const player = gameState.getPlayer();
+  if ('level' in condition) return player.level >= condition.level;
+  if ('gold' in condition)  return player.resources.gold >= condition.gold;
+  const attrs = player.attributes ?? {};
+  for (const key of Object.keys(attrs)) {
+    if (key in condition) return attrs[key] >= condition[key];
+  }
   if ('mission' in condition) return gameState.getMissionStatus(condition.mission) === condition.status;
 
   console.warn('[Gravity] evaluateCondition: unrecognised condition shape', condition);

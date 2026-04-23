@@ -443,8 +443,6 @@ The `condition` field supports a full boolean tree. Used on options, skills, des
 
 **Combinators:** `and` (all must pass), `or` (any must pass), `not` (inverts child).
 
-> Note: only `charisma` is supported as a custom attribute in conditions. Other custom attributes (e.g. `stealth`) cannot currently be used as condition leaf types.
-
 ---
 
 ### Actions
