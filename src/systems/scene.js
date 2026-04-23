@@ -87,7 +87,7 @@ export class SceneRenderer {
       if (!cond || evaluateCondition(cond, gameState)) {
         this.engine.combatSystem.startCombat(
           scene.autoAttack.enemies,
-          { setFlag: scene.autoAttack.setFlag, destination: scene.autoAttack.destination }
+          scene.autoAttack
         );
         return;
       }
