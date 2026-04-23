@@ -40,16 +40,7 @@ function handleDialogue(action, engine) {
   engine.dialogueSystem.startDialogue(action.npc);
 }
 
-function handleRest(action, engine) {
-  const healAmount = action.heal || engine.data.rules?.restHealAmount || 10;
-  gameState.modifyPlayerStat('hp', healAmount);
-  if (action.log !== false) {
-    const msg = typeof action.log === 'string' ? action.log : engine.t('actions.rested');
-    engine.log(LOG.SYSTEM, msg);
-  }
-}
-
-function handleReturnToWorld(_action, engine) {
+function handleReturn(_action, engine) {
   const fallback = engine.data.rules?.startingScene || null;
   engine.renderScene(gameState.getReturnSceneId() || fallback);
 }
@@ -65,11 +56,11 @@ function handleFullRest(action, engine) {
   if (action.destination) engine.renderScene(action.destination);
 }
 
-function handleEatSnack(action, engine) {
-  const amount = engine.data.rules?.snackHealAmount || 2;
+function handleHeal(action, engine) {
+  const amount = action.amount ?? engine.data.rules?.snackHealAmount ?? 2;
   gameState.modifyPlayerStat('hp', amount);
   if (action.log !== false) {
-    const msg = typeof action.log === 'string' ? action.log : engine.t('actions.eatSnack', { amount });
+    const msg = typeof action.log === 'string' ? action.log : engine.t('actions.heal', { amount });
     engine.log(LOG.SYSTEM, msg, 'loot');
   }
 }
@@ -111,10 +102,9 @@ export function registerBuiltinActions(engine) {
   engine.registerAction(ACTIONS.LOOT,            handleLoot);
   engine.registerAction(ACTIONS.COMBAT,          handleCombat);
   engine.registerAction(ACTIONS.DIALOGUE,        handleDialogue);
-  engine.registerAction(ACTIONS.REST,            handleRest);
-  engine.registerAction(ACTIONS.RETURN_TO_WORLD, handleReturnToWorld);
+  engine.registerAction(ACTIONS.RETURN,          handleReturn);
   engine.registerAction(ACTIONS.FULL_REST,       handleFullRest);
-  engine.registerAction(ACTIONS.EAT_SNACK,       handleEatSnack);
+  engine.registerAction(ACTIONS.HEAL,            handleHeal);
   engine.registerAction(ACTIONS.MANAGE_CHEST,    handleManageChest);
   engine.registerAction(ACTIONS.NAVIGATE,        handleNavigate);
   engine.registerAction(ACTIONS.SET_FLAG,        handleSetFlag);

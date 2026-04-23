@@ -29,10 +29,7 @@
     },
     "attributes": {
       "ac": 10,
-      "initiative": 0,
-      "perception": 0,
-      "charisma": 0,
-      "sneak": 0
+      "initiative": 0
     },
     "inventory": [
       { "item": "rusty_sword",    "amount": 1 },
@@ -48,6 +45,12 @@
       "Legs": null
     }
   },
+  "customAttributes": [
+    { "id": "perception", "default": 0 },
+    { "id": "charisma",   "default": 0 },
+    { "id": "stealth",    "default": 0 },
+    { "id": "darkness",    "default": 0 }
+  ],
   "charCreation": {
     "pointBudget": 3,
     "stats": [
@@ -55,12 +58,14 @@
       { "id": "attributes.ac",         "localeKey": "ac",         "bonusPerPoint": 1, "min": 0 },
       { "id": "attributes.perception", "localeKey": "perception", "bonusPerPoint": 1, "min": 0 },
       { "id": "attributes.charisma",   "localeKey": "charisma",   "bonusPerPoint": 1, "min": 0 },
-      { "id": "attributes.sneak",      "localeKey": "sneak",      "bonusPerPoint": 1, "min": 0 }
+      { "id": "attributes.stealth",      "localeKey": "stealth",  "bonusPerPoint": 1, "min": 0 },
+      { "id": "attributes.darkness",      "localeKey": "darkness",  "bonusPerPoint": 1, "min": 0 }
     ]
   },
   "tabs": [
-    { "id": "inventory-tab", "localeKey": "ui.tabInventory", "default": true },
-    { "id": "quests-tab",    "localeKey": "ui.tabQuests" },
-    { "id": "map-tab",       "localeKey": "ui.tabMap",       "widget": "map" }
+    { "id": "inventory-tab",   "localeKey": "ui.tabInventory",  "default": true },
+    { "id": "quests-tab",      "localeKey": "ui.tabQuests" },
+    { "id": "attributes-tab",  "localeKey": "ui.tabAttributes", "widget": "attributes" },
+    { "id": "map-tab",         "localeKey": "ui.tabMap",        "widget": "map" }
   ]
 }

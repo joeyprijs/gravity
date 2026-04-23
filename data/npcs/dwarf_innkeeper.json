@@ -43,7 +43,7 @@
       "npcText": "You made it out? Ha! Wasn't sure you had it in ya. Most don't come back from that place. Here — take this. Old wayfinder's charm. Kept me alive more times than I care to count.",
       "actions": [
         { "type": "loot", "item": "wayfinder_charm" },
-        { "type": "setFlag", "flag": "received_brons_charm", "value": true }
+        { "type": "set_flag", "flag": "received_brons_charm", "value": true }
       ],
       "responses": [
         { "text": "Thank you, Bron.", "actions": [{ "type": "goToConversation", "node": "charm_given" }] }

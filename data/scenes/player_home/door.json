@@ -20,7 +20,7 @@
       "text": "Return via Teleport",
       "requirements": { "item": "home_rune" },
       "actions": [
-        { "type": "return_to_world" }
+        { "type": "return" }
       ]
     }
   ]

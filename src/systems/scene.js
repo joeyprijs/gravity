@@ -286,7 +286,7 @@ export class SceneRenderer {
     // If no navigation-triggering action ran, refresh option buttons so any
     // flag changes take effect immediately (e.g. hiding a one-time option).
     const navigated = (opt.actions || []).some(a =>
-      ['navigate', 'combat', 'dialogue', 'return_to_world', 'manage_chest'].includes(a.type)
+      ['navigate', 'combat', 'dialogue', 'return', 'manage_chest'].includes(a.type)
     );
     if (!navigated) {
       const scene = this.engine.data.scenes[gameState.getCurrentSceneId()];

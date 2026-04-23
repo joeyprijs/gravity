@@ -24,7 +24,7 @@
       "condition": { "flag": "door_unlocked", "value": false },
       "requirements": { "item": "cellar_key" },
       "actions": [
-        { "type": "setFlag", "flag": "door_unlocked", "value": true },
+        { "type": "set_flag", "flag": "door_unlocked", "value": true },
         { "type": "navigate", "destination": "dungeon_corridor" }
       ]
     },

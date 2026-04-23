@@ -58,9 +58,9 @@ const MIGRATIONS = {
       initiative: p.initiative ?? 0,
       perception: p.perception ?? 0,
       charisma:   p.charisma   ?? 0,
-      sneak:      p.sneak      ?? 0
+      stealth:      p.stealth      ?? 0
     };
-    ['hp', 'maxHp', 'ap', 'maxAp', 'gold', 'ac', 'initiative', 'perception', 'charisma', 'sneak']
+    ['hp', 'maxHp', 'ap', 'maxAp', 'gold', 'ac', 'initiative', 'perception', 'charisma', 'stealth']
       .forEach(k => delete p[k]);
   },
 };
@@ -76,9 +76,13 @@ function migrate(data, extraMigrations = {}) {
 }
 
 function makeDefaultState(rules) {
+  const player = JSON.parse(JSON.stringify(rules.playerDefaults));
+  (rules.customAttributes ?? []).forEach(attr => {
+    player.attributes[attr.id] = attr.default ?? 0;
+  });
   return {
     saveVersion: SAVE_VERSION,
-    player: JSON.parse(JSON.stringify(rules.playerDefaults)),
+    player,
     flags: {},
     missions: {},
     currentSceneId: rules.startingScene || null,

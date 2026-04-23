@@ -176,6 +176,26 @@ body {
   overflow-y: auto;
 }
 
+.game__scene-options::-webkit-scrollbar,
+.game__player::-webkit-scrollbar {
+  width: 6px;
+}
+
+.game__scene-options::-webkit-scrollbar-track,
+.game__player::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+.game__scene-options::-webkit-scrollbar-thumb,
+.game__player::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+}
+
+.game__scene-options::-webkit-scrollbar-thumb:hover,
+.game__player::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
 .game__scene {
   background: var(--panel-bg);
   -webkit-backdrop-filter: blur(10px);

@@ -21,8 +21,8 @@
       "text": "Rest here (Restore HP)",
       "condition": { "flag": "chamber_rested", "value": false },
       "actions": [
-        { "type": "setFlag", "flag": "chamber_rested", "value": true },
-        { "type": "rest", "heal": 10 }
+        { "type": "set_flag", "flag": "chamber_rested", "value": true },
+        { "type": "heal", "amount": 10 }
       ]
     },
     {

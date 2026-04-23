@@ -13,7 +13,7 @@
       "ac":         { "label": "Armor Class (AC)",  "description": "+1 AC per point" },
       "perception": { "label": "Perception",        "description": "+1 Perception per point" },
       "charisma":   { "label": "Charisma",          "description": "+1 Charisma per point" },
-      "sneak":      { "label": "Sneak",             "description": "+1 Sneak per point" }
+      "stealth":      { "label": "Stealth",         "description": "+1 Stealth per point" }
     }
   },
   "system": {
@@ -30,7 +30,7 @@
     "ac":         "{value}",
     "initiative": "{value}",
     "perception": "{value}",
-    "sneak":      "{value}",
+    "stealth":      "{value}",
     "gold":       "{value}"
   },
   "ui": {
@@ -48,6 +48,7 @@
     "skillsHeading":       "Skills",
     "tabInventory":        "Inventory",
     "tabQuests":           "Quests",
+    "tabAttributes":       "Skills",
     "tabMap":              "Map",
     "equippedSection":     "Equipped",
     "equippedTo":          "Equipped: {slot}",
@@ -81,7 +82,7 @@
   "actions": {
     "rested":                "You rested and recovered HP.",
     "fullRest":              "You slept soundly. Health and Actions fully restored.",
-    "eatSnack":              "You ate a warm meal from the pot. Recovered {amount} HP.",
+    "heal":                  "You ate a warm meal from the pot. Recovered {amount} HP.",
     "museumTook":            "You retrieved {name} from the display.",
     "museumDisplayed":       "You proudly displayed {name}.",
     "museumRoomEmpty":       "The room is currently devoid of trophies.",
@@ -91,7 +92,7 @@
     "skillBadge": {
       "perception": "DC {dc}, Skill: Perception",
       "charisma":   "DC {dc}, Skill: Charisma",
-      "sneak":      "DC {dc}, Skill: Sneak"
+      "stealth":      "DC {dc}, Skill: Stealth"
     },
     "skillSuccess": "({roll}, 1d20 + {mod} {skill}) — success!",
     "skillFail":    "({roll}, 1d20 + {mod} {skill}) — failure.",

@@ -25,7 +25,7 @@
           "condition": { "not": { "flag": "stranger_reputation_known", "value": true } },
           "actions": [
             { "type": "loot", "item": "healing_potion" },
-            { "type": "setFlag", "flag": "stranger_reputation_known", "value": true },
+            { "type": "set_flag", "flag": "stranger_reputation_known", "value": true },
             { "type": "trade", "tradeDiscount": 10, "persistDiscount": true }
           ]
         },

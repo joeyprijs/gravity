@@ -13,7 +13,7 @@
     {
       "text": "Eat a Snack",
       "actions": [
-        { "type": "eat_snack" }
+        { "type": "heal" }
       ]
     },
     {

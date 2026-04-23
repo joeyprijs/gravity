@@ -63,7 +63,7 @@
     },
     {
       "text": "Slip past the goblins undetected.",
-      "skillCheck": "sneak",
+      "skillCheck": "stealth",
       "dc": 14,
       "increment": 2,
       "setFlag": { "flag": "goblins_snuck_past", "value": true },

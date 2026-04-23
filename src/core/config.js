@@ -7,13 +7,12 @@ export const ACTIONS = {
   LOOT:            'loot',
   COMBAT:          'combat',
   DIALOGUE:        'dialogue',
-  REST:            'rest',
-  RETURN_TO_WORLD: 'return_to_world',
+  RETURN:          'return',
   FULL_REST:       'full_rest',
-  EAT_SNACK:       'eat_snack',
+  HEAL:            'heal',
   MANAGE_CHEST:    'manage_chest',
   NAVIGATE:        'navigate',
-  SET_FLAG:        'setFlag',
+  SET_FLAG:        'set_flag',
   LOG:             'log',
 };
 
