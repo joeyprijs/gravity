@@ -6,10 +6,10 @@
 //   { "item": "item_id" }                           — player has item in inventory
 //   { "item": "item_id", "count": 3 }              — player has >= 3 of item
 //   { "gold": 50 }                                  — player gold >= 50 (shorthand for gte)
-//   { "gold": { "lt": 10 } }                       — supports gte/gt/lte/lt/eq operators
+//   { "gold": { "less_than": 10 } }                — supports at_least/more_than/at_most/less_than/is
 //   { "level": 3 }                                  — player level >= 3
-//   { "stealth": 2 }                               — any player attribute >= 2 (shorthand for gte)
-//   { "stealth": { "gt": 1 } }                     — attribute with explicit operator
+//   { "stealth": 2 }                               — any player attribute >= 2 (shorthand for at_least)
+//   { "stealth": { "more_than": 1 } }              — attribute with explicit operator
 //   { "mission": "id", "status": "complete" }       — mission is in the given status
 //
 // Combinators:
@@ -20,11 +20,11 @@
 // Compares actual against operand. Bare number = >=. Object = explicit operator.
 function compare(actual, operand) {
   if (typeof operand === 'number') return actual >= operand;
-  if ('gte' in operand) return actual >= operand.gte;
-  if ('gt'  in operand) return actual >  operand.gt;
-  if ('lte' in operand) return actual <= operand.lte;
-  if ('lt'  in operand) return actual <  operand.lt;
-  if ('eq'  in operand) return actual === operand.eq;
+  if ('at_least'  in operand) return actual >= operand.at_least;
+  if ('more_than' in operand) return actual >  operand.more_than;
+  if ('at_most'   in operand) return actual <= operand.at_most;
+  if ('less_than' in operand) return actual <  operand.less_than;
+  if ('is'        in operand) return actual === operand.is;
   return false;
 }
 
