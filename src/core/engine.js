@@ -104,7 +104,16 @@ class RPGEngine {
         loadCategory(manifest.scenes),
         loadCategory(manifest.missions),
         manifest.tables ? loadCategory(manifest.tables) : Promise.resolve({}),
-        manifest.flags ? fetch(manifest.flags).then(r => r.json()).catch(() => ({})) : Promise.resolve({}),
+        manifest.flags
+          ? (typeof manifest.flags === 'string'
+            ? fetch(manifest.flags).then(r => r.json()).catch(() => ({}))
+            : Promise.all(
+                Object.values(manifest.flags).map(url =>
+                  fetch(url).then(r => r.json()).catch(err => { console.warn(`[Gravity] Failed to load flags from "${url}": ${err.message}`); return {}; })
+                )
+              ).then(results => Object.assign({}, ...results))
+          )
+          : Promise.resolve({}),
         manifest.rules ? fetch(manifest.rules).then(r => r.json()).catch(() => null) : Promise.resolve(null)
       ]);
 
@@ -219,6 +228,16 @@ class RPGEngine {
       warn(`Missing required fallback item "${playerFallback}" — add to data/items/ and index.json`);
     if (enemyFallback && !items[enemyFallback])
       warn(`Missing required fallback item "${enemyFallback}" — add to data/items/ and index.json`);
+
+    for (const attr of (rules?.customAttributes || [])) {
+      if (!this.data.locale?.actions?.skillBadge?.[attr.id])
+        warn(`customAttributes "${attr.id}": missing locale entry at actions.skillBadge.${attr.id}`);
+    }
+
+    for (const stat of (rules?.charCreation?.stats || [])) {
+      if (!this.data.locale?.charCreation?.stats?.[stat.localeKey])
+        warn(`charCreation.stats "${stat.id}": missing locale entry at charCreation.stats.${stat.localeKey}`);
+    }
   }
 
   // --- Item action methods ---
