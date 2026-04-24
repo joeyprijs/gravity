@@ -2,7 +2,8 @@
   "worldMapSize": { "width": 3000, "height": 2000 },
   "rules": "data/rules.json",
   "flags": {
-    "dungeon": "data/flags/dungeon.json"
+    "dungeon":     "data/flags/dungeon.json",
+    "player_home": "data/flags/player_home.json"
   },
   "regions": {
     "dungeon": { "name": "The Dungeon" },
