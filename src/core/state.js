@@ -5,9 +5,21 @@ const MAX_LOG_ENTRIES = 200;
 // Increment when the save schema changes. loadFromObject() migrates older saves
 // forward so they remain compatible. Each migration function receives the raw
 // parsed data object and mutates it in-place.
-const SAVE_VERSION = 1;
+const SAVE_VERSION = 2;
 
-const MIGRATIONS = {};
+const MIGRATIONS = {
+  // v0 → v1: player.name was added; give it an empty default on older saves.
+  1: (data) => { if (!('name' in data.player)) data.player.name = ''; },
+  // v1 → v2: museumChest array moved into generic chests map.
+  2: (data) => {
+    if ('museumChest' in data) {
+      data.chests = { museum: data.museumChest };
+      delete data.museumChest;
+    } else {
+      data.chests = {};
+    }
+  },
+};
 
 function migrate(data, extraMigrations = {}) {
   const from = data.saveVersion ?? 0;
@@ -31,7 +43,7 @@ function makeDefaultState(rules) {
     missions: {},
     currentSceneId: rules.startingScene || null,
     returnSceneId: null,
-    museumChest: [],
+    chests: {},
     visitedScenes: [],
     log: []
   };
@@ -52,7 +64,7 @@ class StateManager {
       missions: {},
       currentSceneId: null,
       returnSceneId: null,
-      museumChest: [],
+      chests: {},
       visitedScenes: [],
       log: []
     };
@@ -254,25 +266,28 @@ class StateManager {
   getReturnSceneId() { return this.state.returnSceneId; }
   setReturnSceneId(sceneId) { this.state.returnSceneId = sceneId; }
 
-  getMuseumChest() { return this.state.museumChest; }
+  getChest(chestId) { return this.state.chests[chestId] ?? []; }
 
-  depositToChest(itemId, amount = 1) {
-    const existing = this.state.museumChest.find(i => i.item === itemId);
+  depositToChest(chestId, itemId, amount = 1) {
+    if (!this.state.chests[chestId]) this.state.chests[chestId] = [];
+    const existing = this.state.chests[chestId].find(i => i.item === itemId);
     if (existing) {
       existing.amount += amount;
     } else {
-      this.state.museumChest.push({ item: itemId, amount: amount });
+      this.state.chests[chestId].push({ item: itemId, amount });
     }
     this.removeFromInventory(itemId, amount, { silent: true });
     this.notifyListeners('inventory');
   }
 
-  withdrawFromChest(itemId, amount = 1) {
-    const existing = this.state.museumChest.find(i => i.item === itemId);
+  withdrawFromChest(chestId, itemId, amount = 1) {
+    const chest = this.state.chests[chestId];
+    if (!chest) return;
+    const existing = chest.find(i => i.item === itemId);
     if (!existing) return;
     existing.amount -= amount;
     if (existing.amount <= 0) {
-      this.state.museumChest = this.state.museumChest.filter(i => i.item !== itemId);
+      this.state.chests[chestId] = chest.filter(i => i.item !== itemId);
     }
     this.addToInventory(itemId, amount, { silent: true });
     this.notifyListeners('inventory');

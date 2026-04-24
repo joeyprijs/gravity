@@ -2,10 +2,35 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { gameState } from '../src/core/state.js';
 
-// Reset to defaults before each test so singleton state is clean.
-// PLAYER_DEFAULTS starts with: hp/maxHp=10, ap/maxAp=3, charisma=1, level=1, xp=0, gold=0
-// inventory: rusty_sword×1, flames×1, healing_potion×2
-beforeEach(() => gameState.reset());
+// Minimal rules that mirror the key values from rules.json.
+// State must be init'd before each test since gameState is a singleton.
+const TEST_RULES = {
+  playerDefaults: {
+    name: '',
+    level: 1,
+    xp: 0,
+    resources: { hp: { current: 10, max: 10 }, ap: { current: 3, max: 3 }, gold: 0 },
+    attributes: { ac: 10, initiative: 0 },
+    inventory: [
+      { item: 'rusty_sword',    amount: 1 },
+      { item: 'flames',         amount: 1 },
+      { item: 'healing_potion', amount: 2 },
+    ],
+    equipment: {},
+  },
+  customAttributes: [],
+  startingScene: null,
+  xpPerLevel: 100,
+  levelUpHpBonus: 5,
+};
+
+// Shortcuts to avoid repeating player.resources.hp.current etc. throughout tests.
+const hp    = () => gameState.getPlayer().resources.hp.current;
+const maxHp = () => gameState.getPlayer().resources.hp.max;
+const ap    = () => gameState.getPlayer().resources.ap.current;
+const maxAp = () => gameState.getPlayer().resources.ap.max;
+
+beforeEach(() => gameState.init(TEST_RULES));
 
 test('addXP: level increases at threshold, carries surplus', () => {
   // Level 1 threshold = 1 × 100 = 100 XP
@@ -24,31 +49,29 @@ test('addXP: multiple level increases in one call', () => {
 });
 
 test('addXP: level-up increases maxHp', () => {
-  const before = gameState.getPlayer().maxHp;
+  const before = maxHp();
   gameState.addXP(100);
-  assert.equal(gameState.getPlayer().maxHp, before + 5);
+  assert.equal(maxHp(), before + 5);
 });
 
 test('modifyPlayerStat hp: clamps to maxHp on overflow', () => {
   gameState.modifyPlayerStat('hp', 1000);
-  const player = gameState.getPlayer();
-  assert.equal(player.hp, player.maxHp);
+  assert.equal(hp(), maxHp());
 });
 
 test('modifyPlayerStat hp: clamps to 0 on underflow', () => {
   gameState.modifyPlayerStat('hp', -1000);
-  assert.equal(gameState.getPlayer().hp, 0);
+  assert.equal(hp(), 0);
 });
 
 test('modifyPlayerStat ap: clamps to maxAp on overflow', () => {
   gameState.modifyPlayerStat('ap', 1000);
-  const player = gameState.getPlayer();
-  assert.equal(player.ap, player.maxAp);
+  assert.equal(ap(), maxAp());
 });
 
 test('modifyPlayerStat ap: clamps to 0 on underflow', () => {
   gameState.modifyPlayerStat('ap', -1000);
-  assert.equal(gameState.getPlayer().ap, 0);
+  assert.equal(ap(), 0);
 });
 
 test('addToInventory: stacks existing item', () => {

@@ -11,15 +11,5 @@
   "equipment": {
     "Right Hand": "rusty_sword"
   },
-  "carriedItems": ["healing_potion"],
-  "droppedLoot": [
-    {
-      "item": "gold",
-      "amount": 10
-    },
-    {
-      "item": "home_rune",
-      "amount": 1
-    }
-  ]
+  "carriedItems": ["healing_potion"]
 }

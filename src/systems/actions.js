@@ -12,12 +12,21 @@ import { LOG, ACTIONS } from "../core/config.js";
 // Register additional actions at runtime: window.gameEngine.registerAction(name, fn)
 
 function handleLoot(action, engine) {
-  gameState.addToInventory(action.item, action.amount || 1);
-  if (action.log !== false) {
-    const msg = typeof action.log === 'string'
-      ? action.log
-      : engine.t('loot.receivedItem', { name: engine.data.items[action.item]?.name || action.item });
-    engine.log(LOG.SYSTEM, msg, 'loot');
+  const amount = action.amount || 1;
+  if (action.item === 'gold') {
+    gameState.modifyPlayerStat('gold', amount);
+    if (action.log !== false) {
+      const msg = typeof action.log === 'string' ? action.log : engine.t('loot.foundGold', { amount });
+      engine.log(LOG.SYSTEM, msg, 'loot');
+    }
+  } else {
+    gameState.addToInventory(action.item, amount);
+    if (action.log !== false) {
+      const msg = typeof action.log === 'string'
+        ? action.log
+        : engine.t('loot.receivedItem', { name: engine.data.items[action.item]?.name || action.item });
+      engine.log(LOG.SYSTEM, msg, 'loot');
+    }
   }
   if (action.xpReward) {
     gameState.addXP(action.xpReward);
@@ -78,6 +87,11 @@ function handleLog(action, engine) {
   engine.log(LOG.SYSTEM, action.message || '');
 }
 
+function handleManageChest(action, engine) {
+  engine._customUIOpen = true;
+  engine.ui.renderChestUI(action.chest);
+}
+
 export function registerBuiltinActions(engine) {
   engine.registerAction(ACTIONS.LOOT,            handleLoot);
   engine.registerAction(ACTIONS.COMBAT,          handleCombat);
@@ -88,4 +102,5 @@ export function registerBuiltinActions(engine) {
   engine.registerAction(ACTIONS.NAVIGATE,        handleNavigate);
   engine.registerAction(ACTIONS.SET_FLAG,        handleSetFlag);
   engine.registerAction(ACTIONS.LOG,             handleLog);
+  engine.registerAction(ACTIONS.MANAGE_CHEST,    handleManageChest);
 }

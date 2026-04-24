@@ -1,5 +1,5 @@
 import { createElement } from "../core/utils.js";
-import { EL, CSS } from "../core/config.js";
+import { EL, CSS, WEAPON_SLOTS } from "../core/config.js";
 
 // InventoryUI renders the inventory and equipment sidebar panels.
 export class InventoryUI {
@@ -89,7 +89,7 @@ export class InventoryUI {
         btn.dataset.item = invItem.item;
         actionsDiv.appendChild(btn);
       } else if (itemData.type === 'Weapon' || itemData.type === 'Spell') {
-        for (const [slot, labelKey] of [['Left Hand', 'inventory.leftHandButton'], ['Right Hand', 'inventory.rightHandButton']]) {
+        for (const [slot, labelKey] of [[WEAPON_SLOTS[0], 'inventory.leftHandButton'], [WEAPON_SLOTS[1], 'inventory.rightHandButton']]) {
           const btn = createElement('button', [CSS.BTN, CSS.BTN_ITEM], this.engine.t(labelKey));
           btn.dataset.action = 'equip';
           btn.dataset.slot = slot;

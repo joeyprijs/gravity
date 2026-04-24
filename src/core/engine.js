@@ -193,8 +193,6 @@ class RPGEngine {
         const itemId = typeof entry === 'string' ? entry : entry.item;
         if (!items[itemId]) warn(`NPC "${npcId}": carriedItems → unknown item "${itemId}"`);
       }
-      for (const loot of (npc.droppedLoot || []))
-        if (loot.item !== 'gold' && !items[loot.item]) warn(`NPC "${npcId}": droppedLoot → unknown item "${loot.item}"`);
       for (const [slot, itemId] of Object.entries(npc.equipment || {}))
         if (itemId && !items[itemId]) warn(`NPC "${npcId}": equipment[${slot}] → unknown item "${itemId}"`);
     }
@@ -312,6 +310,8 @@ class RPGEngine {
 
   get inCombat() { return this.combatSystem.inCombat; }
   get isGameOver() { return this.combatSystem.isGameOver; }
+  get inDialogue() { return !!this.dialogueSystem.currentNPC; }
+  get inCustomUI() { return !!this._customUIOpen; }
 
   get isGameStart() { return this.narrative.isGameStart; }
   set isGameStart(v) { this.narrative.isGameStart = v; }

@@ -2,7 +2,7 @@ import { gameState } from "../core/state.js";
 import { clearElement, getByPath } from "../core/utils.js";
 import { EL, CSS, LOG } from "../core/config.js";
 import { MapManager } from "../world/map.js";
-import { MuseumUI } from "../world/museum.js";
+import { ChestUI } from "./chest-ui.js";
 import { QuestUI } from "./quest-ui.js";
 import { InventoryUI } from "./inventory-ui.js";
 
@@ -10,7 +10,6 @@ export class UIManager {
   constructor(engine) {
     this.engine = engine;
     this.map = new MapManager(engine);
-    this.museum = new MuseumUI(engine);
     this.questUI = new QuestUI(engine);
     this.inventoryUI = new InventoryUI(engine);
   }
@@ -184,7 +183,7 @@ export class UIManager {
     this.engine.restoreScene(gameState.getCurrentSceneId(), lastDesc);
   }
 
-  renderMuseumChestUI() {
-    this.museum.render();
+  renderChestUI(chestId) {
+    new ChestUI(this.engine, chestId).render();
   }
 }

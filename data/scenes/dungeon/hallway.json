@@ -35,7 +35,9 @@
           "type": "combat",
           "enemies": ["goblin_guard", "goblin_grunt"],
           "onVictory": [
-            { "type": "set_flag", "flag": "defeated_goblin_guard", "value": true }
+            { "type": "set_flag", "flag": "defeated_goblin_guard", "value": true },
+            { "type": "loot", "item": "gold", "amount": 13 },
+            { "type": "loot", "item": "home_rune", "amount": 1 }
           ]
         }
       ]

@@ -11,9 +11,5 @@
   },
   "equipment": {
     "Right Hand": "simple_dagger"
-  },
-  "droppedLoot": [
-    { "item": "gold", "amount": 5 },
-    { "item": "healing_potion", "amount": 1 }
-  ]
+  }
 }

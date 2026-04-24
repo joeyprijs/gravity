@@ -7,8 +7,5 @@
     "actionPoints": 1,
     "initiative": 0,
     "xpReward": 25
-  },
-  "droppedLoot": [
-    { "item": "gold", "amount": 3 }
-  ]
+  }
 }

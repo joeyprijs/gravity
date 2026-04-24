@@ -20,7 +20,9 @@
   "autoAttack": {
     "enemies": ["lost_wanderer"],
     "onVictory": [
-      { "type": "set_flag", "flag": "wanderer_defeated", "value": true }
+      { "type": "set_flag", "flag": "wanderer_defeated", "value": true },
+      { "type": "loot", "item": "gold", "amount": 5 },
+      { "type": "loot", "item": "healing_potion", "amount": 1 }
     ],
     "condition": { "flag": "wanderer_defeated", "value": false }
   },

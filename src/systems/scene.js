@@ -57,7 +57,9 @@ export class SceneRenderer {
       this.engine.openScene();
       // Scene content comes from developer-authored JSON, not user input —
       // buildSceneDescription uses innerHTML for the body to allow basic formatting.
-      this.engine.currentSceneEl.appendChild(buildSceneDescription(scene.title || scene.name, currentDesc));
+      const descEl = buildSceneDescription(scene.title || scene.name, currentDesc);
+      this._lastDescBodyEl = descEl.querySelector(`.${CSS.SCENE_BODY}`);
+      this.engine.currentSceneEl.appendChild(descEl);
       gameState.appendLog({ type: 'scene', title: scene.title || scene.name, desc: currentDesc });
 
       this.lastRenderedSceneId = sceneId;
@@ -81,6 +83,12 @@ export class SceneRenderer {
     });
 
     this.renderOptions(scene);
+
+    // Emit scene:entered once per actual entry so quest triggers and other
+    // listeners don't fire on skill-check re-renders or save restores.
+    if (scene.questTrigger) {
+      this.engine.emit('scene:entered', { sceneId, scene });
+    }
 
     if (scene.autoAttack) {
       const cond = scene.autoAttack.condition ?? null;
@@ -115,7 +123,6 @@ export class SceneRenderer {
 
     (scene.options || []).forEach(opt => {
       // Hide options whose condition is not currently met.
-      // Supports both the legacy requiredState shorthand and the full condition tree.
       const cond = opt.condition ?? null;
       if (!evaluateCondition(cond, gameState)) return;
 
@@ -143,110 +150,16 @@ export class SceneRenderer {
       const cond = opt.condition ?? null;
       if (!evaluateCondition(cond, gameState)) return;
 
-      const skillKey = `skill_dc_${opt.skillCheck}_${sceneId}`;
       const items = opt.items || [];
-
+      let btn;
       if (items.length) {
-        // Item-discovery mode: roll against per-item DCs, track what's been found.
-        let state = gameState.getFlag(skillKey);
-        if (!state || !state.dcs) {
-          state = { dcs: items.map(l => l.dc ?? 10), found: items.map(() => false) };
-        }
-        if (state.found.every(f => f)) return;
-
-        const lowestDc = Math.min(...state.dcs.filter((_, idx) => !state.found[idx]));
-        const btn = buildOptionButton(opt.text, this.engine.t(`actions.skillBadge.${opt.skillCheck}`, { dc: lowestDc }));
-        btn.onclick = () => {
-          this.engine.isGameStart = false;
-          this.engine.log(LOG.PLAYER, opt.text, 'choice');
-          const mod = gameState.getPlayer().attributes[opt.skillCheck] || 0;
-          const hitRoll = roll(1, MAX_D20_ROLL) + mod;
-          const newlyFound = [];
-          items.forEach((l, idx) => {
-            if (state.found[idx]) return;
-            if (hitRoll >= state.dcs[idx]) { state.found[idx] = true; newlyFound.push(l); }
-            else { state.dcs[idx] += l.increment ?? 1; }
-          });
-          const anyFound = newlyFound.length > 0;
-          const stillMore = anyFound && !state.found.every(f => f);
-          const msgKey = anyFound
-            ? (stillMore ? 'actions.lookAroundFoundMore' : 'actions.lookAroundFound')
-            : 'actions.lookAroundFail';
-          this.engine.log(LOG.SYSTEM, this.engine.t(msgKey, { roll: hitRoll, mod }), anyFound ? 'loot' : 'system');
-          const drops = [];
-          newlyFound.forEach(l => {
-            if (l.table) {
-              for (let i = 0; i < (l.itemDrops ?? 1); i++) {
-                const resolved = this._rollTable(l.table);
-                if (resolved) drops.push(resolved);
-              }
-            } else {
-              drops.push(l);
-            }
-          });
-          const aggregated = new Map();
-          drops.forEach(d => {
-            const existing = aggregated.get(d.item);
-            if (existing) existing.amount += (d.amount ?? 1);
-            else aggregated.set(d.item, { item: d.item, amount: d.amount ?? 1 });
-          });
-          aggregated.forEach(d => {
-            if (d.item === 'gold') {
-              gameState.modifyPlayerStat('gold', d.amount);
-              this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundGold', { amount: d.amount }), 'loot');
-            } else {
-              gameState.addToInventory(d.item, d.amount);
-              this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundItem', { name: this.engine.data.items[d.item]?.name || d.item }), 'loot');
-            }
-          });
-          gameState.setFlag(skillKey, state);
-          this.renderOptions(scene);
-        };
-        skillBtns.push(btn);
-
+        btn = this._buildItemDiscoveryButton(opt, sceneId, scene);
       } else if (!opt.dc) {
-        // Flavor-only: no roll, show once then disappear.
-        if (gameState.getFlag(skillKey)) return;
-        const btn = buildOptionButton(opt.text, this.engine.t('actions.lookAroundBadge'));
-        btn.onclick = () => {
-          this.engine.isGameStart = false;
-          gameState.setFlag(skillKey, true);
-          this.engine.log(LOG.PLAYER, opt.text, 'choice');
-          this.engine.log(LOG.SYSTEM, this.engine.t('actions.lookAroundEmpty'));
-          this.renderOptions(scene);
-        };
-        skillBtns.push(btn);
-
+        btn = this._buildFlavorButton(opt, sceneId, scene);
       } else {
-        // Pass/fail mode: single roll against escalating DC (charisma, sneak, etc.).
-        const skillState = gameState.getFlag(skillKey) || {};
-        const dc = skillState[i] ?? opt.dc;
-        const btn = buildOptionButton(opt.text, this.engine.t(`actions.skillBadge.${opt.skillCheck}`, { dc }));
-        btn.onclick = () => {
-          this.engine.isGameStart = false;
-          this.engine.log(LOG.PLAYER, opt.text, 'choice');
-          const mod = gameState.getPlayer().attributes[opt.skillCheck] || 0;
-          const rolled = roll(1, MAX_D20_ROLL) + mod;
-          const success = rolled >= dc;
-          this.engine.log(
-            LOG.SYSTEM,
-            this.engine.t(success ? 'actions.skillSuccess' : 'actions.skillFail',
-              { roll: rolled, mod, dc, skill: opt.skillCheck }),
-            success ? 'loot' : 'system'
-          );
-          if (success) {
-            const sceneIdBefore = gameState.getCurrentSceneId();
-            this.engine.runActions(opt.onSuccess || []);
-            const didNavigate = gameState.getCurrentSceneId() !== sceneIdBefore || this.engine.inCombat;
-            if (!didNavigate) this.engine.renderScene(gameState.getCurrentSceneId());
-          } else {
-            skillState[i] = dc + (opt.increment ?? 1);
-            gameState.setFlag(skillKey, skillState);
-            this.renderOptions(scene);
-          }
-        };
-        skillBtns.push(btn);
+        btn = this._buildPassFailButton(opt, i, sceneId, scene);
       }
+      if (btn) skillBtns.push(btn);
     });
 
     if (skillBtns.length > 0) {
@@ -254,10 +167,6 @@ export class SceneRenderer {
       skillsContainer.appendChild(heading);
       skillBtns.forEach(b => skillsContainer.appendChild(b));
       skillsContainer.removeAttribute('hidden');
-    }
-
-    if (scene.questTrigger) {
-      this.engine.emit('scene:entered', { sceneId: gameState.getCurrentSceneId(), scene });
     }
 
     // One-time XP reward on first visit. The flag prevents re-awarding on
@@ -274,7 +183,7 @@ export class SceneRenderer {
 
   handleOption(opt) {
     this.engine.isGameStart = false;
-    this.engine.log(LOG.PLAYER, opt.text, 'choice');
+    if (opt.log !== false) this.engine.log(LOG.PLAYER, opt.text, 'choice');
 
     const sceneIdBefore = gameState.getCurrentSceneId();
     this.engine.runActions(opt.actions || []);
@@ -282,33 +191,149 @@ export class SceneRenderer {
     // Re-render options if nothing caused navigation, so flag changes take
     // effect immediately. Checking sceneId and inCombat covers all action types
     // including plugins, without maintaining a hardcoded list.
-    const navigated = gameState.getCurrentSceneId() !== sceneIdBefore || this.engine.inCombat;
+    const navigated = gameState.getCurrentSceneId() !== sceneIdBefore || this.engine.inCombat || this.engine.inDialogue || this.engine.inCustomUI;
     if (!navigated) {
       const scene = this.engine.data.scenes[gameState.getCurrentSceneId()];
       if (scene) this.renderOptions(scene);
     }
   }
 
+  // Item-discovery skill check: roll against per-item DCs, track found items.
+  // Returns a button, or null if all items have already been found.
+  _buildItemDiscoveryButton(opt, sceneId, scene) {
+    const skillKey = `skill_dc_${opt.skillCheck}_${sceneId}`;
+    const items = opt.items;
+    let state = gameState.getFlag(skillKey);
+    if (!state || !state.dcs) {
+      state = { dcs: items.map(l => l.dc ?? 10), found: items.map(() => false) };
+    }
+    if (state.found.every(f => f)) return null;
+
+    const lowestDc = Math.min(...state.dcs.filter((_, idx) => !state.found[idx]));
+    const btn = buildOptionButton(opt.text, this.engine.t(`actions.skillBadge.${opt.skillCheck}`, { dc: lowestDc }));
+    btn.onclick = () => {
+      this.engine.isGameStart = false;
+      this.engine.log(LOG.PLAYER, opt.text, 'choice');
+      const mod = gameState.getPlayer().attributes[opt.skillCheck] || 0;
+      const hitRoll = roll(1, MAX_D20_ROLL) + mod;
+      const newlyFound = [];
+      items.forEach((l, idx) => {
+        if (state.found[idx]) return;
+        if (hitRoll >= state.dcs[idx]) { state.found[idx] = true; newlyFound.push(l); }
+        else { state.dcs[idx] += l.increment ?? 1; }
+      });
+      const anyFound = newlyFound.length > 0;
+      const stillMore = anyFound && !state.found.every(f => f);
+      const msgKey = anyFound
+        ? (stillMore ? 'actions.lookAroundFoundMore' : 'actions.lookAroundFound')
+        : 'actions.lookAroundFail';
+      this.engine.log(LOG.SYSTEM, this.engine.t(msgKey, { roll: hitRoll, mod }), anyFound ? 'loot' : 'system');
+      const drops = [];
+      newlyFound.forEach(l => {
+        if (l.table) {
+          for (let i = 0; i < (l.itemDrops ?? 1); i++) {
+            const resolved = this._rollTable(l.table);
+            if (resolved) drops.push(resolved);
+          }
+        } else {
+          drops.push(l);
+        }
+      });
+      const aggregated = new Map();
+      drops.forEach(d => {
+        const existing = aggregated.get(d.item);
+        if (existing) existing.amount += (d.amount ?? 1);
+        else aggregated.set(d.item, { item: d.item, amount: d.amount ?? 1 });
+      });
+      aggregated.forEach(d => {
+        if (d.item === 'gold') {
+          gameState.modifyPlayerStat('gold', d.amount);
+          this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundGold', { amount: d.amount }), 'loot');
+        } else {
+          gameState.addToInventory(d.item, d.amount);
+          this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundItem', { name: this.engine.data.items[d.item]?.name || d.item }), 'loot');
+        }
+      });
+      gameState.setFlag(skillKey, state);
+      this.renderOptions(scene);
+    };
+    return btn;
+  }
+
+  // Flavor-only skill check: no roll, shown once then hidden permanently.
+  // Returns a button, or null if it has already been triggered.
+  _buildFlavorButton(opt, sceneId, scene) {
+    const skillKey = `skill_dc_${opt.skillCheck}_${sceneId}`;
+    if (gameState.getFlag(skillKey)) return null;
+    const btn = buildOptionButton(opt.text, this.engine.t('actions.lookAroundBadge'));
+    btn.onclick = () => {
+      this.engine.isGameStart = false;
+      gameState.setFlag(skillKey, true);
+      this.engine.log(LOG.PLAYER, opt.text, 'choice');
+      this.engine.log(LOG.SYSTEM, this.engine.t('actions.lookAroundEmpty'));
+      this.renderOptions(scene);
+    };
+    return btn;
+  }
+
+  // Pass/fail skill check with an escalating DC on failure.
+  // Always returns a button (the check remains available until the player passes).
+  _buildPassFailButton(opt, i, sceneId, scene) {
+    const skillKey = `skill_dc_${opt.skillCheck}_${sceneId}`;
+    const skillState = gameState.getFlag(skillKey) || {};
+    const dc = skillState[i] ?? opt.dc;
+    const btn = buildOptionButton(opt.text, this.engine.t(`actions.skillBadge.${opt.skillCheck}`, { dc }));
+    btn.onclick = () => {
+      this.engine.isGameStart = false;
+      this.engine.log(LOG.PLAYER, opt.text, 'choice');
+      const mod = gameState.getPlayer().attributes[opt.skillCheck] || 0;
+      const rolled = roll(1, MAX_D20_ROLL) + mod;
+      const success = rolled >= dc;
+      this.engine.log(
+        LOG.SYSTEM,
+        this.engine.t(success ? 'actions.skillSuccess' : 'actions.skillFail',
+          { roll: rolled, mod, dc, skill: opt.skillCheck }),
+        success ? 'loot' : 'system'
+      );
+      if (success) {
+        const sceneIdBefore = gameState.getCurrentSceneId();
+        this.engine.runActions(opt.onSuccess || []);
+        const didNavigate = gameState.getCurrentSceneId() !== sceneIdBefore || this.engine.inCombat;
+        if (!didNavigate) this.engine.renderScene(gameState.getCurrentSceneId());
+      } else {
+        skillState[i] = dc + (opt.increment ?? 1);
+        gameState.setFlag(skillKey, skillState);
+        this.renderOptions(scene);
+      }
+    };
+    return btn;
+  }
+
   // Picks a random entry from a loot table using weighted probability.
+  // Each entry may carry an optional `weight` field (defaults to 1).
   _rollTable(tableId) {
     const table = this.engine.data.tables[tableId];
     if (!table?.entries?.length) return null;
-    return table.entries[Math.floor(Math.random() * table.entries.length)];
+    const totalWeight = table.entries.reduce((sum, e) => sum + (e.weight ?? 1), 0);
+    let r = Math.random() * totalWeight;
+    for (const entry of table.entries) {
+      r -= (entry.weight ?? 1);
+      if (r <= 0) return entry;
+    }
+    return table.entries[table.entries.length - 1];
   }
 
   // Returns the description string to display for a scene.
   // Handles three cases:
   //   1. Plain string description — returned as-is.
-  //   2. Conditional array — first matching requiredState wins; the entry with
-  //      no requiredState acts as the fallback.
+  //   2. Conditional array — first matching condition wins; the entry with
+  //      no condition acts as the fallback.
   //   3. descriptionHook — appends dynamic content after the base description.
   _resolveDescription(scene) {
     let desc = scene.description;
 
     if (Array.isArray(scene.description)) {
-      // Default to the fallback entry (no requiredState) first, then override
-      // with the first conditional entry whose flag condition is met.
-      desc = scene.description.find(d => !d.requiredState && !d.condition)?.text || '';
+      desc = scene.description.find(d => !d.condition)?.text || '';
       for (const d of scene.description) {
         const cond = d.condition ?? null;
         if (cond && evaluateCondition(cond, gameState)) {
@@ -324,5 +349,13 @@ export class SceneRenderer {
     }
 
     return desc;
+  }
+
+  // Updates the body of the most recently rendered scene description in place.
+  // Used by custom UIs (e.g. ChestUI) to reflect state changes without appending
+  // a new narrative block.
+  refreshDescription(scene) {
+    if (!this._lastDescBodyEl) return;
+    this._lastDescBodyEl.innerHTML = this._resolveDescription(scene);
   }
 }

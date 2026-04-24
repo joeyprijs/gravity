@@ -4,10 +4,32 @@ import { CombatSystem } from '../src/systems/combat.js';
 import { gameState } from '../src/core/state.js';
 import { ENEMY_CLAW_ID } from '../src/core/config.js';
 
+// Minimal rules required by gameState.init() — mirrors the key values from rules.json.
+const TEST_RULES = {
+  playerDefaults: {
+    name: '',
+    level: 1,
+    xp: 0,
+    resources: { hp: { current: 10, max: 10 }, ap: { current: 3, max: 3 }, gold: 0 },
+    attributes: { ac: 10, initiative: 0 },
+    inventory: [],
+    equipment: {},
+  },
+  customAttributes: [],
+  startingScene: null,
+  xpPerLevel: 100,
+  levelUpHpBonus: 5,
+};
+
+// Shortcuts to avoid repeating player.resources.* throughout tests.
+const hp    = () => gameState.getPlayer().resources.hp.current;
+const maxHp = () => gameState.getPlayer().resources.hp.max;
+const ap    = () => gameState.getPlayer().resources.ap.current;
+
 // Minimal engine mock — satisfies CombatSystem constructor and all methods under test.
 // No DOM calls originate from the methods under test (renderer is overridden below).
 function makeMockEngine(items = {}) {
-  return {
+  const engine = {
     data: { items, npcs: {} },
     t: (key) => key,
     log: () => {},
@@ -17,7 +39,20 @@ function makeMockEngine(items = {}) {
     openScene: () => {},
     currentSceneEl: { appendChild: () => {} },
     renderScene: () => {},
+    // Minimal runActions: handles set_flag so onVictory pipelines work in tests.
+    runActions(actions) {
+      for (const a of (actions || [])) {
+        if (a.type === 'set_flag') gameState.setFlag(a.flag, a.value);
+      }
+    },
   };
+  // _spendAP spends AP and delegates the apSpent event — mirrors engine.js behaviour.
+  engine._spendAP = (cost) => {
+    gameState.modifyPlayerStat('ap', -cost);
+    engine.emit('player:apSpent', { remaining: gameState.getPlayer().resources.ap.current });
+    return true;
+  };
+  return engine;
 }
 
 // Minimal weapon fixture.
@@ -44,7 +79,7 @@ function makeCS(items = {}) {
 }
 
 beforeEach(() => {
-  gameState.reset();
+  gameState.init(TEST_RULES);
 });
 
 // ─── _resolveEnemyWeapon ─────────────────────────────────────────────────────
@@ -86,7 +121,7 @@ test('_resolveEnemyAttacks: all misses when roll cannot beat player AC', () => {
   assert.equal(result.hits, 0);
   assert.equal(result.misses, 3);
   assert.equal(result.totalDamage, 0);
-  assert.equal(gameState.getPlayer().hp, gameState.getPlayer().maxHp); // unchanged
+  assert.equal(hp(), maxHp()); // unchanged
 
   Math.random = orig;
 });
@@ -99,14 +134,14 @@ test('_resolveEnemyAttacks: all hits when roll beats player AC', () => {
   const cs = makeCS();
   const weapon = makeWeapon({ actionPoints: 1, damageRoll: '1d6' });
   const enemy = makeEnemy({ ap: 2 });
-  const playerHpBefore = gameState.getPlayer().hp;
+  const playerHpBefore = hp();
   const result = cs._resolveEnemyAttacks(weapon, 2, enemy);
 
   assert.equal(result.attackCount, 2);
   assert.equal(result.hits, 2);
   assert.equal(result.misses, 0);
   assert.ok(result.totalDamage > 0);
-  assert.ok(gameState.getPlayer().hp < playerHpBefore);
+  assert.ok(hp() < playerHpBefore);
 
   Math.random = orig;
 });
@@ -132,7 +167,7 @@ test('_resolveEnemyAttacks: stops early when player HP reaches 0', () => {
   const orig = Math.random;
   Math.random = () => 0.9999; // always roll 20, always hit
 
-  gameState.modifyPlayerStat('hp', -(gameState.getPlayer().maxHp - 1)); // set HP to 1
+  gameState.modifyPlayerStat('hp', -(maxHp() - 1)); // set HP to 1
 
   const cs = makeCS();
   const weapon = makeWeapon({ actionPoints: 1, damageRoll: '1d6' });
@@ -141,7 +176,7 @@ test('_resolveEnemyAttacks: stops early when player HP reaches 0', () => {
 
   // Loop should have stopped after player HP hit 0 — far fewer than 5 attacks
   assert.ok(result.attackCount < 5, `Expected early stop, got ${result.attackCount} attacks`);
-  assert.equal(gameState.getPlayer().hp, 0);
+  assert.equal(hp(), 0);
 
   Math.random = orig;
 });
@@ -174,12 +209,12 @@ test('playerAttack: hit reduces enemy HP and costs AP', () => {
   cs.enemies = [enemy];
 
   const weapon = makeWeapon({ actionPoints: 1, damageRoll: '1d6' });
-  const apBefore = gameState.getPlayer().ap;
+  const apBefore = ap();
 
   cs.playerAttack(weapon, enemy);
 
   assert.ok(enemy.attributes.healthPoints < 100, 'Enemy HP should be reduced on hit');
-  assert.equal(gameState.getPlayer().ap, apBefore - 1, 'AP should be spent');
+  assert.equal(ap(), apBefore - 1, 'AP should be spent');
 
   Math.random = orig;
 });
@@ -195,12 +230,12 @@ test('playerAttack: miss leaves enemy HP unchanged, still costs AP', () => {
   cs.enemies = [enemy];
 
   const weapon = makeWeapon({ actionPoints: 1 });
-  const apBefore = gameState.getPlayer().ap;
+  const apBefore = ap();
 
   cs.playerAttack(weapon, enemy);
 
   assert.equal(enemy.attributes.healthPoints, 50, 'Enemy HP should not change on miss');
-  assert.equal(gameState.getPlayer().ap, apBefore - 1, 'AP should still be spent on miss');
+  assert.equal(ap(), apBefore - 1, 'AP should still be spent on miss');
 
   Math.random = orig;
 });
@@ -241,10 +276,10 @@ test('enemyTurn: phase "after" — enemy with lower init than player attacks', (
   const enemy = makeEnemy({ hp: 10, ac: 1, ap: 1, initRoll: 5 }); // initRoll(5) <= playerInit(15)
   cs.enemies = [enemy];
 
-  const hpBefore = gameState.getPlayer().hp;
+  const hpBefore = hp();
   cs.enemyTurn('after');
 
-  assert.ok(gameState.getPlayer().hp < hpBefore, 'Enemy should attack player in "after" phase');
+  assert.ok(hp() < hpBefore, 'Enemy should attack player in "after" phase');
 
   Math.random = orig;
 });
@@ -257,10 +292,10 @@ test('enemyTurn: phase "after" — enemy with higher init than player does NOT a
   const enemy = makeEnemy({ hp: 10, ac: 1, ap: 1, initRoll: 15 }); // initRoll(15) > playerInit(5)
   cs.enemies = [enemy];
 
-  const hpBefore = gameState.getPlayer().hp;
+  const hpBefore = hp();
   cs.enemyTurn('after');
 
-  assert.equal(gameState.getPlayer().hp, hpBefore, 'High-init enemy should not act in "after" phase');
+  assert.equal(hp(), hpBefore, 'High-init enemy should not act in "after" phase');
 });
 
 test('enemyTurn: phase "before" — enemy with higher init than player attacks', () => {
@@ -277,10 +312,10 @@ test('enemyTurn: phase "before" — enemy with higher init than player attacks',
   const enemy = makeEnemy({ hp: 10, ac: 1, ap: 1, initRoll: 15 }); // initRoll(15) > playerInit(5)
   cs.enemies = [enemy];
 
-  const hpBefore = gameState.getPlayer().hp;
+  const hpBefore = hp();
   cs.enemyTurn('before');
 
-  assert.ok(gameState.getPlayer().hp < hpBefore, 'High-init enemy should attack in "before" phase');
+  assert.ok(hp() < hpBefore, 'High-init enemy should attack in "before" phase');
 
   Math.random = orig;
 });
@@ -293,24 +328,24 @@ test('enemyTurn: dead enemy is skipped even if phase matches', () => {
   const enemy = makeEnemy({ hp: 0, ac: 1, ap: 3, initRoll: 5 }); // dead
   cs.enemies = [enemy];
 
-  const hpBefore = gameState.getPlayer().hp;
+  const hpBefore = hp();
   cs.enemyTurn('after');
 
-  assert.equal(gameState.getPlayer().hp, hpBefore, 'Dead enemy should not attack');
+  assert.equal(hp(), hpBefore, 'Dead enemy should not attack');
 });
 
 // ─── endCombat ───────────────────────────────────────────────────────────────
 
-test('endCombat: applies originOption.setFlag on victory', () => {
+test('endCombat: runs onVictory action pipeline on victory', () => {
   const cs = makeCS();
   cs.inCombat = true;
   cs.enemies = [makeEnemy({ hp: 0 })]; // already defeated
-  cs.originOption = { setFlag: { flag: 'boss_defeated', value: true } };
+  cs.originOption = { onVictory: [{ type: 'set_flag', flag: 'boss_defeated', value: true }] };
 
   gameState.setFlag('boss_defeated', false);
   cs.endCombat(true);
 
-  assert.equal(gameState.getFlag('boss_defeated'), true, 'Victory flag should be set after winning');
+  assert.equal(gameState.getFlag('boss_defeated'), true, 'onVictory actions should run after winning');
 });
 
 test('endCombat: inCombat is false and isGameOver is true after defeat', () => {
@@ -339,7 +374,7 @@ test('enemyTurn: calls endCombat(false) when player HP hits 0', () => {
   Math.random = () => 0.9999;
 
   // Set player HP to 1 so one hit kills them
-  gameState.modifyPlayerStat('hp', -(gameState.getPlayer().maxHp - 1));
+  gameState.modifyPlayerStat('hp', -(maxHp() - 1));
 
   const cs = makeCS();
   cs.inCombat = true;

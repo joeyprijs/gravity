@@ -1,10 +1,38 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { gameState } from '../src/core/state.js';
-import { CHAR_CREATION, PLAYER_DEFAULTS } from '../src/core/config.js';
 
-// Reset state before each test
-beforeEach(() => gameState.reset());
+// Load the authoritative source — tests validate the actual rules.json content,
+// so they stay in sync automatically when rules change.
+const rules = JSON.parse(readFileSync(new URL('../data/rules.json', import.meta.url), 'utf8'));
+const CHAR_CREATION = rules.charCreation;
+
+// Flat map of dotted-path stat IDs → their default value in playerDefaults.
+// Used to assert that every charCreation stat ID corresponds to a real player field.
+function getPath(obj, path) { return path.split('.').reduce((v, k) => v?.[k], obj); }
+const PLAYER_DEFAULTS = {
+  name: rules.playerDefaults.name,
+  ...Object.fromEntries(CHAR_CREATION.stats.map(s => [s.id, getPath(rules.playerDefaults, s.id)])),
+};
+
+const TEST_RULES = {
+  playerDefaults: {
+    name: '',
+    level: 1,
+    xp: 0,
+    resources: { hp: { current: 10, max: 10 }, ap: { current: 3, max: 3 }, gold: 0 },
+    attributes: { ac: 10, initiative: 0 },
+    inventory: [],
+    equipment: {},
+  },
+  customAttributes: [],
+  startingScene: null,
+  xpPerLevel: 100,
+  levelUpHpBonus: 5,
+};
+
+beforeEach(() => gameState.init(TEST_RULES));
 
 // ── CHAR_CREATION config ────────────────────────────────────────────────────
 

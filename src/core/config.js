@@ -13,6 +13,7 @@ export const ACTIONS = {
   NAVIGATE:        'navigate',
   SET_FLAG:        'set_flag',
   LOG:             'log',
+  MANAGE_CHEST:    'manage_chest',
 };
 
 // CSS class names referenced from JavaScript. Centralised here so that renaming
@@ -56,9 +57,6 @@ export const CSS = {
   ITEM_TYPE:              'item__type',
   ITEM_STATS:             'item__stats',
   ITEM_ACTIONS:           'item__actions',
-
-  // Museum
-  MUSEUM_ITEM_LIST:       'museum-item-list',
 
   // Map
   MAP_NODE:               'map-node',
@@ -146,3 +144,12 @@ export const MAP_NODE_DEFAULT_BG = 'var(--panel-bg)';
 
 // Size of the minimap HUD in pixels (square)
 export const MINIMAP_SIZE = 200;
+
+// Equipment slots that can hold weapons/spells. Used by combat and inventory UI
+// to identify attackable items without hardcoding slot names in logic code.
+export const WEAPON_SLOTS = ['Left Hand', 'Right Hand'];
+
+// Fallback item ID used when an enemy has no weapon equipped. Must match an
+// entry in data/items/ and data/index.json. Overridable via rules.fallbackWeapons.enemy.
+export const ENEMY_CLAW_ID = 'enemy_claw';
+

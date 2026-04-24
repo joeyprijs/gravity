@@ -1,6 +1,6 @@
 import { gameState } from "../core/state.js";
 import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "../core/utils.js";
-import { MAX_D20_ROLL, EL, CSS, LOG } from "../core/config.js";
+import { MAX_D20_ROLL, EL, CSS, LOG, WEAPON_SLOTS, ENEMY_CLAW_ID } from "../core/config.js";
 import { roll, parseDamage } from "./dice.js";
 
 // CombatSystem manages the full lifecycle of a turn-based combat encounter:
@@ -69,7 +69,7 @@ export class CombatSystem {
       e.initiativeRoll = roll(1, MAX_D20_ROLL) + (e.attributes.initiative || 0);
       if (e.initiativeRoll > highestEnemyInit) highestEnemyInit = e.initiativeRoll;
     });
-    this.enemyGoesFirst = highestEnemyInit > this.playerInit;
+    this.anyEnemyGoesFirst = highestEnemyInit > this.playerInit;
     const enemyRolls = this.enemies
       .map(e => this.engine.t('combat.initiativeEnemy', { name: e.name, roll: e.initiativeRoll }))
       .join(', ');
@@ -81,13 +81,10 @@ export class CombatSystem {
     this.engine.log(LOG.COMBAT, this.engine.t('combat.initiative', { playerRoll: this.playerInit, enemyRolls, turnOrder }), 'combat');
 
     this.renderer.render();
-    if (this.enemyGoesFirst) this.enemyTurn('before');
+    if (this.anyEnemyGoesFirst) this.enemyTurn('before');
   }
 
   playerAttack(weapon, targetEnemy) {
-    const player = gameState.getPlayer();
-    gameState.modifyPlayerStat('ap', -weapon.actionPoints);
-
     // Attack roll 1-20 + modifier
     const hitModifier = weapon.bonusHitChance || 0;
     const baseRoll = roll(1, MAX_D20_ROLL);
@@ -105,7 +102,7 @@ export class CombatSystem {
       if (targetEnemy.attributes.healthPoints <= 0) {
         if (this.enemies.every(e => e.attributes.healthPoints <= 0)) {
           this.endCombat(true);
-          return;
+          return; // AP is restored in endCombat — no need to spend first
         }
         this.engine.log(LOG.COMBAT, this.engine.t('combat.enemyDefeated', { name: targetEnemy.name }), 'loot');
       }
@@ -115,9 +112,9 @@ export class CombatSystem {
       }), 'damage');
     }
 
-    // Let the apSpent handler decide renderCombatUI vs enemyTurn — consistent
-    // with how item/equip AP costs are handled during combat.
-    if (this.inCombat) this.engine.emit('player:apSpent', { remaining: player.resources.ap.current });
+    // Spend AP via the shared helper — consistent with useItem/equipItem.
+    // _spendAP also emits player:apSpent which triggers enemyTurn or UI refresh.
+    this.engine._spendAP(weapon.actionPoints);
   }
 
   // phase='before': enemies who outrolled the player (act before the player each round)
@@ -144,7 +141,11 @@ export class CombatSystem {
         if (result.hits > 0) parts.push(this.engine.t('combat.enemyAttackHits', { count: result.hits, s: result.hits > 1 ? 's' : '', rolls: result.hitRolls.join(' and ') }));
         if (result.misses > 0) parts.push(this.engine.t('combat.enemyAttackMisses', { count: result.misses, es: result.misses > 1 ? 'es' : '', rolls: result.missRolls.join(' and ') }));
 
-        const times = result.attackCount === 1 ? 'once' : result.attackCount === 2 ? 'twice' : `${result.attackCount} times`;
+        const times = result.attackCount === 1
+          ? this.engine.t('combat.attackOnce')
+          : result.attackCount === 2
+            ? this.engine.t('combat.attackTwice')
+            : this.engine.t('combat.attackMany', { count: result.attackCount });
         let summary = this.engine.t('combat.enemyAttack', { name: enemy.name, weapon: eWeapon.name, times, parts: parts.join(', ') });
         summary += ' ' + (result.hits > 0
           ? this.engine.t('combat.playerTakesDamage', { damage: result.totalDamage, dice: eWeapon.attributes.damageRoll, rolls: result.damageRolls.join(' and ') })
@@ -177,10 +178,10 @@ export class CombatSystem {
   // the default claw fallback if nothing is equipped. Returns null if neither
   // is available (data loading failure).
   _resolveEnemyWeapon(enemy) {
-    const equipped = enemy.equipment?.['Right Hand'];
+    const equipped = enemy.equipment?.[WEAPON_SLOTS[1]]; // Right Hand
     const item = equipped ? this.engine.data.items[equipped] : null;
-    const fallbackId = this.engine.data.rules?.fallbackWeapons?.enemy;
-    return item || (fallbackId ? this.engine.data.items[fallbackId] : null) || null;
+    const fallbackId = this.engine.data.rules?.fallbackWeapons?.enemy ?? ENEMY_CLAW_ID;
+    return item || this.engine.data.items[fallbackId] || null;
   }
 
   // Executes all enemy attacks for one turn and returns a roll summary.
@@ -225,19 +226,8 @@ export class CombatSystem {
       const names = this.enemies.map(e => e.name).join(' & ');
       this.engine.log(LOG.SYSTEM, this.engine.t('combat.victory', { names }), 'loot');
 
-      // Aggregate loot and XP from all enemies
+      // Award XP from all enemies
       this.enemies.forEach(enemy => {
-        if (enemy.droppedLoot) {
-          enemy.droppedLoot.forEach(l => {
-            if (l.item === 'gold') {
-              gameState.modifyPlayerStat('gold', l.amount);
-              this.engine.log(LOG.SYSTEM, `${enemy.name}: ${this.engine.t('loot.foundGold', { amount: l.amount })}`, 'loot');
-            } else {
-              gameState.addToInventory(l.item, l.amount || 1);
-              this.engine.log(LOG.SYSTEM, `${enemy.name}: ${this.engine.t('loot.foundItem', { name: this.engine.data.items[l.item]?.name || l.item })}`, 'loot');
-            }
-          });
-        }
         if (enemy.attributes.xpReward) {
           gameState.addXP(enemy.attributes.xpReward);
           this.engine.log(LOG.SYSTEM, `${enemy.name}: ${this.engine.t('loot.xpGained', { amount: enemy.attributes.xpReward })}`, 'loot');
@@ -255,32 +245,7 @@ export class CombatSystem {
       if (!didNavigate) this.engine.renderScene(gameState.getCurrentSceneId());
 
     } else {
-      this.engine.openScene();
-      const desc = buildSceneDescription(
-        this.engine.t('combat.gameOverTitle'),
-        this.engine.t('combat.gameOverBody')
-      );
-      desc.querySelector('h2').classList.add(CSS.SCENE_TITLE_GAME_OVER);
-      this.engine.currentSceneEl.appendChild(desc);
-
-      const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
-      const container = document.getElementById(EL.SCENE_OPTIONS);
-      const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
-      const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
-      panel.querySelectorAll(`.${CSS.SCENE_OPTIONS_SECTION}`).forEach(el => el.remove());
-      clearElement(skillsContainer);
-      skillsContainer.setAttribute('hidden', '');
-      clearElement(container);
-      if (reminder) container.appendChild(reminder);
-      const loadBtn = buildOptionButton(this.engine.t('combat.loadLastSave'));
-      loadBtn.onclick = () => document.getElementById(EL.BTN_LOAD).click();
-      container.appendChild(loadBtn);
-
-      const restartBtn = buildOptionButton(this.engine.t('combat.restartGame'));
-      restartBtn.onclick = () => document.getElementById(EL.BTN_RESTART).click();
-      container.appendChild(restartBtn);
-
-      document.querySelectorAll(`.${CSS.BTN_ITEM}`).forEach(btn => { btn.disabled = true; });
+      this.renderer.renderGameOver();
     }
   }
 }
@@ -297,7 +262,7 @@ class CombatRenderer {
     const attacks = [];
 
     let hasWeapon = false;
-    ['Left Hand', 'Right Hand'].forEach(slot => {
+    WEAPON_SLOTS.forEach(slot => {
       const itemId = player.equipment[slot];
       if (itemId && this.cs.engine.data.items[itemId]) {
         const item = this.cs.engine.data.items[itemId];
@@ -314,6 +279,36 @@ class CombatRenderer {
       if (unarmed) attacks.push(unarmed);
     }
     return attacks;
+  }
+
+  renderGameOver() {
+    this.cs.engine.openScene();
+    const desc = buildSceneDescription(
+      this.cs.engine.t('combat.gameOverTitle'),
+      this.cs.engine.t('combat.gameOverBody')
+    );
+    desc.querySelector('h2').classList.add(CSS.SCENE_TITLE_GAME_OVER);
+    this.cs.engine.currentSceneEl.appendChild(desc);
+
+    const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
+    const container = document.getElementById(EL.SCENE_OPTIONS);
+    const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
+    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
+    panel.querySelectorAll(`.${CSS.SCENE_OPTIONS_SECTION}`).forEach(el => el.remove());
+    clearElement(skillsContainer);
+    skillsContainer.setAttribute('hidden', '');
+    clearElement(container);
+    if (reminder) container.appendChild(reminder);
+
+    const loadBtn = buildOptionButton(this.cs.engine.t('combat.loadLastSave'));
+    loadBtn.onclick = () => document.getElementById(EL.BTN_LOAD).click();
+    container.appendChild(loadBtn);
+
+    const restartBtn = buildOptionButton(this.cs.engine.t('combat.restartGame'));
+    restartBtn.onclick = () => document.getElementById(EL.BTN_RESTART).click();
+    container.appendChild(restartBtn);
+
+    document.querySelectorAll(`.${CSS.BTN_ITEM}`).forEach(btn => { btn.disabled = true; });
   }
 
   render() {
