@@ -35,7 +35,7 @@ function handleLoot(action, engine) {
 }
 
 function handleCombat(action, engine) {
-  const allEnemies = action.enemies || (action.enemy ? [action.enemy] : []);
+  const allEnemies = action.enemies || [];
   const enemies = allEnemies.filter(id => !gameState.getFlag(`friendly_${id}`));
   if (enemies.length === 0) {
     engine.log(LOG.SYSTEM, engine.t('combat.avoided'), 'system');

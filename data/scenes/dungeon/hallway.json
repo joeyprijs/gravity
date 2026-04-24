@@ -80,7 +80,7 @@
           { "flag": "goblins_pacified", "value": false }
         ]
       },
-      "onSuccess": [
+      "actions": [
         { "type": "set_flag", "flag": "goblins_snuck_past", "value": true },
         { "type": "navigate", "destination": "dungeon_chamber" }
       ]
@@ -97,7 +97,7 @@
           { "flag": "goblins_pacified", "value": false }
         ]
       },
-      "onSuccess": [
+      "actions": [
         { "type": "set_flag", "flag": "goblins_pacified", "value": true },
         { "type": "navigate", "destination": "dungeon_hallway" }
       ]

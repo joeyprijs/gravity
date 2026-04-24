@@ -42,16 +42,22 @@ export class DialogueSystem {
   // Runs an actions[] pipeline through the global action registry first, then
   // handles dialogue-specific action types (goToConversation, trade, leave,
   // makeFriendly, questTrigger) that only make sense within a conversation.
+  // Returns true if navigation occurred (new node, store opened, or scene exit),
+  // so callers can decide whether to re-render the current dialogue state.
   _runActions(actions) {
+    let navigated = false;
     for (const action of (actions || [])) {
       const globalHandler = this.engine.getActionHandler(action.type);
       if (globalHandler) {
         globalHandler(action, this.engine);
+        // engine.renderScene clears currentNPC — use that as the "left dialogue" signal
+        if (!this.currentNPC) navigated = true;
         continue;
       }
       switch (action.type) {
         case 'goToConversation':
           this.renderDialogue(action.node);
+          navigated = true;
           break;
         case 'trade': {
           const pct = typeof action.tradeDiscount === 'string'
@@ -62,10 +68,12 @@ export class DialogueSystem {
             gameState.setFlag(`trade_discount_${this.currentNPCId}`, pct);
           }
           this.renderStore();
+          navigated = true;
           break;
         }
         case 'leave':
           this.engine.renderScene(gameState.getCurrentSceneId());
+          navigated = true;
           break;
         case 'makeFriendly':
           gameState.setFlag(`friendly_${this.currentNPCId}`, true);
@@ -77,6 +85,7 @@ export class DialogueSystem {
           console.warn(`[Gravity] dialogue: unknown action type "${action.type}"`);
       }
     }
+    return navigated;
   }
 
   renderDialogue(nodeId = "start", overrideText = null, optionsOnly = false) {
@@ -138,7 +147,8 @@ export class DialogueSystem {
           if (!success) {
             dcState[resKey] = dc + (res.increment ?? 1);
             gameState.setFlag(dcStateKey, dcState);
-            this.renderDialogue(nodeId, null, true);
+            const failNavigated = res.onFailure?.length ? this._runActions(res.onFailure) : false;
+            if (!failNavigated) this.renderDialogue(nodeId, null, true);
             return;
           }
         }
@@ -202,6 +212,16 @@ export class DialogueSystem {
     this.engine.scrollNarrativeToBottom();
   }
 
+  // Returns the effective stock for a merchant item: reads from gameState flags
+  // (persisted) rather than mutating the NPC data object (in-memory only).
+  // npcAmount === null means unlimited; otherwise returns the flag value if
+  // already set, falling back to the original npcAmount on first access.
+  _getStock(itemId, npcAmount) {
+    if (npcAmount === null) return null;
+    const flagVal = gameState.getFlag(`merchant_stock_${this.currentNPCId}_${itemId}`);
+    return flagVal !== false ? flagVal : npcAmount;
+  }
+
   renderStore(isUpdate = false) {
     if (!isUpdate) {
       if (this.activeDiscount === 0) {
@@ -254,15 +274,16 @@ export class DialogueSystem {
     const buyItems = (this.currentNPC.carriedItems || [])
       .map(entry => {
         const id = typeof entry === 'string' ? entry : entry.item;
-        const stock = typeof entry === 'object' && entry !== null ? (entry.amount ?? null) : null;
-        return { id, item: this.engine.data.items[id], stock, entry };
+        const npcAmount = typeof entry === 'object' && entry !== null ? (entry.amount ?? null) : null;
+        const stock = this._getStock(id, npcAmount);
+        return { id, item: this.engine.data.items[id], stock, npcAmount };
       })
       .filter(({ item, stock }) => item && stock !== 0);
 
     if (buyItems.length) {
       const buySection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);
       buySection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('dialogue.buyGroup')));
-      buyItems.forEach(({ id: itemId, item, stock, entry }) => {
+      buyItems.forEach(({ id: itemId, item, stock, npcAmount }) => {
         const displayName = stock !== null ? `${item.name} (x${stock})` : item.name;
         const price = this.activeDiscount > 0 ? Math.floor(item.value * (1 - this.activeDiscount)) : item.value;
         const btn = buildOptionButton(
@@ -271,7 +292,9 @@ export class DialogueSystem {
         );
         if (gameState.getPlayer().resources.gold < price) btn.disabled = true;
         btn.onclick = () => {
-          if (stock !== null) entry.amount--;
+          if (npcAmount !== null) {
+            gameState.setFlag(`merchant_stock_${this.currentNPCId}_${itemId}`, stock - 1);
+          }
           gameState.modifyPlayerStat('gold', -price);
           gameState.addToInventory(itemId, 1);
           this.engine.log(LOG.PLAYER, this.engine.t('dialogue.bought', { name: item.name, price }), 'loot');

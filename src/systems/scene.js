@@ -297,13 +297,20 @@ export class SceneRenderer {
       );
       if (success) {
         const sceneIdBefore = gameState.getCurrentSceneId();
-        this.engine.runActions(opt.onSuccess || []);
+        this.engine.runActions(opt.actions || []);
         const didNavigate = gameState.getCurrentSceneId() !== sceneIdBefore || this.engine.inCombat;
         if (!didNavigate) this.engine.renderScene(gameState.getCurrentSceneId());
       } else {
         skillState[i] = dc + (opt.increment ?? 1);
         gameState.setFlag(skillKey, skillState);
-        this.renderOptions(scene);
+        if (opt.onFailure?.length) {
+          const sceneIdBefore = gameState.getCurrentSceneId();
+          this.engine.runActions(opt.onFailure);
+          const didNavigate = gameState.getCurrentSceneId() !== sceneIdBefore || this.engine.inCombat;
+          if (!didNavigate) this.renderOptions(scene);
+        } else {
+          this.renderOptions(scene);
+        }
       }
     };
     return btn;

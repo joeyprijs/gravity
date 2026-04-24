@@ -181,9 +181,25 @@ class RPGEngine {
           if (action.type === 'dialogue' && action.npc && !npcs[action.npc])
             warn(`Scene "${sceneId}": dialogue → unknown NPC "${action.npc}"`);
           if (action.type === 'combat') {
-            const ids = action.enemies || (action.enemy ? [action.enemy] : []);
+            const ids = action.enemies || [];
             ids.forEach(id => { if (!npcs[id]) warn(`Scene "${sceneId}": combat → unknown enemy "${id}"`); });
+            for (const va of (action.onVictory || [])) {
+              if (va.type === 'navigate' && va.destination && !scenes[va.destination])
+                warn(`Scene "${sceneId}": combat.onVictory → unknown destination "${va.destination}"`);
+              if (va.type === 'loot' && va.item && va.item !== 'gold' && !items[va.item])
+                warn(`Scene "${sceneId}": combat.onVictory → unknown item "${va.item}"`);
+            }
           }
+        }
+      }
+      if (scene.autoAttack) {
+        const ids = scene.autoAttack.enemies || [];
+        ids.forEach(id => { if (!npcs[id]) warn(`Scene "${sceneId}": autoAttack → unknown enemy "${id}"`); });
+        for (const va of (scene.autoAttack.onVictory || [])) {
+          if (va.type === 'navigate' && va.destination && !scenes[va.destination])
+            warn(`Scene "${sceneId}": autoAttack.onVictory → unknown destination "${va.destination}"`);
+          if (va.type === 'loot' && va.item && va.item !== 'gold' && !items[va.item])
+            warn(`Scene "${sceneId}": autoAttack.onVictory → unknown item "${va.item}"`);
         }
       }
     }
@@ -337,6 +353,8 @@ class RPGEngine {
 
   renderScene(sceneId) {
     this.dialogueSystem.storeOpen = false;
+    this.dialogueSystem.currentNPC = null;
+    this.dialogueSystem.currentNPCId = null;
     return this.scene.render(sceneId);
   }
   restoreScene(sceneId, lastDesc) { return this.scene.restoreFromSave(sceneId, lastDesc); }

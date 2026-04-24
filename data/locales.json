@@ -13,7 +13,7 @@
       "ac":         { "label": "Armor Class (AC)",  "description": "+1 AC per point" },
       "perception": { "label": "Perception",        "description": "+1 Perception per point" },
       "charisma":   { "label": "Charisma",          "description": "+1 Charisma per point" },
-      "stealth":    { "label": "Stealth",           "description": "+1 Stealth per point" },
+      "stealth":    { "label": "Stealth",           "description": "+1 Stealth per point" }
     }
   },
   "system": {

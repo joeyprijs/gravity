@@ -56,5 +56,5 @@ export function evaluateCondition(condition, gameState) {
   }
 
   console.warn('[Gravity] evaluateCondition: unrecognised condition shape', condition);
-  return true;
+  return false;
 }
