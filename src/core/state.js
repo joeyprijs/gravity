@@ -1,4 +1,4 @@
-import { MSG } from "./config.js";
+import { MSG, MISSION_STATUS } from "./config.js";
 
 const MAX_LOG_ENTRIES = 200;
 
@@ -144,7 +144,7 @@ class StateManager {
   registerMissions(missionsData) {
     Object.keys(missionsData).forEach(missionId => {
       if (!(missionId in this.state.missions)) {
-        this.state.missions[missionId] = "not_started";
+        this.state.missions[missionId] = MISSION_STATUS.NOT_STARTED;
       }
     });
   }
@@ -248,7 +248,7 @@ class StateManager {
     this.notifyListeners('inventory');
   }
 
-  getMissionStatus(missionId) { return this.state.missions[missionId] || "not_started"; }
+  getMissionStatus(missionId) { return this.state.missions[missionId] || MISSION_STATUS.NOT_STARTED; }
   setMissionStatus(missionId, status) { this.state.missions[missionId] = status; this.notifyListeners('quests'); }
 
   getCurrentSceneId() { return this.state.currentSceneId; }

@@ -48,8 +48,7 @@
   "customAttributes": [
     { "id": "perception", "default": 0 },
     { "id": "charisma",   "default": 0 },
-    { "id": "stealth",    "default": 0 },
-    { "id": "darkness",    "default": 0 }
+    { "id": "stealth",    "default": 0 }
   ],
   "charCreation": {
     "pointBudget": 3,
@@ -58,8 +57,7 @@
       { "id": "attributes.ac",         "localeKey": "ac",         "bonusPerPoint": 1, "min": 0 },
       { "id": "attributes.perception", "localeKey": "perception", "bonusPerPoint": 1, "min": 0 },
       { "id": "attributes.charisma",   "localeKey": "charisma",   "bonusPerPoint": 1, "min": 0 },
-      { "id": "attributes.stealth",      "localeKey": "stealth",  "bonusPerPoint": 1, "min": 0 },
-      { "id": "attributes.darkness",      "localeKey": "darkness",  "bonusPerPoint": 1, "min": 0 }
+      { "id": "attributes.stealth",      "localeKey": "stealth",  "bonusPerPoint": 1, "min": 0 }
     ]
   },
   "tabs": [

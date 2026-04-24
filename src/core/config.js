@@ -119,6 +119,13 @@ export const EL = {
   FULLMAP_CLOSE:           'fullmap-close',
 };
 
+// Canonical mission status values — used by QuestSystem, StateManager, QuestUI, and conditions.
+export const MISSION_STATUS = {
+  NOT_STARTED: 'not_started',
+  ACTIVE:      'active',
+  COMPLETE:    'complete',
+};
+
 // Log type labels — the [Label] prefix shown in every narrative log entry.
 export const LOG = {
   SYSTEM: 'System',

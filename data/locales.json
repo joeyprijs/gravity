@@ -13,7 +13,7 @@
       "ac":         { "label": "Armor Class (AC)",  "description": "+1 AC per point" },
       "perception": { "label": "Perception",        "description": "+1 Perception per point" },
       "charisma":   { "label": "Charisma",          "description": "+1 Charisma per point" },
-      "stealth":      { "label": "Stealth",         "description": "+1 Stealth per point" }
+      "stealth":    { "label": "Stealth",           "description": "+1 Stealth per point" },
     }
   },
   "system": {
@@ -30,7 +30,7 @@
     "ac":         "{value}",
     "initiative": "{value}",
     "perception": "{value}",
-    "stealth":      "{value}",
+    "stealth":    "{value}",
     "gold":       "{value}"
   },
   "ui": {
@@ -45,7 +45,6 @@
     "chestWithdraw":       "Take",
     "chestDeposit":        "Deposit",
     "inventoryTitle":      "Your Inventory",
-
     "skillsHeading":       "Skills",
     "tabInventory":        "Inventory",
     "tabQuests":           "Quests",
@@ -88,14 +87,12 @@
     "chestDeposited":        "You placed {name} in the chest.",
     "chestRoomEmpty":        "The chest is empty.",
     "chestDisplayedWithin":  "Stored within: {names}.",
-    "museumTook":            "You retrieved {name} from the display.",
-    "museumDeposited":       "You proudly displayed {name}.",
     "lookAround":            "Look Around",
     "lookAroundBadge":       "Skill: Perception",
     "skillBadge": {
       "perception": "DC {dc}, Skill: Perception",
       "charisma":   "DC {dc}, Skill: Charisma",
-      "stealth":      "DC {dc}, Skill: Stealth"
+      "stealth":    "DC {dc}, Skill: Stealth"
     },
     "skillSuccess": "({roll}, 1d20 + {mod} {skill}) — success!",
     "skillFail":    "({roll}, 1d20 + {mod} {skill}) — failure.",

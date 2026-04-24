@@ -24,6 +24,7 @@ export class DialogueSystem {
 
   startDialogue(npcId) {
     this.storeOpen = false;
+    this.activeDiscount = 0;
     const npc = this.engine.data.npcs[npcId];
     if (!npc) { console.warn(`[Gravity] startDialogue: unknown NPC "${npcId}"`); return; }
 
@@ -112,7 +113,7 @@ export class DialogueSystem {
     skillsContainer.setAttribute('hidden', '');
 
     const dcStateKey = `dialogue_dc_${this.currentNPCId}`;
-    const dcState = gameState.getFlag(dcStateKey) || {};
+    const dcState = gameState.getFlag(dcStateKey);
     const skillResponses = [];
 
     (node.responses || []).forEach((res, i) => {

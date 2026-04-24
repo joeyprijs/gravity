@@ -1,6 +1,6 @@
 import { gameState } from "../core/state.js";
 import { createElement } from "../core/utils.js";
-import { CSS, EL } from "../core/config.js";
+import { CSS, EL, MISSION_STATUS } from "../core/config.js";
 
 // QuestUI renders the quest log sidebar panel.
 export class QuestUI {
@@ -27,9 +27,9 @@ export class QuestUI {
 
     for (const [mId, mData] of Object.entries(this.engine.data.missions)) {
       const status = gameState.getMissionStatus(mId);
-      if (status === "active") {
+      if (status === MISSION_STATUS.ACTIVE) {
         activeList.push(buildQuestItem(mData));
-      } else if (status === "complete") {
+      } else if (status === MISSION_STATUS.COMPLETE) {
         completedList.push(buildQuestItem(mData, CSS.ITEM_LIST_ITEM_DONE));
       }
     }

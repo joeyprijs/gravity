@@ -1,5 +1,5 @@
 import { gameState } from "../core/state.js";
-import { LOG } from "../core/config.js";
+import { LOG, MISSION_STATUS } from "../core/config.js";
 
 // QuestSystem processes quest triggers that are embedded in scene JSON and
 // fires the appropriate state transitions (not_started → active → complete).
@@ -21,16 +21,16 @@ export class QuestSystem {
     const mId = triggerData.mission;
     const mData = this.engine.data.missions[mId];
     // Silently skip unknown missions and already-completed ones (completion is one-way).
-    if (!mData || gameState.getMissionStatus(mId) === "complete") return false;
+    if (!mData || gameState.getMissionStatus(mId) === MISSION_STATUS.COMPLETE) return false;
 
-    if (triggerData.status === "complete") {
+    if (triggerData.status === MISSION_STATUS.COMPLETE) {
       this.completeMission(mId, mData);
       return true;
     }
     // Only activate a mission that hasn't started yet — re-entering a scene
     // should not re-log the quest description.
-    if (triggerData.status === "active" && gameState.getMissionStatus(mId) === "not_started") {
-      gameState.setMissionStatus(mId, "active");
+    if (triggerData.status === MISSION_STATUS.ACTIVE && gameState.getMissionStatus(mId) === MISSION_STATUS.NOT_STARTED) {
+      gameState.setMissionStatus(mId, MISSION_STATUS.ACTIVE);
       this.engine.log(LOG.QUEST, this.engine.t('quest.started', { name: mData.name, description: mData.description }), 'quest');
       return true;
     }
@@ -39,7 +39,7 @@ export class QuestSystem {
 
   // Marks a mission complete, logs the result, and grants any XP/gold rewards.
   completeMission(mId, mData) {
-    gameState.setMissionStatus(mId, "complete");
+    gameState.setMissionStatus(mId, MISSION_STATUS.COMPLETE);
     this.engine.log(LOG.QUEST, this.engine.t('quest.completed', { name: mData.name }), 'quest');
     if (mData.missionRewards?.xp) {
       gameState.addXP(mData.missionRewards.xp);
