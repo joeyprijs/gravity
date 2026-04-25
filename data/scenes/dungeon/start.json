@@ -8,31 +8,55 @@
     "height": 60,
     "background": "rgba(60, 40, 20, 0.9)"
   },
-  "questTrigger": { "mission": "escape_dungeon", "status": "active" },
+  "questTrigger": {
+    "mission": "escape_dungeon",
+    "status": "active"
+  },
   "description": [
     {
       "text": "You are back in the dimly lit cellar. The heavy wooden door stands wide open to the north.",
-      "condition": { "flag": "door_unlocked", "value": true }
+      "condition": {
+        "flag": "door_unlocked",
+        "value": true
+      }
     },
     {
-      "text": "You awake in a dimly lit cellar. The smell of damp earth fills the air. A heavy wooden door stands locked to the north."
+      "text": "You awake in a dimly lit cellar. The smell of damp earth fills the air. A heavy wooden door stands locked to the north. You don't remember who you are."
     }
   ],
   "options": [
     {
       "text": "Unlock the door",
-      "condition": { "flag": "door_unlocked", "value": false },
-      "requirements": { "item": "cellar_key" },
+      "condition": {
+        "flag": "door_unlocked",
+        "value": false
+      },
+      "requirements": {
+        "item": "cellar_key"
+      },
       "actions": [
-        { "type": "set_flag", "flag": "door_unlocked", "value": true },
-        { "type": "navigate", "destination": "dungeon_corridor" }
+        {
+          "type": "set_flag",
+          "flag": "door_unlocked",
+          "value": true
+        },
+        {
+          "type": "navigate",
+          "destination": "dungeon_corridor"
+        }
       ]
     },
     {
       "text": "Go through the open door",
-      "condition": { "flag": "door_unlocked", "value": true },
+      "condition": {
+        "flag": "door_unlocked",
+        "value": true
+      },
       "actions": [
-        { "type": "navigate", "destination": "dungeon_corridor" }
+        {
+          "type": "navigate",
+          "destination": "dungeon_corridor"
+        }
       ]
     }
   ],
@@ -41,8 +65,18 @@
       "text": "Look Around",
       "skillCheck": "perception",
       "items": [
-        { "item": "cellar_key", "amount": 1, "dc": 10, "increment": 1 },
-        { "table": "basic_loot", "dc": 14, "increment": 2, "itemDrops": 2 }
+        {
+          "item": "cellar_key",
+          "amount": 1,
+          "dc": 10,
+          "increment": 1
+        },
+        {
+          "table": "basic_loot",
+          "dc": 14,
+          "increment": 2,
+          "itemDrops": 2
+        }
       ]
     }
   ]
