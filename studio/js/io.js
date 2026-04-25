@@ -92,6 +92,24 @@ export async function createEntry(type, id) {
   return key;
 }
 
+export async function deleteEntry(key) {
+  const [type, id] = key.split(':');
+  const path = store.index[type]?.[id];
+  if (!path) throw new Error(`No index entry for "${key}"`);
+
+  const parts = path.split('/');
+  let dirHandle = store.dirHandle;
+  for (let i = 0; i < parts.length - 1; i++) {
+    dirHandle = await dirHandle.getDirectoryHandle(parts[i]);
+  }
+  await dirHandle.removeEntry(parts[parts.length - 1]);
+
+  delete store.fileHandles[key];
+  delete store.files[key];
+  delete store.index[type][id];
+  store.dirtyFiles.delete(key);
+}
+
 export async function saveFile(key) {
   const handle = store.fileHandles[key];
   if (!handle) throw new Error(`No file handle for "${key}"`);

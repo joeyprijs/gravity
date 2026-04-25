@@ -49,7 +49,9 @@ function renderItemForm(key, data) {
     return ta;
   }
 
-  form.appendChild(formRow('Name', bindInput('name')));
+  const nameInput = bindInput('name');
+  nameInput.setAttribute('data-required', '');
+  form.appendChild(formRow('Name', nameInput));
 
   // Type select
   const typeOpts = ['Weapon', 'Spell', 'Armor', 'Consumable', 'Flavour'].map(t => [t, t]);
@@ -89,6 +91,7 @@ function renderItemForm(key, data) {
     const type = data.type;
     const hasSlot = type === 'Weapon' || type === 'Spell' || type === 'Armor';
     const isOffensive = type === 'Weapon' || type === 'Spell';
+    const sceneIds = Object.keys(store.index?.scenes ?? {});
 
     slotRow.style.display = hasSlot ? '' : 'none';
     hitRow.style.display = isOffensive ? '' : 'none';
@@ -121,7 +124,6 @@ function renderItemForm(key, data) {
       });
       attrsBody.appendChild(formRow('Armor Class Bonus', acInput));
 
-      const sceneIds = Object.keys(store.index?.scenes ?? {});
       const teleOpts = [['', 'None'], ...sceneIds.map(id => [id, id])];
       const teleSel = select(teleOpts, data.attributes.teleportScene ?? '', v => {
         data.attributes.teleportScene = v || undefined;
@@ -143,6 +145,14 @@ function renderItemForm(key, data) {
         markDirty(key);
       });
       attrsBody.appendChild(formRow('Healing Amount', haInput));
+
+      const teleOpts = [['', 'None'], ...sceneIds.map(id => [id, id])];
+      const teleSel = select(teleOpts, data.attributes.teleportScene ?? '', v => {
+        data.attributes.teleportScene = v || undefined;
+        markDirty(key);
+      });
+      teleSel.className = 'form-select';
+      attrsBody.appendChild(formRow('Teleport to Scene', teleSel));
     }
   }
 
@@ -383,9 +393,10 @@ function renderMissionForm(key, data) {
       if (path === 'name') title.textContent = input.value || missionId;
     });
     form.appendChild(formRow(label, input));
+    return input;
   }
 
-  addInput('name', 'Name');
+  addInput('name', 'Name').setAttribute('data-required', '');
 
   const descTa = el('textarea', { class: 'form-textarea' }, [data.description ?? '']);
   descTa.addEventListener('input', () => {

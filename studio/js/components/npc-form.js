@@ -26,7 +26,7 @@ export function renderNpcForm(key, data) {
 
   // ── Basic fields ─────────────────────────────────────────────────────────
 
-  const nameInput = el('input', { type: 'text', class: 'form-input', value: data.name ?? '' });
+  const nameInput = el('input', { type: 'text', class: 'form-input', value: data.name ?? '', 'data-required': '' });
   nameInput.addEventListener('input', () => {
     data.name = nameInput.value;
     titleEl.textContent = nameInput.value || 'New NPC';

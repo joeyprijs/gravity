@@ -1,6 +1,7 @@
 import { openWorkspace, saveFile } from './io.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderForm } from './components/forms.js';
+import { toast } from './ui.js';
 
 export const store = {
   files: {},        // { "items:rusty_sword": { ...json }, "__rules": { ... }, ... }
@@ -43,8 +44,11 @@ function updateSaveButton() {
 }
 
 async function handleSave() {
-  const status = document.getElementById('status-text');
-  status.textContent = 'Saving…';
+  // Warn about empty required fields but don't block save
+  const emptyRequired = [...document.querySelectorAll('[data-required]')]
+    .filter(input => !input.value.trim());
+  emptyRequired.forEach(input => input.classList.add('form-input-error'));
+
   try {
     for (const key of [...store.dirtyFiles]) {
       await saveFile(key);
@@ -53,31 +57,34 @@ async function handleSave() {
       if (node) node.classList.remove('dirty');
     }
     updateSaveButton();
-    status.textContent = 'Saved.';
-    setTimeout(() => { status.textContent = ''; }, 2000);
+    if (emptyRequired.length > 0) {
+      toast('Saved — but some required fields are empty', 'error');
+    } else {
+      toast('Saved', 'success');
+    }
   } catch (e) {
-    status.textContent = `Save failed: ${e.message}`;
+    toast(`Save failed: ${e.message}`, 'error');
   }
 }
 
 async function handleOpen() {
-  const status = document.getElementById('status-text');
-  status.textContent = 'Opening…';
   try {
     await openWorkspace();
     document.getElementById('sidebar-placeholder')?.remove();
     renderSidebar(document.getElementById('sidebar'));
     const count = Object.keys(store.files).length;
-    status.textContent = `Loaded ${count} files.`;
-    setTimeout(() => { status.textContent = ''; }, 3000);
+    toast(`Loaded ${count} files`, 'success');
   } catch (e) {
-    if (e.name !== 'AbortError') status.textContent = `Error: ${e.message}`;
-    else status.textContent = '';
+    if (e.name !== 'AbortError') toast(`Error: ${e.message}`, 'error');
   }
 }
 
 document.getElementById('btn-open').addEventListener('click', handleOpen);
 document.getElementById('btn-save').addEventListener('click', handleSave);
+
+document.addEventListener('input', e => {
+  if (e.target.hasAttribute('data-required')) e.target.classList.remove('form-input-error');
+});
 
 document.addEventListener('keydown', e => {
   if ((e.metaKey || e.ctrlKey) && e.key === 's') {

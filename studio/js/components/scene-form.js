@@ -25,7 +25,7 @@ export function renderSceneForm(key, data) {
 
   // ── Header ──────────────────────────────────────────────────────────────
 
-  const titleInput = el('input', { type: 'text', class: 'form-input', value: data.title ?? '' });
+  const titleInput = el('input', { type: 'text', class: 'form-input', value: data.title ?? '', 'data-required': '' });
   titleInput.addEventListener('input', () => {
     data.title = titleInput.value;
     titleEl.textContent = titleInput.value || 'New Scene';
