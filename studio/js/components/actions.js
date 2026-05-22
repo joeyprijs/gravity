@@ -30,24 +30,26 @@ export function renderActionPipeline(actions, onChange) {
     container.innerHTML = '';
 
     actions.forEach((action, i) => {
-      const row = el('div', { class: 'action-row' });
+      const card = el('div', { class: 'action-card' });
 
+      const hdr = el('div', { class: 'action-card-hdr' });
       const typeSel = select(ACTION_TYPES, action.type, v => {
         Object.keys(action).forEach(k => { if (k !== 'type') delete action[k]; });
         action.type = v;
         onChange();
         rebuild();
       });
-      typeSel.className = 'form-select action-type-sel';
-
-      const params = el('div', { class: 'action-params' });
-      renderParams(action, params, onChange);
-
-      const rmBtn = el('button', { class: 'btn btn-danger btn-sm' }, ['✕']);
+      typeSel.className = 'form-select';
+      const rmBtn = el('button', { class: 'btn-hdr' }, ['✕']);
       rmBtn.addEventListener('click', () => { actions.splice(i, 1); onChange(); rebuild(); });
+      hdr.append(typeSel, rmBtn);
+      card.appendChild(hdr);
 
-      row.append(typeSel, params, rmBtn);
-      container.appendChild(row);
+      const body = el('div', { class: 'action-card-body' });
+      renderParams(action, body, onChange);
+      if (body.children.length > 0) card.appendChild(body);
+
+      container.appendChild(card);
     });
 
     const addBtn = el('button', { class: 'btn btn-secondary' }, ['+ Add Action']);
@@ -113,7 +115,7 @@ function renderParams(action, container, onChange) {
             action.item = v; onChange();
           }, 'form-select')
         ));
-        container.appendChild(param('×', numInput(action.amount ?? 1, v => { action.amount = v; onChange(); }, 'sm')));
+        container.appendChild(param('Amount', numInput(action.amount ?? 1, v => { action.amount = v; onChange(); }, 'sm')));
       }
       break;
     }
@@ -216,7 +218,7 @@ function renderEnemyList(enemies, npcIds, onChange) {
     enemies.forEach((id, i) => {
       const row = el('div', { class: 'list-row' });
       const sel = select(npcIds.map(nid => [nid, nid]), id, v => { enemies[i] = v; onChange(); }, 'form-select');
-      const rm = el('button', { class: 'btn btn-danger btn-sm' }, ['✕']);
+      const rm = el('button', { class: 'btn-hdr' }, ['✕']);
       rm.addEventListener('click', () => { enemies.splice(i, 1); onChange(); rebuild(); });
       row.append(sel, rm);
       wrap.appendChild(row);

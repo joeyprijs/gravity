@@ -121,7 +121,6 @@ textarea:not([rows]) {
 
 body {
   background-color: var(--bg-color);
-  background-image: radial-gradient(circle at top right, var(--bg-gradient-start), var(--bg-gradient-end));
   color: var(--text-primary);
   font-size: var(--font-md);
   line-height: 24px;
@@ -198,8 +197,6 @@ body {
 
 .game__scene {
   background: var(--panel-bg);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
   box-shadow: 0 0 0 1px var(--panel-border);
   padding: calc(var(--spacing) * 4);
   display: flex;

@@ -80,6 +80,28 @@ function buildGraph(npcKey) {
 
     const wRect = scrollWrap.getBoundingClientRect();
 
+    // Pass 1: count how many connections arrive at each (target, side) pair
+    // so we can spread them evenly along that edge.
+    const inCount = {};
+    for (const [nodeId, node] of Object.entries(convs)) {
+      const card = nodeEls[nodeId];
+      if (!card) continue;
+      for (const resp of node.responses ?? []) {
+        const target = (resp.actions ?? []).find(a => a.type === 'goToConversation')?.node;
+        if (!target || !nodeEls[target]) continue;
+        const sc   = card.getBoundingClientRect();
+        const tc   = nodeEls[target].getBoundingClientRect();
+        const side = tc.left < sc.right ? 'r' : 'l';
+        const key  = `${target}_${side}`;
+        inCount[key] = (inCount[key] ?? 0) + 1;
+      }
+    }
+
+    // Pass 2: draw, assigning each connection its spread port position
+    const inIdx = {};
+    const ARROW  = 8;
+    const MARGIN = 16;
+
     for (const [nodeId, node] of Object.entries(convs)) {
       const card = nodeEls[nodeId];
       if (!card) continue;
@@ -89,16 +111,34 @@ function buildGraph(npcKey) {
         if (!target || !nodeEls[target]) return;
 
         const anchor = card.querySelector(`[data-anchor="${ri}"]`);
-        const tHdr   = nodeEls[target].querySelector('.dg-node-hdr');
-        if (!anchor || !tHdr) return;
+        const tCard  = nodeEls[target];
+        const tHdr   = tCard?.querySelector('.dg-node-hdr');
+        if (!anchor || !tCard || !tHdr) return;
 
-        const a = anchor.getBoundingClientRect();
-        const t = tHdr.getBoundingClientRect();
+        const a  = anchor.getBoundingClientRect();
+        const sc = card.getBoundingClientRect();
+        const tc = tCard.getBoundingClientRect();
+        const th = tHdr.getBoundingClientRect();
 
         const ax = a.right  - wRect.left + scrollWrap.scrollLeft;
         const ay = (a.top + a.bottom) / 2 - wRect.top + scrollWrap.scrollTop;
-        const tx = t.left   - wRect.left + scrollWrap.scrollLeft;
-        const ty = (t.top + t.bottom) / 2 - wRect.top + scrollWrap.scrollTop;
+
+        const backward = tc.left < sc.right;
+        const side     = backward ? 'r' : 'l';
+        const key      = `${target}_${side}`;
+        const total    = inCount[key] ?? 1;
+        const idx      = inIdx[key] ?? 0;
+        inIdx[key]     = idx + 1;
+
+        // Spread ports evenly between MARGIN from top and MARGIN from bottom.
+        const portY = total === 1
+          ? (tc.top + tc.bottom) / 2
+          : tc.top + MARGIN + idx * (tc.height - 2 * MARGIN) / (total - 1);
+        const ty = portY - wRect.top + scrollWrap.scrollTop;
+
+        const tx = backward
+          ? tc.right - wRect.left + scrollWrap.scrollLeft + ARROW
+          : tc.left  - wRect.left + scrollWrap.scrollLeft - ARROW;
 
         drawBezier(svg, NS, ax, ay, tx, ty);
         anchor.classList.add('dg-anchor-on');
@@ -276,8 +316,8 @@ function autoLayout(convs) {
 // ── SVG helpers ───────────────────────────────────────────────────────────
 
 function bezier(x1, y1, x2, y2) {
-  const cx = x1 + (x2 - x1) * 0.55;
-  return `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`;
+  const t = (x2 - x1) * 0.5;
+  return `M${x1},${y1} C${x1 + t},${y1} ${x2 - t},${y2} ${x2},${y2}`;
 }
 
 function drawBezier(svg, NS, x1, y1, x2, y2) {
@@ -294,16 +334,16 @@ function drawBezier(svg, NS, x1, y1, x2, y2) {
 function addArrowDef(svg, NS) {
   const defs   = document.createElementNS(NS, 'defs');
   const marker = document.createElementNS(NS, 'marker');
-  marker.setAttribute('id', 'dg-arrow');
-  marker.setAttribute('markerWidth', '8');
+  marker.setAttribute('id',           'dg-arrow');
+  marker.setAttribute('markerWidth',  '8');
   marker.setAttribute('markerHeight', '6');
-  marker.setAttribute('refX', '8');
-  marker.setAttribute('refY', '3');
-  marker.setAttribute('orient', 'auto');
+  marker.setAttribute('refX',         '0');
+  marker.setAttribute('refY',         '3');
+  marker.setAttribute('orient',       'auto');
+  marker.setAttribute('markerUnits',  'userSpaceOnUse');
   const poly = document.createElementNS(NS, 'polygon');
   poly.setAttribute('points', '0 0, 8 3, 0 6');
-  poly.setAttribute('fill', '#4a9eff');
-  poly.setAttribute('opacity', '0.65');
+  poly.setAttribute('fill',   'context-stroke');
   marker.appendChild(poly);
   defs.appendChild(marker);
   svg.appendChild(defs);

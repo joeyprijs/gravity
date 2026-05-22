@@ -40,6 +40,10 @@ export function renderSceneForm(key, data) {
   regionSel.className = 'form-select';
   form.appendChild(formRow('Region', regionSel));
 
+  const xpInput = el('input', { type: 'number', class: 'form-input', value: data.xpReward ?? '' });
+  xpInput.addEventListener('input', () => { data.xpReward = xpInput.value === '' ? undefined : Number(xpInput.value); onChange(); });
+  form.appendChild(formRow('XP Reward', xpInput));
+
   // ── Quest Trigger ────────────────────────────────────────────────────────
 
   form.appendChild(el('h3', { class: 'form-section-title' }, ['Quest Trigger']));
@@ -155,20 +159,33 @@ function renderDescBlocks(data, onChange) {
   function render() {
     container.innerHTML = '';
     data.description.forEach((block, i) => {
-      const card = el('div', { class: 'block-item' });
+      const card = el('div', { class: 'card-item' });
 
       const hdr = blockHeader(`Block ${i + 1}`, () => { data.description.splice(i, 1); onChange(); render(); });
       card.appendChild(hdr);
 
+      const cardBody = el('div', { class: 'card-body' });
       const ta = el('textarea', { class: 'form-textarea desc-ta' }, [block.text ?? '']);
       ta.addEventListener('input', () => { block.text = ta.value; onChange(); });
-      card.appendChild(ta);
-
-      card.appendChild(renderInlineCondition(
+      cardBody.appendChild(ta);
+      const descCondWrap = el('div', { class: 'card-section' });
+      descCondWrap.appendChild(renderInlineCondition(
         () => block.condition,
         v => { if (v == null) delete block.condition; else block.condition = v; },
         onChange
       ));
+      cardBody.appendChild(descCondWrap);
+      card.appendChild(cardBody);
+
+      let collapsed = true;
+      cardBody.style.display = 'none';
+      hdr.classList.add('collapsed');
+      hdr.addEventListener('click', e => {
+        if (e.target.closest('.btn-hdr')) return;
+        collapsed = !collapsed;
+        cardBody.style.display = collapsed ? 'none' : '';
+        hdr.classList.toggle('collapsed', collapsed);
+      });
 
       container.appendChild(card);
     });
@@ -185,7 +202,7 @@ function renderDescBlocks(data, onChange) {
 // ── Options ────────────────────────────────────────────────────────────────
 
 function renderOptions(data, onChange) {
-  const container = el('div', { class: 'block-list' });
+  const container = el('div', { class: 'flat-list' });
   const itemIds = Object.keys(store.index?.items ?? {});
 
   function render() {
@@ -193,23 +210,18 @@ function renderOptions(data, onChange) {
     data.options.forEach((opt, i) => {
       if (!Array.isArray(opt.actions)) opt.actions = [];
 
-      const card = el('div', { class: 'block-item' });
-      const labelEl = el('span', { class: 'block-title' }, [previewText(opt.text, `Option ${i + 1}`)]);
+      const item = el('div', { class: 'card-item' });
 
-      const hdr = el('div', { class: 'block-header' }, [labelEl]);
-      const rm = el('button', { class: 'btn btn-danger btn-sm' }, ['✕']);
+      const hdr = el('div', { class: 'card-hdr collapsible' });
+      const textInput = el('input', { type: 'text', class: 'form-input flat-title-input', value: opt.text ?? '', placeholder: 'Option text…' });
+      textInput.addEventListener('input', () => { opt.text = textInput.value; onChange(); });
+      hdr.appendChild(textInput);
+      const rm = el('button', { class: 'btn-hdr' }, ['✕']);
       rm.addEventListener('click', () => { data.options.splice(i, 1); onChange(); render(); });
       hdr.appendChild(rm);
-      card.appendChild(hdr);
+      item.appendChild(hdr);
 
-      const textInput = el('input', { type: 'text', class: 'form-input', value: opt.text ?? '', placeholder: 'Button text' });
-      textInput.addEventListener('input', () => {
-        opt.text = textInput.value;
-        labelEl.textContent = previewText(opt.text, `Option ${i + 1}`);
-        onChange();
-      });
-      card.appendChild(formRow('Text', textInput));
-
+      const cardBody = el('div', { class: 'card-body' });
       const reqSel = select(
         [['', 'None'], ...itemIds.map(id => [id, id])],
         opt.requirements?.item ?? '',
@@ -220,18 +232,34 @@ function renderOptions(data, onChange) {
         }
       );
       reqSel.className = 'form-select';
-      card.appendChild(formRow('Requires Item', reqSel));
-
-      card.appendChild(renderInlineCondition(
+      const reqParam = el('div', { class: 'action-param' });
+      reqParam.appendChild(el('span', { class: 'action-param-label' }, ['Requires Item']));
+      reqParam.appendChild(reqSel);
+      cardBody.appendChild(reqParam);
+      const optCondWrap = el('div', { class: 'card-section' });
+      optCondWrap.appendChild(renderInlineCondition(
         () => opt.condition,
         v => { if (v == null) delete opt.condition; else opt.condition = v; },
         onChange
       ));
+      cardBody.appendChild(optCondWrap);
+      const actWrap = el('div', { class: 'card-section' });
+      actWrap.appendChild(el('div', { class: 'card-section-label' }, ['Actions']));
+      actWrap.appendChild(renderActionPipeline(opt.actions, onChange));
+      cardBody.appendChild(actWrap);
+      item.appendChild(cardBody);
 
-      card.appendChild(el('div', { class: 'section-label' }, ['Actions']));
-      card.appendChild(renderActionPipeline(opt.actions, onChange));
+      let collapsed = true;
+      cardBody.style.display = 'none';
+      hdr.classList.add('collapsed');
+      hdr.addEventListener('click', e => {
+        if (textInput.contains(e.target) || rm.contains(e.target)) return;
+        collapsed = !collapsed;
+        cardBody.style.display = collapsed ? 'none' : '';
+        hdr.classList.toggle('collapsed', collapsed);
+      });
 
-      container.appendChild(card);
+      container.appendChild(item);
     });
 
     const add = el('button', { class: 'btn btn-secondary' }, ['+ Add Option']);
@@ -246,7 +274,7 @@ function renderOptions(data, onChange) {
 // ── Skill Checks ───────────────────────────────────────────────────────────
 
 function renderSkills(data, onChange) {
-  const container = el('div', { class: 'block-list' });
+  const container = el('div', { class: 'flat-list' });
   const itemIds  = Object.keys(store.index?.items  ?? {});
   const tableIds = Object.keys(store.index?.tables ?? {});
   const customAttrs = (store.files['__rules']?.customAttributes ?? []).map(a => [a.id, a.id]);
@@ -254,28 +282,86 @@ function renderSkills(data, onChange) {
   function render() {
     container.innerHTML = '';
     data.skills.forEach((skill, i) => {
-      if (!Array.isArray(skill.items)) skill.items = [];
+      const item = el('div', { class: 'card-item' });
 
-      const card = el('div', { class: 'block-item' });
-      const hdr = blockHeader(`Skill Check ${i + 1}`, () => { data.skills.splice(i, 1); onChange(); render(); });
-      card.appendChild(hdr);
-
-      const textInput = el('input', { type: 'text', class: 'form-input', value: skill.text ?? '' });
+      const hdr = el('div', { class: 'card-hdr collapsible' });
+      const textInput = el('input', { type: 'text', class: 'form-input flat-title-input', value: skill.text ?? '', placeholder: 'Button text…' });
       textInput.addEventListener('input', () => { skill.text = textInput.value; onChange(); });
-      card.appendChild(formRow('Button Text', textInput));
-
+      hdr.appendChild(textInput);
       const skillSel = select(customAttrs, skill.skillCheck ?? '', v => { skill.skillCheck = v; onChange(); });
       skillSel.className = 'form-select';
-      card.appendChild(formRow('Skill', skillSel));
+      hdr.appendChild(skillSel);
+      const rm = el('button', { class: 'btn-hdr' }, ['✕']);
+      rm.addEventListener('click', () => { data.skills.splice(i, 1); onChange(); render(); });
+      hdr.appendChild(rm);
+      item.appendChild(hdr);
 
-      card.appendChild(el('div', { class: 'section-label' }, ['Item Drops']));
-      card.appendChild(renderDropsList(skill, itemIds, tableIds, onChange));
+      if (!Array.isArray(skill.actions)) skill.actions = [];
+      if (!Array.isArray(skill.onFailure)) skill.onFailure = [];
+      if (!Array.isArray(skill.items)) skill.items = [];
 
-      container.appendChild(card);
+      const cardBody = el('div', { class: 'card-body' });
+
+      const npcNameInput = el('input', { type: 'text', class: 'form-input', value: skill.npcName ?? '', placeholder: 'NPC name (optional)' });
+      npcNameInput.addEventListener('input', () => { skill.npcName = npcNameInput.value || undefined; onChange(); });
+      const npcParam = el('div', { class: 'action-param' });
+      npcParam.appendChild(el('span', { class: 'action-param-label' }, ['NPC Name']));
+      npcParam.appendChild(npcNameInput);
+      cardBody.appendChild(npcParam);
+
+      const dcWrap = el('div', { class: 'card-section' });
+      const dcRow = el('div', { class: 'drop-rhs' });
+      const dcInput = el('input', { type: 'number', class: 'form-input sm', value: skill.dc ?? '', placeholder: 'DC' });
+      dcInput.addEventListener('input', () => { skill.dc = dcInput.value === '' ? undefined : Number(dcInput.value); onChange(); });
+      const incInput = el('input', { type: 'number', class: 'form-input sm', value: skill.increment ?? '', placeholder: '+' });
+      incInput.addEventListener('input', () => { skill.increment = incInput.value === '' ? undefined : Number(incInput.value); onChange(); });
+      dcRow.append(el('span', { class: 'list-label' }, ['DC']), dcInput, el('span', { class: 'list-label' }, ['+']), incInput);
+      dcWrap.appendChild(dcRow);
+      cardBody.appendChild(dcWrap);
+
+      const skillCondWrap = el('div', { class: 'card-section' });
+      skillCondWrap.appendChild(renderInlineCondition(
+        () => skill.condition,
+        v => { if (v == null) delete skill.condition; else skill.condition = v; },
+        onChange
+      ));
+      cardBody.appendChild(skillCondWrap);
+
+      const actWrap = el('div', { class: 'card-section' });
+      actWrap.appendChild(el('div', { class: 'card-section-label' }, ['On Success']));
+      actWrap.appendChild(renderActionPipeline(skill.actions, onChange));
+      cardBody.appendChild(actWrap);
+
+      const failWrap = el('div', { class: 'card-section' });
+      failWrap.appendChild(el('div', { class: 'card-section-label' }, ['On Failure']));
+      failWrap.appendChild(renderActionPipeline(skill.onFailure, onChange));
+      cardBody.appendChild(failWrap);
+
+      const dropsWrap = el('div', { class: 'card-section' });
+      dropsWrap.appendChild(el('div', { class: 'card-section-label' }, ['Item Drops']));
+      dropsWrap.appendChild(renderDropsList(skill, itemIds, tableIds, onChange));
+      cardBody.appendChild(dropsWrap);
+
+      item.appendChild(cardBody);
+
+      let collapsed = true;
+      cardBody.style.display = 'none';
+      hdr.classList.add('collapsed');
+      hdr.addEventListener('click', e => {
+        if (textInput.contains(e.target) || skillSel.contains(e.target) || rm.contains(e.target)) return;
+        collapsed = !collapsed;
+        cardBody.style.display = collapsed ? 'none' : '';
+        hdr.classList.toggle('collapsed', collapsed);
+      });
+
+      container.appendChild(item);
     });
 
     const add = el('button', { class: 'btn btn-secondary' }, ['+ Add Skill Check']);
-    add.addEventListener('click', () => { data.skills.push({ text: '', skillCheck: customAttrs[0]?.[0] ?? '', items: [] }); onChange(); render(); });
+    add.addEventListener('click', () => {
+      data.skills.push({ text: '', skillCheck: customAttrs[0]?.[0] ?? '', dc: 10, increment: 2, actions: [], onFailure: [] });
+      onChange(); render();
+    });
     container.appendChild(add);
   }
 
@@ -284,53 +370,59 @@ function renderSkills(data, onChange) {
 }
 
 function renderDropsList(skill, itemIds, tableIds, onChange) {
-  const container = el('div', { class: 'block-list' });
+  const container = el('div', { class: 'drop-list' });
 
   function render() {
     container.innerHTML = '';
     skill.items.forEach((drop, i) => {
-      const row = el('div', { class: 'action-row' });
       const isTable = drop.table !== undefined;
+      const row = el('div', { class: 'drop-row' });
 
+      const lhs = el('div', { class: 'drop-lhs' });
       const modeSel = select([['item', 'Item'], ['table', 'Table']], isTable ? 'table' : 'item', v => {
         if (v === 'table') { delete drop.item; delete drop.amount; drop.table = tableIds[0] ?? ''; drop.itemDrops = 1; }
         else               { delete drop.table; delete drop.itemDrops; drop.item = itemIds[0] ?? ''; drop.amount = 1; }
         onChange(); render();
       });
       modeSel.className = 'form-select sm';
-      row.appendChild(modeSel);
+      lhs.appendChild(modeSel);
 
       if (isTable) {
         const tSel = select(tableIds.map(id => [id, id]), drop.table ?? '', v => { drop.table = v; onChange(); });
         tSel.className = 'form-select';
-        row.appendChild(tSel);
+        lhs.appendChild(tSel);
         const drInput = el('input', { type: 'number', class: 'form-input sm', value: drop.itemDrops ?? 1 });
         drInput.addEventListener('input', () => { drop.itemDrops = Number(drInput.value); onChange(); });
-        row.append(el('span', { class: 'list-label' }, ['drops']), drInput);
+        lhs.append(el('span', { class: 'list-label' }, ['drops']), drInput);
       } else {
         const iSel = select(itemIds.map(id => [id, id]), drop.item ?? '', v => { drop.item = v; onChange(); });
         iSel.className = 'form-select';
-        row.appendChild(iSel);
+        lhs.appendChild(iSel);
         const amtInput = el('input', { type: 'number', class: 'form-input sm', value: drop.amount ?? 1 });
         amtInput.addEventListener('input', () => { drop.amount = Number(amtInput.value); onChange(); });
-        row.append(el('span', { class: 'list-label' }, ['×']), amtInput);
+        lhs.append(el('span', { class: 'list-label' }, ['×']), amtInput);
       }
+      row.appendChild(lhs);
 
+      const rhs = el('div', { class: 'drop-rhs' });
       const dcInput = el('input', { type: 'number', class: 'form-input sm', value: drop.dc ?? '', placeholder: 'DC' });
       dcInput.addEventListener('input', () => { drop.dc = dcInput.value === '' ? undefined : Number(dcInput.value); onChange(); });
       const incInput = el('input', { type: 'number', class: 'form-input sm', value: drop.increment ?? '', placeholder: '+' });
       incInput.addEventListener('input', () => { drop.increment = incInput.value === '' ? undefined : Number(incInput.value); onChange(); });
-      row.append(el('span', { class: 'list-label' }, ['DC']), dcInput, el('span', { class: 'list-label' }, ['+']), incInput);
-
-      const rm = el('button', { class: 'btn btn-danger btn-sm' }, ['✕']);
-      rm.addEventListener('click', () => { skill.items.splice(i, 1); onChange(); render(); });
-      row.appendChild(rm);
+      rhs.append(el('span', { class: 'list-label' }, ['DC']), dcInput, el('span', { class: 'list-label' }, ['+']), incInput);
+      const rmBtn = el('button', { class: 'btn-hdr' }, ['✕']);
+      rmBtn.addEventListener('click', () => { skill.items.splice(i, 1); onChange(); render(); });
+      rhs.appendChild(rmBtn);
+      row.appendChild(rhs);
 
       container.appendChild(row);
     });
 
     const add = el('button', { class: 'btn btn-secondary btn-sm' }, ['+ Add Drop']);
-    add.addEventListener('click', () => { skill.items.push({ item: itemIds[0] ?? '', amount: 1, dc: 10, increment: 1 }); onChange(); render(); });
+    add.addEventListener('click', () => {
+      skill.items.push({ item: itemIds[0] ?? '', amount: 1, dc: 10, increment: 1 });
+      onChange(); render();
+    });
     container.appendChild(add);
   }
 
@@ -351,43 +443,58 @@ function renderAutoAttack(data, onChange) {
       btn.addEventListener('click', () => { data.autoAttack = { enemies: [], onVictory: [] }; onChange(); render(); });
       wrap.appendChild(btn);
     } else {
+      const card = el('div', { class: 'card-item' });
       const aa = data.autoAttack;
       if (!Array.isArray(aa.enemies))   aa.enemies   = [];
       if (!Array.isArray(aa.onVictory)) aa.onVictory = [];
 
+      const aaHdr = el('div', { class: 'card-hdr' });
+      aaHdr.appendChild(el('span', { class: 'card-hdr-label' }, ['Auto Attack']));
+      const rmHdr = el('button', { class: 'btn-hdr' }, ['✕']);
+      rmHdr.addEventListener('click', () => { delete data.autoAttack; onChange(); render(); });
+      aaHdr.appendChild(rmHdr);
+      card.appendChild(aaHdr);
+
+      const cardBody = el('div', { class: 'card-body' });
+
       // Enemies
-      const enemyWrap = el('div', { class: 'list-editor' });
+      const enemyParam = el('div', { class: 'action-param' });
+      enemyParam.appendChild(el('span', { class: 'action-param-label' }, ['Enemies']));
+      const enemyList = el('div', { class: 'mini-list' });
       function rebuildEnemies() {
-        enemyWrap.innerHTML = '';
+        enemyList.innerHTML = '';
         aa.enemies.forEach((id, i) => {
           const row = el('div', { class: 'list-row' });
           const sel = select(npcIds.map(nid => [nid, nid]), id, v => { aa.enemies[i] = v; onChange(); });
           sel.className = 'form-select';
-          const rm = el('button', { class: 'btn btn-danger btn-sm' }, ['✕']);
+          const rm = el('button', { class: 'btn-hdr' }, ['✕']);
           rm.addEventListener('click', () => { aa.enemies.splice(i, 1); onChange(); rebuildEnemies(); });
           row.append(sel, rm);
-          enemyWrap.appendChild(row);
+          enemyList.appendChild(row);
         });
         const addE = el('button', { class: 'btn btn-secondary btn-sm' }, ['+ Enemy']);
         addE.addEventListener('click', () => { aa.enemies.push(npcIds[0] ?? ''); onChange(); rebuildEnemies(); });
-        enemyWrap.appendChild(addE);
+        enemyList.appendChild(addE);
       }
       rebuildEnemies();
-      wrap.appendChild(formRow('Enemies', enemyWrap));
+      enemyParam.appendChild(enemyList);
+      cardBody.appendChild(enemyParam);
 
-      wrap.appendChild(renderInlineCondition(
+      const aaCondWrap = el('div', { class: 'card-section' });
+      aaCondWrap.appendChild(renderInlineCondition(
         () => aa.condition,
         v => { if (v == null) delete aa.condition; else aa.condition = v; },
         onChange
       ));
+      cardBody.appendChild(aaCondWrap);
 
-      wrap.appendChild(el('div', { class: 'section-label' }, ['On Victory']));
-      wrap.appendChild(renderActionPipeline(aa.onVictory, onChange));
+      const victorySection = el('div', { class: 'card-section' });
+      victorySection.appendChild(el('div', { class: 'card-section-label' }, ['On Victory']));
+      victorySection.appendChild(renderActionPipeline(aa.onVictory, onChange));
+      cardBody.appendChild(victorySection);
 
-      const rm = el('button', { class: 'btn btn-danger btn-sm' }, ['Remove Auto Attack']);
-      rm.style.marginTop = '8px';
-      rm.addEventListener('click', () => { delete data.autoAttack; onChange(); render(); });
-      wrap.appendChild(rm);
+      card.appendChild(cardBody);
+      wrap.appendChild(card);
     }
   }
 
@@ -398,14 +505,10 @@ function renderAutoAttack(data, onChange) {
 // ── Utilities ──────────────────────────────────────────────────────────────
 
 function blockHeader(label, onRemove) {
-  const hdr = el('div', { class: 'block-header' });
-  hdr.appendChild(el('span', { class: 'block-title' }, [label]));
-  const btn = el('button', { class: 'btn btn-danger btn-sm' }, ['✕']);
+  const hdr = el('div', { class: 'card-hdr collapsible' });
+  hdr.appendChild(el('span', { class: 'card-hdr-label' }, [label]));
+  const btn = el('button', { class: 'btn-hdr' }, ['✕']);
   btn.addEventListener('click', onRemove);
   hdr.appendChild(btn);
   return hdr;
-}
-
-function previewText(text, fallback) {
-  return text ? `"${text.slice(0, 35)}${text.length > 35 ? '…' : ''}"` : fallback;
 }

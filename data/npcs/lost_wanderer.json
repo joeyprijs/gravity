@@ -1,7 +1,6 @@
 {
   "name": "Lost Wanderer",
   "description": "A hollow-eyed figure in tattered rags, wild with fear. Before you can speak, they lunge.",
-  "disposition": "Hostile",
   "attributes": {
     "healthPoints": 8,
     "armorClass": 8,

@@ -208,9 +208,29 @@ function renderRulesForm(key, data) {
 
   // Player defaults
   form.appendChild(el('h3', { class: 'form-section-title' }, ['Player Defaults']));
-  addNumber('playerDefaults.resources.hp.max',  'Starting Max HP');
-  addNumber('playerDefaults.resources.ap.max',  'Starting Max AP');
-  addNumber('playerDefaults.resources.gold',    'Starting Gold');
+  addNumber('playerDefaults.resources.hp.max',    'Starting Max HP');
+  addNumber('playerDefaults.resources.ap.max',    'Starting Max AP');
+  addNumber('playerDefaults.resources.gold',      'Starting Gold');
+  addNumber('playerDefaults.attributes.ac',       'Starting Armor Class');
+  addNumber('playerDefaults.attributes.initiative', 'Starting Initiative');
+
+  // Starting equipment
+  form.appendChild(el('h3', { class: 'form-section-title' }, ['Starting Equipment']));
+  if (!data.playerDefaults) data.playerDefaults = {};
+  if (!data.playerDefaults.equipment) data.playerDefaults.equipment = {};
+  for (const slot of ['Head', 'Amulet', 'Torso', 'Left Hand', 'Right Hand', 'Legs']) {
+    const sel = select(
+      [['', 'None'], ...itemIds.map(id => [id, id])],
+      data.playerDefaults.equipment[slot] ?? '',
+      v => {
+        if (v) data.playerDefaults.equipment[slot] = v;
+        else delete data.playerDefaults.equipment[slot];
+        markDirty(key);
+      }
+    );
+    sel.className = 'form-select';
+    form.appendChild(formRow(slot, sel));
+  }
 
   // Starting inventory
   form.appendChild(el('h3', { class: 'form-section-title' }, ['Starting Inventory']));
@@ -236,7 +256,7 @@ function renderRulesForm(key, data) {
         markDirty(key);
       });
 
-      const rmBtn = el('button', { class: 'btn btn-danger btn-sm' }, ['✕']);
+      const rmBtn = el('button', { class: 'btn-hdr' }, ['✕']);
       rmBtn.addEventListener('click', () => {
         inv.splice(i, 1);
         markDirty(key);
@@ -283,7 +303,7 @@ function renderRulesForm(key, data) {
         markDirty(key);
       });
 
-      const rmBtn = el('button', { class: 'btn btn-danger btn-sm' }, ['✕']);
+      const rmBtn = el('button', { class: 'btn-hdr' }, ['✕']);
       rmBtn.addEventListener('click', () => {
         attrs.splice(i, 1);
         if (!attrs.length) delete data.customAttributes;
@@ -346,7 +366,7 @@ function renderFlagsForm(key, data) {
       });
       valSel.className = 'form-select sm';
 
-      const rmBtn = el('button', { class: 'btn btn-danger btn-sm' }, ['✕']);
+      const rmBtn = el('button', { class: 'btn-hdr' }, ['✕']);
       rmBtn.addEventListener('click', () => {
         delete data[currentName];
         markDirty(key);
@@ -449,7 +469,7 @@ function renderTableForm(key, data) {
         markDirty(key);
       });
 
-      const rmBtn = el('button', { class: 'btn btn-danger btn-sm' }, ['✕']);
+      const rmBtn = el('button', { class: 'btn-hdr' }, ['✕']);
       rmBtn.addEventListener('click', () => {
         entries.splice(i, 1);
         markDirty(key);

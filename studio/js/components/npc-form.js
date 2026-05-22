@@ -38,14 +38,6 @@ export function renderNpcForm(key, data) {
   descTa.addEventListener('input', () => { data.description = descTa.value || undefined; onChange(); });
   form.appendChild(formRow('Description', descTa));
 
-  const dispositionSel = select(
-    [['', 'None'], ['Hostile', 'Hostile'], ['Friendly', 'Friendly'], ['Neutral', 'Neutral']],
-    data.disposition ?? '',
-    v => { data.disposition = v || undefined; onChange(); }
-  );
-  dispositionSel.className = 'form-select';
-  form.appendChild(formRow('Disposition', dispositionSel));
-
   const merchantCheck = el('input', { type: 'checkbox' });
   if (data.isMerchant) merchantCheck.checked = true;
   merchantCheck.addEventListener('change', () => {
@@ -111,7 +103,6 @@ export function renderNpcForm(key, data) {
     graphBtn.addEventListener('click', () => openDialogueGraph(key));
     convHdr.appendChild(graphBtn);
   }
-  form.appendChild(el('div', { class: 'form-section-title', style: 'padding-top:18px' }));
   form.appendChild(convHdr);
   form.appendChild(renderConversations(data, onChange));
 
@@ -131,7 +122,7 @@ function renderCarriedItems(data, itemIds, onChange) {
       sel.className = 'form-select';
       const amtInput = el('input', { type: 'number', class: 'form-input sm', min: '1', value: entry.amount ?? 1 });
       amtInput.addEventListener('input', () => { entry.amount = Number(amtInput.value); onChange(); });
-      const rm = el('button', { class: 'btn btn-danger btn-sm' }, ['✕']);
+      const rm = el('button', { class: 'btn-hdr' }, ['✕']);
       rm.addEventListener('click', () => { data.carriedItems.splice(i, 1); onChange(); render(); });
       row.append(sel, el('span', { class: 'list-label' }, ['×']), amtInput, rm);
       container.appendChild(row);
@@ -162,7 +153,7 @@ function renderConversations(data, onChange) {
     }
 
     // Add new node row
-    const addRow = el('div', { class: 'list-row', style: 'margin-top:8px' });
+    const addRow = el('div', { class: 'list-row' });
     const idInput = el('input', { type: 'text', class: 'form-input', placeholder: 'new_node_id' });
     const addBtn  = el('button', { class: 'btn btn-secondary' }, ['+ Add Node']);
     addBtn.addEventListener('click', () => {
@@ -184,13 +175,23 @@ function renderConversations(data, onChange) {
 function renderNode(nodeId, node, data, onChange, rerenderAll) {
   let currentId = nodeId;
 
-  const card = el('div', { class: 'conversation-node' });
+  const card = el('div', { class: 'card-item' });
 
-  const header = el('div', { class: 'conv-node-header' });
-  const nodeLabel = el('code', {}, [nodeId]);
-  header.appendChild(nodeLabel);
+  const header = el('div', { class: 'card-hdr collapsible' });
 
-  const rmBtn = el('button', { class: 'btn btn-danger btn-sm' }, ['Delete Node']);
+  const idInput = el('input', { type: 'text', class: 'form-input flat-title-input', value: nodeId });
+  idInput.addEventListener('change', () => {
+    const newId = idInput.value.trim();
+    if (!newId || newId === currentId) return;
+    const nodeData = data.conversations[currentId];
+    delete data.conversations[currentId];
+    data.conversations[newId] = nodeData;
+    currentId = newId;
+    onChange();
+  });
+  header.appendChild(idInput);
+
+  const rmBtn = el('button', { class: 'btn-hdr' }, ['✕']);
   rmBtn.addEventListener('click', e => {
     e.stopPropagation();
     delete data.conversations[currentId];
@@ -199,36 +200,46 @@ function renderNode(nodeId, node, data, onChange, rerenderAll) {
   header.appendChild(rmBtn);
   card.appendChild(header);
 
-  const body = el('div', { class: 'conv-node-body' });
+  const body = el('div', { class: 'card-body' });
   card.appendChild(body);
 
-  // Node ID rename
-  const idInput = el('input', { type: 'text', class: 'form-input', value: nodeId });
-  idInput.addEventListener('change', () => {
-    const newId = idInput.value.trim();
-    if (!newId || newId === currentId) return;
-    const nodeData = data.conversations[currentId];
-    delete data.conversations[currentId];
-    data.conversations[newId] = nodeData;
-    currentId = newId;
-    nodeLabel.textContent = newId;
-    onChange();
-  });
-  body.appendChild(formRow('Node ID', idInput));
-  body.appendChild(el('p', { class: 'form-hint', style: 'margin-top:-4px' },
-    ['Renaming does not update goToConversation references.']));
-
-  const npcTa = el('textarea', { class: 'form-textarea', style: 'min-height:56px' }, [node.npcText ?? '']);
+  const npcTa = el('textarea', { class: 'form-textarea', style: 'min-height:56px', placeholder: 'NPC text…' }, [node.npcText ?? '']);
   npcTa.addEventListener('input', () => { node.npcText = npcTa.value; onChange(); });
-  body.appendChild(formRow('NPC Text', npcTa));
+  body.appendChild(npcTa);
 
-  body.appendChild(el('div', { class: 'section-label' }, ['Responses']));
-  body.appendChild(renderResponses(node, onChange));
+  if (!Array.isArray(node.actions)) node.actions = [];
+  const actSection = el('div', { class: 'card-section' });
+  actSection.appendChild(el('div', { class: 'card-section-label' }, ['Actions']));
+  actSection.appendChild(renderActionPipeline(node.actions, onChange));
+  body.appendChild(actSection);
 
-  // Collapse toggle
-  let collapsed = false;
-  header.style.cursor = 'pointer';
-  header.addEventListener('click', () => {
+  const respSection = el('div', { class: 'card-section' });
+  respSection.appendChild(el('span', { class: 'action-param-label' }, ['Responses']));
+
+  const respContainer = el('div', { class: 'resp-list' });
+  respSection.appendChild(respContainer);
+  body.appendChild(respSection);
+
+  function renderRespCards() {
+    respContainer.innerHTML = '';
+    node.responses.forEach((resp, i) => {
+      if (!Array.isArray(resp.actions)) resp.actions = [];
+      respContainer.appendChild(makeResponseCard(resp, i, node, onChange, renderRespCards));
+    });
+    const addRespBtn = el('button', { class: 'btn btn-secondary' }, ['+ Add Response']);
+    addRespBtn.addEventListener('click', () => {
+      node.responses.push({ text: '', actions: [] });
+      onChange(); renderRespCards();
+    });
+    respContainer.appendChild(addRespBtn);
+  }
+  renderRespCards();
+
+  let collapsed = true;
+  body.style.display = 'none';
+  header.classList.add('collapsed');
+  header.addEventListener('click', e => {
+    if (e.target === idInput || rmBtn.contains(e.target)) return;
     collapsed = !collapsed;
     body.style.display = collapsed ? 'none' : '';
     header.classList.toggle('collapsed', collapsed);
@@ -237,95 +248,93 @@ function renderNode(nodeId, node, data, onChange, rerenderAll) {
   return card;
 }
 
-function renderResponses(node, onChange) {
-  const container = el('div', { class: 'block-list' });
+function makeResponseCard(resp, i, node, onChange, rerender) {
+  const item = el('div', { class: 'card-item' });
 
-  function render() {
-    container.innerHTML = '';
+  const hdr = el('div', { class: 'card-hdr collapsible' });
+  const textInput = el('input', { type: 'text', class: 'form-input flat-title-input', value: resp.text ?? '', placeholder: `Response ${i + 1}…` });
+  textInput.addEventListener('input', () => { resp.text = textInput.value; onChange(); });
+  hdr.appendChild(textInput);
+  const rm = el('button', { class: 'btn-hdr' }, ['✕']);
+  rm.addEventListener('click', () => { node.responses.splice(i, 1); onChange(); rerender(); });
+  hdr.appendChild(rm);
+  item.appendChild(hdr);
 
-    node.responses.forEach((resp, i) => {
-      if (!Array.isArray(resp.actions)) resp.actions = [];
+  if (!Array.isArray(resp.onFailure)) resp.onFailure = [];
 
-      const card = el('div', { class: 'response-item' });
-      const labelEl = el('span', { class: 'block-title' }, [previewText(resp.text, `Response ${i + 1}`)]);
+  const body = el('div', { class: 'card-body' });
+  body.appendChild(renderSkillCheckRow(resp, onChange));
+  const respCondWrap = el('div', { class: 'card-section' });
+  respCondWrap.appendChild(renderInlineCondition(
+    () => resp.condition,
+    v => { if (v == null) delete resp.condition; else resp.condition = v; },
+    onChange
+  ));
+  body.appendChild(respCondWrap);
+  const actSection = el('div', { class: 'card-section' });
+  actSection.appendChild(el('div', { class: 'card-section-label' }, ['On Success']));
+  actSection.appendChild(renderActionPipeline(resp.actions, onChange));
+  body.appendChild(actSection);
+  const failSection = el('div', { class: 'card-section' });
+  failSection.appendChild(el('div', { class: 'card-section-label' }, ['On Failure']));
+  failSection.appendChild(renderActionPipeline(resp.onFailure, onChange));
+  body.appendChild(failSection);
+  item.appendChild(body);
 
-      const hdr = el('div', { class: 'block-header' }, [labelEl]);
-      const rm = el('button', { class: 'btn btn-danger btn-sm' }, ['✕']);
-      rm.addEventListener('click', () => { node.responses.splice(i, 1); onChange(); render(); });
-      hdr.appendChild(rm);
-      card.appendChild(hdr);
+  let collapsed = true;
+  body.style.display = 'none';
+  hdr.classList.add('collapsed');
+  hdr.addEventListener('click', e => {
+    if (textInput.contains(e.target) || rm.contains(e.target)) return;
+    collapsed = !collapsed;
+    body.style.display = collapsed ? 'none' : '';
+    hdr.classList.toggle('collapsed', collapsed);
+  });
 
-      const textInput = el('input', { type: 'text', class: 'form-input', value: resp.text ?? '', placeholder: 'Player response text' });
-      textInput.addEventListener('input', () => {
-        resp.text = textInput.value;
-        labelEl.textContent = previewText(resp.text, `Response ${i + 1}`);
-        onChange();
-      });
-      card.appendChild(formRow('Text', textInput));
-
-      card.appendChild(renderSkillCheckToggle(resp, onChange));
-
-      card.appendChild(renderInlineCondition(
-        () => resp.condition,
-        v => { if (v == null) delete resp.condition; else resp.condition = v; },
-        onChange
-      ));
-
-      card.appendChild(el('div', { class: 'section-label' }, ['Actions']));
-      card.appendChild(renderActionPipeline(resp.actions, onChange));
-
-      container.appendChild(card);
-    });
-
-    const add = el('button', { class: 'btn btn-secondary btn-sm' }, ['+ Add Response']);
-    add.addEventListener('click', () => { node.responses.push({ text: '', actions: [] }); onChange(); render(); });
-    container.appendChild(add);
-  }
-
-  render();
-  return container;
+  return item;
 }
 
-function renderSkillCheckToggle(resp, onChange) {
-  const wrap = el('div', { style: 'margin-top:6px' });
+function renderSkillCheckRow(resp, onChange) {
+  const attrs = (store.files['__rules']?.customAttributes ?? []).map(a => [a.id, a.id]);
+  const ctrl = el('div', { class: 'skill-row-ctrl' });
 
   function render() {
-    wrap.innerHTML = '';
-    if (!resp.skillCheck) {
-      const btn = el('button', { class: 'btn btn-secondary btn-sm' }, ['+ Skill Check']);
-      btn.addEventListener('click', () => {
-        const attrs = store.files['__rules']?.customAttributes ?? [];
-        resp.skillCheck = attrs[0]?.id ?? '';
-        resp.dc = 10;
-        resp.increment = 1;
+    ctrl.innerHTML = '';
+    const sel = select(
+      [['', 'None'], ...attrs],
+      resp.skillCheck ?? '',
+      v => {
+        if (v) {
+          resp.skillCheck = v;
+          if (resp.dc == null) resp.dc = 10;
+          if (resp.increment == null) resp.increment = 1;
+        } else {
+          delete resp.skillCheck;
+          delete resp.dc;
+          delete resp.increment;
+        }
         onChange(); render();
-      });
-      wrap.appendChild(btn);
-    } else {
-      const attrs = (store.files['__rules']?.customAttributes ?? []).map(a => [a.id, a.id]);
-      const sel = select(attrs, resp.skillCheck, v => { resp.skillCheck = v; onChange(); });
-      sel.className = 'form-select';
-      wrap.appendChild(formRow('Skill Check', sel));
+      }
+    );
+    sel.className = 'form-select';
+    ctrl.appendChild(sel);
 
+    if (resp.skillCheck) {
+      ctrl.appendChild(el('span', { class: 'list-label' }, ['DC']));
       const dcInput = el('input', { type: 'number', class: 'form-input sm', value: resp.dc ?? '' });
       dcInput.addEventListener('input', () => { resp.dc = dcInput.value === '' ? undefined : Number(dcInput.value); onChange(); });
-      wrap.appendChild(formRow('DC', dcInput));
+      ctrl.appendChild(dcInput);
 
+      ctrl.appendChild(el('span', { class: 'list-label' }, ['+']));
       const incInput = el('input', { type: 'number', class: 'form-input sm', value: resp.increment ?? '' });
       incInput.addEventListener('input', () => { resp.increment = incInput.value === '' ? undefined : Number(incInput.value); onChange(); });
-      wrap.appendChild(formRow('Increment', incInput));
-
-      const rm = el('button', { class: 'btn btn-danger btn-sm' }, ['Remove Skill Check']);
-      rm.style.marginTop = '4px';
-      rm.addEventListener('click', () => { delete resp.skillCheck; delete resp.dc; delete resp.increment; onChange(); render(); });
-      wrap.appendChild(rm);
+      ctrl.appendChild(incInput);
     }
   }
 
   render();
+  const wrap = el('div', { class: 'action-param' });
+  wrap.appendChild(el('span', { class: 'action-param-label' }, ['Skill Check']));
+  wrap.appendChild(ctrl);
   return wrap;
-}
-
-function previewText(text, fallback) {
-  return text ? `"${text.slice(0, 35)}${text.length > 35 ? '…' : ''}"` : fallback;
 }

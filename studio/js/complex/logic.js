@@ -71,7 +71,7 @@ function renderCombinator(wrap, typeSel, cond, type, onReplace, onChange) {
         newChild => { arr[i] = newChild; onChange(); rebuildChildren(); },
         onChange
       ));
-      const rm = el('button', { class: 'btn btn-danger btn-sm cond-rm' }, ['✕']);
+      const rm = el('button', { class: 'btn-hdr cond-rm' }, ['✕']);
       rm.addEventListener('click', () => { arr.splice(i, 1); onChange(); rebuildChildren(); });
       row.appendChild(rm);
       body.appendChild(row);

@@ -110,10 +110,21 @@ export async function deleteEntry(key) {
   store.dirtyFiles.delete(key);
 }
 
+// Fields the engine never reads — strip them from saved JSON.
+const DEAD_KEYS = new Set(['disposition', 'droppedLoot']);
+// Optional array fields — omit when empty so the JSON stays clean.
+const STRIP_EMPTY_ARRAYS = new Set(['actions', 'onFailure', 'items']);
+
+function saveReplacer(key, value) {
+  if (DEAD_KEYS.has(key)) return undefined;
+  if (STRIP_EMPTY_ARRAYS.has(key) && Array.isArray(value) && value.length === 0) return undefined;
+  return value;
+}
+
 export async function saveFile(key) {
   const handle = store.fileHandles[key];
   if (!handle) throw new Error(`No file handle for "${key}"`);
   const writable = await handle.createWritable();
-  await writable.write(JSON.stringify(store.files[key], null, 2) + '\n');
+  await writable.write(JSON.stringify(store.files[key], saveReplacer, 2) + '\n');
   await writable.close();
 }
