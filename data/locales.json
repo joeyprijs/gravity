@@ -56,8 +56,19 @@
     "worldMapTitle":       "World Map",
     "itemRequires":        "Requires: {name}",
     "locationDialogue":    "DIALOGUE: {name}",
-    "locationMerchant":    "MERCHANT: {name}",
-    "locationCombat":      "Combat"
+    "locationCombat":      "Combat",
+    "curatorTitle":        "Museum Curator Panel",
+    "curatorDone":         "Done",
+    "curatorBack":         "Back",
+    "curatorCancel":       "Cancel",
+    "curatorEmpty":        "(Empty)",
+    "curatorInstall":      "+ Install New Display Case ({cost} Gold)",
+    "curatorRetrieve":     "Retrieve Artifact",
+    "curatorExhibit":      "Exhibit",
+    "curatorHeadingExhibits": "Current Exhibits",
+    "curatorSelectArtifact": "Select an artifact to exhibit:",
+    "curatorNoEligibleItems": "No eligible artifacts in your inventory.",
+    "notEnoughGold":       "Not enough gold!"
   },
   "itemTypes": {
     "Weapon":     "Weapons",
@@ -87,6 +98,8 @@
     "chestDeposited":        "You placed {name} in the chest.",
     "chestRoomEmpty":        "The chest is empty.",
     "chestDisplayedWithin":  "Stored within: {names}.",
+    "displayTook":           "You carefully retrieved the {name} from the {display}.",
+    "displayDeposited":      "You carefully arranged the {name} inside the {display}.",
     "lookAround":            "Look Around",
     "lookAroundBadge":       "Skill: Perception",
     "skillBadge": {

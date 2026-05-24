@@ -42,6 +42,21 @@ export class SceneRenderer {
       return;
     }
 
+    // Auto-register initial displays defined in the scene file if not already registered in state
+    if (scene.displays?.length) {
+      const existing = gameState.getDisplaysForScene(sceneId);
+      if (existing.length === 0) {
+        scene.displays.forEach(d => {
+          gameState.addDisplayToScene(sceneId, {
+            id: d.id,
+            name: d.name,
+            item: d.item || null,
+            allowedTypes: d.allowedTypes || null
+          });
+        });
+      }
+    }
+
     // addVisitedScene must be called BEFORE setCurrentSceneId because
     // setCurrentSceneId triggers notifyListeners → ui.update() → renderMinimap(),
     // which checks visitedScenes. If the order is reversed, the current scene
@@ -121,11 +136,28 @@ export class SceneRenderer {
     clearElement(skillsContainer);
     skillsContainer.setAttribute('hidden', '');
 
+    const standardOpts = [];
+    const backOpts = [];
+
+    const isBackOption = (opt) => {
+      const text = (opt.text || '').toLowerCase();
+      const hasReturnAction = opt.actions?.some(a => a.type === 'return');
+      const isBackText = text.includes('return') || text.includes('go back') || text.includes('leave') || text.includes('exit');
+      return hasReturnAction || isBackText;
+    };
+
     (scene.options || []).forEach(opt => {
-      // Hide options whose condition is not currently met.
       const cond = opt.condition ?? null;
       if (!evaluateCondition(cond, gameState)) return;
 
+      if (isBackOption(opt)) {
+        backOpts.push(opt);
+      } else {
+        standardOpts.push(opt);
+      }
+    });
+
+    const renderOptionBtn = (opt) => {
       let reqText = null;
       let disabled = false;
       if (opt.requirements?.item) {
@@ -140,7 +172,9 @@ export class SceneRenderer {
       if (disabled) btn.disabled = true;
       btn.onclick = () => this.handleOption(opt);
       optionsContainer.appendChild(btn);
-    });
+    };
+
+    standardOpts.forEach(renderOptionBtn);
 
     const skillBtns = [];
     const sceneId = gameState.getCurrentSceneId();
@@ -179,6 +213,24 @@ export class SceneRenderer {
         this.engine.log(LOG.SYSTEM, this.engine.t('loot.xpGained', { amount: scene.xpReward }), 'loot');
       }
     }
+
+    // Auto-inject a consolidated curator option button if this scene supports exhibits
+    const hasDisplays = gameState.getDisplaysForScene(sceneId).length > 0;
+    if (scene.supportsExhibits || hasDisplays) {
+      const btn = buildOptionButton(this.engine.t('ui.curatorTitle'));
+      btn.onclick = () => {
+        this.engine.isGameStart = false;
+        this.engine.log(LOG.PLAYER, this.engine.t('ui.curatorTitle'), 'choice');
+        this.handleOption({
+          text: this.engine.t('ui.curatorTitle'),
+          log: false,
+          actions: [{ type: 'manage_exhibits' }]
+        });
+      };
+      optionsContainer.appendChild(btn);
+    }
+
+    backOpts.forEach(renderOptionBtn);
   }
 
   handleOption(opt) {
@@ -353,6 +405,26 @@ export class SceneRenderer {
     if (scene.descriptionHook) {
       const hook = this.engine.getDescriptionHook(scene.descriptionHook);
       if (hook) desc += hook(this.engine);
+    }
+
+    // Dynamic displays status representation
+    const sceneId = gameState.getCurrentSceneId() || scene.id;
+    if (sceneId) {
+      const displays = gameState.getDisplaysForScene(sceneId);
+      if (displays.length > 0) {
+        let tableHtml = `<div class="exhibits-table-container" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">`;
+        tableHtml += `<h3 style="margin-top: 0; margin-bottom: 12px; color: var(--accent-color); font-size: 0.9em; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 700;">${this.engine.t('ui.curatorHeadingExhibits')}</h3>`;
+        tableHtml += `<table class="exhibits-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95em;">`;
+        tableHtml += `<thead><tr style="border-bottom: 2px solid var(--border-color); color: var(--accent-color); font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.05em;"><th style="padding: 6px 4px; font-weight: 600;">Display Stand</th><th style="padding: 6px 4px; font-weight: 600;">Showcased Relic</th></tr></thead>`;
+        tableHtml += `<tbody>`;
+        displays.forEach(d => {
+          const itemName = d.item ? (this.engine.data.items[d.item]?.name || d.item) : this.engine.t('ui.curatorEmpty');
+          const itemStyle = d.item ? `font-weight: bold; color: var(--accent-color);` : `font-style: italic; opacity: 0.5;`;
+          tableHtml += `<tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);"><td style="padding: 8px 4px; color: var(--text-color);">${d.name}</td><td style="padding: 8px 4px; ${itemStyle}">${itemName}</td></tr>`;
+        });
+        tableHtml += `</tbody></table></div>`;
+        desc += tableHtml;
+      }
     }
 
     return desc;

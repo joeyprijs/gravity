@@ -14,6 +14,8 @@ export const ACTIONS = {
   SET_FLAG:        'set_flag',
   LOG:             'log',
   MANAGE_CHEST:    'manage_chest',
+  MANAGE_EXHIBITS: 'manage_exhibits',
+  ADD_DISPLAY:     'add_display',
 };
 
 // CSS class names referenced from JavaScript. Centralised here so that renaming

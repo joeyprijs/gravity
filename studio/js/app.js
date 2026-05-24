@@ -1,7 +1,7 @@
-import { openWorkspace, saveFile } from './io.js';
+import { openWorkspace, saveFile, resetWorkspace } from './io.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderForm } from './components/forms.js';
-import { toast } from './ui.js';
+import { toast, showConfirm } from './ui.js';
 
 export const store = {
   files: {},        // { "items:rusty_sword": { ...json }, "__rules": { ... }, ... }
@@ -10,6 +10,7 @@ export const store = {
   dirHandle: null,  // root FileSystemDirectoryHandle
   activeFile: null,
   dirtyFiles: new Set(),
+  descriptionHooks: new Set(),
 };
 
 export function setActiveFile(key) {
@@ -74,13 +75,32 @@ async function handleOpen() {
     renderSidebar(document.getElementById('sidebar'));
     const count = Object.keys(store.files).length;
     toast(`Loaded ${count} files`, 'success');
+    document.getElementById('btn-reset').disabled = false;
   } catch (e) {
     if (e.name !== 'AbortError') toast(`Error: ${e.message}`, 'error');
   }
 }
 
+async function handleReset() {
+  const confirmed = await showConfirm(
+    'Are you sure you want to reset all campaign data? This will permanently delete all custom items, NPCs, scenes, missions, and tables, and reset the project to a clean boilerplate.',
+    'Reset Data'
+  );
+  if (!confirmed) return;
+
+  try {
+    await resetWorkspace();
+    renderSidebar(document.getElementById('sidebar'));
+    setActiveFile(null);
+    toast('Workspace reset successfully', 'success');
+  } catch (e) {
+    toast(`Reset failed: ${e.message}`, 'error');
+  }
+}
+
 document.getElementById('btn-open').addEventListener('click', handleOpen);
 document.getElementById('btn-save').addEventListener('click', handleSave);
+document.getElementById('btn-reset').addEventListener('click', handleReset);
 
 document.addEventListener('input', e => {
   if (e.target.hasAttribute('data-required')) e.target.classList.remove('form-input-error');

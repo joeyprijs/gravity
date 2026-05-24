@@ -8,12 +8,19 @@
     "height": 100,
     "background": "rgba(30, 30, 80, 0.9)"
   },
-  "description": "You enter the bedroom. It's surprisingly tidy, with a plush feather bed tucked in the corner. The mattress looks incredibly inviting.",
+  "description": "You enter the bedroom. It's surprisingly tidy, with a plush feather bed tucked in the corner. A heavy iron-bound personal chest rests at the foot of your bed.",
   "options": [
     {
       "text": "Sleep (Full Rest)",
       "actions": [
         { "type": "full_rest" }
+      ]
+    },
+    {
+      "text": "Open Personal Chest",
+      "log": false,
+      "actions": [
+        { "type": "manage_chest", "chest": "personal" }
       ]
     },
     {

@@ -300,6 +300,10 @@ A location the player can visit, supporting conditional text blocks, option grid
     "top": 245, "left": 175, "width": 50, "height": 60, "background": "rgba(60,40,20,0.9)"
   },
   "descriptionHook": "museumChestContents",
+  "supportsExhibits": true,
+  "displays": [
+    { "id": "cellar_pedestal", "name": "Old Altar Pedestal", "item": "rusty_sword" }
+  ],
   "description": [
     {
       "text": "The wooden door stands wide open to the north.",

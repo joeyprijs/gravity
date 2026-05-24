@@ -5,7 +5,7 @@ const MAX_LOG_ENTRIES = 200;
 // Increment when the save schema changes. loadFromObject() migrates older saves
 // forward so they remain compatible. Each migration function receives the raw
 // parsed data object and mutates it in-place.
-const SAVE_VERSION = 2;
+const SAVE_VERSION = 3;
 
 const MIGRATIONS = {
   // v0 → v1: player.name was added; give it an empty default on older saves.
@@ -17,6 +17,12 @@ const MIGRATIONS = {
       delete data.museumChest;
     } else {
       data.chests = {};
+    }
+  },
+  // v2 → v3: displays map added for dynamic exhibits curation.
+  3: (data) => {
+    if (!('displays' in data)) {
+      data.displays = {};
     }
   },
 };
@@ -44,6 +50,7 @@ function makeDefaultState(rules) {
     currentSceneId: rules.startingScene || null,
     returnSceneId: null,
     chests: {},
+    displays: {},
     visitedScenes: [],
     log: []
   };
@@ -65,6 +72,7 @@ class StateManager {
       currentSceneId: null,
       returnSceneId: null,
       chests: {},
+      displays: {},
       visitedScenes: [],
       log: []
     };
@@ -292,6 +300,52 @@ class StateManager {
     this.addToInventory(itemId, amount, { silent: true });
     this.notifyListeners('inventory');
   }
+
+  getDisplaysForScene(sceneId) {
+    if (!this.state.displays) this.state.displays = {};
+    return this.state.displays[sceneId] ?? [];
+  }
+
+  addDisplayToScene(sceneId, displayConfig) {
+    if (!this.state.displays) this.state.displays = {};
+    if (!this.state.displays[sceneId]) this.state.displays[sceneId] = [];
+    
+    const id = displayConfig.id || `display_${Date.now()}`;
+    const newDisplay = {
+      id,
+      name: displayConfig.name || "Display Case",
+      item: displayConfig.item || null,
+      allowedTypes: displayConfig.allowedTypes || null
+    };
+    
+    this.state.displays[sceneId].push(newDisplay);
+    this.notifyListeners('displays');
+    return id;
+  }
+
+  placeItemInDisplay(sceneId, displayId, itemId) {
+    const displays = this.getDisplaysForScene(sceneId);
+    const display = displays.find(d => d.id === displayId);
+    if (!display) return false;
+    
+    display.item = itemId;
+    this.removeFromInventory(itemId, 1, { silent: true });
+    this.notifyListeners('inventory');
+    return true;
+  }
+
+  takeItemFromDisplay(sceneId, displayId) {
+    const displays = this.getDisplaysForScene(sceneId);
+    const display = displays.find(d => d.id === displayId);
+    if (!display || !display.item) return null;
+    
+    const itemId = display.item;
+    display.item = null;
+    this.addToInventory(itemId, 1, { silent: true });
+    this.notifyListeners('inventory');
+    return itemId;
+  }
+
 
   subscribe(callback) { this.listeners.push(callback); }
   notifyListeners(hint) { this.listeners.forEach(cb => cb(this.state, hint)); }

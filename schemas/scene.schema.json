@@ -146,6 +146,28 @@
         "required": ["text", "skillCheck"],
         "additionalProperties": false
       }
+    },
+    "supportsExhibits": {
+      "type": "BOOLEAN",
+      "description": "If true, this scene supports exhibits curatorship."
+    },
+    "displays": {
+      "type": "ARRAY",
+      "description": "Initial display cases defined in this scene.",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "id": { "type": "STRING" },
+          "name": { "type": "STRING" },
+          "item": { "type": ["STRING", "NULL"] },
+          "allowedTypes": {
+            "type": "ARRAY",
+            "items": { "type": "STRING" }
+          }
+        },
+        "required": ["id", "name"],
+        "additionalProperties": false
+      }
     }
   },
   "required": ["name", "region"],

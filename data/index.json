@@ -42,7 +42,8 @@
     "home_living_room": "data/scenes/player_home/living_room.json",
     "home_kitchen": "data/scenes/player_home/kitchen.json",
     "home_bedroom": "data/scenes/player_home/bedroom.json",
-    "home_museum": "data/scenes/player_home/museum.json"
+    "home_museum": "data/scenes/player_home/museum.json",
+    "home_museum_armor": "data/scenes/player_home/museum_armor.json"
   },
   "missions": {
     "escape_dungeon": "data/missions/escape_dungeon.json"

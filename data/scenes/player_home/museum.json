@@ -8,13 +8,17 @@
     "height": 100,
     "background": "rgba(60, 30, 70, 0.9)"
   },
-  "description":"You step into the grand museum room. Display cases line the walls, and a large communal storage chest sits imposingly in the center, waiting to preserve your most valuable discoveries.",
+  "description": "You step into the grand museum room. Elegant display cases line the walls, waiting to preserve your most valuable discoveries.",
+  "supportsExhibits": true,
+  "displays": [
+    { "id": "home_museum_pedestal_1", "name": "Mahogany Pedestal" },
+    { "id": "home_museum_pedestal_2", "name": "Glass Case", "item": "rusty_sword" }
+  ],
   "options": [
     {
-      "text": "Manage Museum Chest",
-      "log": false,
+      "text": "Enter the Armor Wing",
       "actions": [
-        { "type": "manage_chest", "chest": "museum" }
+        { "type": "navigate", "destination": "home_museum_armor" }
       ]
     },
     {

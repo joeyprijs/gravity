@@ -44,9 +44,35 @@ export function renderSceneForm(key, data) {
   xpInput.addEventListener('input', () => { data.xpReward = xpInput.value === '' ? undefined : Number(xpInput.value); onChange(); });
   form.appendChild(formRow('XP Reward', xpInput));
 
-  const hookInput = el('input', { type: 'text', class: 'form-input', value: data.descriptionHook ?? '', placeholder: 'e.g. museumChestContents (optional)' });
+  const listId = 'description-hooks-list';
+  let datalist = document.getElementById(listId);
+  if (!datalist) {
+    datalist = el('datalist', { id: listId });
+    document.body.appendChild(datalist);
+  }
+  datalist.innerHTML = '';
+  [...store.descriptionHooks].forEach(hook => {
+    datalist.appendChild(el('option', { value: hook }));
+  });
+
+  const hookInput = el('input', { 
+    type: 'text', 
+    class: 'form-input', 
+    value: data.descriptionHook ?? '', 
+    placeholder: 'e.g. museumChestContents (optional)',
+    list: listId
+  });
   hookInput.addEventListener('input', () => { data.descriptionHook = hookInput.value.trim() || undefined; onChange(); });
   form.appendChild(formRow('Description Hook', hookInput));
+
+  // supportsExhibits checkbox
+  const exhibitsCheckbox = el('input', { type: 'checkbox', class: 'form-checkbox' });
+  if (data.supportsExhibits) exhibitsCheckbox.checked = true;
+  exhibitsCheckbox.addEventListener('change', () => {
+    data.supportsExhibits = exhibitsCheckbox.checked ? true : undefined;
+    onChange();
+  });
+  form.appendChild(formRow('Supports Exhibits', exhibitsCheckbox));
 
   // ── Quest Trigger ────────────────────────────────────────────────────────
 
@@ -77,6 +103,11 @@ export function renderSceneForm(key, data) {
 
   form.appendChild(el('h3', { class: 'form-section-title' }, ['Auto Attack']));
   form.appendChild(renderAutoAttack(data, onChange));
+
+  // ── Display Stands ───────────────────────────────────────────────────────
+
+  form.appendChild(el('h3', { class: 'form-section-title' }, ['Display Stands']));
+  form.appendChild(renderDisplaysList(data, onChange));
 
   return wrap;
 }
@@ -557,4 +588,84 @@ function blockHeader(label, onRemove) {
   btn.addEventListener('click', onRemove);
   hdr.appendChild(btn);
   return hdr;
+}
+
+function renderDisplaysList(data, onChange) {
+  const container = el('div', { class: 'flat-list' });
+
+  function render() {
+    container.innerHTML = '';
+    if (!Array.isArray(data.displays)) data.displays = [];
+
+    data.displays.forEach((disp, i) => {
+      const card = el('div', { class: 'card-item' });
+      
+      const hdr = el('div', { class: 'card-hdr collapsible' });
+      const nameInput = el('input', { 
+        type: 'text', 
+        class: 'form-input flat-title-input', 
+        value: disp.name ?? '', 
+        placeholder: 'Display stand name (e.g. Mahogany Pedestal)…' 
+      });
+      nameInput.addEventListener('input', () => { disp.name = nameInput.value; onChange(); });
+      hdr.appendChild(nameInput);
+      
+      const rm = el('button', { class: 'btn-hdr' }, ['✕']);
+      rm.addEventListener('click', () => { data.displays.splice(i, 1); onChange(); render(); });
+      hdr.appendChild(rm);
+      card.appendChild(hdr);
+
+      const cardBody = el('div', { class: 'card-body' });
+      
+      // ID field (required)
+      const idInput = el('input', { 
+        type: 'text', 
+        class: 'form-input', 
+        value: disp.id ?? '', 
+        placeholder: 'Unique ID (e.g. museum_pedestal_1)' 
+      });
+      idInput.addEventListener('input', () => { disp.id = idInput.value.trim(); onChange(); });
+      cardBody.appendChild(formRow('Display ID', idInput));
+
+      // Starting pre-placed item (optional)
+      const itemIds = Object.keys(store.index?.items ?? {});
+      const itemSel = select(
+        [['', 'None (Empty)'], ...itemIds.map(id => [id, id])],
+        disp.item ?? '',
+        v => {
+          if (v) disp.item = v;
+          else delete disp.item;
+          onChange();
+        }
+      );
+      itemSel.className = 'form-select';
+      cardBody.appendChild(formRow('Pre-placed Relic', itemSel));
+
+      card.appendChild(cardBody);
+
+      let collapsed = true;
+      cardBody.style.display = 'none';
+      hdr.classList.add('collapsed');
+      hdr.addEventListener('click', e => {
+        if (nameInput.contains(e.target) || rm.contains(e.target)) return;
+        collapsed = !collapsed;
+        cardBody.style.display = collapsed ? 'none' : '';
+        hdr.classList.toggle('collapsed', collapsed);
+      });
+
+      container.appendChild(card);
+    });
+
+    const add = el('button', { class: 'btn btn-secondary' }, ['+ Add Display Stand']);
+    add.addEventListener('click', () => {
+      const id = `display_${Date.now()}`;
+      data.displays.push({ id, name: 'New Display Stand' });
+      onChange();
+      render();
+    });
+    container.appendChild(add);
+  }
+
+  render();
+  return container;
 }
