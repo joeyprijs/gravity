@@ -4,10 +4,22 @@ import { MAX_D20_ROLL, EL, CSS, LOG } from "../core/config.js";
 import { evaluateCondition } from "./condition.js";
 import { roll } from "./dice.js";
 
-// DialogueSystem handles NPC conversations and the merchant buy/sell interface.
-// Conversations are driven by a node graph defined in NPC JSON files. If an NPC
-// has no conversations object, a minimal fallback UI is shown instead.
+/**
+ * DialogueSystem manages NPC dialogue trees, branching conversations, 
+ * skill checks, and merchant store interfaces (buy/sell loops).
+ * 
+ * Data Design:
+ * - Dialogue branches are loaded as Node Graphs from NPC JSON files.
+ * - All conversational state changes, merchant stocks, and DC escalations 
+ *   are stored in persistent `gameState` flags to guarantee save safety.
+ */
 export class DialogueSystem {
+  /**
+   * Constructs the DialogueSystem.
+   * Binds a listener to the state manager to auto-refresh store values.
+   * 
+   * @param {object} engine - The central RPGEngine coordination instance.
+   */
   constructor(engine) {
     this.engine = engine;
     this.currentNPC = null;
@@ -15,55 +27,77 @@ export class DialogueSystem {
     this.storeOpen = false;
     this.activeDiscount = 0;
 
-    // Re-render the store on any state change so gold and inventory stay in
-    // sync — removing the need for UIManager to know the store exists.
+    // Reactively refresh the store UI whenever a state change occurs
+    // (e.g. buying/selling changes gold and inventory, which must update instantly).
     gameState.subscribe(() => {
       if (this.storeOpen) this.renderStore(true);
     });
   }
 
+  /**
+   * Initiates a conversation branch with a specific NPC.
+   * 
+   * @param {string} npcId - The NPC database identifier to talk to.
+   */
   startDialogue(npcId) {
     this.storeOpen = false;
     this.activeDiscount = 0;
     const npc = this.engine.data.npcs[npcId];
-    if (!npc) { console.warn(`[Gravity] startDialogue: unknown NPC "${npcId}"`); return; }
+    
+    if (!npc) { 
+      console.warn(`[Gravity] startDialogue: unknown NPC ID "${npcId}"`); 
+      return; 
+    }
 
     this.engine.resetScene();
     this.currentNPC = npc;
     this.currentNPCId = npcId;
+    
+    // Clear dynamic DC escalation states for conversational rolls when starting fresh
     gameState.setFlag(`dialogue_dc_${npcId}`, {});
+    
     if (npc.conversations) {
       this.renderDialogue("start");
     } else {
-      this.renderDialogueFallback();
+      this.renderDialogueFallback(); // Minimal default greetings for flavor-only NPCs
     }
   }
 
-  // Runs an actions[] pipeline through the global action registry first, then
-  // handles dialogue-specific action types (goToConversation, trade, leave,
-  // makeFriendly, questTrigger) that only make sense within a conversation.
-  // Returns true if navigation occurred (new node, store opened, or scene exit),
-  // so callers can decide whether to re-render the current dialogue state.
+  /**
+   * Evaluates dialogue-specific actions inside a conversation node pipeline.
+   * Unrecognized action types are forwarded to the global RPGEngine action registry.
+   * 
+   * @private
+   * @param {object[]} actions - Array of actions to run.
+   * @returns {boolean} True if navigation occurred (dialogue closed, new node, or trade opened).
+   */
   _runActions(actions) {
     let navigated = false;
     for (const action of (actions || [])) {
       const globalHandler = this.engine.getActionHandler(action.type);
+      
+      // Handoff to global engine actions (e.g. loot, set_flag, navigate)
       if (globalHandler) {
         globalHandler(action, this.engine);
-        // engine.renderScene clears currentNPC — use that as the "left dialogue" signal
+        // Clearing currentNPC acts as the "left dialogue" signal
         if (!this.currentNPC) navigated = true;
         continue;
       }
+      
+      // Dialogue-specific local actions
       switch (action.type) {
         case 'goToConversation':
           this.renderDialogue(action.node);
           navigated = true;
           break;
+          
         case 'trade': {
           const pct = typeof action.tradeDiscount === 'string'
             ? parseFloat(action.tradeDiscount)
             : (action.tradeDiscount || 0);
           this.activeDiscount = pct / 100;
+          
+          // Optionally save this discount permanently in the session state
           if (action.persistDiscount && pct > 0) {
             gameState.setFlag(`trade_discount_${this.currentNPCId}`, pct);
           }
@@ -71,26 +105,41 @@ export class DialogueSystem {
           navigated = true;
           break;
         }
+        
         case 'leave':
           this.engine.renderScene(gameState.getCurrentSceneId());
           navigated = true;
           break;
+          
         case 'makeFriendly':
           gameState.setFlag(`friendly_${this.currentNPCId}`, true);
           break;
+          
         case 'questTrigger':
           this.engine.handleQuestTrigger(action);
           break;
+          
         default:
-          console.warn(`[Gravity] dialogue: unknown action type "${action.type}"`);
+          console.warn(`[Gravity] dialogue: unrecognized action node type "${action.type}"`);
       }
     }
     return navigated;
   }
 
+  /**
+   * Renders the conversation interface for a specific dialogue node.
+   * Compiles player reply choices and checks dynamic skill check gates.
+   * 
+   * @param {string} [nodeId="start"] - The node key inside the NPC's conversation tree.
+   * @param {string|null} [overrideText=null] - Text override (e.g. store farewell lines).
+   * @param {boolean} [optionsOnly=false] - If true, skips appending narrative text blocks.
+   */
   renderDialogue(nodeId = "start", overrideText = null, optionsOnly = false) {
     const node = this.currentNPC.conversations[nodeId];
-    if (!node) { console.warn(`[Gravity] renderDialogue: unknown node "${nodeId}" on NPC "${this.currentNPC.name}"`); return; }
+    if (!node) { 
+      console.warn(`[Gravity] renderDialogue: unknown conversation node "${nodeId}" on NPC "${this.currentNPC.name}"`); 
+      return; 
+    }
 
     if (!optionsOnly) {
       const displayString = overrideText || node.npcText;
@@ -110,6 +159,7 @@ export class DialogueSystem {
     const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
     const container = document.getElementById(EL.SCENE_OPTIONS);
     const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
+    
     clearElement(container);
     panel.querySelectorAll(`.${CSS.SCENE_OPTIONS_SECTION}`).forEach(el => el.remove());
     if (reminder) {
@@ -121,11 +171,14 @@ export class DialogueSystem {
     clearElement(skillsContainer);
     skillsContainer.setAttribute('hidden', '');
 
+    // ── Conversational Skill Checks ─────────────────────────────────────────
+    // Reads escalated DCs from persistent flags to keep saves robust.
     const dcStateKey = `dialogue_dc_${this.currentNPCId}`;
     const dcState = gameState.getFlag(dcStateKey);
     const skillResponses = [];
 
     (node.responses || []).forEach((res, i) => {
+      // Hide options whose condition requirements are not met
       if (!evaluateCondition(res.condition ?? null, gameState)) return;
 
       const needsCheck = !!res.skillCheck && res.dc > 0;
@@ -143,16 +196,23 @@ export class DialogueSystem {
           const rolled = roll(1, MAX_D20_ROLL) + mod;
           const success = rolled >= dc;
           const logKey = success ? 'actions.skillSuccess' : 'actions.skillFail';
+          
           this.engine.log(LOG.SYSTEM, this.engine.t(logKey, { roll: rolled, mod, dc, skill: res.skillCheck }), success ? 'loot' : 'system');
+          
           if (!success) {
+            // Conversational DC Escalation: Failed attempts raise the difficulty
+            // by a custom increment so that repeat trials are increasingly challenging.
             dcState[resKey] = dc + (res.increment ?? 1);
             gameState.setFlag(dcStateKey, dcState);
+            
+            // Execute failure actions pipeline if registered
             const failNavigated = res.onFailure?.length ? this._runActions(res.onFailure) : false;
             if (!failNavigated) this.renderDialogue(nodeId, null, true);
             return;
           }
         }
 
+        // Action routing on success
         this._runActions(res.actions || []);
       };
 
@@ -173,6 +233,11 @@ export class DialogueSystem {
     this.engine.scrollNarrativeToBottom();
   }
 
+  /**
+   * Renders a basic, parameterless fallback greeting screen for simple NPCs.
+   * 
+   * @param {string|null} [overrideText=null] - Narrative text override.
+   */
   renderDialogueFallback(overrideText = null) {
     const displayString = overrideText || this.engine.t('dialogue.greeting', { name: this.currentNPC.name });
 
@@ -184,6 +249,7 @@ export class DialogueSystem {
     const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
     const container = document.getElementById(EL.SCENE_OPTIONS);
     const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
+    
     clearElement(container);
     panel.querySelectorAll(`.${CSS.SCENE_OPTIONS_SECTION}`).forEach(el => el.remove());
     if (reminder) {
@@ -209,21 +275,33 @@ export class DialogueSystem {
       this.engine.renderScene(gameState.getCurrentSceneId());
     };
     container.appendChild(leaveBtn);
+    
     this.engine.scrollNarrativeToBottom();
   }
 
-  // Returns the effective stock for a merchant item: reads from gameState flags
-  // (persisted) rather than mutating the NPC data object (in-memory only).
-  // npcAmount === null means unlimited; otherwise returns the flag value if
-  // already set, falling back to the original npcAmount on first access.
+  /**
+   * Retrieves an item's current stock count from a merchant.
+   * Reads from persistent session flags to avoid mutating static files.
+   * 
+   * @private
+   * @param {string} itemId - The item identifier.
+   * @param {number|null} npcAmount - Stock count configured in NPC file (null = unlimited).
+   * @returns {number|null} Current stock count remaining, or null for unlimited.
+   */
   _getStock(itemId, npcAmount) {
     if (npcAmount === null) return null;
     const flagVal = gameState.getFlag(`merchant_stock_${this.currentNPCId}_${itemId}`);
     return flagVal !== false ? flagVal : npcAmount;
   }
 
+  /**
+   * Renders the interactive Merchant Shop UI, listing buy/sell items and dynamic prices.
+   * 
+   * @param {boolean} [isUpdate=false] - If true, skips appending narrative text blocks.
+   */
   renderStore(isUpdate = false) {
     if (!isUpdate) {
+      // Pull saved discounts from previous conversation branches if active
       if (this.activeDiscount === 0) {
         const saved = gameState.getFlag(`trade_discount_${this.currentNPCId}`);
         if (saved) this.activeDiscount = saved / 100;
@@ -253,7 +331,7 @@ export class DialogueSystem {
       container.appendChild(reminder);
     }
 
-    // Never mind at top — always reachable without scrolling
+    // Exit Button placed at the top for accessibility
     const neverMind = this.engine.t('dialogue.neverMind');
     const leaveBtn = buildOptionButton(neverMind);
     leaveBtn.onclick = () => {
@@ -270,7 +348,7 @@ export class DialogueSystem {
     };
     container.appendChild(leaveBtn);
 
-    // Buy items
+    // ── 1. Buy Panel ────────────────────────────────────────────────────────
     const buyItems = (this.currentNPC.carriedItems || [])
       .map(entry => {
         const id = typeof entry === 'string' ? entry : entry.item;
@@ -283,14 +361,18 @@ export class DialogueSystem {
     if (buyItems.length) {
       const buySection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);
       buySection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('dialogue.buyGroup')));
+      
       buyItems.forEach(({ id: itemId, item, stock, npcAmount }) => {
         const displayName = stock !== null ? `${item.name} (x${stock})` : item.name;
+        // Compute custom discount: Math.floor(Value * (1 - Discount))
         const price = this.activeDiscount > 0 ? Math.floor(item.value * (1 - this.activeDiscount)) : item.value;
         const btn = buildOptionButton(
           this.engine.t('dialogue.buyButton', { name: displayName }),
           this.engine.t('dialogue.buyPrice', { amount: price })
         );
+        
         if (gameState.getPlayer().resources.gold < price) btn.disabled = true;
+        
         btn.onclick = () => {
           if (npcAmount !== null) {
             gameState.setFlag(`merchant_stock_${this.currentNPCId}_${itemId}`, stock - 1);
@@ -305,7 +387,8 @@ export class DialogueSystem {
       panel.insertBefore(buySection, skillsContainer);
     }
 
-    // Sell items
+    // ── 2. Sell Panel ───────────────────────────────────────────────────────
+    // Sell value = floor(ItemValue * merchantSellRatio)
     const player = gameState.getPlayer();
     const sellRatio = this.engine.data.rules?.merchantSellRatio ?? 0.5;
     const sellItems = player.inventory.filter(invItem => {
@@ -316,6 +399,7 @@ export class DialogueSystem {
     if (sellItems.length) {
       const sellSection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);
       sellSection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('dialogue.sellGroup')));
+      
       sellItems.forEach(invItem => {
         const item = this.engine.data.items[invItem.item];
         const sellValue = Math.floor(item.value * sellRatio);
@@ -323,6 +407,7 @@ export class DialogueSystem {
           this.engine.t('dialogue.sellButton', { name: item.name, count: invItem.amount }),
           this.engine.t('dialogue.sellPrice', { amount: sellValue })
         );
+        
         btn.onclick = () => {
           gameState.removeFromInventory(invItem.item, 1);
           gameState.modifyPlayerStat('gold', sellValue);

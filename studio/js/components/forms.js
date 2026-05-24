@@ -326,6 +326,161 @@ function renderRulesForm(key, data) {
   }
   renderAttrs();
 
+  // ── Point-Buy Character Creation ─────────────────────────────────────────
+  form.appendChild(el('h3', { class: 'form-section-title' }, ['Point-Buy Character Creation']));
+  if (!data.charCreation) data.charCreation = {};
+  const pbInput = el('input', { type: 'number', class: 'form-input sm', value: data.charCreation.pointBudget ?? '' });
+  pbInput.addEventListener('input', () => {
+    data.charCreation.pointBudget = pbInput.value === '' ? undefined : Number(pbInput.value);
+    markDirty(key);
+  });
+  form.appendChild(formRow('Starting Point Budget', pbInput));
+
+  const ccStatsContainer = el('div', { class: 'list-editor' });
+  form.appendChild(ccStatsContainer);
+
+  function renderCcStats() {
+    ccStatsContainer.innerHTML = '';
+    if (!data.charCreation) data.charCreation = {};
+    const stats = data.charCreation.stats ?? [];
+
+    stats.forEach((stat, i) => {
+      const row = el('div', { class: 'list-row', style: 'flex-flow:wrap;gap:8px;padding-bottom:8px;border-bottom:1px dashed var(--border)' });
+
+      const idInput = el('input', { type: 'text', class: 'form-input', value: stat.id ?? '', placeholder: 'path, e.g. attributes.perception', style: 'flex: 1 1 200px' });
+      idInput.addEventListener('input', () => { stat.id = idInput.value; markDirty(key); });
+
+      const localeInput = el('input', { type: 'text', class: 'form-input sm', value: stat.localeKey ?? '', placeholder: 'localeKey', style: 'width:100px' });
+      localeInput.addEventListener('input', () => { stat.localeKey = localeInput.value; markDirty(key); });
+
+      const bonusInput = el('input', { type: 'number', class: 'form-input sm', value: stat.bonusPerPoint ?? 1, placeholder: 'bonus', style: 'width:60px' });
+      bonusInput.addEventListener('input', () => { stat.bonusPerPoint = Number(bonusInput.value) || 1; markDirty(key); });
+
+      const minInput = el('input', { type: 'number', class: 'form-input sm', value: stat.min ?? 0, placeholder: 'min', style: 'width:50px' });
+      minInput.addEventListener('input', () => { stat.min = Number(minInput.value) || 0; markDirty(key); });
+
+      const rmBtn = el('button', { class: 'btn-hdr' }, ['✕']);
+      rmBtn.addEventListener('click', () => {
+        stats.splice(i, 1);
+        if (!stats.length) delete data.charCreation.stats;
+        markDirty(key);
+        renderCcStats();
+      });
+
+      row.append(
+        idInput,
+        el('span', { class: 'list-label' }, ['key:']), localeInput,
+        el('span', { class: 'list-label' }, ['bonus:']), bonusInput,
+        el('span', { class: 'list-label' }, ['min:']), minInput,
+        rmBtn
+      );
+      ccStatsContainer.appendChild(row);
+    });
+
+    const addBtn = el('button', { class: 'btn btn-secondary' }, ['+ Add Point-Buy Stat']);
+    addBtn.addEventListener('click', () => {
+      if (!data.charCreation) data.charCreation = {};
+      if (!data.charCreation.stats) data.charCreation.stats = [];
+      data.charCreation.stats.push({ id: '', localeKey: '', bonusPerPoint: 1, min: 0 });
+      markDirty(key);
+      renderCcStats();
+    });
+    ccStatsContainer.appendChild(addBtn);
+  }
+  renderCcStats();
+
+  // ── Sidebar Tabs Manager ──────────────────────────────────────────────────
+  form.appendChild(el('h3', { class: 'form-section-title' }, ['Sidebar Navigation Tabs']));
+  const tabsContainer = el('div', { class: 'list-editor' });
+  form.appendChild(tabsContainer);
+
+  function renderTabs() {
+    tabsContainer.innerHTML = '';
+    const tabs = data.tabs ?? [];
+
+    tabs.forEach((tab, i) => {
+      const row = el('div', { class: 'list-row', style: 'flex-flow:wrap;gap:8px;padding-bottom:8px;border-bottom:1px dashed var(--border)' });
+
+      const idInput = el('input', { type: 'text', class: 'form-input', value: tab.id ?? '', placeholder: 'tab-id', style: 'width:120px' });
+      idInput.addEventListener('input', () => { tab.id = idInput.value; markDirty(key); });
+
+      const localeInput = el('input', { type: 'text', class: 'form-input', value: tab.localeKey ?? '', placeholder: 'localeKey', style: 'width:120px' });
+      localeInput.addEventListener('input', () => { tab.localeKey = localeInput.value; markDirty(key); });
+
+      const widgetSel = select([
+        ['', 'No widget (Standard)'],
+        ['attributes', 'Attributes (customAttributes)'],
+        ['map', 'Map (minimap canvas)']
+      ], tab.widget ?? '', v => {
+        tab.widget = v || undefined;
+        markDirty(key);
+      });
+      widgetSel.className = 'form-select';
+      widgetSel.style.width = '180px';
+
+      const defaultCheck = el('input', { type: 'checkbox', style: 'margin: 0 4px' });
+      if (tab.default) defaultCheck.checked = true;
+      defaultCheck.addEventListener('change', () => {
+        tabs.forEach((t, idx) => {
+          if (idx === i) t.default = defaultCheck.checked || undefined;
+          else delete t.default;
+        });
+        markDirty(key);
+        renderTabs();
+      });
+
+      const rmBtn = el('button', { class: 'btn-hdr' }, ['✕']);
+      rmBtn.addEventListener('click', () => {
+        tabs.splice(i, 1);
+        if (!tabs.length) delete data.tabs;
+        markDirty(key);
+        renderTabs();
+      });
+
+      row.append(
+        idInput,
+        localeInput,
+        widgetSel,
+        el('span', { class: 'list-label' }, ['Default:']),
+        defaultCheck,
+        rmBtn
+      );
+      tabsContainer.appendChild(row);
+    });
+
+    const addBtn = el('button', { class: 'btn btn-secondary' }, ['+ Add Tab']);
+    addBtn.addEventListener('click', () => {
+      if (!data.tabs) data.tabs = [];
+      data.tabs.push({ id: '', localeKey: '', default: data.tabs.length === 0 ? true : undefined });
+      markDirty(key);
+      renderTabs();
+    });
+    tabsContainer.appendChild(addBtn);
+  }
+  renderTabs();
+
+  // ── Inventory Type Sorting priorities ───────────────────────────────────────
+  form.appendChild(el('h3', { class: 'form-section-title' }, ['Inventory Type Sorting Priorities']));
+  const orderContainer = el('div', { class: 'list-editor' });
+  form.appendChild(orderContainer);
+
+  function renderTypeOrder() {
+    orderContainer.innerHTML = '';
+    if (!data.itemTypeOrder) data.itemTypeOrder = {};
+    const types = ['Weapon', 'Spell', 'Armor', 'Consumable', 'Flavour'];
+    types.forEach(t => {
+      const row = el('div', { class: 'list-row' });
+      const input = el('input', { type: 'number', class: 'form-input sm', value: data.itemTypeOrder[t] ?? 99 });
+      input.addEventListener('input', () => {
+        data.itemTypeOrder[t] = input.value === '' ? 99 : Number(input.value);
+        markDirty(key);
+      });
+      row.append(el('span', { class: 'list-label', style: 'width:120px' }, [t]), input);
+      orderContainer.appendChild(row);
+    });
+  }
+  renderTypeOrder();
+
   return wrap;
 }
 
@@ -469,6 +624,16 @@ function renderTableForm(key, data) {
         markDirty(key);
       });
 
+      const weightInput = el('input', {
+        type: 'number', class: 'form-input sm',
+        value: entry.weight ?? '', placeholder: 'wt',
+      });
+      weightInput.addEventListener('input', () => {
+        entry.weight = weightInput.value === '' ? undefined : Number(weightInput.value);
+        if (entry.weight === undefined) delete entry.weight;
+        markDirty(key);
+      });
+
       const rmBtn = el('button', { class: 'btn-hdr' }, ['✕']);
       rmBtn.addEventListener('click', () => {
         entries.splice(i, 1);
@@ -476,7 +641,7 @@ function renderTableForm(key, data) {
         renderEntries();
       });
 
-      row.append(itemSel, amtInput, rmBtn);
+      row.append(itemSel, amtInput, weightInput, rmBtn);
       listContainer.appendChild(row);
     });
 

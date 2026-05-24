@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Gravity Item Definition",
+  "type": "OBJECT",
+  "properties": {
+    "name": {
+      "type": "STRING",
+      "description": "Visual display name of the item."
+    },
+    "type": {
+      "type": "STRING",
+      "enum": ["Weapon", "Spell", "Armor", "Consumable", "Flavour"],
+      "description": "The dynamic item classification."
+    },
+    "description": {
+      "type": "STRING",
+      "description": "Flavour/lore text rendered in the inventory card."
+    },
+    "value": {
+      "type": "INTEGER",
+      "minimum": 0,
+      "description": "Gold purchase value. Reselling fetches half value by default."
+    },
+    "slot": {
+      "type": "STRING",
+      "enum": ["Head", "Amulet", "Torso", "Left Hand", "Right Hand", "Legs"],
+      "description": "The equipment slot target. Required for weapons, spells, and armor."
+    },
+    "actionPoints": {
+      "type": "INTEGER",
+      "minimum": 0,
+      "description": "Action Points (AP) required to swing/equip/use inside combat."
+    },
+    "bonusHitChance": {
+      "type": "INTEGER",
+      "description": "Flat bonus added to d20 hit rolls. Used for weapons and spells."
+    },
+    "attributes": {
+      "type": "OBJECT",
+      "description": "Custom parameter extensions depending on item type.",
+      "properties": {
+        "damageRoll": {
+          "type": "STRING",
+          "pattern": "^((\\d+)d(\\d+)([\\+\\-]\\d+)?|\\d+\\-\\d+)$",
+          "description": "Damage formula: Standard NdF[+/-M] (e.g. '1d6+1') or range (e.g. '1-4')."
+        },
+        "armorClassBonus": {
+          "type": "INTEGER",
+          "description": "Flat AC protection added when equipped. Used for Armor."
+        },
+        "healingAmount": {
+          "type": ["INTEGER", "STRING"],
+          "description": "HP restored on consumption. Supports flat numbers or dice notation."
+        },
+        "teleportScene": {
+          "type": "STRING",
+          "description": "Scene ID to teleport to upon usage. Used for consumable items."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["name", "type"],
+  "additionalProperties": false
+}

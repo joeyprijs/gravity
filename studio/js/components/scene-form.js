@@ -44,6 +44,10 @@ export function renderSceneForm(key, data) {
   xpInput.addEventListener('input', () => { data.xpReward = xpInput.value === '' ? undefined : Number(xpInput.value); onChange(); });
   form.appendChild(formRow('XP Reward', xpInput));
 
+  const hookInput = el('input', { type: 'text', class: 'form-input', value: data.descriptionHook ?? '', placeholder: 'e.g. museumChestContents (optional)' });
+  hookInput.addEventListener('input', () => { data.descriptionHook = hookInput.value.trim() || undefined; onChange(); });
+  form.appendChild(formRow('Description Hook', hookInput));
+
   // ── Quest Trigger ────────────────────────────────────────────────────────
 
   form.appendChild(el('h3', { class: 'form-section-title' }, ['Quest Trigger']));
@@ -236,6 +240,48 @@ function renderOptions(data, onChange) {
       reqParam.appendChild(el('span', { class: 'action-param-label' }, ['Requires Item']));
       reqParam.appendChild(reqSel);
       cardBody.appendChild(reqParam);
+
+      const curLog = opt.log;
+      let logMode = 'default';
+      if (curLog === false) logMode = 'silent';
+      else if (typeof curLog === 'string') logMode = 'custom';
+
+      const customLogInput = el('input', {
+        type: 'text',
+        class: 'form-input',
+        value: typeof opt.log === 'string' ? opt.log : '',
+        placeholder: 'Enter custom log description…',
+        style: logMode === 'custom' ? 'margin-top:4px' : 'display:none;margin-top:4px'
+      });
+      customLogInput.addEventListener('input', () => {
+        opt.log = customLogInput.value;
+        onChange();
+      });
+
+      const logModeSel = select([
+        ['default', 'Default (Show Option Text)'],
+        ['silent', 'Silent (Hide from Narrative Log)'],
+        ['custom', 'Custom Narrative Message…']
+      ], logMode, v => {
+        if (v === 'default') {
+          delete opt.log;
+          customLogInput.style.display = 'none';
+        } else if (v === 'silent') {
+          opt.log = false;
+          customLogInput.style.display = 'none';
+        } else if (v === 'custom') {
+          opt.log = typeof curLog === 'string' ? curLog : '';
+          customLogInput.style.display = '';
+          customLogInput.value = opt.log;
+        }
+        onChange();
+      });
+      logModeSel.className = 'form-select';
+
+      const logParam = el('div', { class: 'action-param' });
+      logParam.appendChild(el('span', { class: 'action-param-label' }, ['Narrative Log']));
+      logParam.appendChild(el('div', { style: 'display:flex;flex-direction:column;flex-grow:1' }, [logModeSel, customLogInput]));
+      cardBody.appendChild(logParam);
       const optCondWrap = el('div', { class: 'card-section' });
       optCondWrap.appendChild(renderInlineCondition(
         () => opt.condition,
