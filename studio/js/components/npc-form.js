@@ -321,12 +321,12 @@ function renderSkillCheckRow(resp, onChange) {
 
     if (resp.skillCheck) {
       ctrl.appendChild(el('span', { class: 'list-label' }, ['DC']));
-      const dcInput = el('input', { type: 'number', class: 'form-input sm', value: resp.dc ?? '' });
+      const dcInput = el('input', { type: 'number', class: 'form-input sm', value: resp.dc ?? '', placeholder: 'DC' });
       dcInput.addEventListener('input', () => { resp.dc = dcInput.value === '' ? undefined : Number(dcInput.value); onChange(); });
       ctrl.appendChild(dcInput);
 
-      ctrl.appendChild(el('span', { class: 'list-label' }, ['+']));
-      const incInput = el('input', { type: 'number', class: 'form-input sm', value: resp.increment ?? '' });
+      ctrl.appendChild(el('span', { class: 'list-label' }, ['+ Increment']));
+      const incInput = el('input', { type: 'number', class: 'form-input sm', value: resp.increment ?? '', placeholder: 'Increment' });
       incInput.addEventListener('input', () => { resp.increment = incInput.value === '' ? undefined : Number(incInput.value); onChange(); });
       ctrl.appendChild(incInput);
     }

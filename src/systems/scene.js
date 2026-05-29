@@ -413,7 +413,6 @@ export class SceneRenderer {
       const displays = gameState.getDisplaysForScene(sceneId);
       if (displays.length > 0) {
         let tableHtml = `<div class="exhibits-table-container" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">`;
-        tableHtml += `<h3 style="margin-top: 0; margin-bottom: 12px; color: var(--accent-color); font-size: 0.9em; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 700;">${this.engine.t('ui.curatorHeadingExhibits')}</h3>`;
         tableHtml += `<table class="exhibits-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95em;">`;
         tableHtml += `<thead><tr style="border-bottom: 2px solid var(--border-color); color: var(--accent-color); font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.05em;"><th style="padding: 6px 4px; font-weight: 600;">Display Stand</th><th style="padding: 6px 4px; font-weight: 600;">Showcased Relic</th></tr></thead>`;
         tableHtml += `<tbody>`;

@@ -68,8 +68,8 @@
         {
           "item": "cellar_key",
           "amount": 1,
-          "dc": 10,
-          "increment": 1
+          "dc": 5,
+          "increment": 0
         },
         {
           "table": "basic_loot",

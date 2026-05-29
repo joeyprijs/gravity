@@ -78,10 +78,10 @@ class RPGEngine {
   async loadData() {
     // Load locale first — must be available before the try-catch below so
     // error messages can still be translated if game data fails to load.
-    this.data.locale = await fetch('data/locales.json').then(r => r.json()).catch(() => ({}));
+    this.data.locale = await fetch('data/locales.json', { cache: 'no-cache' }).then(r => r.json()).catch(() => ({}));
 
     try {
-      const manifestRes = await fetch('data/index.json');
+      const manifestRes = await fetch('data/index.json', { cache: 'no-cache' });
       const manifest = await manifestRes.json();
 
       const loadCategory = async (categoryObj) => {
@@ -89,7 +89,7 @@ class RPGEngine {
         const keys = Object.keys(categoryObj);
         const loadedData = await Promise.all(
           keys.map(key =>
-            fetch(categoryObj[key])
+            fetch(categoryObj[key], { cache: 'no-cache' })
               .then(r => r.json())
               .catch(err => { console.warn(`[Gravity] Failed to load "${key}": ${err.message}`); return null; })
           )
@@ -106,15 +106,15 @@ class RPGEngine {
         manifest.tables ? loadCategory(manifest.tables) : Promise.resolve({}),
         manifest.flags
           ? (typeof manifest.flags === 'string'
-            ? fetch(manifest.flags).then(r => r.json()).catch(() => ({}))
+            ? fetch(manifest.flags, { cache: 'no-cache' }).then(r => r.json()).catch(() => ({}))
             : Promise.all(
                 Object.values(manifest.flags).map(url =>
-                  fetch(url).then(r => r.json()).catch(err => { console.warn(`[Gravity] Failed to load flags from "${url}": ${err.message}`); return {}; })
+                  fetch(url, { cache: 'no-cache' }).then(r => r.json()).catch(err => { console.warn(`[Gravity] Failed to load flags from "${url}": ${err.message}`); return {}; })
                 )
               ).then(results => Object.assign({}, ...results))
           )
           : Promise.resolve({}),
-        manifest.rules ? fetch(manifest.rules).then(r => r.json()).catch(() => null) : Promise.resolve(null)
+        manifest.rules ? fetch(manifest.rules, { cache: 'no-cache' }).then(r => r.json()).catch(() => null) : Promise.resolve(null)
       ]);
 
       this.data = { items, npcs, scenes, missions, tables, regions: manifest.regions || {}, worldMapSize: manifest.worldMapSize || DEFAULT_WORLD_MAP_SIZE, locale: this.data.locale, rules, flags };

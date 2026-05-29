@@ -390,9 +390,9 @@ function renderSkills(data, onChange) {
       const dcRow = el('div', { class: 'drop-rhs' });
       const dcInput = el('input', { type: 'number', class: 'form-input sm', value: skill.dc ?? '', placeholder: 'DC' });
       dcInput.addEventListener('input', () => { skill.dc = dcInput.value === '' ? undefined : Number(dcInput.value); onChange(); });
-      const incInput = el('input', { type: 'number', class: 'form-input sm', value: skill.increment ?? '', placeholder: '+' });
+      const incInput = el('input', { type: 'number', class: 'form-input sm', value: skill.increment ?? '', placeholder: 'Increment' });
       incInput.addEventListener('input', () => { skill.increment = incInput.value === '' ? undefined : Number(incInput.value); onChange(); });
-      dcRow.append(el('span', { class: 'list-label' }, ['DC']), dcInput, el('span', { class: 'list-label' }, ['+']), incInput);
+      dcRow.append(el('span', { class: 'list-label' }, ['DC']), dcInput, el('span', { class: 'list-label' }, ['+ Increment']), incInput);
       dcWrap.appendChild(dcRow);
       cardBody.appendChild(dcWrap);
 
@@ -484,9 +484,9 @@ function renderDropsList(skill, itemIds, tableIds, onChange) {
       const rhs = el('div', { class: 'drop-rhs' });
       const dcInput = el('input', { type: 'number', class: 'form-input sm', value: drop.dc ?? '', placeholder: 'DC' });
       dcInput.addEventListener('input', () => { drop.dc = dcInput.value === '' ? undefined : Number(dcInput.value); onChange(); });
-      const incInput = el('input', { type: 'number', class: 'form-input sm', value: drop.increment ?? '', placeholder: '+' });
+      const incInput = el('input', { type: 'number', class: 'form-input sm', value: drop.increment ?? '', placeholder: 'Increment' });
       incInput.addEventListener('input', () => { drop.increment = incInput.value === '' ? undefined : Number(incInput.value); onChange(); });
-      rhs.append(el('span', { class: 'list-label' }, ['DC']), dcInput, el('span', { class: 'list-label' }, ['+']), incInput);
+      rhs.append(el('span', { class: 'list-label' }, ['DC']), dcInput, el('span', { class: 'list-label' }, ['+ Increment']), incInput);
       const rmBtn = el('button', { class: 'btn-hdr' }, ['✕']);
       rmBtn.addEventListener('click', () => { skill.items.splice(i, 1); onChange(); render(); });
       rhs.appendChild(rmBtn);
