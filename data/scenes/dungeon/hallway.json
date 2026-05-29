@@ -66,7 +66,7 @@
       "text": "Look Around",
       "skillCheck": "perception",
       "items": [
-        { "table": "basic_loot", "dc": 12, "increment": 2, "itemDrops": 2 }
+        { "table": "basic_loot", "dc": 12, "increment": 0, "itemDrops": 2 }
       ]
     },
     {
@@ -82,7 +82,19 @@
       },
       "actions": [
         { "type": "set_flag", "flag": "goblins_snuck_past", "value": true },
+        { "type": "loot", "item": "home_rune", "amount": 1 },
         { "type": "navigate", "destination": "dungeon_chamber" }
+      ],
+      "onFailure": [
+        {
+          "type": "combat",
+          "enemies": ["goblin_guard", "goblin_grunt"],
+          "onVictory": [
+            { "type": "set_flag", "flag": "defeated_goblin_guard", "value": true },
+            { "type": "loot", "item": "gold", "amount": 13 },
+            { "type": "loot", "item": "home_rune", "amount": 1 }
+          ]
+        }
       ]
     },
     {
@@ -99,6 +111,7 @@
       },
       "actions": [
         { "type": "set_flag", "flag": "goblins_pacified", "value": true },
+        { "type": "loot", "item": "home_rune", "amount": 1 },
         { "type": "navigate", "destination": "dungeon_hallway" }
       ]
     }

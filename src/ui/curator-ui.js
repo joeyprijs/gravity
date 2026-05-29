@@ -90,8 +90,8 @@ export class CuratorUI {
     if (!canInstall) installBtn.disabled = true;
     installBtn.onclick = () => {
       const count = displays.length + 1;
-      const defaultName = `Display Case ${count}`;
-      const customName = prompt("Enter a name for your new display case:", defaultName);
+      const defaultName = this.engine.t('ui.curatorInstallDefault', { count });
+      const customName = prompt(this.engine.t('ui.curatorInstallPrompt'), defaultName);
       if (customName === null) return; // User cancelled
       const name = customName.trim() || defaultName;
 
@@ -99,7 +99,7 @@ export class CuratorUI {
       gameState.addDisplayToScene(sceneId, {
         name: name
       });
-      this.engine.log(LOG.SYSTEM, `You spent ${installCost} gold and installed the "${name}".`);
+      this.engine.log(LOG.SYSTEM, this.engine.t('ui.curatorInstallSuccess', { cost: installCost, name }));
       this._refreshSceneDesc();
       this.render('dashboard');
     };

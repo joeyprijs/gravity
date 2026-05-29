@@ -69,6 +69,9 @@
     "curatorHeadingExhibits": "Current Exhibits",
     "curatorSelectArtifact": "Select an artifact to exhibit:",
     "curatorNoEligibleItems": "No eligible artifacts in your inventory.",
+    "curatorInstallPrompt": "Enter a name for your new display case:",
+    "curatorInstallDefault": "Display Case {count}",
+    "curatorInstallSuccess": "You spent {cost} Gold and installed the \"{name}\".",
     "notEnoughGold":       "Not enough gold!"
   },
   "itemTypes": {
@@ -89,6 +92,8 @@
     "receivedItem":   "You received {name}!",
     "foundGold":      "Found {amount} Gold.",
     "foundItem":      "Found {name}.",
+    "foundItems":     "Found {list}.",
+    "gold":           "Gold",
     "xpGained":       "+{amount} XP"
   },
   "actions": {

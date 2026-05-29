@@ -141,7 +141,7 @@ export class CombatSystem {
       const dmgResult = parseDamage(weapon.attributes.damageRoll);
       targetEnemy.attributes.healthPoints -= dmgResult.total;
       
-      this.engine.log(LOG.PLAYER, this.engine.t('combat.attackHit', {
+      this.engine.log(gameState.getPlayer().name || LOG.PLAYER, this.engine.t('combat.attackHit', {
         weapon: weapon.name, roll: hitRoll, mod: modStr,
         ac: targetEnemy.attributes.armorClass, damage: dmgResult.total, 
         dice: weapon.attributes.damageRoll, rollStr: dmgResult.string
@@ -157,7 +157,7 @@ export class CombatSystem {
       }
     } else {
       // Missed attack logging
-      this.engine.log(LOG.PLAYER, this.engine.t('combat.attackMiss', {
+      this.engine.log(gameState.getPlayer().name || LOG.PLAYER, this.engine.t('combat.attackMiss', {
         weapon: weapon.name, roll: hitRoll, mod: modStr, ac: targetEnemy.attributes.armorClass
       }), 'damage');
     }
@@ -220,7 +220,7 @@ export class CombatSystem {
           ? this.engine.t('combat.playerTakesDamage', { damage: result.totalDamage, dice: eWeapon.attributes.damageRoll, rolls: result.damageRolls.join(' and ') })
           : this.engine.t('combat.playerTakesNoDamage'));
           
-        this.engine.log(LOG.COMBAT, summary, 'damage');
+        this.engine.log(enemy.name, summary, 'damage');
       }
 
       // Check if the player fell in battle

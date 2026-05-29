@@ -297,15 +297,30 @@ export class SceneRenderer {
         if (existing) existing.amount += (d.amount ?? 1);
         else aggregated.set(d.item, { item: d.item, amount: d.amount ?? 1 });
       });
+      const lootItems = [];
       aggregated.forEach(d => {
         if (d.item === 'gold') {
           gameState.modifyPlayerStat('gold', d.amount);
-          this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundGold', { amount: d.amount }), 'loot');
+          lootItems.push(`${d.amount} ${this.engine.t('loot.gold')}`);
         } else {
           gameState.addToInventory(d.item, d.amount);
-          this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundItem', { name: this.engine.data.items[d.item]?.name || d.item }), 'loot');
+          const itemName = this.engine.data.items[d.item]?.name || d.item;
+          lootItems.push(d.amount > 1 ? `${itemName} (x${d.amount})` : itemName);
         }
       });
+      if (lootItems.length > 0) {
+        let listStr = "";
+        if (lootItems.length === 1) {
+          listStr = lootItems[0];
+        } else if (lootItems.length === 2) {
+          listStr = `${lootItems[0]} and ${lootItems[1]}`;
+        } else {
+          listStr = `${lootItems.slice(0, -1).join(', ')}, and ${lootItems[lootItems.length - 1]}`;
+        }
+        const message = this.engine.t('loot.foundItems', { list: listStr });
+        const fallbackMessage = message !== 'loot.foundItems' ? message : `Found ${listStr}.`;
+        this.engine.log(LOG.SYSTEM, fallbackMessage, 'loot');
+      }
       gameState.setFlag(skillKey, state);
       this.renderOptions(scene);
     };
