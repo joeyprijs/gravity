@@ -3,14 +3,15 @@
  ========================================================================== */
 :root {
   /* Global Colors */
-  --bg-color: #0f172a;
-  --bg-gradient-start: #1e1b4b;
-  --bg-gradient-end: #0f172a;
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --accent-color: #38bdf8;
-  --accent-hover: #0284c7;
-  --gold-color: #fbbf24;
+  --bg-color: #131315;
+  --bg-gradient-start: #242428;
+  --bg-gradient-end: #131315;
+  --text-primary: #f0f0f4;
+  --text-secondary: #9a9aa3;
+  --accent-color: #4a9eff;
+  --accent-color-rgb: 74, 158, 255;
+  --accent-hover: #2582eb;
+  --gold-color: #f59e0b;
 
   /* Stats Colors */
   --health-color: #ef4444;
@@ -18,14 +19,14 @@
   --xp-color: #10b981;
 
   /* Panels */
-  --panel-bg: rgba(30, 41, 59, 0.7);
-  --panel-border: rgba(255, 255, 255, 0.1);
+  --panel-bg: rgba(28, 28, 31, 0.75);
+  --panel-border: rgba(56, 56, 63, 0.5);
   --panel-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
 
   /* Buttons */
-  --btn-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
-  --btn-hover-bg: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(2, 132, 199, 0.2));
-  --btn-hover-shadow: 0 4px 15px rgba(2, 132, 199, 0.3);
+  --btn-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+  --btn-hover-bg: linear-gradient(135deg, rgba(var(--accent-color-rgb), 0.15), rgba(var(--accent-color-rgb), 0.05));
+  --btn-hover-shadow: 0 4px 15px rgba(var(--accent-color-rgb), 0.2);
   --btn-disabled-bg: rgba(0, 0, 0, 0.3);
 
   /* Scrollbars */
@@ -36,6 +37,15 @@
   /* Lists */
   --list-item-bg: rgba(0, 0, 0, 0.2);
   --list-item-hover-bg: rgba(255, 255, 255, 0.05);
+
+  /* Overlay & Backdrop Colors */
+  --overlay-backdrop: rgba(0, 0, 0, 0.75);
+  --overlay-bg: rgba(28, 28, 31, 0.98);
+
+  /* Map Visuals */
+  --minimap-bg: rgba(0, 0, 0, 0.55);
+  --map-node-border: rgba(255, 255, 255, 0.18);
+  --map-node-text: rgba(255, 255, 255, 0.65);
 
   /* Typography */
   --font-xs: 10px;
@@ -329,7 +339,7 @@ body {
   gap: 4px;
   padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 1.75);
   line-height: 1;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--list-item-bg);
   border: 1px solid var(--panel-border);
 }
 
@@ -395,7 +405,7 @@ body {
 .tabs__btn--active {
   color: var(--accent-color);
   font-weight: bold;
-  background: rgba(56, 189, 248, 0.1);
+  background: rgba(var(--accent-color-rgb), 0.1);
 }
 
 /* ==========================================================================
@@ -552,7 +562,7 @@ body {
   width: 100%;
   aspect-ratio: 1;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--minimap-bg);
   border: 1px solid var(--panel-border);
   cursor: pointer;
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -560,7 +570,7 @@ body {
 
 .minimap:hover {
   border-color: var(--accent-color);
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
+  box-shadow: 0 0 12px rgba(var(--accent-color-rgb), 0.3);
 }
 
 /* Hide labels at minimap scale — too small to read */
@@ -574,7 +584,7 @@ body {
 
 .map-node {
   position: absolute;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid var(--map-node-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -588,7 +598,7 @@ body {
 }
 
 .map-node__label {
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--map-node-text);
   text-align: center;
   padding: 2px 4px;
   pointer-events: none;
@@ -610,7 +620,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.75);
+  background: var(--overlay-backdrop);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
@@ -624,7 +634,7 @@ body {
   flex-direction: column;
   width: 90vw;
   height: 90vh;
-  background: rgba(5, 10, 20, 0.97);
+  background: var(--overlay-bg);
   border: 1px solid var(--panel-border);
 }
 
@@ -663,7 +673,7 @@ body {
 }
 
 .fullmap-overlay__inner::-webkit-scrollbar-thumb {
-  background: rgba(56, 189, 248, 0.8);
+  background: rgba(var(--accent-color-rgb), 0.8);
   border-radius: 4px;
 }
 
