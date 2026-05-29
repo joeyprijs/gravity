@@ -70,7 +70,18 @@ export function buildSceneDescription(title, body = null) {
     // body is trusted HTML authored in game JSON (scene descriptions, NPC text).
     // It intentionally supports inline markup (<br>, <em>, etc.). Never pass
     // user-supplied or save-file-derived content here.
-    p.innerHTML = body;
+    let html = body;
+    if (body && !/^\s*\[/.test(body)) {
+      let label = 'Narrator';
+      if (typeof window !== 'undefined' && window.gameEngine && typeof window.gameEngine.t === 'function') {
+        const translated = window.gameEngine.t('log.Narrator');
+        if (translated !== 'log.Narrator') {
+          label = translated;
+        }
+      }
+      html = `[${label}] ${body}`;
+    }
+    p.innerHTML = html;
     div.appendChild(p);
   }
   return div;

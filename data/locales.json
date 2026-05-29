@@ -175,7 +175,8 @@
     "System": "System",
     "Player": "Player",
     "Combat": "Combat",
-    "Quest":  "Quest"
+    "Quest":  "Quest",
+    "Narrator": "Narrator"
   },
   "quest": {
     "started":         "{name}: {description}",

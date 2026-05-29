@@ -434,6 +434,12 @@ export class SceneRenderer {
   // a new narrative block.
   refreshDescription(scene) {
     if (!this._lastDescBodyEl) return;
-    this._lastDescBodyEl.innerHTML = this._resolveDescription(scene);
+    let desc = this._resolveDescription(scene);
+    if (desc && !/^\s*\[/.test(desc)) {
+      const translated = this.engine.t('log.Narrator');
+      const label = translated !== 'log.Narrator' ? translated : 'Narrator';
+      desc = `[${label}] ${desc}`;
+    }
+    this._lastDescBodyEl.innerHTML = desc;
   }
 }

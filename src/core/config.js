@@ -134,6 +134,7 @@ export const LOG = {
   PLAYER: 'Player',
   COMBAT: 'Combat',
   QUEST:  'Quest',
+  NARRATOR: 'Narrator',
 };
 
 // System messages shared across multiple modules. Keeping them here ensures
