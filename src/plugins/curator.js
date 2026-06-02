@@ -19,16 +19,23 @@ export function patchState(items = {}) {
 
   gameState._updateReputation = function() {
     let rep = this.state.museumReputation ?? 0;
+    console.log("[Curator Plugin] _updateReputation start. Base rep:", rep);
     if (this.state.displays) {
+      console.log("[Curator Plugin] Displays in state:", JSON.parse(JSON.stringify(this.state.displays)));
       for (const sceneId in this.state.displays) {
         for (const display of this.state.displays[sceneId]) {
+          console.log("[Curator Plugin] Checking display:", display.id, "Item:", display.item);
           if (display.item && this._items && this._items[display.item]) {
             const itemRep = this._items[display.item].reputation ?? 0;
+            console.log("[Curator Plugin] Found item in displays list. Item rep:", itemRep);
             rep += itemRep;
+          } else {
+            console.log("[Curator Plugin] Skipping display item. _items defined?", !!this._items, "display.item in _items?", display.item ? !!this._items[display.item] : "no item");
           }
         }
       }
     }
+    console.log("[Curator Plugin] Final calculated rep:", rep);
     if (this.state.player && this.state.player.attributes) {
       this.state.player.attributes.reputation = rep;
     }
