@@ -158,27 +158,6 @@ export default function curatorPlugin(engine) {
   // 1. Patch state manager methods
   patchState(engine.data.items);
 
-  // 2. Add dynamic localization keys
-  if (engine.data.locale && engine.data.locale.ui) {
-    Object.assign(engine.data.locale.ui, {
-      museumReputationHeading: "Museum Reputation",
-      museumReputationValue:   "{value} Points",
-      curatorTitle:            "Museum Curator Panel",
-      curatorDone:             "Done",
-      curatorBack:             "Back",
-      curatorCancel:           "Cancel",
-      curatorEmpty:            "(Empty)",
-      curatorInstall:          "+ Install New Display Case ({cost} Gold)",
-      curatorRetrieve:         "Retrieve Artifact",
-      curatorExhibit:          "Exhibit",
-      curatorHeadingExhibits:  "Current Exhibits",
-      curatorSelectArtifact:   "Select an artifact to exhibit:",
-      curatorNoEligibleItems:  "No eligible artifacts in your inventory.",
-      curatorInstallPrompt:    "Enter a name for your new display case:",
-      curatorInstallDefault:   "Display Case {count}",
-      curatorInstallSuccess:   "You spent {cost} Gold and installed the \"{name}\".",
-    });
-  }
 
   // 3. Register custom action handlers
   engine.registerAction("manage_exhibits", (action, engine) => {
@@ -233,7 +212,7 @@ export class CuratorUI {
     panel.querySelectorAll(`.${CSS.SCENE_OPTIONS_SECTION}`).forEach(el => el.remove());
 
     if (reminder) {
-      reminder.innerText = this.engine.t('ui.curatorTitle');
+      reminder.innerText = this.engine.t('plugin.curator.curatorTitle');
       container.appendChild(reminder);
     }
 
@@ -250,7 +229,7 @@ export class CuratorUI {
 
   _renderDashboard(container, panel, skillsContainer, sceneId, scene) {
     // 1. Done Button
-    const doneBtn = buildOptionButton(this.engine.t('ui.curatorDone'));
+    const doneBtn = buildOptionButton(this.engine.t('plugin.curator.curatorDone'));
     doneBtn.onclick = () => {
       this.engine._customUIOpen = false;
       this.engine.scene.renderOptions(scene);
@@ -264,11 +243,11 @@ export class CuratorUI {
     repSection.style.background = 'var(--list-item-bg)';
     repSection.style.border = '1px solid var(--panel-border)';
     
-    const repTitle = createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('ui.museumReputationHeading'));
+    const repTitle = createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('plugin.curator.museumReputationHeading'));
     repSection.appendChild(repTitle);
     
     const repVal = gameState.getMuseumReputation();
-    const repText = createElement('div', CSS.ITEM_STATS, this.engine.t('ui.museumReputationValue', { value: repVal }));
+    const repText = createElement('div', CSS.ITEM_STATS, this.engine.t('plugin.curator.museumReputationValue', { value: repVal }));
     repText.style.fontWeight = 'bold';
     repSection.appendChild(repText);
     
@@ -276,13 +255,13 @@ export class CuratorUI {
 
     // 2. Exhibits Section
     const exhibitsSection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);
-    exhibitsSection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('ui.curatorHeadingExhibits')));
+    exhibitsSection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('plugin.curator.curatorHeadingExhibits')));
 
     const displays = gameState.getDisplaysForScene(sceneId);
     if (displays.length > 0) {
       displays.forEach(d => {
-        const itemName = d.item ? (this.engine.data.items[d.item]?.name || d.item) : this.engine.t('ui.curatorEmpty');
-        const badge = d.item ? itemName : this.engine.t('ui.curatorEmpty');
+        const itemName = d.item ? (this.engine.data.items[d.item]?.name || d.item) : this.engine.t('plugin.curator.curatorEmpty');
+        const badge = d.item ? itemName : this.engine.t('plugin.curator.curatorEmpty');
         const btn = buildOptionButton(d.name, badge);
         btn.onclick = () => {
           if (d.item) {
@@ -294,7 +273,7 @@ export class CuratorUI {
         exhibitsSection.appendChild(btn);
       });
     } else {
-      const emptyLabel = buildOptionButton(this.engine.t('ui.curatorEmpty'));
+      const emptyLabel = buildOptionButton(this.engine.t('plugin.curator.curatorEmpty'));
       emptyLabel.disabled = true;
       exhibitsSection.appendChild(emptyLabel);
     }
@@ -308,14 +287,14 @@ export class CuratorUI {
     
     const installSection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);
     const installBtn = buildOptionButton(
-      this.engine.t('ui.curatorInstall', { cost: installCost }),
+      this.engine.t('plugin.curator.curatorInstall', { cost: installCost }),
       canInstall ? null : this.engine.t('ui.notEnoughGold')
     );
     if (!canInstall) installBtn.disabled = true;
     installBtn.onclick = () => {
       const count = displays.length + 1;
-      const defaultName = this.engine.t('ui.curatorInstallDefault', { count });
-      const customName = prompt(this.engine.t('ui.curatorInstallPrompt'), defaultName);
+      const defaultName = this.engine.t('plugin.curator.curatorInstallDefault', { count });
+      const customName = prompt(this.engine.t('plugin.curator.curatorInstallPrompt'), defaultName);
       if (customName === null) return; // User cancelled
       const name = customName.trim() || defaultName;
 
@@ -323,7 +302,7 @@ export class CuratorUI {
       gameState.addDisplayToScene(sceneId, {
         name: name
       });
-      this.engine.log(LOG.SYSTEM, this.engine.t('ui.curatorInstallSuccess', { cost: installCost, name }));
+      this.engine.log(LOG.SYSTEM, this.engine.t('plugin.curator.curatorInstallSuccess', { cost: installCost, name }));
       this._refreshSceneDesc();
       this.render('dashboard');
     };
@@ -344,7 +323,7 @@ export class CuratorUI {
     const name = itemData?.name || itemId;
 
     // 1. Back button
-    const backBtn = buildOptionButton(this.engine.t('ui.curatorBack'));
+    const backBtn = buildOptionButton(this.engine.t('plugin.curator.curatorBack'));
     backBtn.onclick = () => this.render('dashboard');
     container.appendChild(backBtn);
 
@@ -374,7 +353,7 @@ export class CuratorUI {
     detailSection.appendChild(infoContainer);
 
     // 3. Take Button
-    const takeBtn = buildOptionButton(this.engine.t('ui.curatorRetrieve'));
+    const takeBtn = buildOptionButton(this.engine.t('plugin.curator.curatorRetrieve'));
     takeBtn.onclick = () => {
       gameState.takeItemFromDisplay(sceneId, displayId);
       this.engine.log(LOG.SYSTEM, this.engine.t('actions.displayTook', { name, display: display.name }));
@@ -395,13 +374,13 @@ export class CuratorUI {
     }
 
     // 1. Cancel button
-    const cancelBtn = buildOptionButton(this.engine.t('ui.curatorCancel'));
+    const cancelBtn = buildOptionButton(this.engine.t('plugin.curator.curatorCancel'));
     cancelBtn.onclick = () => this.render('dashboard');
     container.appendChild(cancelBtn);
 
     // 2. Select Artifact Section
     const selectSection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);
-    selectSection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('ui.curatorSelectArtifact')));
+    selectSection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('plugin.curator.curatorSelectArtifact')));
 
     // Get eligible player inventory items
     const player = gameState.getPlayer();
@@ -430,7 +409,7 @@ export class CuratorUI {
         selectSection.appendChild(btn);
       });
     } else {
-      const noneLabel = createElement('p', CSS.ITEM_TYPE, this.engine.t('ui.curatorNoEligibleItems'));
+      const noneLabel = createElement('p', CSS.ITEM_TYPE, this.engine.t('plugin.curator.curatorNoEligibleItems'));
       noneLabel.style.textAlign = 'center';
       noneLabel.style.padding = '20px';
       selectSection.appendChild(noneLabel);

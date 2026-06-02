@@ -217,12 +217,12 @@ export class SceneRenderer {
     // Auto-inject a consolidated curator option button if this scene supports exhibits
     const hasDisplays = gameState.getDisplaysForScene(sceneId).length > 0;
     if (scene.supportsExhibits || hasDisplays) {
-      const btn = buildOptionButton(this.engine.t('ui.curatorTitle'));
+      const btn = buildOptionButton(this.engine.t('plugin.curator.curatorTitle'));
       btn.onclick = () => {
         this.engine.isGameStart = false;
-        this.engine.log(LOG.PLAYER, this.engine.t('ui.curatorTitle'), 'choice');
+        this.engine.log(LOG.PLAYER, this.engine.t('plugin.curator.curatorTitle'), 'choice');
         this.handleOption({
-          text: this.engine.t('ui.curatorTitle'),
+          text: this.engine.t('plugin.curator.curatorTitle'),
           log: false,
           actions: [{ type: 'manage_exhibits' }]
         });
@@ -432,7 +432,7 @@ export class SceneRenderer {
         tableHtml += `<thead><tr style="border-bottom: 2px solid var(--border-color); color: var(--accent-color); font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.05em;"><th style="padding: 6px 4px; font-weight: 600;">Display Stand</th><th style="padding: 6px 4px; font-weight: 600;">Showcased Relic</th></tr></thead>`;
         tableHtml += `<tbody>`;
         displays.forEach(d => {
-          const itemName = d.item ? (this.engine.data.items[d.item]?.name || d.item) : this.engine.t('ui.curatorEmpty');
+          const itemName = d.item ? (this.engine.data.items[d.item]?.name || d.item) : this.engine.t('plugin.curator.curatorEmpty');
           const itemStyle = d.item ? `font-weight: bold; color: var(--accent-color);` : `font-style: italic; opacity: 0.5;`;
           tableHtml += `<tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);"><td style="padding: 8px 4px; color: var(--text-color);">${d.name}</td><td style="padding: 8px 4px; ${itemStyle}">${itemName}</td></tr>`;
         });

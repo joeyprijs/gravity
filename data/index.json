@@ -2,7 +2,13 @@
   "worldMapSize": { "width": 3000, "height": 2000 },
   "rules": "data/rules.json",
   "plugins": [
-    "./src/plugins/curator.js"
+    {
+      "id": "curator",
+      "src": "./src/plugins/curator.js",
+      "locales": {
+        "en": "./src/plugins/curator/locales/en.json"
+      }
+    }
   ],
   "flags": {
     "dungeon":     "data/flags/dungeon.json",

@@ -42,19 +42,44 @@ class RPGEngine {
     // Load plugins before initialising state so they can register migrations.
     if (manifest?.plugins?.length) {
       await Promise.all(
-        manifest.plugins.map(url => {
+        manifest.plugins.map(async pluginConfig => {
+          const isObject = typeof pluginConfig === 'object';
+          const url = isObject ? pluginConfig.src : pluginConfig;
+          const id = isObject ? pluginConfig.id : null;
+          const locales = isObject ? pluginConfig.locales : null;
+
+          // Load locales first if declared in manifest
+          if (id && locales) {
+            const currentLang = 'en'; // default active language
+            const localePath = locales[currentLang];
+            if (localePath) {
+              try {
+                const res = await fetch(localePath, { cache: 'no-cache' });
+                const localeData = await res.json();
+                if (!this.data.locale.plugin) this.data.locale.plugin = {};
+                this.data.locale.plugin[id] = localeData;
+              } catch (e) {
+                console.warn(`[Gravity] Failed to load plugin locales for ${id} from ${localePath}`, e);
+              }
+            }
+          }
+
           if (url.includes('curator.js')) {
             try {
               curatorPlugin(this);
-              return Promise.resolve();
+              return;
             } catch (e) {
               console.warn(`[Gravity] Static plugin fallback failed for ${url}`, e);
             }
           }
+
           const absoluteUrl = new URL(url, document.baseURI).href;
-          return import(absoluteUrl)
-            .then(m => m.default?.(this))
-            .catch(e => console.warn(`[Gravity] Plugin failed: ${absoluteUrl}`, e));
+          try {
+            const m = await import(absoluteUrl);
+            m.default?.(this);
+          } catch (e) {
+            console.warn(`[Gravity] Plugin failed: ${absoluteUrl}`, e);
+          }
         })
       );
     }
