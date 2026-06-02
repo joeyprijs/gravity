@@ -92,26 +92,6 @@ function handleManageChest(action, engine) {
   engine.ui.renderChestUI(action.chest);
 }
 
-function handleManageExhibits(action, engine) {
-  engine._customUIOpen = true;
-  engine.ui.renderCuratorUI();
-}
-
-function handleAddDisplay(action, engine) {
-  const sceneId = action.scene || gameState.getCurrentSceneId();
-  const cost = action.cost || 0;
-  const p = gameState.getPlayer();
-  if (p.resources.gold < cost) {
-    engine.log(LOG.SYSTEM, engine.t('ui.notEnoughGold'));
-    return;
-  }
-  gameState.modifyPlayerStat('gold', -cost);
-  gameState.addDisplayToScene(sceneId, {
-    name: action.name || "Display Pedestal"
-  });
-  engine.log(LOG.SYSTEM, `A new ${action.name || "Display Pedestal"} has been added to the room.`);
-}
-
 export function registerBuiltinActions(engine) {
   engine.registerAction(ACTIONS.LOOT,            handleLoot);
   engine.registerAction(ACTIONS.COMBAT,          handleCombat);
@@ -123,6 +103,4 @@ export function registerBuiltinActions(engine) {
   engine.registerAction(ACTIONS.SET_FLAG,        handleSetFlag);
   engine.registerAction(ACTIONS.LOG,             handleLog);
   engine.registerAction(ACTIONS.MANAGE_CHEST,    handleManageChest);
-  engine.registerAction(ACTIONS.MANAGE_EXHIBITS, handleManageExhibits);
-  engine.registerAction(ACTIONS.ADD_DISPLAY,     handleAddDisplay);
 }

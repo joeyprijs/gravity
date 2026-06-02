@@ -82,7 +82,14 @@ Deepen the roleplay elements by letting players choose how they modernize the mu
 
 ### E. Museum Reputation & Dynamic Visitor Spawns
 Make the museum feel alive as it gains popularity.
-* **Reputation Flag:** Track `museum_reputation` globally.
+* **Reputation System**:
+  * **Items**: Rare relics have a `reputation` value (configured via Gravity Studio).
+  * **Player Reputation**: Tracked under `attributes.reputation` in the Skills sheet. Increases when acquiring a reputation-bearing relic for the first time.
+  * **Museum Reputation**: Calculated dynamically:
+    $$\text{Museum Reputation} = \text{Museum Permanent Reputation} + \text{Museum Display Reputation}$$
+    * **Museum Permanent Reputation** increases permanently whenever the player's reputation increases (spreading the word in the outer world).
+    * **Museum Display Reputation** is a dynamic value that sums the reputations of all items currently exhibited in display cases inside the museum.
+  * **Curator Panel**: The dashboard displays the live museum reputation score.
 * **Dynamic NPCs:** Create conditional NPC spawns in your home village based on reputation thresholds.
   * At *Reputation 1*: Only a couple of local children wander in.
   * At *Reputation 5*: Travelling merchants, eccentric wealthy collectors, and academy researchers visit, offering premium prices for duplicates or giving you high-stakes archaeological leads.

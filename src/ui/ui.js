@@ -3,7 +3,6 @@ import { clearElement, getByPath } from "../core/utils.js";
 import { EL, CSS, LOG } from "../core/config.js";
 import { MapManager } from "../world/map.js";
 import { ChestUI } from "./chest-ui.js";
-import { CuratorUI } from "./curator-ui.js";
 import { QuestUI } from "./quest-ui.js";
 import { InventoryUI } from "./inventory-ui.js";
 
@@ -186,9 +185,5 @@ export class UIManager {
 
   renderChestUI(chestId) {
     new ChestUI(this.engine, chestId).render();
-  }
-
-  renderCuratorUI() {
-    new CuratorUI(this.engine).render();
   }
 }

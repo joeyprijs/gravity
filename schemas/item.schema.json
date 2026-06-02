@@ -21,6 +21,11 @@
       "minimum": 0,
       "description": "Gold purchase value. Reselling fetches half value by default."
     },
+    "reputation": {
+      "type": "INTEGER",
+      "minimum": 0,
+      "description": "Reputation value. Contributes to player's reputation upon acquisition and museum's reputation when placed in display cases."
+    },
     "slot": {
       "type": "STRING",
       "enum": ["Head", "Amulet", "Torso", "Left Hand", "Right Hand", "Legs"],

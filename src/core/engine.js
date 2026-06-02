@@ -9,6 +9,7 @@ import { DEFAULT_WORLD_MAP_SIZE, LOG } from "./config.js";
 import { registerBuiltinActions } from "../systems/actions.js";
 import { parseDamage } from "../systems/dice.js";
 import { CharCreationScreen } from "../screens/char-creation.js";
+import curatorPlugin from "../plugins/curator.js";
 
 // RPGEngine is the central orchestrator. It owns all subsystems, loads game
 // data from JSON, and exposes a thin delegate API so subsystems can call each
@@ -41,16 +42,25 @@ class RPGEngine {
     // Load plugins before initialising state so they can register migrations.
     if (manifest?.plugins?.length) {
       await Promise.all(
-        manifest.plugins.map(url =>
-          import(url)
+        manifest.plugins.map(url => {
+          if (url.includes('curator.js')) {
+            try {
+              curatorPlugin(this);
+              return Promise.resolve();
+            } catch (e) {
+              console.warn(`[Gravity] Static plugin fallback failed for ${url}`, e);
+            }
+          }
+          const absoluteUrl = new URL(url, document.baseURI).href;
+          return import(absoluteUrl)
             .then(m => m.default?.(this))
-            .catch(e => console.warn(`[Gravity] Plugin failed: ${url}`, e))
-        )
+            .catch(e => console.warn(`[Gravity] Plugin failed: ${absoluteUrl}`, e));
+        })
       );
     }
 
     // Initialise state from rules, then register missions and flags on it.
-    gameState.init(this.data.rules);
+    gameState.init(this.data.rules, this.data.items);
     gameState.registerMissions(this.data.missions);
     gameState.registerSceneFlags(this.data.flags);
 

@@ -37,7 +37,9 @@
       "text": "Look Around",
       "skillCheck": "perception",
       "items": [
-        { "table": "basic_loot", "dc": 14, "increment": 0, "itemDrops": 2 }
+        { "table": "basic_loot", "dc": 14, "increment": 0, "itemDrops": 2 },
+        { "item": "sunstone_shard", "amount": 1, "dc": 12, "increment": 0 },
+        { "item": "eldritch_eye", "amount": 1, "dc": 18, "increment": 0 }
       ]
     }
   ]

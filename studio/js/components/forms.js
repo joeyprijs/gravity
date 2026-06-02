@@ -77,6 +77,7 @@ function renderItemForm(key, data) {
   form.appendChild(formRow('Description', bindTextarea('description')));
   form.appendChild(formRow('Value (gold)', bindInput('value', 'number')));
   form.appendChild(formRow('Action Points', bindInput('actionPoints', 'number')));
+  form.appendChild(formRow('Reputation', bindInput('reputation', 'number')));
 
   // Bonus hit chance (conditional)
   const hitRow = formRow('Bonus Hit Chance', bindInput('bonusHitChance', 'number'));

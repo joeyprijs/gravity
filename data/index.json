@@ -1,6 +1,9 @@
 {
   "worldMapSize": { "width": 3000, "height": 2000 },
   "rules": "data/rules.json",
+  "plugins": [
+    "./src/plugins/curator.js"
+  ],
   "flags": {
     "dungeon":     "data/flags/dungeon.json",
     "player_home": "data/flags/player_home.json"
@@ -19,7 +22,9 @@
     "cellar_key": "data/items/cellar_key.json",
     "flames": "data/items/flames.json",
     "home_rune": "data/items/home_rune.json",
-    "wayfinder_charm": "data/items/wayfinder_charm.json"
+    "wayfinder_charm": "data/items/wayfinder_charm.json",
+    "sunstone_shard": "data/items/sunstone_shard.json",
+    "eldritch_eye": "data/items/eldritch_eye.json"
   },
   "tables": {
     "basic_loot": "data/tables/basic_loot.json",

@@ -2,6 +2,213 @@ import { gameState } from "../core/state.js";
 import { createElement, clearElement, buildOptionButton } from "../core/utils.js";
 import { CSS, EL, LOG } from "../core/config.js";
 
+// Helper to wrap StateManager methods for reputation calculations.
+// Only wrap once to prevent infinite recursion.
+export function patchState(items = {}) {
+  if (gameState._curatorPatched) {
+    gameState._items = items;
+    return;
+  }
+  gameState._curatorPatched = true;
+  gameState._items = items;
+
+  // Add helper methods
+  gameState.getMuseumReputation = function() {
+    return this.state.player?.attributes?.reputation ?? 0;
+  };
+
+  gameState._updateReputation = function() {
+    let rep = this.state.museumReputation ?? 0;
+    if (this.state.displays) {
+      for (const sceneId in this.state.displays) {
+        for (const display of this.state.displays[sceneId]) {
+          if (display.item && this._items && this._items[display.item]) {
+            const itemRep = this._items[display.item].reputation ?? 0;
+            rep += itemRep;
+          }
+        }
+      }
+    }
+    if (this.state.player && this.state.player.attributes) {
+      this.state.player.attributes.reputation = rep;
+    }
+  };
+
+  // Wrap init
+  const originalInit = gameState.init;
+  gameState.init = function(rules, itemsData = {}) {
+    originalInit.call(gameState, rules, itemsData);
+    this._items = itemsData;
+    if (this.state.player && this.state.player.attributes) {
+      if (!('reputation' in this.state.player.attributes)) {
+        this.state.player.attributes.reputation = 0;
+      }
+    }
+    this._updateReputation();
+  };
+
+  // Wrap modifyPlayerStat
+  const originalModify = gameState.modifyPlayerStat;
+  gameState.modifyPlayerStat = function(stat, amount) {
+    if (stat === 'reputation') {
+      this.state.museumReputation = (this.state.museumReputation ?? 0) + amount;
+      this._updateReputation();
+      this.notifyListeners('stats');
+    } else {
+      originalModify.call(gameState, stat, amount);
+    }
+  };
+
+  // Wrap addToInventory
+  const originalAdd = gameState.addToInventory;
+  gameState.addToInventory = function(itemId, amount = 1, options = {}) {
+    originalAdd.call(gameState, itemId, amount, options);
+    if (this._items && this._items[itemId]) {
+      const itemData = this._items[itemId];
+      if (itemData.reputation) {
+        if (!this.state.obtainedItems) this.state.obtainedItems = [];
+        if (!this.state.obtainedItems.includes(itemId)) {
+          this.state.obtainedItems.push(itemId);
+          this.modifyPlayerStat('reputation', itemData.reputation);
+        }
+      }
+    }
+  };
+
+  // Wrap placeItemInDisplay / takeItemFromDisplay
+  const originalPlace = gameState.placeItemInDisplay;
+  gameState.placeItemInDisplay = function(sceneId, displayId, itemId) {
+    const res = originalPlace.call(gameState, sceneId, displayId, itemId);
+    if (res) {
+      this._updateReputation();
+      this.notifyListeners('inventory');
+      this.notifyListeners('stats');
+    }
+    return res;
+  };
+
+  const originalTake = gameState.takeItemFromDisplay;
+  gameState.takeItemFromDisplay = function(sceneId, displayId) {
+    const itemId = originalTake.call(gameState, sceneId, displayId);
+    if (itemId) {
+      this._updateReputation();
+      this.notifyListeners('inventory');
+      this.notifyListeners('stats');
+    }
+    return itemId;
+  };
+
+  // Wrap loadFromObject / reset
+  const originalLoad = gameState.loadFromObject;
+  gameState.loadFromObject = function(parsedData) {
+    originalLoad.call(gameState, parsedData);
+    this._updateReputation();
+    this.notifyListeners();
+  };
+
+  const originalReset = gameState.reset;
+  gameState.reset = function() {
+    originalReset.call(gameState);
+    this._updateReputation();
+    this.notifyListeners();
+  };
+
+  // Register migration v4 for reputation save file additions
+  gameState.registerMigration(4, (data) => {
+    if (!('museumReputation' in data)) {
+      data.museumReputation = 0;
+    }
+    if (!('obtainedItems' in data)) {
+      const currentItems = new Set();
+      if (data.player && data.player.inventory) {
+        data.player.inventory.forEach(i => currentItems.add(i.item));
+      }
+      if (data.player && data.player.equipment) {
+        Object.values(data.player.equipment).forEach(itemId => {
+          if (itemId) currentItems.add(itemId);
+        });
+      }
+      if (data.displays) {
+        for (const sceneId in data.displays) {
+          data.displays[sceneId].forEach(d => {
+            if (d.item) currentItems.add(d.item);
+          });
+        }
+      }
+      data.obtainedItems = Array.from(currentItems);
+    }
+  });
+}
+
+function injectReputationHeader() {
+  if (document.querySelector('.stat-item--reputation')) return;
+  const goldItem = document.querySelector('.stat-item--gold');
+  if (goldItem) {
+    const repItem = document.createElement('div');
+    repItem.className = 'stat-item stat-item--reputation';
+    repItem.innerHTML = `
+      <span class="stat-item__label">REP</span>
+      <span class="stat-item__value" data-stat-bind="attributes.reputation"></span>
+    `;
+    goldItem.parentNode.appendChild(repItem);
+  }
+}
+
+export default function curatorPlugin(engine) {
+  // 1. Patch state manager methods
+  patchState(engine.data.items);
+
+  // 2. Add dynamic localization keys
+  if (engine.data.locale && engine.data.locale.ui) {
+    Object.assign(engine.data.locale.ui, {
+      museumReputationHeading: "Museum Reputation",
+      museumReputationValue:   "{value} Points",
+      curatorTitle:            "Museum Curator Panel",
+      curatorDone:             "Done",
+      curatorBack:             "Back",
+      curatorCancel:           "Cancel",
+      curatorEmpty:            "(Empty)",
+      curatorInstall:          "+ Install New Display Case ({cost} Gold)",
+      curatorRetrieve:         "Retrieve Artifact",
+      curatorExhibit:          "Exhibit",
+      curatorHeadingExhibits:  "Current Exhibits",
+      curatorSelectArtifact:   "Select an artifact to exhibit:",
+      curatorNoEligibleItems:  "No eligible artifacts in your inventory.",
+      curatorInstallPrompt:    "Enter a name for your new display case:",
+      curatorInstallDefault:   "Display Case {count}",
+      curatorInstallSuccess:   "You spent {cost} Gold and installed the \"{name}\".",
+    });
+  }
+
+  // 3. Register custom action handlers
+  engine.registerAction("manage_exhibits", (action, engine) => {
+    engine._customUIOpen = true;
+    new CuratorUI(engine).render();
+  });
+
+  engine.registerAction("add_display", (action, engine) => {
+    const sceneId = action.scene || gameState.getCurrentSceneId();
+    const cost = action.cost || 0;
+    const p = gameState.getPlayer();
+    if (p.resources.gold < cost) {
+      engine.log(LOG.SYSTEM, engine.t('ui.notEnoughGold'));
+      return;
+    }
+    gameState.modifyPlayerStat('gold', -cost);
+    gameState.addDisplayToScene(sceneId, {
+      name: action.name || "Display Pedestal"
+    });
+    engine.log(LOG.SYSTEM, `A new ${action.name || "Display Pedestal"} has been added to the room.`);
+  });
+
+  // 4. Inject reputation stat DOM element into header
+  injectReputationHeader();
+  gameState.subscribe(() => {
+    injectReputationHeader();
+  });
+}
+
+// standalone CuratorUI dashboard logic
 export class CuratorUI {
   constructor(engine) {
     this.engine = engine;
@@ -49,6 +256,23 @@ export class CuratorUI {
       this.engine.scene.renderOptions(scene);
     };
     container.appendChild(doneBtn);
+
+    // Museum Reputation Section
+    const repSection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);
+    repSection.style.padding = '12px 15px';
+    repSection.style.marginBottom = '15px';
+    repSection.style.background = 'var(--list-item-bg)';
+    repSection.style.border = '1px solid var(--panel-border)';
+    
+    const repTitle = createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('ui.museumReputationHeading'));
+    repSection.appendChild(repTitle);
+    
+    const repVal = gameState.getMuseumReputation();
+    const repText = createElement('div', CSS.ITEM_STATS, this.engine.t('ui.museumReputationValue', { value: repVal }));
+    repText.style.fontWeight = 'bold';
+    repSection.appendChild(repText);
+    
+    panel.insertBefore(repSection, skillsContainer);
 
     // 2. Exhibits Section
     const exhibitsSection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);

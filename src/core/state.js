@@ -78,14 +78,16 @@ class StateManager {
     };
     this.listeners = [];
     this._rules = null;
+    this._items = {};
     this._extraMigrations = {};
   }
 
   // Called by the engine after rules.json is loaded. Replaces the skeleton
   // state with a proper default state derived from the rules. Must be called
   // before any gameplay code accesses the player object.
-  init(rules) {
+  init(rules, items = {}) {
     this._rules = rules;
+    this._items = items;
     this.state = makeDefaultState(rules);
   }
 
@@ -273,6 +275,7 @@ class StateManager {
 
   getReturnSceneId() { return this.state.returnSceneId; }
   setReturnSceneId(sceneId) { this.state.returnSceneId = sceneId; }
+
 
   getChest(chestId) { return this.state.chests[chestId] ?? []; }
 
