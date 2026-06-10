@@ -812,3 +812,51 @@ body {
 .char-creation__confirm-btn { }
 
 .char-creation__load-btn { }
+
+/* ==========================================================================
+ CURATOR PLUGIN — EXHIBITS TABLE
+ ========================================================================== */
+.exhibits-table-container {
+  margin-top: 20px;
+  border-top: 1px solid var(--panel-border);
+  padding-top: 15px;
+}
+
+.exhibits-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.95em;
+}
+
+.exhibits-table thead tr {
+  border-bottom: 2px solid var(--panel-border);
+  color: var(--accent-color);
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.exhibits-table th {
+  padding: 6px 4px;
+  font-weight: 600;
+}
+
+.exhibits-table tbody tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.exhibits-table td {
+  padding: 8px 4px;
+  color: var(--text-primary);
+}
+
+.exhibits-table__item--filled {
+  font-weight: bold;
+  color: var(--accent-color);
+}
+
+.exhibits-table__item--empty {
+  font-style: italic;
+  opacity: 0.5;
+}

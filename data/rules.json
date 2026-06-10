@@ -60,6 +60,9 @@
       { "id": "attributes.stealth",      "localeKey": "stealth",  "bonusPerPoint": 1, "min": 0 }
     ]
   },
+  "curator": {
+    "installCost": 50
+  },
   "tabs": [
     { "id": "inventory-tab",   "localeKey": "ui.tabInventory",  "default": true },
     { "id": "quests-tab",      "localeKey": "ui.tabQuests" },

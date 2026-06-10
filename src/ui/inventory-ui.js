@@ -1,4 +1,4 @@
-import { createElement } from "../core/utils.js";
+import { createElement, getItemLabel } from "../core/utils.js";
 import { EL, CSS, WEAPON_SLOTS } from "../core/config.js";
 
 // InventoryUI renders the inventory and equipment sidebar panels.
@@ -72,7 +72,7 @@ export class InventoryUI {
       }
 
       const li = createElement('li', CSS.ITEM_LIST_ITEM);
-      const label = `${itemData.name}${invItem.amount > 1 ? ` (x${invItem.amount})` : ''}`;
+      const label = getItemLabel(this.engine.data.items, invItem.item, invItem.amount);
       const descDiv = createElement('div', CSS.ITEM_DESCRIPTION);
       descDiv.appendChild(createElement('strong', CSS.ITEM_TITLE, label));
       descDiv.appendChild(createElement('div', CSS.ITEM_TYPE, itemData.description));

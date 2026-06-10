@@ -1,4 +1,4 @@
-import { CSS } from "./config.js";
+import { CSS, EL } from "./config.js";
 
 /**
  * Reads a value from a nested object using a dot-separated path.
@@ -21,12 +21,19 @@ export function setByPath(obj, path, value) {
 
 /**
 * Creates a new DOM element.
+*
+* Content is set via textContent — game data (item names, descriptions,
+* locale strings) is always treated as plain text, never HTML. The only
+* sanctioned HTML channels are scene description bodies (see
+* buildSceneDescription) and engine-authored structural templates; dynamic
+* values embedded in those must go through escapeHtml().
+*
 * @param {string} tag - The HTML tag name.
 * @param {string|string[]} [className] - Optional CSS class names.
-* @param {string} [innerHTML] - Optional inner HTML content.
+* @param {string} [textContent] - Optional plain-text content.
 * @returns {HTMLElement} The constructed DOM element.
 */
-export function createElement(tag, className = "", innerHTML = "") {
+export function createElement(tag, className = "", textContent = "") {
   const el = document.createElement(tag);
   if (className) {
     if (Array.isArray(className)) {
@@ -35,10 +42,26 @@ export function createElement(tag, className = "", innerHTML = "") {
       el.className = className;
     }
   }
-  if (innerHTML) {
-    el.innerHTML = innerHTML;
+  if (textContent) {
+    el.textContent = textContent;
   }
   return el;
+}
+
+/**
+ * Escapes HTML special characters so a string can be safely embedded in an
+ * HTML fragment. Use for any dynamic value (player input, save-file data)
+ * that flows into innerHTML.
+ * @param {string} str - The raw string.
+ * @returns {string} The escaped string.
+ */
+export function escapeHtml(str) {
+  return String(str)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }
 
 /**
@@ -50,6 +73,45 @@ export function clearElement(elementOrId) {
   if (el) {
     el.innerHTML = '';
   }
+}
+
+/**
+ * Returns the display label for an item: its name from the items data map
+ * (falling back to the raw ID) plus an "(xN)" suffix when amount > 1.
+ * @param {Object} itemsData - The item database (engine.data.items).
+ * @param {string} itemId - The item identifier.
+ * @param {number} [amount=1] - Stack size.
+ * @returns {string} e.g. "Healing Potion (x3)".
+ */
+export function getItemLabel(itemsData, itemId, amount = 1) {
+  const name = itemsData[itemId]?.name || itemId;
+  return amount > 1 ? `${name} (x${amount})` : name;
+}
+
+/**
+ * Resets the scene options panel to an empty state: clears the option button
+ * container, removes injected option sections, and clears + hides the skills
+ * container. The location reminder is re-appended as the container's first
+ * child; pass reminderText to also update its text.
+ * @param {string|null} [reminderText=null] - New text for the location reminder.
+ * @returns {{panel: HTMLElement, container: HTMLElement, skillsContainer: HTMLElement, reminder: HTMLElement|null}}
+ */
+export function resetOptionsPanel(reminderText = null) {
+  const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
+  const container = document.getElementById(EL.SCENE_OPTIONS);
+  const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
+  const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
+
+  clearElement(container);
+  clearElement(skillsContainer);
+  skillsContainer.setAttribute('hidden', '');
+  panel.querySelectorAll(`.${CSS.SCENE_OPTIONS_SECTION}`).forEach(el => el.remove());
+
+  if (reminder) {
+    if (reminderText !== null) reminder.innerText = reminderText;
+    container.appendChild(reminder);
+  }
+  return { panel, container, skillsContainer, reminder };
 }
 
 /**

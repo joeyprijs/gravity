@@ -1,6 +1,6 @@
 import { gameState } from "../core/state.js";
-import { createElement, clearElement, buildOptionButton } from "../core/utils.js";
-import { CSS, EL, LOG } from "../core/config.js";
+import { createElement, buildOptionButton, getItemLabel, resetOptionsPanel } from "../core/utils.js";
+import { CSS, LOG } from "../core/config.js";
 
 export class ChestUI {
   constructor(engine, chestId) {
@@ -31,15 +31,7 @@ export class ChestUI {
     const chest = gameState.getChest(this.chestId);
     const pInv = gameState.getPlayer().inventory;
 
-    const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
-    const container = document.getElementById(EL.SCENE_OPTIONS);
-    const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
-    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
-
-    clearElement(container);
-    panel.querySelectorAll(`.${CSS.SCENE_OPTIONS_SECTION}`).forEach(el => el.remove());
-
-    if (reminder) container.appendChild(reminder);
+    const { panel, container, skillsContainer } = resetOptionsPanel();
 
     const doneBtn = buildOptionButton(this.tChest('Done'));
     doneBtn.onclick = () => {
@@ -53,9 +45,8 @@ export class ChestUI {
     chestSection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.tChest('Title')));
     if (chest.length > 0) {
       chest.forEach(b => {
-        const name = this.engine.data.items[b.item]?.name || b.item;
-        const label = b.amount > 1 ? `${name} (x${b.amount})` : name;
-        const btn = buildOptionButton(label, this.tChest('Withdraw'));
+        const name = getItemLabel(this.engine.data.items, b.item);
+        const btn = buildOptionButton(getItemLabel(this.engine.data.items, b.item, b.amount), this.tChest('Withdraw'));
         btn.onclick = () => {
           gameState.withdrawFromChest(this.chestId, b.item, 1);
           this.engine.log(LOG.SYSTEM, this.tAction('Took', { name }));
@@ -75,9 +66,8 @@ export class ChestUI {
     invSection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('ui.inventoryTitle')));
     if (pInv.length > 0) {
       pInv.forEach(b => {
-        const name = this.engine.data.items[b.item]?.name || b.item;
-        const label = b.amount > 1 ? `${name} (x${b.amount})` : name;
-        const btn = buildOptionButton(label, this.tChest('Deposit'));
+        const name = getItemLabel(this.engine.data.items, b.item);
+        const btn = buildOptionButton(getItemLabel(this.engine.data.items, b.item, b.amount), this.tChest('Deposit'));
         btn.onclick = () => {
           gameState.depositToChest(this.chestId, b.item, 1);
           this.engine.log(LOG.SYSTEM, this.tAction('Deposited', { name }));

@@ -1,8 +1,8 @@
 import { gameState } from "../core/state.js";
-import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "../core/utils.js";
-import { MAX_D20_ROLL, EL, CSS, LOG } from "../core/config.js";
+import { createElement, buildSceneDescription, buildOptionButton, resetOptionsPanel } from "../core/utils.js";
+import { CSS, FLAG_KEYS, LOG } from "../core/config.js";
 import { evaluateCondition } from "./condition.js";
-import { roll } from "./dice.js";
+import { performSkillCheck, getEscalatedDc, escalateDc } from "./skill-checks.js";
 
 /**
  * DialogueSystem manages NPC dialogue trees, branching conversations, 
@@ -54,7 +54,7 @@ export class DialogueSystem {
     this.currentNPCId = npcId;
     
     // Clear dynamic DC escalation states for conversational rolls when starting fresh
-    gameState.setFlag(`dialogue_dc_${npcId}`, {});
+    gameState.setFlag(FLAG_KEYS.dialogueDc(npcId), {});
     
     if (npc.conversations) {
       this.renderDialogue("start");
@@ -99,7 +99,7 @@ export class DialogueSystem {
           
           // Optionally save this discount permanently in the session state
           if (action.persistDiscount && pct > 0) {
-            gameState.setFlag(`trade_discount_${this.currentNPCId}`, pct);
+            gameState.setFlag(FLAG_KEYS.tradeDiscount(this.currentNPCId), pct);
           }
           this.renderStore();
           navigated = true;
@@ -112,7 +112,7 @@ export class DialogueSystem {
           break;
           
         case 'makeFriendly':
-          gameState.setFlag(`friendly_${this.currentNPCId}`, true);
+          gameState.setFlag(FLAG_KEYS.friendly(this.currentNPCId), true);
           break;
           
         case 'questTrigger':
@@ -156,25 +156,13 @@ export class DialogueSystem {
       this._runActions(node.actions || []);
     }
 
-    const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
-    const container = document.getElementById(EL.SCENE_OPTIONS);
-    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
-    
-    clearElement(container);
-    panel.querySelectorAll(`.${CSS.SCENE_OPTIONS_SECTION}`).forEach(el => el.remove());
-    if (reminder) {
-      reminder.innerText = this.engine.t('ui.locationDialogue', { name: this.currentNPC.name });
-      container.appendChild(reminder);
-    }
-
-    const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
-    clearElement(skillsContainer);
-    skillsContainer.setAttribute('hidden', '');
+    const { container, skillsContainer } = resetOptionsPanel(
+      this.engine.t('ui.locationDialogue', { name: this.currentNPC.name })
+    );
 
     // ── Conversational Skill Checks ─────────────────────────────────────────
     // Reads escalated DCs from persistent flags to keep saves robust.
-    const dcStateKey = `dialogue_dc_${this.currentNPCId}`;
-    const dcState = gameState.getFlag(dcStateKey);
+    const dcStateKey = FLAG_KEYS.dialogueDc(this.currentNPCId);
     const skillResponses = [];
 
     (node.responses || []).forEach((res, i) => {
@@ -183,7 +171,7 @@ export class DialogueSystem {
 
       const needsCheck = !!res.skillCheck && res.dc > 0;
       const resKey = `${res.skillCheck}_${nodeId}_${i}`;
-      const dc = needsCheck ? (dcState[resKey] || res.dc) : 0;
+      const dc = needsCheck ? getEscalatedDc(dcStateKey, resKey, res.dc) : 0;
 
       const badge = needsCheck ? this.engine.t(`actions.skillBadge.${res.skillCheck}`, { dc }) : null;
       const btn = buildOptionButton(res.text, badge);
@@ -192,19 +180,13 @@ export class DialogueSystem {
         this.engine.log(LOG.PLAYER, res.text, 'choice');
 
         if (needsCheck) {
-          const mod = gameState.getPlayer().attributes[res.skillCheck] || 0;
-          const rolled = roll(1, MAX_D20_ROLL) + mod;
-          const success = rolled >= dc;
-          const logKey = success ? 'actions.skillSuccess' : 'actions.skillFail';
-          
-          this.engine.log(LOG.SYSTEM, this.engine.t(logKey, { roll: rolled, mod, dc, skill: res.skillCheck }), success ? 'loot' : 'system');
-          
+          const { success } = performSkillCheck(this.engine, res.skillCheck, dc);
+
           if (!success) {
             // Conversational DC Escalation: Failed attempts raise the difficulty
             // by a custom increment so that repeat trials are increasingly challenging.
-            dcState[resKey] = dc + (res.increment ?? 1);
-            gameState.setFlag(dcStateKey, dcState);
-            
+            escalateDc(dcStateKey, resKey, dc, res.increment ?? 1);
+
             // Execute failure actions pipeline if registered
             const failNavigated = res.onFailure?.length ? this._runActions(res.onFailure) : false;
             if (!failNavigated) this.renderDialogue(nodeId, null, true);
@@ -246,20 +228,9 @@ export class DialogueSystem {
       buildSceneDescription(this.currentNPC.name, `[${this.currentNPC.name}] ${displayString}`)
     );
 
-    const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
-    const container = document.getElementById(EL.SCENE_OPTIONS);
-    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
-    
-    clearElement(container);
-    panel.querySelectorAll(`.${CSS.SCENE_OPTIONS_SECTION}`).forEach(el => el.remove());
-    if (reminder) {
-      reminder.innerText = this.engine.t('ui.locationDialogue', { name: this.currentNPC.name });
-      container.appendChild(reminder);
-    }
-
-    const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
-    clearElement(skillsContainer);
-    skillsContainer.setAttribute('hidden', '');
+    const { container } = resetOptionsPanel(
+      this.engine.t('ui.locationDialogue', { name: this.currentNPC.name })
+    );
 
     if (this.currentNPC.isMerchant) {
       const tradeBtn = buildOptionButton(this.engine.t('dialogue.trade'));
@@ -290,7 +261,7 @@ export class DialogueSystem {
    */
   _getStock(itemId, npcAmount) {
     if (npcAmount === null) return null;
-    const flagVal = gameState.getFlag(`merchant_stock_${this.currentNPCId}_${itemId}`);
+    const flagVal = gameState.getFlag(FLAG_KEYS.merchantStock(this.currentNPCId, itemId));
     return flagVal !== false ? flagVal : npcAmount;
   }
 
@@ -303,7 +274,7 @@ export class DialogueSystem {
     if (!isUpdate) {
       // Pull saved discounts from previous conversation branches if active
       if (this.activeDiscount === 0) {
-        const saved = gameState.getFlag(`trade_discount_${this.currentNPCId}`);
+        const saved = gameState.getFlag(FLAG_KEYS.tradeDiscount(this.currentNPCId));
         if (saved) this.activeDiscount = saved / 100;
       }
       this.storeOpen = true;
@@ -316,20 +287,9 @@ export class DialogueSystem {
       );
     }
 
-    const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
-    const container = document.getElementById(EL.SCENE_OPTIONS);
-    const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
-    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
-
-    clearElement(container);
-    clearElement(skillsContainer);
-    skillsContainer.setAttribute('hidden', '');
-    panel.querySelectorAll(`.${CSS.SCENE_OPTIONS_SECTION}`).forEach(el => el.remove());
-
-    if (reminder) {
-      reminder.innerText = this.engine.t('ui.locationMerchant', { name: this.currentNPC.name });
-      container.appendChild(reminder);
-    }
+    const { panel, container, skillsContainer } = resetOptionsPanel(
+      this.engine.t('ui.locationMerchant', { name: this.currentNPC.name })
+    );
 
     // Exit Button placed at the top for accessibility
     const neverMind = this.engine.t('dialogue.neverMind');
@@ -375,7 +335,7 @@ export class DialogueSystem {
         
         btn.onclick = () => {
           if (npcAmount !== null) {
-            gameState.setFlag(`merchant_stock_${this.currentNPCId}_${itemId}`, stock - 1);
+            gameState.setFlag(FLAG_KEYS.merchantStock(this.currentNPCId, itemId), stock - 1);
           }
           gameState.modifyPlayerStat('gold', -price);
           gameState.addToInventory(itemId, 1);

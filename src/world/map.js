@@ -1,6 +1,6 @@
 import { gameState } from "../core/state.js";
 import { clearElement } from "../core/utils.js";
-import { MINIMAP_SIZE, MAP_NODE_DEFAULT_BG, CSS, EL } from "../core/config.js";
+import { MINIMAP_SIZE, MAP_PADDING, MAP_NODE_DEFAULT_BG, CSS, EL } from "../core/config.js";
 
 /**
  * MapManager handles both the minimap HUD in the sidebar and the full-screen world map overlay.
@@ -71,7 +71,7 @@ export class MapManager {
     // ── Bounding Box Scaling Mathematics ────────────────────────────────────
     // 1. Compute the strict structural bounds containing all active nodes.
     const bbox = this._computeBbox(regionScenes);
-    const padding = 40; // Pixel buffers to keep scaled margins clean and visible
+    const padding = MAP_PADDING;
     
     // 2. Compute absolute horizontal and vertical footprint sizes.
     const bboxW = (bbox.maxRight - bbox.minLeft) + padding * 2;

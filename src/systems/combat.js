@@ -1,5 +1,5 @@
 import { gameState } from "../core/state.js";
-import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "../core/utils.js";
+import { createElement, buildSceneDescription, buildOptionButton, resetOptionsPanel } from "../core/utils.js";
 import { MAX_D20_ROLL, EL, CSS, LOG, WEAPON_SLOTS, ENEMY_CLAW_ID } from "../core/config.js";
 import { roll, parseDamage } from "./dice.js";
 
@@ -412,17 +412,8 @@ class CombatRenderer {
     desc.querySelector('h2').classList.add(CSS.SCENE_TITLE_GAME_OVER);
     this.cs.engine.currentSceneEl.appendChild(desc);
 
-    const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
-    const container = document.getElementById(EL.SCENE_OPTIONS);
-    const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
-    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
-    
     // Clear panel areas to focus strictly on recovery controls
-    panel.querySelectorAll(`.${CSS.SCENE_OPTIONS_SECTION}`).forEach(el => el.remove());
-    clearElement(skillsContainer);
-    skillsContainer.setAttribute('hidden', '');
-    clearElement(container);
-    if (reminder) container.appendChild(reminder);
+    const { container } = resetOptionsPanel();
 
     const loadBtn = buildOptionButton(this.cs.engine.t('combat.loadLastSave'));
     loadBtn.onclick = () => document.getElementById(EL.BTN_LOAD).click();
@@ -442,20 +433,7 @@ class CombatRenderer {
   render() {
     const livingEnemies = this.cs.enemies.filter(e => e.attributes.healthPoints > 0);
 
-    const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
-    const container = document.getElementById(EL.SCENE_OPTIONS);
-    const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
-    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
-
-    clearElement(container);
-    clearElement(skillsContainer);
-    skillsContainer.setAttribute('hidden', '');
-    panel.querySelectorAll(`.${CSS.SCENE_OPTIONS_SECTION}`).forEach(el => el.remove());
-
-    if (reminder) {
-      reminder.innerText = this.cs.engine.t('ui.locationCombat');
-      container.appendChild(reminder);
-    }
+    const { panel, container, skillsContainer } = resetOptionsPanel(this.cs.engine.t('ui.locationCombat'));
 
     const attacks = this.getAvailableAttacks();
 

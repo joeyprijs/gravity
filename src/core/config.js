@@ -1,6 +1,22 @@
 // Maximum value of a d20 roll — used for hit chance and initiative rolls
 export const MAX_D20_ROLL = 20;
 
+// The reserved item ID representing currency. Loot tables and loot actions
+// using this ID modify the player's gold resource instead of the inventory.
+export const GOLD_ITEM_ID = 'gold';
+
+// Builders for the dynamic state-flag keys used by the engine and built-in
+// plugins. Centralised so each key format is defined exactly once — an inline
+// typo'd key would silently create a brand-new flag.
+export const FLAG_KEYS = {
+  skillDc:       (skillId, sceneId) => `skill_dc_${skillId}_${sceneId}`,
+  dialogueDc:    (npcId)            => `dialogue_dc_${npcId}`,
+  merchantStock: (npcId, itemId)    => `merchant_stock_${npcId}_${itemId}`,
+  tradeDiscount: (npcId)            => `trade_discount_${npcId}`,
+  friendly:      (npcId)            => `friendly_${npcId}`,
+  xpAwarded:     (sceneId)          => `xp_awarded_${sceneId}`,
+};
+
 // Canonical names for all built-in scene option actions.
 // Used by actions.js at registration time and by _validateData() for dev warnings.
 export const ACTIONS = {
@@ -154,6 +170,9 @@ export const MAP_NODE_DEFAULT_BG = 'var(--panel-bg)';
 
 // Size of the minimap HUD in pixels (square)
 export const MINIMAP_SIZE = 200;
+
+// Pixel buffer around the map bounding box so scaled rooms keep clean margins
+export const MAP_PADDING = 40;
 
 // Equipment slots that can hold weapons/spells. Used by combat and inventory UI
 // to identify attackable items without hardcoding slot names in logic code.

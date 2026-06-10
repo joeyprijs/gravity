@@ -5,7 +5,7 @@ import { QuestSystem } from "../systems/quests.js";
 import { NarrativeLog } from "../systems/narrative.js";
 import { UIManager } from "../ui/ui.js";
 import { SceneRenderer } from "../systems/scene.js";
-import { DEFAULT_WORLD_MAP_SIZE, LOG } from "./config.js";
+import { DEFAULT_WORLD_MAP_SIZE, GOLD_ITEM_ID, LOG } from "./config.js";
 import { registerBuiltinActions } from "../systems/actions.js";
 import { parseDamage } from "../systems/dice.js";
 import { CharCreationScreen } from "../screens/char-creation.js";
@@ -22,6 +22,7 @@ class RPGEngine {
 
     this._actionRegistry = new Map();
     this._descriptionHooks = new Map();
+    this._sceneDecorators = [];
     this._events = new Map();
 
     this.narrative = new NarrativeLog();
@@ -196,7 +197,7 @@ class RPGEngine {
 
     for (const [tableId, table] of Object.entries(this.data.tables || {})) {
       for (const entry of (table.entries || [])) {
-        if (entry.item && entry.item !== 'gold' && !items[entry.item])
+        if (entry.item && entry.item !== GOLD_ITEM_ID && !items[entry.item])
           warn(`Table "${tableId}": entry references unknown item "${entry.item}"`);
       }
     }
@@ -220,7 +221,7 @@ class RPGEngine {
             warn(`Scene "${sceneId}": option "${opt.text}" has unknown action type "${action.type}"`);
           if (action.type === 'navigate' && action.destination && !scenes[action.destination])
             warn(`Scene "${sceneId}": navigate → unknown destination "${action.destination}"`);
-          if (action.type === 'loot' && action.item && action.item !== 'gold' && !items[action.item])
+          if (action.type === 'loot' && action.item && action.item !== GOLD_ITEM_ID && !items[action.item])
             warn(`Scene "${sceneId}": loot → unknown item "${action.item}"`);
           if (action.type === 'dialogue' && action.npc && !npcs[action.npc])
             warn(`Scene "${sceneId}": dialogue → unknown NPC "${action.npc}"`);
@@ -230,7 +231,7 @@ class RPGEngine {
             for (const va of (action.onVictory || [])) {
               if (va.type === 'navigate' && va.destination && !scenes[va.destination])
                 warn(`Scene "${sceneId}": combat.onVictory → unknown destination "${va.destination}"`);
-              if (va.type === 'loot' && va.item && va.item !== 'gold' && !items[va.item])
+              if (va.type === 'loot' && va.item && va.item !== GOLD_ITEM_ID && !items[va.item])
                 warn(`Scene "${sceneId}": combat.onVictory → unknown item "${va.item}"`);
             }
           }
@@ -242,7 +243,7 @@ class RPGEngine {
         for (const va of (scene.autoAttack.onVictory || [])) {
           if (va.type === 'navigate' && va.destination && !scenes[va.destination])
             warn(`Scene "${sceneId}": autoAttack.onVictory → unknown destination "${va.destination}"`);
-          if (va.type === 'loot' && va.item && va.item !== 'gold' && !items[va.item])
+          if (va.type === 'loot' && va.item && va.item !== GOLD_ITEM_ID && !items[va.item])
             warn(`Scene "${sceneId}": autoAttack.onVictory → unknown item "${va.item}"`);
         }
       }
@@ -459,6 +460,18 @@ class RPGEngine {
   getDescriptionHook(name) {
     return this._descriptionHooks.get(name) || null;
   }
+
+  // Registers a scene decorator — an object with optional `description` and
+  // `options` functions invoked for every rendered scene:
+  //   description(scene, sceneId, engine) → HTML string appended to the scene description
+  //   options(scene, optionsContainer, engine) → may append extra option buttons
+  // Plugins use this to inject content into scenes they don't own; the per-scene
+  // descriptionHook covers content a scene declares explicitly in its JSON.
+  registerSceneDecorator(decorator) {
+    this._sceneDecorators.push(decorator);
+  }
+
+  get sceneDecorators() { return this._sceneDecorators; }
 }
 
 window.addEventListener('DOMContentLoaded', () => {

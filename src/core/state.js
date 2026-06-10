@@ -229,21 +229,30 @@ class StateManager {
     this.notifyListeners('stats');
   }
 
-  addToInventory(itemId, amount = 1, { silent = false } = {}) {
-    const existing = this.state.player.inventory.find(i => i.item === itemId);
+  // Shared add/remove logic for {item, amount} stack collections (the player
+  // inventory and chest contents share the same entry shape).
+  _addToItemList(list, itemId, amount) {
+    const existing = list.find(i => i.item === itemId);
     if (existing) existing.amount += amount;
-    else this.state.player.inventory.push({ item: itemId, amount });
+    else list.push({ item: itemId, amount });
+  }
+
+  // Decrements a stack and returns the updated list, dropping entries that
+  // reach zero. Returns the list unchanged when the item is absent.
+  _removeFromItemList(list, itemId, amount) {
+    const existing = list.find(i => i.item === itemId);
+    if (!existing) return list;
+    existing.amount -= amount;
+    return existing.amount <= 0 ? list.filter(i => i.item !== itemId) : list;
+  }
+
+  addToInventory(itemId, amount = 1, { silent = false } = {}) {
+    this._addToItemList(this.state.player.inventory, itemId, amount);
     if (!silent) this.notifyListeners('inventory');
   }
 
   removeFromInventory(itemId, amount = 1, { silent = false } = {}) {
-    const existing = this.state.player.inventory.find(i => i.item === itemId);
-    if (existing) {
-      existing.amount -= amount;
-      if (existing.amount <= 0) {
-        this.state.player.inventory = this.state.player.inventory.filter(i => i.item !== itemId);
-      }
-    }
+    this.state.player.inventory = this._removeFromItemList(this.state.player.inventory, itemId, amount);
     if (!silent) this.notifyListeners('inventory');
   }
 
@@ -281,25 +290,15 @@ class StateManager {
 
   depositToChest(chestId, itemId, amount = 1) {
     if (!this.state.chests[chestId]) this.state.chests[chestId] = [];
-    const existing = this.state.chests[chestId].find(i => i.item === itemId);
-    if (existing) {
-      existing.amount += amount;
-    } else {
-      this.state.chests[chestId].push({ item: itemId, amount });
-    }
+    this._addToItemList(this.state.chests[chestId], itemId, amount);
     this.removeFromInventory(itemId, amount, { silent: true });
     this.notifyListeners('inventory');
   }
 
   withdrawFromChest(chestId, itemId, amount = 1) {
     const chest = this.state.chests[chestId];
-    if (!chest) return;
-    const existing = chest.find(i => i.item === itemId);
-    if (!existing) return;
-    existing.amount -= amount;
-    if (existing.amount <= 0) {
-      this.state.chests[chestId] = chest.filter(i => i.item !== itemId);
-    }
+    if (!chest?.find(i => i.item === itemId)) return;
+    this.state.chests[chestId] = this._removeFromItemList(chest, itemId, amount);
     this.addToInventory(itemId, amount, { silent: true });
     this.notifyListeners('inventory');
   }

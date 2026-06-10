@@ -1,8 +1,9 @@
 import { gameState } from "../core/state.js";
-import { createElement, clearElement, buildSceneDescription, buildOptionButton } from "../core/utils.js";
-import { EL, CSS, LOG, MAX_D20_ROLL } from "../core/config.js";
+import { createElement, buildSceneDescription, buildOptionButton, getItemLabel, resetOptionsPanel } from "../core/utils.js";
+import { CSS, FLAG_KEYS, GOLD_ITEM_ID, LOG, MAX_D20_ROLL } from "../core/config.js";
 import { evaluateCondition } from "./condition.js";
 import { roll } from "./dice.js";
+import { performSkillCheck, getEscalatedDc, escalateDc } from "./skill-checks.js";
 
 // SceneRenderer handles navigating to scenes, resolving their descriptions,
 // and rendering their option buttons. It is the main driver of scene-to-scene
@@ -84,7 +85,7 @@ export class SceneRenderer {
     // Reset skill-check DCs on re-entry. Found items persist; escalated DCs reset.
     (scene.skills || []).forEach(opt => {
       if (!opt.skillCheck) return;
-      const key = `skill_dc_${opt.skillCheck}_${sceneId}`;
+      const key = FLAG_KEYS.skillDc(opt.skillCheck, sceneId);
       if (opt.items?.length) {
         // Item-discovery: reset escalated DCs but preserve which items were already found.
         const state = gameState.getFlag(key);
@@ -120,21 +121,7 @@ export class SceneRenderer {
   }
 
   renderOptions(scene) {
-    const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
-    panel.querySelectorAll(`.${CSS.SCENE_OPTIONS_SECTION}`).forEach(el => el.remove());
-
-    const optionsContainer = document.getElementById(EL.SCENE_OPTIONS);
-
-    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
-    clearElement(optionsContainer);
-    if (reminder) {
-      reminder.innerText = scene.title || scene.name;
-      optionsContainer.appendChild(reminder);
-    }
-
-    const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
-    clearElement(skillsContainer);
-    skillsContainer.setAttribute('hidden', '');
+    const { container: optionsContainer, skillsContainer } = resetOptionsPanel(scene.title || scene.name);
 
     const standardOpts = [];
     const backOpts = [];
@@ -164,7 +151,7 @@ export class SceneRenderer {
         const hasItem = gameState.getPlayer().inventory.find(i => i.item === opt.requirements.item);
         if (!hasItem) {
           disabled = true;
-          reqText = this.engine.t('ui.itemRequires', { name: this.engine.data.items[opt.requirements.item]?.name || opt.requirements.item });
+          reqText = this.engine.t('ui.itemRequires', { name: getItemLabel(this.engine.data.items, opt.requirements.item) });
         }
       }
 
@@ -206,7 +193,7 @@ export class SceneRenderer {
     // One-time XP reward on first visit. The flag prevents re-awarding on
     // subsequent visits or after loading a save.
     if (scene.xpReward) {
-      const xpFlag = `xp_awarded_${gameState.getCurrentSceneId()}`;
+      const xpFlag = FLAG_KEYS.xpAwarded(gameState.getCurrentSceneId());
       if (!gameState.getFlag(xpFlag)) {
         gameState.addXP(scene.xpReward);
         gameState.setFlag(xpFlag, true);
@@ -214,20 +201,10 @@ export class SceneRenderer {
       }
     }
 
-    // Auto-inject a consolidated curator option button if this scene supports exhibits
-    const hasDisplays = gameState.getDisplaysForScene(sceneId).length > 0;
-    if (scene.supportsExhibits || hasDisplays) {
-      const btn = buildOptionButton(this.engine.t('plugin.curator.curatorTitle'));
-      btn.onclick = () => {
-        this.engine.isGameStart = false;
-        this.engine.log(LOG.PLAYER, this.engine.t('plugin.curator.curatorTitle'), 'choice');
-        this.handleOption({
-          text: this.engine.t('plugin.curator.curatorTitle'),
-          log: false,
-          actions: [{ type: 'manage_exhibits' }]
-        });
-      };
-      optionsContainer.appendChild(btn);
+    // Plugin-registered decorators may append extra option buttons (e.g. the
+    // curator plugin's exhibit-management button).
+    for (const decorator of this.engine.sceneDecorators) {
+      if (decorator.options) decorator.options(scene, optionsContainer, this.engine);
     }
 
     backOpts.forEach(renderOptionBtn);
@@ -253,7 +230,7 @@ export class SceneRenderer {
   // Item-discovery skill check: roll against per-item DCs, track found items.
   // Returns a button, or null if all items have already been found.
   _buildItemDiscoveryButton(opt, sceneId, scene) {
-    const skillKey = `skill_dc_${opt.skillCheck}_${sceneId}`;
+    const skillKey = FLAG_KEYS.skillDc(opt.skillCheck, sceneId);
     const items = opt.items;
     let state = gameState.getFlag(skillKey);
     if (!state || !state.dcs) {
@@ -299,13 +276,12 @@ export class SceneRenderer {
       });
       const lootItems = [];
       aggregated.forEach(d => {
-        if (d.item === 'gold') {
+        if (d.item === GOLD_ITEM_ID) {
           gameState.modifyPlayerStat('gold', d.amount);
           lootItems.push(`${d.amount} ${this.engine.t('loot.gold')}`);
         } else {
           gameState.addToInventory(d.item, d.amount);
-          const itemName = this.engine.data.items[d.item]?.name || d.item;
-          lootItems.push(d.amount > 1 ? `${itemName} (x${d.amount})` : itemName);
+          lootItems.push(getItemLabel(this.engine.data.items, d.item, d.amount));
         }
       });
       if (lootItems.length > 0) {
@@ -330,7 +306,7 @@ export class SceneRenderer {
   // Flavor-only skill check: no roll, shown once then hidden permanently.
   // Returns a button, or null if it has already been triggered.
   _buildFlavorButton(opt, sceneId, scene) {
-    const skillKey = `skill_dc_${opt.skillCheck}_${sceneId}`;
+    const skillKey = FLAG_KEYS.skillDc(opt.skillCheck, sceneId);
     if (gameState.getFlag(skillKey)) return null;
     const btn = buildOptionButton(opt.text, this.engine.t('actions.lookAroundBadge'));
     btn.onclick = () => {
@@ -346,30 +322,20 @@ export class SceneRenderer {
   // Pass/fail skill check with an escalating DC on failure.
   // Always returns a button (the check remains available until the player passes).
   _buildPassFailButton(opt, i, sceneId, scene) {
-    const skillKey = `skill_dc_${opt.skillCheck}_${sceneId}`;
-    const skillState = gameState.getFlag(skillKey) || {};
-    const dc = skillState[i] ?? opt.dc;
+    const skillKey = FLAG_KEYS.skillDc(opt.skillCheck, sceneId);
+    const dc = getEscalatedDc(skillKey, i, opt.dc);
     const btn = buildOptionButton(opt.text, this.engine.t(`actions.skillBadge.${opt.skillCheck}`, { dc }));
     btn.onclick = () => {
       this.engine.isGameStart = false;
       this.engine.log(LOG.PLAYER, opt.text, 'choice');
-      const mod = gameState.getPlayer().attributes[opt.skillCheck] || 0;
-      const rolled = roll(1, MAX_D20_ROLL) + mod;
-      const success = rolled >= dc;
-      this.engine.log(
-        LOG.SYSTEM,
-        this.engine.t(success ? 'actions.skillSuccess' : 'actions.skillFail',
-          { roll: rolled, mod, dc, skill: opt.skillCheck }),
-        success ? 'loot' : 'system'
-      );
+      const { success } = performSkillCheck(this.engine, opt.skillCheck, dc);
       if (success) {
         const sceneIdBefore = gameState.getCurrentSceneId();
         this.engine.runActions(opt.actions || []);
         const didNavigate = gameState.getCurrentSceneId() !== sceneIdBefore || this.engine.inCombat;
         if (!didNavigate) this.engine.renderScene(gameState.getCurrentSceneId());
       } else {
-        skillState[i] = dc + (opt.increment ?? 1);
-        gameState.setFlag(skillKey, skillState);
+        escalateDc(skillKey, i, dc, opt.increment ?? 1);
         if (opt.onFailure?.length) {
           const sceneIdBefore = gameState.getCurrentSceneId();
           this.engine.runActions(opt.onFailure);
@@ -422,23 +388,11 @@ export class SceneRenderer {
       if (hook) desc += hook(this.engine);
     }
 
-    // Dynamic displays status representation
+    // Plugin-registered decorators may append dynamic HTML to any scene's
+    // description (e.g. the curator plugin's exhibits table).
     const sceneId = gameState.getCurrentSceneId() || scene.id;
-    if (sceneId) {
-      const displays = gameState.getDisplaysForScene(sceneId);
-      if (displays.length > 0) {
-        let tableHtml = `<div class="exhibits-table-container" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">`;
-        tableHtml += `<table class="exhibits-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95em;">`;
-        tableHtml += `<thead><tr style="border-bottom: 2px solid var(--border-color); color: var(--accent-color); font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.05em;"><th style="padding: 6px 4px; font-weight: 600;">Display Stand</th><th style="padding: 6px 4px; font-weight: 600;">Showcased Relic</th></tr></thead>`;
-        tableHtml += `<tbody>`;
-        displays.forEach(d => {
-          const itemName = d.item ? (this.engine.data.items[d.item]?.name || d.item) : this.engine.t('plugin.curator.curatorEmpty');
-          const itemStyle = d.item ? `font-weight: bold; color: var(--accent-color);` : `font-style: italic; opacity: 0.5;`;
-          tableHtml += `<tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);"><td style="padding: 8px 4px; color: var(--text-color);">${d.name}</td><td style="padding: 8px 4px; ${itemStyle}">${itemName}</td></tr>`;
-        });
-        tableHtml += `</tbody></table></div>`;
-        desc += tableHtml;
-      }
+    for (const decorator of this.engine.sceneDecorators) {
+      if (decorator.description) desc += decorator.description(scene, sceneId, this.engine) || '';
     }
 
     return desc;

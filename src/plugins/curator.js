@@ -1,6 +1,6 @@
 import { gameState } from "../core/state.js";
-import { createElement, clearElement, buildOptionButton } from "../core/utils.js";
-import { CSS, EL, LOG } from "../core/config.js";
+import { createElement, buildOptionButton, escapeHtml, getItemLabel, resetOptionsPanel } from "../core/utils.js";
+import { ACTIONS, CSS, LOG } from "../core/config.js";
 
 // Helper to wrap StateManager methods for reputation calculations.
 // Only wrap once to prevent infinite recursion.
@@ -140,6 +140,26 @@ export function patchState(items = {}) {
   });
 }
 
+// Builds the exhibits status table appended to the description of any scene
+// that has display cases. Returns '' for scenes without displays. Display
+// names come from player input (prompt), so all dynamic values are escaped.
+function buildExhibitsTable(engine, sceneId) {
+  const displays = gameState.getDisplaysForScene(sceneId);
+  if (!displays.length) return '';
+
+  const header = `<thead><tr>`
+    + `<th>${engine.t('plugin.curator.curatorTableStand')}</th>`
+    + `<th>${engine.t('plugin.curator.curatorTableRelic')}</th>`
+    + `</tr></thead>`;
+  const rows = displays.map(d => {
+    const itemName = d.item ? getItemLabel(engine.data.items, d.item) : engine.t('plugin.curator.curatorEmpty');
+    const stateClass = d.item ? 'exhibits-table__item--filled' : 'exhibits-table__item--empty';
+    return `<tr><td>${escapeHtml(d.name)}</td><td class="${stateClass}">${escapeHtml(itemName)}</td></tr>`;
+  }).join('');
+
+  return `<div class="exhibits-table-container"><table class="exhibits-table">${header}<tbody>${rows}</tbody></table></div>`;
+}
+
 function injectReputationHeader() {
   if (document.querySelector('.stat-item--reputation')) return;
   const goldItem = document.querySelector('.stat-item--gold');
@@ -158,6 +178,22 @@ export default function curatorPlugin(engine) {
   // 1. Patch state manager methods
   patchState(engine.data.items);
 
+  // 2. Decorate every scene that has display cases: exhibits table appended to
+  // the description, plus the curator-panel option button.
+  engine.registerSceneDecorator({
+    description: (scene, sceneId) => buildExhibitsTable(engine, sceneId),
+    options: (scene, optionsContainer) => {
+      const sceneId = gameState.getCurrentSceneId();
+      const hasDisplays = gameState.getDisplaysForScene(sceneId).length > 0;
+      if (!scene.supportsExhibits && !hasDisplays) return;
+      const btn = buildOptionButton(engine.t('plugin.curator.curatorTitle'));
+      btn.onclick = () => engine.scene.handleOption({
+        text: engine.t('plugin.curator.curatorTitle'),
+        actions: [{ type: ACTIONS.MANAGE_EXHIBITS }]
+      });
+      optionsContainer.appendChild(btn);
+    }
+  });
 
   // 3. Register custom action handlers
   engine.registerAction("manage_exhibits", (action, engine) => {
@@ -203,18 +239,7 @@ export class CuratorUI {
     const scene = this.engine.data.scenes[sceneId];
     if (!scene) return;
 
-    const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
-    const container = document.getElementById(EL.SCENE_OPTIONS);
-    const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
-    const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
-
-    clearElement(container);
-    panel.querySelectorAll(`.${CSS.SCENE_OPTIONS_SECTION}`).forEach(el => el.remove());
-
-    if (reminder) {
-      reminder.innerText = this.engine.t('plugin.curator.curatorTitle');
-      container.appendChild(reminder);
-    }
+    const { panel, container, skillsContainer } = resetOptionsPanel(this.engine.t('plugin.curator.curatorTitle'));
 
     if (screen === 'dashboard') {
       this._renderDashboard(container, panel, skillsContainer, sceneId, scene);
@@ -260,8 +285,7 @@ export class CuratorUI {
     const displays = gameState.getDisplaysForScene(sceneId);
     if (displays.length > 0) {
       displays.forEach(d => {
-        const itemName = d.item ? (this.engine.data.items[d.item]?.name || d.item) : this.engine.t('plugin.curator.curatorEmpty');
-        const badge = d.item ? itemName : this.engine.t('plugin.curator.curatorEmpty');
+        const badge = d.item ? getItemLabel(this.engine.data.items, d.item) : this.engine.t('plugin.curator.curatorEmpty');
         const btn = buildOptionButton(d.name, badge);
         btn.onclick = () => {
           if (d.item) {
@@ -281,7 +305,7 @@ export class CuratorUI {
     panel.insertBefore(exhibitsSection, skillsContainer);
 
     // 3. Purchase Exhibit Case Button
-    const installCost = 50;
+    const installCost = this.engine.data.rules?.curator?.installCost ?? 50;
     const p = gameState.getPlayer();
     const canInstall = p.resources.gold >= installCost;
     
@@ -320,7 +344,7 @@ export class CuratorUI {
 
     const itemId = display.item;
     const itemData = this.engine.data.items[itemId];
-    const name = itemData?.name || itemId;
+    const name = getItemLabel(this.engine.data.items, itemId);
 
     // 1. Back button
     const backBtn = buildOptionButton(this.engine.t('plugin.curator.curatorBack'));
@@ -395,11 +419,10 @@ export class CuratorUI {
     if (eligibleItems.length > 0) {
       eligibleItems.forEach(invItem => {
         const itemData = this.engine.data.items[invItem.item];
-        const name = itemData?.name || invItem.item;
-        const label = invItem.amount > 1 ? `${name} (x${invItem.amount})` : name;
+        const name = getItemLabel(this.engine.data.items, invItem.item);
         const badge = itemData?.type || null;
 
-        const btn = buildOptionButton(label, badge);
+        const btn = buildOptionButton(getItemLabel(this.engine.data.items, invItem.item, invItem.amount), badge);
         btn.onclick = () => {
           gameState.placeItemInDisplay(sceneId, displayId, invItem.item);
           this.engine.log(LOG.SYSTEM, this.engine.t('actions.displayDeposited', { name, display: display.name }));

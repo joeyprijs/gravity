@@ -1,5 +1,5 @@
 import { gameState } from "../core/state.js";
-import { LOG, ACTIONS } from "../core/config.js";
+import { LOG, ACTIONS, FLAG_KEYS, GOLD_ITEM_ID } from "../core/config.js";
 
 // Built-in action handlers for the scene option action pipeline.
 // Each handler receives (action, engine) — the action object from the pipeline
@@ -13,7 +13,7 @@ import { LOG, ACTIONS } from "../core/config.js";
 
 function handleLoot(action, engine) {
   const amount = action.amount || 1;
-  if (action.item === 'gold') {
+  if (action.item === GOLD_ITEM_ID) {
     gameState.modifyPlayerStat('gold', amount);
     if (action.log !== false) {
       const msg = typeof action.log === 'string' ? action.log : engine.t('loot.foundGold', { amount });
@@ -36,7 +36,7 @@ function handleLoot(action, engine) {
 
 function handleCombat(action, engine) {
   const allEnemies = action.enemies || [];
-  const enemies = allEnemies.filter(id => !gameState.getFlag(`friendly_${id}`));
+  const enemies = allEnemies.filter(id => !gameState.getFlag(FLAG_KEYS.friendly(id)));
   if (enemies.length === 0) {
     engine.log(LOG.SYSTEM, engine.t('combat.avoided'), 'system');
     return;

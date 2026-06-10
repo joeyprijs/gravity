@@ -6,6 +6,8 @@
   "curatorBack":             "Back",
   "curatorCancel":           "Cancel",
   "curatorEmpty":            "(Empty)",
+  "curatorTableStand":       "Display Stand",
+  "curatorTableRelic":       "Showcased Relic",
   "curatorInstall":          "+ Install New Display Case ({cost} Gold)",
   "curatorRetrieve":         "Retrieve Artifact",
   "curatorExhibit":          "Exhibit",
