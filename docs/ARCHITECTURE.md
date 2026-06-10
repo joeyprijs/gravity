@@ -1,0 +1,140 @@
+# Gravity Engine Architecture
+
+This document explains how the engine boots, how the modules fit together, and — most importantly for contributors — the implicit contracts (conditions, actions, events, hooks) that the JSON data and the plugin API are built on.
+
+## Design Principles
+
+1. **Zero dependencies.** The engine runs as native ES Modules in the browser; tests run on Node's built-in test runner. Nothing is compiled or bundled.
+2. **Data-driven.** All game content (scenes, NPCs, items, quests, rules, loot tables) lives in JSON under `data/`. Authoring a game requires no JavaScript.
+3. **Unidirectional reactive state.** All mutations go through `gameState` (a `StateManager` singleton); the UI re-renders via listeners. Game logic never touches DOM values directly, and UI code never owns game rules.
+4. **Decoupled subsystems.** Systems never import each other. They communicate through the engine's delegate methods or its event bus.
+
+## Boot Flow
+
+`index.html` loads a single entry point, `src/core/engine.js`, which constructs `RPGEngine` on `DOMContentLoaded`:
+
+1. **Construct subsystems** — combat, dialogue, quests, narrative log, scene renderer, UI manager. Each receives the engine instance.
+2. **`init()`** registers the built-in actions, then loads `data/index.json` (the manifest) and fetches every registered asset in parallel.
+3. **Plugins load next** — *before* state initialisation, so they can register save migrations. Plugin locales declared in the manifest are loaded into a namespaced `plugin.<id>.*` locale tree.
+4. **Cross-reference validation** (`_validateData`) warns on dangling IDs (unknown items, scenes, enemies, missing locale keys). Developer tooling only — it never blocks the game.
+5. **`gameState.init(rules)`** replaces the skeleton state with defaults derived from `rules.json`; missions and scene flags are registered on top.
+6. **UI setup + subscription** — `gameState.subscribe((_, hint) => ui.update(hint))` makes every state change reactively re-render the relevant UI region.
+7. **Character creation** is shown for a fresh state; otherwise the starting scene renders.
+
+## Module Graph
+
+```
+engine.js (orchestrator, delegate API, event bus, registries)
+├── core/state.js      gameState singleton, listeners, save/load + migrations
+├── core/config.js     CSS/EL registries, ACTIONS, FLAG_KEYS, constants
+├── core/utils.js      DOM helpers (createElement, resetOptionsPanel, …)
+├── systems/
+│   ├── scene.js       scene rendering, options, item discovery
+│   ├── combat.js      initiative-based turn combat + combat renderer
+│   ├── dialogue.js    conversation trees, merchant shops
+│   ├── quests.js      mission lifecycle (listens to scene:entered)
+│   ├── narrative.js   scrollable narrative log
+│   ├── actions.js     built-in action handlers
+│   ├── condition.js   condition AST evaluator (pure)
+│   ├── skill-checks.js d20 checks + DC escalation helpers
+│   └── dice.js        roll() and damage parsing (pure)
+├── ui/                UIManager + tab panels (inventory, quests, chests)
+├── world/map.js       minimap + full-screen world map
+├── screens/char-creation.js
+└── plugins/           optional modules loaded via the manifest
+```
+
+There are no circular imports. Subsystems reach each other only through `engine.*` delegates (`engine.renderScene()`, `engine.log()`, `engine.runActions()`, …) or events.
+
+## State Management
+
+`gameState` (in `core/state.js`) is the single source of truth. Key contracts:
+
+- **Inventory/chest entries** have the shape `{ item: string, amount: number }`.
+- **Mutations notify listeners** with an optional *hint* (`'stats'`, `'inventory'`, `'quests'`, `'map'`, `'displays'`) so the UI can re-render only the affected region. No hint means "update everything".
+- **Flags** are a flat key→value map. Static flags are declared in `data/flags/`; dynamic flags (DC escalation, merchant stock, etc.) use the key builders in `config.js` (`FLAG_KEYS`) so each format is defined exactly once.
+- **Saves** are the whole state object, JSON-serialised and Base64-encoded. `SAVE_VERSION` gates a chain of migration functions so old saves stay loadable; plugins add their own with `gameState.registerMigration(version, fn)` using versions above the core number.
+
+## Conditions
+
+Conditions gate scene options, dialogue responses, description variants, and auto-combat. They are evaluated by `systems/condition.js`:
+
+**Combinators** — `and: [...]`, `or: [...]`, `not: {...}`, nested arbitrarily.
+
+**Leaf nodes:**
+
+| Shape | Meaning |
+|---|---|
+| `{ "flag": "name", "value": true }` | Flag equals value |
+| `{ "item": "id", "count": 2 }` | Inventory holds ≥ count (count optional) |
+| `{ "mission": "id", "status": "active" }` | Quest status (`not_started`/`active`/`complete`) |
+| `{ "level": 3 }` | Player level comparison |
+| `{ "gold": { "less_than": 10 } }` | Gold comparison |
+| `{ "<attribute>": 2 }` | Any custom attribute from `rules.customAttributes` |
+
+Numeric leaves accept a bare number (meaning *at least*) or an operator object: `at_least`, `more_than`, `at_most`, `less_than`, `is`.
+
+## Actions
+
+Actions are the mutation pipeline: an array of `{ "type": ..., ...params }` objects executed in order by `engine.runActions()`. Handlers live in a registry; built-ins are registered from `systems/actions.js` under the names in `config.js` `ACTIONS`:
+
+`loot`, `combat`, `dialogue`, `navigate`, `return`, `full_rest`, `heal`, `set_flag`, `log`, `manage_chest` — plus plugin-registered actions (the curator plugin adds `manage_exhibits` and `add_display`).
+
+Conventions:
+- Handlers receive `(action, engine)` and own only their side effect; navigation is its own `navigate` action.
+- `action.log` controls output: `false` silences it, a string overrides the default message.
+- Dialogue nodes support a few dialogue-local action types handled inside `DialogueSystem._runActions` (`goToConversation`, `trade`, `leave`, `makeFriendly`, `questTrigger`); anything else is forwarded to the global registry.
+
+Register a custom action from a plugin: `engine.registerAction('my_action', (action, engine) => { ... })`.
+
+## Events
+
+A minimal pub/sub bus on the engine: `engine.on(event, fn)`, `engine.off(event, fn)`, `engine.emit(event, data)`.
+
+Current events:
+
+| Event | Payload | Emitted when |
+|---|---|---|
+| `scene:entered` | `{ sceneId, scene }` | A scene with a `questTrigger` is actually entered (not on option re-renders or save restores) |
+| `player:apSpent` | `{ remaining }` | The player spends AP in combat; drives the enemy-turn hand-off |
+
+## Scene Rendering Hooks
+
+Two mechanisms let dynamic content reach scene rendering:
+
+- **Description hooks** (`engine.registerDescriptionHook(name, fn)`) — *per-scene, opt-in*: a scene declares `"descriptionHook": "name"` in its JSON and the hook's return value (an HTML string) is appended to that scene's description.
+- **Scene decorators** (`engine.registerSceneDecorator({ description?, options? })`) — *global*: invoked for every rendered scene. `description(scene, sceneId, engine)` returns HTML appended to the description; `options(scene, optionsContainer, engine)` may append extra option buttons. The curator plugin uses this to render its exhibits table and "Museum Curator Panel" button on any scene that has display cases.
+
+## Plugins
+
+Plugins are ES modules declared in `data/index.json`:
+
+```json
+"plugins": [
+  {
+    "id": "curator",
+    "src": "./src/plugins/curator.js",
+    "locales": { "en": "./src/plugins/curator/locales/en.json" }
+  }
+]
+```
+
+The default export receives the engine instance at boot (before state init). Available extension points:
+
+- `engine.registerAction(name, fn)` — custom action types
+- `engine.registerDescriptionHook(name, fn)` / `engine.registerSceneDecorator(decorator)` — dynamic scene content
+- `engine.on(event, fn)` — react to engine events
+- `gameState.registerMigration(version, fn)` — save-format migrations for plugin state
+- Locales declared in the manifest are exposed under `engine.t('plugin.<id>.<key>')`
+
+`src/plugins/curator.js` (museum curation + reputation) is the reference implementation.
+
+## UI Layer
+
+- `UIManager.update(hint)` re-renders the hinted region; `[data-stat-bind="path"]` elements are bound to player state by dot-path.
+- The scene options panel (option buttons, injected sections, skills container, location reminder) is reset through `resetOptionsPanel()` in `core/utils.js` — every system that takes over the panel (scene, combat, dialogue, store, chest, curator) goes through it.
+- **Text vs HTML policy:** `createElement(tag, class, text)` sets `textContent` — game data is always treated as plain text. The only sanctioned HTML channels are scene description bodies (`buildSceneDescription`) and engine-authored structural templates; any dynamic value embedded in those must pass through `escapeHtml()`.
+
+## Testing
+
+`npm test` runs `node --test tests/*.test.js` — synchronous unit tests against the real modules (no mocks, no DOM). State, combat math, conditions, dice, displays, reputation, and character-creation logic are covered; DOM-dependent modules (UI layer, scene/dialogue rendering) currently are not.

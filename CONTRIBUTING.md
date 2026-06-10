@@ -4,6 +4,8 @@ First off, thank you for taking the time to contribute! Gravity is a dependency-
 
 Following these guidelines helps ensure the project remains high-performance, lightweight, and maintainable.
 
+Before diving in, read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — it documents the boot flow, module graph, and the data/plugin contracts (conditions, actions, events, hooks) the engine is built on.
+
 ---
 
 ## 1. Ground Rules & Code Design
@@ -12,7 +14,7 @@ Gravity holds a strict commitment to the following architectural design principl
 1.  **Zero Third-Party Production Dependencies:** The core engine and studio run directly in the browser via native ES Modules. Do not introduce npm compilation dependencies (like webpack, Babel, or React) in the core runtimes.
 2.  **Unidirectional Reactive State:** All game mutations must proceed strictly through `gameState` (an instance of `StateManager` in `state.js`), which triggers UI re-renders reactively via listeners. Never manipulate HTML element values directly from action/combat logic code.
 3.  **Cross-Subsystem Decoupling:** Subsystems (Combat, Narrative, Scene, Quests, Dialogue) must remain completely decoupled, avoiding circular imports. Communication is routed through the Event Bus (`engine.emit` and `engine.on`) or thin coordinator delegates on `RPGEngine`.
-4.  **Formal JSDoc Commenting:** All new functions, helper utilities, and classes must carry formal JSDoc blocks (`/** ... */`) detailing parameter types, return parameters, and visual behavior configurations.
+4.  **JSDoc on Public APIs:** Exported functions, shared helper utilities, and any method called from other modules must carry formal JSDoc blocks (`/** ... */`) documenting parameter types and return values. For internal/private methods, a concise comment explaining *why* the code exists is preferred over restating *what* it does.
 
 ---
 
@@ -67,6 +69,6 @@ Gravity utilizes Node.js's native test runner (available in Node 18+). There are
     ```bash
     git checkout -b feature/my-cool-mechanic
     ```
-2.  **Format and Comment:** Ensure your changes follow strict JSDoc standards. Write highly descriptive inline comments for complex mathematical transformations, rendering optimizations, or state checks.
+2.  **Format and Comment:** Document public APIs with JSDoc (see Ground Rules). Write descriptive inline comments for complex mathematical transformations, rendering optimizations, or state checks.
 3.  **Run Checks:** Ensure that `npm test` runs successfully with 100% assertions passing before opening a PR.
 4.  **Open PR:** Open a Pull Request on GitHub detailing your changes, reproduction cases, and test results.

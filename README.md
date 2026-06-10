@@ -3,7 +3,7 @@
 [![License: Unlicense](https://img.shields.io/badge/License-Unlicense-blue.svg)](LICENSE)
 [![Dependencies: None](https://img.shields.io/badge/Dependencies-Zero-success.svg)](#tech-stack)
 [![Platform: Browser](https://img.shields.io/badge/Platform-Browser--Native-cyan.svg)](#running-locally)
-[![Tests: Synchronous Node](https://img.shields.io/badge/Tests-85--Passed-emerald.svg)](#running-locally)
+[![Tests: Node Native](https://img.shields.io/badge/Tests-Node--Native-emerald.svg)](#running-locally)
 
 A browser-native, zero-dependency data-driven text RPG engine and creator suite. Define your entire world—scenes, branch screenplays, characters, quests, items, rules, and maps—entirely in JSON with no scripting required.
 
@@ -24,7 +24,7 @@ A browser-native, zero-dependency data-driven text RPG engine and creator suite.
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
 - [Running Locally](#running-locally)
-- [Core Concepts](#core-concepts)
+- [Core Concepts](#core-concepts) — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full engine internals
 - [Content Authoring Reference](#content-authoring-reference)
   - [Manifest — `data/index.json`](#manifest--dataindexjson)
   - [Rules — `data/rules.json`](#rules--datarulesjson)
@@ -116,12 +116,18 @@ gravity/
 │   │   └── chest-ui.js      # Chest vault deposit/withdraw interfaces
 │   ├── world/
 │   │   └── map.js           # Minimap scaling & centering scroll world map
-│   └── screens/
-│       └── char-creation.js # Character allocation pre-game point-buy
-├── tests/                   # 85 synchronous Node unit tests
+│   ├── screens/
+│   │   └── char-creation.js # Character allocation pre-game point-buy
+│   └── plugins/
+│       ├── curator.js       # Museum curation & reputation plugin
+│       └── curator/locales/ # Plugin locale namespaces
+├── tests/                   # Synchronous Node unit tests (npm test)
+│   ├── char-creation.test.js
 │   ├── combat.test.js
 │   ├── condition.test.js
 │   ├── dice.test.js
+│   ├── display.test.js
+│   ├── reputation.test.js
 │   └── state.test.js
 ├── schemas/                 # Project JSON Schema validation files
 │   ├── item.schema.json
