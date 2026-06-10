@@ -1,38 +1,38 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Gravity Scene Definition",
-  "type": "OBJECT",
+  "type": "object",
   "properties": {
     "title": {
-      "type": "STRING",
+      "type": "string",
       "description": "Visual header name of the scene. Takes precedence over 'name'."
     },
     "name": {
-      "type": "STRING",
+      "type": "string",
       "description": "Display name of the scene (used for map tags and fallback headers)."
     },
     "region": {
-      "type": "STRING",
+      "type": "string",
       "description": "Region key from data/index.json indicating map grouping."
     },
     "xpReward": {
-      "type": "INTEGER",
+      "type": "integer",
       "minimum": 1,
       "description": "One-time XP bonus awarded to the player upon their first entry."
     },
     "descriptionHook": {
-      "type": "STRING",
+      "type": "string",
       "description": "Optional runtime callback hook (e.g., 'museumChestContents') to append dynamic text."
     },
     "mapDefinitions": {
-      "type": "OBJECT",
+      "type": "object",
       "properties": {
-        "top": { "type": "INTEGER" },
-        "left": { "type": "INTEGER" },
-        "width": { "type": "INTEGER", "minimum": 1 },
-        "height": { "type": "INTEGER", "minimum": 1 },
+        "top": { "type": "integer" },
+        "left": { "type": "integer" },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
         "background": {
-          "type": "STRING",
+          "type": "string",
           "description": "CSS color expression used to draw room nodes on the map canvas."
         }
       },
@@ -40,21 +40,21 @@
       "additionalProperties": false
     },
     "questTrigger": {
-      "type": "OBJECT",
+      "type": "object",
       "properties": {
-        "mission": { "type": "STRING", "description": "Mission identifier from data/index.json." },
-        "status": { "type": "STRING", "enum": ["active", "complete"] }
+        "mission": { "type": "string", "description": "Mission identifier from data/index.json." },
+        "status": { "type": "string", "enum": ["active", "complete"] }
       },
       "required": ["mission", "status"],
       "additionalProperties": false
     },
     "description": {
-      "type": ["STRING", "ARRAY"],
+      "type": ["string", "array"],
       "description": "Body text of the room. Can be a flat string or conditional variant array.",
       "items": {
-        "type": "OBJECT",
+        "type": "object",
         "properties": {
-          "text": { "type": "STRING" },
+          "text": { "type": "string" },
           "condition": { "$ref": "#/definitions/condition" }
         },
         "required": ["text"],
@@ -62,15 +62,15 @@
       }
     },
     "autoAttack": {
-      "type": "OBJECT",
+      "type": "object",
       "properties": {
         "enemies": {
-          "type": "ARRAY",
-          "items": { "type": "STRING" }
+          "type": "array",
+          "items": { "type": "string" }
         },
         "condition": { "$ref": "#/definitions/condition" },
         "onVictory": {
-          "type": "ARRAY",
+          "type": "array",
           "items": { "$ref": "#/definitions/action" }
         }
       },
@@ -78,26 +78,26 @@
       "additionalProperties": false
     },
     "options": {
-      "type": "ARRAY",
+      "type": "array",
       "items": {
-        "type": "OBJECT",
+        "type": "object",
         "properties": {
-          "text": { "type": "STRING" },
+          "text": { "type": "string" },
           "log": {
-            "type": ["BOOLEAN", "STRING"],
+            "type": ["boolean", "string"],
             "description": "False silences logging; a string prints a custom narrative description."
           },
           "condition": { "$ref": "#/definitions/condition" },
           "requirements": {
-            "type": "OBJECT",
+            "type": "object",
             "properties": {
-              "item": { "type": "STRING", "description": "Item ID required in inventory to enable choice." }
+              "item": { "type": "string", "description": "Item ID required in inventory to enable choice." }
             },
             "required": ["item"],
             "additionalProperties": false
           },
           "actions": {
-            "type": "ARRAY",
+            "type": "array",
             "items": { "$ref": "#/definitions/action" }
           }
         },
@@ -106,38 +106,38 @@
       }
     },
     "skills": {
-      "type": "ARRAY",
+      "type": "array",
       "items": {
-        "type": "OBJECT",
+        "type": "object",
         "properties": {
-          "text": { "type": "STRING" },
-          "skillCheck": { "type": "STRING", "description": "Attribute ID to roll d20 check against." },
-          "dc": { "type": "INTEGER", "minimum": 1 },
-          "increment": { "type": "INTEGER", "description": "Difficulty escalation points added per failure." },
-          "npcName": { "type": "STRING", "description": "Opponent/conversationalist name printed in log." },
+          "text": { "type": "string" },
+          "skillCheck": { "type": "string", "description": "Attribute ID to roll d20 check against." },
+          "dc": { "type": "integer", "minimum": 1 },
+          "increment": { "type": "integer", "description": "Difficulty escalation points added per failure." },
+          "npcName": { "type": "string", "description": "Opponent/conversationalist name printed in log." },
           "condition": { "$ref": "#/definitions/condition" },
           "actions": {
-            "type": "ARRAY",
+            "type": "array",
             "items": { "$ref": "#/definitions/action" },
             "description": "Action pipeline executed on successful checks."
           },
           "onFailure": {
-            "type": "ARRAY",
+            "type": "array",
             "items": { "$ref": "#/definitions/action" },
             "description": "Action pipeline executed on failed checks."
           },
           "items": {
-            "type": "ARRAY",
+            "type": "array",
             "description": "Item-discovery entries supporting sequential search yields.",
             "items": {
-              "type": "OBJECT",
+              "type": "object",
               "properties": {
-                "item": { "type": "STRING" },
-                "table": { "type": "STRING", "description": "Loot table ID to draw random drop." },
-                "amount": { "type": "INTEGER", "minimum": 1 },
-                "itemDrops": { "type": "INTEGER", "minimum": 1 },
-                "dc": { "type": "INTEGER", "minimum": 1 },
-                "increment": { "type": "INTEGER" }
+                "item": { "type": "string" },
+                "table": { "type": "string", "description": "Loot table ID to draw random drop." },
+                "amount": { "type": "integer", "minimum": 1 },
+                "itemDrops": { "type": "integer", "minimum": 1 },
+                "dc": { "type": "integer", "minimum": 1 },
+                "increment": { "type": "integer" }
               },
               "additionalProperties": false
             }
@@ -148,21 +148,21 @@
       }
     },
     "supportsExhibits": {
-      "type": "BOOLEAN",
+      "type": "boolean",
       "description": "If true, this scene supports exhibits curatorship."
     },
     "displays": {
-      "type": "ARRAY",
+      "type": "array",
       "description": "Initial display cases defined in this scene.",
       "items": {
-        "type": "OBJECT",
+        "type": "object",
         "properties": {
-          "id": { "type": "STRING" },
-          "name": { "type": "STRING" },
-          "item": { "type": ["STRING", "NULL"] },
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "item": { "type": ["string", "null"] },
           "allowedTypes": {
-            "type": "ARRAY",
-            "items": { "type": "STRING" }
+            "type": "array",
+            "items": { "type": "string" }
           }
         },
         "required": ["id", "name"],
@@ -175,45 +175,45 @@
   
   "definitions": {
     "condition": {
-      "type": "OBJECT",
+      "type": "object",
       "properties": {
-        "and": { "type": "ARRAY", "items": { "$ref": "#/definitions/condition" } },
-        "or": { "type": "ARRAY", "items": { "$ref": "#/definitions/condition" } },
+        "and": { "type": "array", "items": { "$ref": "#/definitions/condition" } },
+        "or": { "type": "array", "items": { "$ref": "#/definitions/condition" } },
         "not": { "$ref": "#/definitions/condition" },
-        "flag": { "type": "STRING" },
-        "value": { "type": "BOOLEAN" },
-        "item": { "type": "STRING" },
-        "count": { "type": "INTEGER", "minimum": 1 },
-        "gold": { "type": ["INTEGER", "OBJECT"] },
-        "level": { "type": ["INTEGER", "OBJECT"] },
-        "mission": { "type": "STRING" },
-        "status": { "type": "STRING", "enum": ["active", "complete", "not_started"] }
+        "flag": { "type": "string" },
+        "value": { "type": "boolean" },
+        "item": { "type": "string" },
+        "count": { "type": "integer", "minimum": 1 },
+        "gold": { "type": ["integer", "object"] },
+        "level": { "type": ["integer", "object"] },
+        "mission": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "complete", "not_started"] }
       },
       "additionalProperties": {
-        "type": ["INTEGER", "OBJECT"]
+        "type": ["integer", "object"]
       }
     },
     
     "action": {
-      "type": "OBJECT",
+      "type": "object",
       "properties": {
-        "type": { "type": "STRING" },
-        "destination": { "type": "STRING" },
-        "flag": { "type": "STRING" },
-        "value": { "type": "BOOLEAN" },
-        "item": { "type": "STRING" },
-        "amount": { "type": "INTEGER" },
-        "xpReward": { "type": "INTEGER" },
-        "enemies": { "type": "ARRAY", "items": { "type": "STRING" } },
-        "onVictory": { "type": "ARRAY", "items": { "$ref": "#/definitions/action" } },
-        "npc": { "type": "STRING" },
-        "message": { "type": "STRING" },
-        "chest": { "type": "STRING" },
-        "mission": { "type": "STRING" },
-        "status": { "type": "STRING", "enum": ["active", "complete"] },
-        "node": { "type": "STRING" },
-        "tradeDiscount": { "type": ["NUMBER", "STRING"] },
-        "persistDiscount": { "type": "BOOLEAN" }
+        "type": { "type": "string" },
+        "destination": { "type": "string" },
+        "flag": { "type": "string" },
+        "value": { "type": "boolean" },
+        "item": { "type": "string" },
+        "amount": { "type": "integer" },
+        "xpReward": { "type": "integer" },
+        "enemies": { "type": "array", "items": { "type": "string" } },
+        "onVictory": { "type": "array", "items": { "$ref": "#/definitions/action" } },
+        "npc": { "type": "string" },
+        "message": { "type": "string" },
+        "chest": { "type": "string" },
+        "mission": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "complete"] },
+        "node": { "type": "string" },
+        "tradeDiscount": { "type": ["number", "string"] },
+        "persistDiscount": { "type": "boolean" }
       },
       "required": ["type"]
     }

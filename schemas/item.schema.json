@@ -1,64 +1,64 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Gravity Item Definition",
-  "type": "OBJECT",
+  "type": "object",
   "properties": {
     "name": {
-      "type": "STRING",
+      "type": "string",
       "description": "Visual display name of the item."
     },
     "type": {
-      "type": "STRING",
+      "type": "string",
       "enum": ["Weapon", "Spell", "Armor", "Consumable", "Flavour"],
       "description": "The dynamic item classification."
     },
     "description": {
-      "type": "STRING",
+      "type": "string",
       "description": "Flavour/lore text rendered in the inventory card."
     },
     "value": {
-      "type": "INTEGER",
+      "type": "integer",
       "minimum": 0,
       "description": "Gold purchase value. Reselling fetches half value by default."
     },
     "reputation": {
-      "type": "INTEGER",
+      "type": "integer",
       "minimum": 0,
       "description": "Reputation value. Contributes to player's reputation upon acquisition and museum's reputation when placed in display cases."
     },
     "slot": {
-      "type": "STRING",
+      "type": "string",
       "enum": ["Head", "Amulet", "Torso", "Left Hand", "Right Hand", "Legs"],
       "description": "The equipment slot target. Required for weapons, spells, and armor."
     },
     "actionPoints": {
-      "type": "INTEGER",
+      "type": "integer",
       "minimum": 0,
       "description": "Action Points (AP) required to swing/equip/use inside combat."
     },
     "bonusHitChance": {
-      "type": "INTEGER",
+      "type": "integer",
       "description": "Flat bonus added to d20 hit rolls. Used for weapons and spells."
     },
     "attributes": {
-      "type": "OBJECT",
+      "type": "object",
       "description": "Custom parameter extensions depending on item type.",
       "properties": {
         "damageRoll": {
-          "type": "STRING",
+          "type": "string",
           "pattern": "^((\\d+)d(\\d+)([\\+\\-]\\d+)?|\\d+\\-\\d+)$",
           "description": "Damage formula: Standard NdF[+/-M] (e.g. '1d6+1') or range (e.g. '1-4')."
         },
         "armorClassBonus": {
-          "type": "INTEGER",
+          "type": "integer",
           "description": "Flat AC protection added when equipped. Used for Armor."
         },
         "healingAmount": {
-          "type": ["INTEGER", "STRING"],
+          "type": ["integer", "string"],
           "description": "HP restored on consumption. Supports flat numbers or dice notation."
         },
         "teleportScene": {
-          "type": "STRING",
+          "type": "string",
           "description": "Scene ID to teleport to upon usage. Used for consumable items."
         }
       },
