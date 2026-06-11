@@ -75,9 +75,10 @@
     "rightHandButton":  "Right hand"
   },
   "loot": {
-    "receivedItem":   "You received {name}!",
     "foundGold":      "Found {amount} Gold.",
     "foundItem":      "Found {name}.",
+    "receivedGold":   "You received {amount} Gold!",
+    "receivedItem":   "You received {name}!",
     "foundItems":     "Found {list}.",
     "gold":           "Gold",
     "xpGained":       "+{amount} XP"

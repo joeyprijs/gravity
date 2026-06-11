@@ -85,6 +85,7 @@ The dialogue actions (`goToConversation`, `trade`, `leave`, `makeFriendly`, `que
 Conventions:
 - Handlers receive `(action, engine)` and own only their side effect; navigation is its own `navigate` action.
 - `action.log` controls output: `false` silences it, a string overrides the default message.
+- On `loot` actions, `"received": true` marks the item/gold as handed over (NPC gift or reward) rather than found — it switches the log message from the `loot.foundItem`/`loot.foundGold` locale keys to `loot.receivedItem`/`loot.receivedGold`.
 
 Register a custom action from a plugin: `engine.registerAction('my_action', (action, engine) => { ... })`.
 

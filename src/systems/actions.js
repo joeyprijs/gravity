@@ -11,20 +11,25 @@ import { LOG, ACTIONS, FLAG_KEYS, GOLD_ITEM_ID } from "../core/config.js";
 //
 // Register additional actions at runtime: window.gameEngine.registerAction(name, fn)
 
+// action.received distinguishes how the loot reached the player: false/absent
+// means it was found (searched, dropped by an enemy), true means it was handed
+// over (an NPC gift or reward). It only selects the log message's locale key.
 function handleLoot(action, engine) {
   const amount = action.amount || 1;
   if (action.item === GOLD_ITEM_ID) {
     gameState.modifyPlayerStat('gold', amount);
     if (action.log !== false) {
-      const msg = typeof action.log === 'string' ? action.log : engine.t('loot.foundGold', { amount });
+      const key = action.received ? 'loot.receivedGold' : 'loot.foundGold';
+      const msg = typeof action.log === 'string' ? action.log : engine.t(key, { amount });
       engine.log(LOG.SYSTEM, msg, 'loot');
     }
   } else {
     gameState.addToInventory(action.item, amount);
     if (action.log !== false) {
+      const key = action.received ? 'loot.receivedItem' : 'loot.foundItem';
       const msg = typeof action.log === 'string'
         ? action.log
-        : engine.t('loot.receivedItem', { name: engine.data.items[action.item]?.name || action.item });
+        : engine.t(key, { name: engine.data.items[action.item]?.name || action.item });
       engine.log(LOG.SYSTEM, msg, 'loot');
     }
   }

@@ -24,7 +24,7 @@
           "increment": 3,
           "condition": { "not": { "flag": "stranger_reputation_known", "value": true } },
           "actions": [
-            { "type": "loot", "item": "healing_potion" },
+            { "type": "loot", "item": "healing_potion", "received": true },
             { "type": "set_flag", "flag": "stranger_reputation_known", "value": true },
             { "type": "trade", "tradeDiscount": 10, "persistDiscount": true }
           ]
