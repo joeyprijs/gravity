@@ -92,7 +92,7 @@ export class SceneRenderer {
     this.engine.openScene();
     // Scene content comes from developer-authored JSON, not user input —
     // buildSceneDescription uses innerHTML for the body to allow basic formatting.
-    const descEl = buildSceneDescription(scene.title || scene.name, currentDesc);
+    const descEl = buildSceneDescription(scene.title || scene.name, currentDesc, this.engine.t.bind(this.engine));
     this._lastDescBodyEl = descEl.querySelector(`.${CSS.SCENE_BODY}`);
     this.engine.currentSceneEl.appendChild(descEl);
     gameState.appendLog({ type: 'scene', title: scene.title || scene.name, desc: currentDesc });
@@ -262,7 +262,7 @@ export class SceneRenderer {
   // found loot, persists the updated state, and re-renders the options.
   _resolveDiscovery(opt, state, skillKey, scene) {
     const items = opt.items;
-    const mod = gameState.getPlayer().attributes[opt.skillCheck] || 0;
+    const mod = gameState.getPlayer().attributes[opt.skillCheck] ?? 0;
     const hitRoll = roll(1, MAX_D20_ROLL) + mod;
 
     const newlyFound = [];

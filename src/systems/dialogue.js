@@ -64,7 +64,7 @@ export class DialogueSystem {
     this.engine.registerAction(ACTIONS.TRADE, requireNPC(ACTIONS.TRADE, (action) => {
       const pct = typeof action.tradeDiscount === 'string'
         ? parseFloat(action.tradeDiscount)
-        : (action.tradeDiscount || 0);
+        : (action.tradeDiscount ?? 0);
       this.activeDiscount = pct / 100;
 
       // Optionally save this discount permanently in the session state
@@ -296,7 +296,8 @@ export class DialogueSystem {
       this.engine.currentSceneEl.appendChild(
         buildSceneDescription(
           this.engine.t('dialogue.merchantWaresTitle', { name: this.currentNPC.name }),
-          this.engine.t('dialogue.merchantGreeting', { name: this.currentNPC.name })
+          this.engine.t('dialogue.merchantGreeting', { name: this.currentNPC.name }),
+          this.engine.t.bind(this.engine)
         )
       );
     }
@@ -337,10 +338,9 @@ export class DialogueSystem {
    * @param {HTMLElement} skillsContainer - Insertion anchor for option sections.
    */
   _buildBuySection(panel, skillsContainer) {
+    // carriedItems entries are normalized to { item, amount } at load.
     const buyItems = (this.currentNPC.carriedItems || [])
-      .map(entry => {
-        const id = typeof entry === 'string' ? entry : entry.item;
-        const npcAmount = typeof entry === 'object' && entry !== null ? (entry.amount ?? null) : null;
+      .map(({ item: id, amount: npcAmount }) => {
         const stock = this._getStock(id, npcAmount);
         return { id, item: this.engine.data.items[id], stock, npcAmount };
       })

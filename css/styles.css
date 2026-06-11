@@ -860,3 +860,27 @@ body {
   font-style: italic;
   opacity: 0.5;
 }
+
+/* ==========================================================================
+ CURATOR PLUGIN — DASHBOARD PANEL
+ ========================================================================== */
+.curator-panel__rep {
+  padding: 12px 15px;
+  margin-bottom: 15px;
+  background: var(--list-item-bg);
+  border: 1px solid var(--panel-border);
+}
+
+.curator-panel__rep-value {
+  font-weight: bold;
+}
+
+.curator-panel__item-info {
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.curator-panel__empty-note {
+  text-align: center;
+  padding: 20px;
+}

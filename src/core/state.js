@@ -38,7 +38,7 @@ function migrate(data, extraMigrations = {}) {
 }
 
 function makeDefaultState(rules) {
-  const player = JSON.parse(JSON.stringify(rules.playerDefaults));
+  const player = structuredClone(rules.playerDefaults);
   (rules.customAttributes ?? []).forEach(attr => {
     player.attributes[attr.id] = attr.default ?? 0;
   });

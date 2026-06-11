@@ -7,7 +7,11 @@ import { EL, CSS } from "../core/config.js";
 // It also owns the currentSceneEl reference (the active scene DOM node) so
 // subsystems can append content to the correct container.
 export class NarrativeLog {
-  constructor() {
+  // t: locale lookup (engine.t) used when rebuilding scene descriptions on
+  // save restore — passed in explicitly so this module never reaches back
+  // into the engine through globals.
+  constructor(t = null) {
+    this.t = t;
     this.el = document.getElementById(EL.SCENE_NARRATIVE);
     this.currentSceneEl = null;
     this.isGameStart = true;
@@ -62,7 +66,7 @@ export class NarrativeLog {
     logEntries.forEach(entry => {
       if (entry.type === 'scene') {
         this.openScene();
-        this.currentSceneEl.appendChild(buildSceneDescription(entry.title, entry.desc));
+        this.currentSceneEl.appendChild(buildSceneDescription(entry.title, entry.desc, this.t));
         lastDesc = entry.desc;
       } else {
         if (!this.currentSceneEl) this.openScene();

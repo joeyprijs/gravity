@@ -15,7 +15,7 @@ import { LOG, ACTIONS, FLAG_KEYS, GOLD_ITEM_ID } from "../core/config.js";
 // means it was found (searched, dropped by an enemy), true means it was handed
 // over (an NPC gift or reward). It only selects the log message's locale key.
 function handleLoot(action, engine) {
-  const amount = action.amount || 1;
+  const amount = action.amount ?? 1;
   if (action.item === GOLD_ITEM_ID) {
     gameState.modifyPlayerStat('gold', amount);
     if (action.log !== false) {

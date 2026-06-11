@@ -84,7 +84,8 @@ export class CombatSystem {
     this.engine.currentSceneEl.appendChild(
       buildSceneDescription(
         this.engine.t('combat.fightingTitle', { names }),
-        this.enemies.length === 1 ? (this.enemies[0].description || null) : null
+        this.enemies.length === 1 ? (this.enemies[0].description || null) : null,
+        this.engine.t.bind(this.engine)
       )
     );
 
@@ -93,11 +94,11 @@ export class CombatSystem {
     // ── Initiative Calculations ─────────────────────────────────────────────
     // Rolled as: 1d20 + flat initiative modifier.
     // Ties are sorted alphabetically or index-wise. Higher values act earlier.
-    this.playerInit = roll(1, MAX_D20_ROLL) + (player.attributes.initiative || 0);
+    this.playerInit = roll(1, MAX_D20_ROLL) + (player.attributes.initiative ?? 0);
     let highestEnemyInit = 0;
     
     this.enemies.forEach(e => {
-      e.initiativeRoll = roll(1, MAX_D20_ROLL) + (e.attributes.initiative || 0);
+      e.initiativeRoll = roll(1, MAX_D20_ROLL) + (e.attributes.initiative ?? 0);
       if (e.initiativeRoll > highestEnemyInit) highestEnemyInit = e.initiativeRoll;
     });
 
@@ -110,7 +111,7 @@ export class CombatSystem {
     
     const allCombatants = [
       { name: this.engine.t('combat.initiativeYou'), roll: this.playerInit },
-      ...this.enemies.map(e => ({ name: e.name, roll: e.initiativeRoll || 0 }))
+      ...this.enemies.map(e => ({ name: e.name, roll: e.initiativeRoll ?? 0 }))
     ].sort((a, b) => b.roll - a.roll);
 
     const turnOrder = allCombatants.map(c => c.name).join(' → ');
@@ -131,7 +132,7 @@ export class CombatSystem {
    * @param {object} targetEnemy - The cloned NPC object being attacked.
    */
   playerAttack(weapon, targetEnemy) {
-    const hitModifier = weapon.bonusHitChance || 0;
+    const hitModifier = weapon.bonusHitChance ?? 0;
     const baseRoll = roll(1, MAX_D20_ROLL);
     const hitRoll = baseRoll + hitModifier;
     const modStr = hitModifier !== 0 ? (hitModifier > 0 ? `+${hitModifier}` : hitModifier) : "";
@@ -183,12 +184,12 @@ export class CombatSystem {
     // Sort living enemies by initiative roll descending so fast enemies attack first
     const allLiving = this.enemies
       .filter(e => e.attributes.healthPoints > 0)
-      .sort((a, b) => (b.initiativeRoll || 0) - (a.initiativeRoll || 0));
+      .sort((a, b) => (b.initiativeRoll ?? 0) - (a.initiativeRoll ?? 0));
 
     // Filter which enemies are allowed to act in the current phase
     const enemiesToAct = phase === 'before'
-      ? allLiving.filter(e => (e.initiativeRoll || 0) > this.playerInit)
-      : allLiving.filter(e => (e.initiativeRoll || 0) <= this.playerInit);
+      ? allLiving.filter(e => (e.initiativeRoll ?? 0) > this.playerInit)
+      : allLiving.filter(e => (e.initiativeRoll ?? 0) <= this.playerInit);
 
     for (const enemy of enemiesToAct) {
       const eWeapon = this._resolveEnemyWeapon(enemy);
@@ -240,7 +241,7 @@ export class CombatSystem {
       gameState.modifyPlayerStat('ap', player.resources.ap.max - player.resources.ap.current);
       
       // 2. Check if high-initiative enemies act at the beginning of the next round.
-      const hasBeforeEnemies = this.enemies.some(e => e.attributes.healthPoints > 0 && (e.initiativeRoll || 0) > this.playerInit);
+      const hasBeforeEnemies = this.enemies.some(e => e.attributes.healthPoints > 0 && (e.initiativeRoll ?? 0) > this.playerInit);
       if (hasBeforeEnemies) {
         this.enemyTurn('before');
       } else {
@@ -290,7 +291,7 @@ export class CombatSystem {
       eAP -= eWeapon.actionPoints;
       attackCount++;
 
-      const hitModifier = eWeapon.bonusHitChance || 0;
+      const hitModifier = eWeapon.bonusHitChance ?? 0;
       const baseRoll = roll(1, MAX_D20_ROLL);
       const hitRoll = baseRoll + hitModifier;
       const modStr = hitModifier !== 0 ? (hitModifier > 0 ? `+${hitModifier}` : hitModifier) : "";
@@ -407,7 +408,8 @@ class CombatRenderer {
     this.cs.engine.openScene();
     const desc = buildSceneDescription(
       this.cs.engine.t('combat.gameOverTitle'),
-      this.cs.engine.t('combat.gameOverBody')
+      this.cs.engine.t('combat.gameOverBody'),
+      this.cs.engine.t.bind(this.cs.engine)
     );
     desc.querySelector('h2').classList.add(CSS.SCENE_TITLE_GAME_OVER);
     this.cs.engine.currentSceneEl.appendChild(desc);

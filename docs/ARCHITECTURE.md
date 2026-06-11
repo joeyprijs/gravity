@@ -14,7 +14,7 @@ This document explains how the engine boots, how the modules fit together, and �
 `index.html` loads a single entry point, `src/core/engine.js`, which constructs `RPGEngine` on `DOMContentLoaded`:
 
 1. **Construct subsystems** — combat, dialogue, quests, narrative log, scene renderer, UI manager. Each receives the engine instance.
-2. **`init()`** registers the built-in actions, then loads `data/index.json` (the manifest), resolves the active language (see *Localisation*), and fetches every registered asset in parallel.
+2. **`init()`** registers the built-in actions, then loads `data/index.json` (the manifest), resolves the active language (see *Localisation*), and fetches every registered asset in parallel. NPC `carriedItems` are normalized at load to `{ item, amount }` objects (`amount: null` = unlimited), so data files may use the string shorthand but consumers only ever see one shape.
 3. **Plugins load next** — *before* state initialisation, so they can register save migrations. Plugin locales declared in the manifest are loaded into a namespaced `plugin.<id>.*` locale tree, using the active language (falling back to the plugin's `en` file).
 4. **Data validation** (`core/validate.js`, invoked via `_validateData`) checks all loaded data: dangling IDs (items, scenes, enemies, NPCs, tables, conversation nodes), unknown action types and `skillCheck` names, enemies missing the attributes combat requires, and missing locale keys. Issues are printed to the console grouped per source entity. Developer tooling only — it never blocks the game.
 5. **`gameState.init(rules)`** replaces the skeleton state with defaults derived from `rules.json`; missions and scene flags are registered on top.

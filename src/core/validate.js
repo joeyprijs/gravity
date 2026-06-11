@@ -11,9 +11,30 @@ import { GOLD_ITEM_ID } from "./config.js";
 const COMBAT_NPC_ATTRIBUTES = ['healthPoints', 'armorClass', 'actionPoints'];
 
 /**
+ * Normalizes every NPC's carriedItems to the object form
+ * { item: string, amount: number|null } (amount null = unlimited stock).
+ * Data files may use the string shorthand (see npc.schema.json); the engine
+ * normalizes once at load so every consumer sees a single shape. Runs before
+ * validateGameData, which assumes the normalized form. Mutates in place.
+ *
+ * @param {Object<string, object>} npcs - The loaded NPC database.
+ */
+export function normalizeCarriedItems(npcs) {
+  for (const npc of Object.values(npcs || {})) {
+    if (!npc.carriedItems) continue;
+    npc.carriedItems = npc.carriedItems.map(entry =>
+      typeof entry === 'string'
+        ? { item: entry, amount: null }
+        : { item: entry.item, amount: entry.amount ?? null }
+    );
+  }
+}
+
+/**
  * Validates all loaded game data and returns the issues found.
  *
  * @param {object} data - The engine's data object ({ items, npcs, scenes, missions, tables, rules, locale }).
+ *   NPC carriedItems must already be normalized (see normalizeCarriedItems).
  * @param {Set<string>} knownActionTypes - Registered action type names (engine._actionRegistry keys).
  * @returns {{group: string, message: string}[]} One entry per issue; empty when the data is clean.
  */
@@ -142,8 +163,7 @@ function validateNpcs(ctx) {
     const group = `NPC "${npcId}"`;
 
     for (const entry of (npc.carriedItems || [])) {
-      const itemId = typeof entry === 'string' ? entry : entry.item;
-      if (!ctx.items[itemId]) ctx.add(group, `carriedItems → unknown item "${itemId}"`);
+      if (!ctx.items[entry.item]) ctx.add(group, `carriedItems → unknown item "${entry.item}"`);
     }
 
     for (const [slot, itemId] of Object.entries(npc.equipment || {})) {

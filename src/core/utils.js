@@ -121,8 +121,13 @@ export function resetOptionsPanel(reminderText = null) {
  * title is set via textContent (plain text — NPC/scene names are not trusted HTML).
  * body is set via innerHTML and may contain authored HTML (<br>, <span>, etc.).
  * Omit body (or pass null) for scenes that have no description paragraph.
+ *
+ * @param {string} title - The scene/speaker title.
+ * @param {string|null} [body=null] - Authored HTML body, or null for none.
+ * @param {((key: string) => string)|null} [t=null] - Locale lookup (engine.t)
+ *   used to translate the Narrator label; plain "Narrator" when omitted.
  */
-export function buildSceneDescription(title, body = null) {
+export function buildSceneDescription(title, body = null, t = null) {
   const div = createElement('div', CSS.SCENE_DESCRIPTION);
   const h2 = createElement('h2', CSS.SCENE_TITLE);
   h2.textContent = title;
@@ -134,13 +139,8 @@ export function buildSceneDescription(title, body = null) {
     // user-supplied or save-file-derived content here.
     let html = body;
     if (body && !/^\s*\[/.test(body)) {
-      let label = 'Narrator';
-      if (typeof window !== 'undefined' && window.gameEngine && typeof window.gameEngine.t === 'function') {
-        const translated = window.gameEngine.t('log.Narrator');
-        if (translated !== 'log.Narrator') {
-          label = translated;
-        }
-      }
+      const translated = t ? t('log.Narrator') : null;
+      const label = translated && translated !== 'log.Narrator' ? translated : 'Narrator';
       html = `[${label}] ${body}`;
     }
     p.innerHTML = html;

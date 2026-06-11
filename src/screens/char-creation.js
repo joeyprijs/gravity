@@ -24,12 +24,15 @@ export class CharCreationScreen {
     const stats = rules.charCreation?.stats || [];
     // Track how many points have been spent on each stat
     this.spent = Object.fromEntries(stats.map(s => [s.id, 0]));
+    // Increment buttons per stat ID — kept here so the rules config objects
+    // stay free of DOM references.
+    this._incrementBtns = new Map();
     this._render();
   }
 
   get pointsRemaining() {
     const used = Object.values(this.spent).reduce((a, b) => a + b, 0);
-    return (this.rules.charCreation?.pointBudget || 0) - used;
+    return (this.rules.charCreation?.pointBudget ?? 0) - used;
   }
 
   _render() {
@@ -147,10 +150,7 @@ export class CharCreationScreen {
     row.appendChild(info);
     row.appendChild(controls);
 
-    // Store refs for external updates
-    stat._decrementBtn = decrementBtn;
-    stat._incrementBtn = incrementBtn;
-    stat._valueEl = valueEl;
+    this._incrementBtns.set(stat.id, incrementBtn);
 
     this._updateStatRow(stat, valueEl, decrementBtn, incrementBtn);
     return row;
@@ -201,10 +201,9 @@ export class CharCreationScreen {
   _updateConfirmBtn() {
     this.confirmBtn.disabled = !this.nameInput.value.trim();
     // Also refresh all increment buttons since points may have changed
-    const stats = this.rules.charCreation?.stats || [];
-    stats.forEach(stat => {
-      if (stat._incrementBtn) stat._incrementBtn.disabled = this.pointsRemaining <= 0;
-    });
+    for (const btn of this._incrementBtns.values()) {
+      btn.disabled = this.pointsRemaining <= 0;
+    }
   }
 
   _confirm() {

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validateGameData } from '../src/core/validate.js';
+import { normalizeCarriedItems, validateGameData } from '../src/core/validate.js';
 
 const KNOWN_ACTIONS = new Set(['loot', 'combat', 'navigate', 'set_flag', 'dialogue', 'goToConversation', 'leave']);
 
@@ -60,8 +60,26 @@ function makeCleanData() {
 }
 
 function validate(data) {
+  // Mirror the engine's load order: carriedItems are normalized before validation.
+  normalizeCarriedItems(data.npcs);
   return validateGameData(data, KNOWN_ACTIONS);
 }
+
+test('normalizeCarriedItems: string shorthand becomes { item, amount: null }', () => {
+  const npcs = { vendor: { carriedItems: ['potion', { item: 'sword', amount: 2 }, { item: 'rope' }] } };
+  normalizeCarriedItems(npcs);
+  assert.deepEqual(npcs.vendor.carriedItems, [
+    { item: 'potion', amount: null },
+    { item: 'sword', amount: 2 },
+    { item: 'rope', amount: null },
+  ]);
+});
+
+test('normalizeCarriedItems: NPCs without carriedItems are untouched', () => {
+  const npcs = { hermit: { name: 'Hermit' } };
+  normalizeCarriedItems(npcs);
+  assert.deepEqual(npcs.hermit, { name: 'Hermit' });
+});
 
 test('clean data produces no issues', () => {
   assert.deepEqual(validate(makeCleanData()), []);

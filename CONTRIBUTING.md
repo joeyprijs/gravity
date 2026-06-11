@@ -15,6 +15,8 @@ Gravity holds a strict commitment to the following architectural design principl
 2.  **Unidirectional Reactive State:** All game mutations must proceed strictly through `gameState` (an instance of `StateManager` in `state.js`), which triggers UI re-renders reactively via listeners. Never manipulate HTML element values directly from action/combat logic code.
 3.  **Cross-Subsystem Decoupling:** Subsystems (Combat, Narrative, Scene, Quests, Dialogue) must remain completely decoupled, avoiding circular imports. Communication is routed through the Event Bus (`engine.emit` and `engine.on`) or thin coordinator delegates on `RPGEngine`.
 4.  **JSDoc on Public APIs:** Exported functions, shared helper utilities, and any method called from other modules must carry formal JSDoc blocks (`/** ... */`) documenting parameter types and return values. For internal/private methods, a concise comment explaining *why* the code exists is preferred over restating *what* it does.
+5.  **Defaults use `??`, not `||`:** For numeric or nullable defaults (`amount ?? 1`, `cost ?? 0`), use the nullish coalescing operator so `0` survives as a valid value. Reserve `||` for genuine truthiness fallbacks (e.g. `scene.title || scene.name`, where an empty string should also fall through).
+6.  **Event binding:** Use `addEventListener` for one-time setup bindings (toolbar buttons, document-level listeners). For handlers on elements that are re-rendered or re-bound on every update, assign `element.onclick` directly — re-assignment *replaces* the previous handler instead of stacking duplicates.
 
 ---
 

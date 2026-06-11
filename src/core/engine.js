@@ -7,7 +7,7 @@ import { UIManager } from "../ui/ui.js";
 import { SceneRenderer } from "../systems/scene.js";
 import { DEFAULT_WORLD_MAP_SIZE, LOG } from "./config.js";
 import { resolveLanguage } from "./i18n.js";
-import { validateGameData } from "./validate.js";
+import { normalizeCarriedItems, validateGameData } from "./validate.js";
 import { registerBuiltinActions } from "../systems/actions.js";
 import { parseDamage } from "../systems/dice.js";
 import { CharCreationScreen } from "../screens/char-creation.js";
@@ -35,7 +35,7 @@ class RPGEngine {
     this._sceneDecorators = [];
     this._events = new Map();
 
-    this.narrative = new NarrativeLog();
+    this.narrative = new NarrativeLog(this.t.bind(this));
     this.combatSystem = new CombatSystem(this);
     this.dialogueSystem = new DialogueSystem(this);
     this.questSystem = new QuestSystem(this);
@@ -181,6 +181,10 @@ class RPGEngine {
         manifest.rules ? fetch(manifest.rules, { cache: 'no-cache' }).then(r => r.json()).catch(() => null) : Promise.resolve(null)
       ]);
 
+      // Normalize once at load so consumers (merchant store, validation) only
+      // ever see carriedItems in its { item, amount } object form.
+      normalizeCarriedItems(npcs);
+
       this.data = { items, npcs, scenes, missions, tables, regions: manifest.regions || {}, worldMapSize: manifest.worldMapSize || DEFAULT_WORLD_MAP_SIZE, locale: this.data.locale, rules, flags };
 
       // Note: registerMissions and registerSceneFlags are called by init()
@@ -243,7 +247,7 @@ class RPGEngine {
     const itemData = this.data.items[itemId];
     if (!itemData) return;
 
-    const apCost = itemData.actionPoints || 0;
+    const apCost = itemData.actionPoints ?? 0;
     if (this.inCombat && gameState.getPlayer().resources.ap.current < apCost) {
       this.log(LOG.SYSTEM, this.t('player.notEnoughAP', { cost: apCost }));
       return;
@@ -286,7 +290,7 @@ class RPGEngine {
     const targetSlot = slot || itemData?.slot;
     if (!itemData || !targetSlot) return;
 
-    const apCost = itemData.actionPoints || 0;
+    const apCost = itemData.actionPoints ?? 0;
     if (this.inCombat && gameState.getPlayer().resources.ap.current < apCost) {
       this.log(LOG.SYSTEM, this.t('player.notEnoughAP', { cost: apCost }));
       return;
@@ -294,7 +298,7 @@ class RPGEngine {
 
     const oldItemId = gameState.getPlayer().equipment[targetSlot];
     const oldBonus = (oldItemId && this.data.items[oldItemId]?.attributes?.armorClassBonus) || 0;
-    const newBonus = itemData.attributes?.armorClassBonus || 0;
+    const newBonus = itemData.attributes?.armorClassBonus ?? 0;
     gameState.equipItem(targetSlot, itemId);
     if (newBonus - oldBonus !== 0) gameState.modifyPlayerStat('ac', newBonus - oldBonus);
     this.log(LOG.PLAYER, this.t('player.equipped', { name: itemData.name, slot: targetSlot }));

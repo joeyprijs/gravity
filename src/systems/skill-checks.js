@@ -12,7 +12,7 @@ import { roll } from "./dice.js";
  * @returns {{rolled: number, mod: number, success: boolean}}
  */
 export function performSkillCheck(engine, skillId, dc) {
-  const mod = gameState.getPlayer().attributes[skillId] || 0;
+  const mod = gameState.getPlayer().attributes[skillId] ?? 0;
   const rolled = roll(1, MAX_D20_ROLL) + mod;
   const success = rolled >= dc;
   engine.log(

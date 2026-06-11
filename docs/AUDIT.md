@@ -2,7 +2,7 @@
 
 *Audit date: 2026-06-10. Scope: all JavaScript under `src/`, plus `tests/`, `schemas/`, `data/` contracts, and docs. The `/studio` directory is excluded. Line numbers refer to the codebase at commit `5ac1511`.*
 
-> **Remediation status (updated 2026-06-11):** every item in the "Before release" **and** "First pass after release" roadmap groups has been implemented — see the checked boxes in [Section 7](#7-remediation-roadmap) and the ✅ annotations on individual findings. Line numbers in resolved findings refer to the pre-fix code. The remaining work is the "Nice to have" group.
+> **Remediation status (updated 2026-06-11):** every roadmap group — "Before release", "First pass after release", **and** "Nice to have" — has been implemented; see the checked boxes in [Section 7](#7-remediation-roadmap) and the ✅ annotations on individual findings. Line numbers in resolved findings refer to the pre-fix code. One deliberate scope cut: the jsdom UI smoke tests from 4.7 were skipped to keep the repo dependency-free.
 
 ---
 
@@ -190,14 +190,18 @@ These are the engine's real extension surface, currently discoverable only by re
 
 **Recommendation:** One `ARCHITECTURE.md` (or `docs/extending.md`) covering boot flow, the five contracts above, and "how to write a plugin." Cheap to write, highest leverage for the OSS goal.
 
-### 4.10 Smaller mediums
+### 4.10 Smaller mediums ✅ *Resolved*
+
+> **Resolution:** `normalizeCarriedItems()` (in `core/validate.js`, called from `engine.loadData`) normalizes every NPC's `carriedItems` to `{ item, amount }` at load; the merchant store and validator now assume that single shape. The event-binding rule (addEventListener for one-time setup, `onclick` assignment for re-bound handlers) is written down in CONTRIBUTING's Ground Rules.
 
 - **`carriedItems` mixed string/object form** is normalized ad-hoc at the read site (`dialogue.js:352-358`). Normalize once at load instead, so every consumer sees one shape.
 - **Mixed event-binding idioms**: `addEventListener` in `ui.js` setup, deliberate `onclick=` rebinding in `bindItemActions` (`ui.js:158`, commented), and ad-hoc choices in chest/curator/char-creation. The onclick-rebinding trick is fine — but adopt it (or delegation) consciously and consistently, and write the rule down.
 
 ---
 
-## 5. Low-Severity Findings
+## 5. Low-Severity Findings ✅ *Resolved*
+
+> **Resolution:** char-creation buttons now live in a local `_incrementBtns` map; the curator inline styles moved to `curator-panel__*` classes in `css/styles.css`; `??` is now used for numeric defaults across the engine and the rule is in CONTRIBUTING; `makeDefaultState` uses `structuredClone`; the curator comment numbering was already fixed in an earlier pass; `buildSceneDescription` now takes an explicit `t` function (and `NarrativeLog` receives one), removing the `utils.js` → `window.gameEngine` reach-back — the global itself remains as a deliberate debug/extension handle; the minimap's scene-ID cache key is now documented as a deliberate decision in `map.js`; DC escalation no longer persists across scene re-entry (`scene.js` `_resetSkillDcs`, added in the earlier refactor pass).
 
 - DOM element references stored on data/config objects: `stat._decrementBtn` etc. (`char-creation.js:137-141`) — pollutes config with DOM; use a local map.
 - Inline styles in curator UI (`curator.js:241-244, 336-337, 413-414`) — move to CSS classes.
@@ -248,4 +252,4 @@ During the audit these suspected issues were checked and found **not** to be pro
 
 - [x] Tests for `actions.js`, `dialogue.js`, `scene.js`; curator plugin tests. jsdom UI smoke tests skipped — they would require a dev dependency, which the project deliberately avoids. *(4.7)*
 - [x] Real language selection for i18n. *(4.3)*
-- [ ] Normalize `carriedItems` at load; standardize event binding and `??` usage; remaining Section 5 items. *(4.10, 5)*
+- [x] Normalize `carriedItems` at load; standardize event binding and `??` usage; remaining Section 5 items. *(4.10, 5)*

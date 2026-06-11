@@ -166,7 +166,7 @@ export default function curatorPlugin(engine) {
 
   engine.registerAction("add_display", (action, engine) => {
     const sceneId = action.scene || gameState.getCurrentSceneId();
-    const cost = action.cost || 0;
+    const cost = action.cost ?? 0;
     const p = gameState.getPlayer();
     if (p.resources.gold < cost) {
       engine.log(LOG.SYSTEM, engine.t('ui.notEnoughGold'));
@@ -225,18 +225,13 @@ export class CuratorUI {
     container.appendChild(doneBtn);
 
     // Museum Reputation Section
-    const repSection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);
-    repSection.style.padding = '12px 15px';
-    repSection.style.marginBottom = '15px';
-    repSection.style.background = 'var(--list-item-bg)';
-    repSection.style.border = '1px solid var(--panel-border)';
-    
+    const repSection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION, 'curator-panel__rep']);
+
     const repTitle = createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('plugin.curator.museumReputationHeading'));
     repSection.appendChild(repTitle);
-    
+
     const repVal = getMuseumReputation();
-    const repText = createElement('div', CSS.ITEM_STATS, this.engine.t('plugin.curator.museumReputationValue', { value: repVal }));
-    repText.style.fontWeight = 'bold';
+    const repText = createElement('div', [CSS.ITEM_STATS, 'curator-panel__rep-value'], this.engine.t('plugin.curator.museumReputationValue', { value: repVal }));
     repSection.appendChild(repText);
     
     panel.insertBefore(repSection, skillsContainer);
@@ -319,9 +314,7 @@ export class CuratorUI {
     detailSection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, display.name));
 
     // Item Info
-    const infoContainer = createElement('div', CSS.ITEM_LIST_ITEM);
-    infoContainer.style.padding = '15px';
-    infoContainer.style.marginBottom = '15px';
+    const infoContainer = createElement('div', [CSS.ITEM_LIST_ITEM, 'curator-panel__item-info']);
 
     infoContainer.appendChild(createElement('h3', CSS.ITEM_TITLE, name));
     if (itemData?.type) {
@@ -395,9 +388,7 @@ export class CuratorUI {
         selectSection.appendChild(btn);
       });
     } else {
-      const noneLabel = createElement('p', CSS.ITEM_TYPE, this.engine.t('plugin.curator.curatorNoEligibleItems'));
-      noneLabel.style.textAlign = 'center';
-      noneLabel.style.padding = '20px';
+      const noneLabel = createElement('p', [CSS.ITEM_TYPE, 'curator-panel__empty-note'], this.engine.t('plugin.curator.curatorNoEligibleItems'));
       selectSection.appendChild(noneLabel);
     }
 

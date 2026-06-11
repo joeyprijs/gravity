@@ -16,7 +16,7 @@ export class InventoryUI {
     const sortedInv = [...player.inventory].sort((a, b) => {
       const typeA = this.engine.data.items[a.item]?.type || 'Flavour';
       const typeB = this.engine.data.items[b.item]?.type || 'Flavour';
-      return (typeOrder[typeA] || 99) - (typeOrder[typeB] || 99);
+      return (typeOrder[typeA] ?? 99) - (typeOrder[typeB] ?? 99);
     });
 
     if (equippedEntries.length === 0 && sortedInv.length === 0) {

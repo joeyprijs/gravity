@@ -21,6 +21,10 @@ export class MapManager {
     
     // Cached scene ID to skip rebuilding coordinates if the player hasn't moved.
     // Initialized to null to guarantee a render on the first boot update.
+    // The scene ID is a sufficient cache key by design: mapDefinitions are
+    // static data, and newly visited scenes always come with a scene change.
+    // Anything that changes map appearance without moving the player must
+    // call invalidateMinimap() first (as the map tab switch in ui.js does).
     this._minimapCacheKey = null;
   }
 
