@@ -1,7 +1,7 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { gameState } from '../src/core/state.js';
-import { patchState } from '../src/plugins/curator.js';
+import { registerCuratorState, getMuseumReputation } from '../src/plugins/curator.js';
 
 const TEST_RULES = {
   playerDefaults: {
@@ -40,19 +40,19 @@ const TEST_ITEMS = {
 };
 
 beforeEach(() => {
-  patchState(TEST_ITEMS);
+  registerCuratorState(TEST_ITEMS);
   gameState.init(TEST_RULES, TEST_ITEMS);
 });
 
 test('first-time acquisition: awards reputation to player and museum', () => {
   assert.equal(gameState.getPlayer().attributes.reputation, 0);
-  assert.equal(gameState.getMuseumReputation(), 0);
+  assert.equal(getMuseumReputation(), 0);
 
   // Obtain relic_crown for the first time
   gameState.addToInventory('relic_crown', 1);
 
   assert.equal(gameState.getPlayer().attributes.reputation, 25);
-  assert.equal(gameState.getMuseumReputation(), 25); // museumReputation permanent = 25, display = 0
+  assert.equal(getMuseumReputation(), 25); // museumReputation permanent = 25, display = 0
   assert.deepEqual(gameState.state.obtainedItems, ['relic_crown']);
 });
 
@@ -76,7 +76,7 @@ test('exhibiting relics: dynamically updates museum reputation', () => {
   gameState.addToInventory('relic_shard', 1); // +10 permanent
   
   assert.equal(gameState.getPlayer().attributes.reputation, 35);
-  assert.equal(gameState.getMuseumReputation(), 35); // permanent 35 + 0 display = 35
+  assert.equal(getMuseumReputation(), 35); // permanent 35 + 0 display = 35
 
   const displayId = gameState.addDisplayToScene('museum_room', { name: 'Exhibition Pedestal' });
 
@@ -84,13 +84,13 @@ test('exhibiting relics: dynamically updates museum reputation', () => {
   gameState.placeItemInDisplay('museum_room', displayId, 'relic_crown');
 
   // Museum reputation should be permanent (35) + display (relic_crown: 25) = 60
-  assert.equal(gameState.getMuseumReputation(), 60);
+  assert.equal(getMuseumReputation(), 60);
 
   // Retrieve relic_crown from display
   gameState.takeItemFromDisplay('museum_room', displayId);
 
   // Museum reputation should drop back to 35
-  assert.equal(gameState.getMuseumReputation(), 35);
+  assert.equal(getMuseumReputation(), 35);
 });
 
 test('migration v3 to v4: initializes stats and populates obtainedItems from existing items', () => {

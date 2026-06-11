@@ -1,8 +1,13 @@
 import { gameState } from "../core/state.js";
 import { createElement, buildSceneDescription, buildOptionButton, resetOptionsPanel } from "../core/utils.js";
-import { CSS, FLAG_KEYS, LOG } from "../core/config.js";
+import { ACTIONS, CSS, FLAG_KEYS, LOG } from "../core/config.js";
 import { evaluateCondition } from "./condition.js";
 import { performSkillCheck, getEscalatedDc, escalateDc } from "./skill-checks.js";
+
+// Actions that move the conversation to a new panel (node, store, or scene).
+// _runActions reports these as "navigated" so callers skip re-rendering the
+// current node's options on top of the new panel.
+const DIALOGUE_NAV_ACTIONS = new Set([ACTIONS.GO_TO_CONVERSATION, ACTIONS.TRADE, ACTIONS.LEAVE]);
 
 /**
  * DialogueSystem manages NPC dialogue trees, branching conversations, 
@@ -31,6 +36,54 @@ export class DialogueSystem {
     // (e.g. buying/selling changes gold and inventory, which must update instantly).
     gameState.subscribe(() => {
       if (this.storeOpen) this.renderStore(true);
+    });
+
+    this._registerActions();
+  }
+
+  /**
+   * Registers the dialogue actions on the engine's global action registry so
+   * conversation nodes and scene options share one extension mechanism.
+   * The conversation-bound actions warn and no-op outside an active dialogue.
+   *
+   * @private
+   */
+  _registerActions() {
+    const requireNPC = (type, fn) => (action, engine) => {
+      if (!this.currentNPC) {
+        console.warn(`[Gravity] action "${type}" requires an active dialogue — ignored`);
+        return;
+      }
+      fn(action, engine);
+    };
+
+    this.engine.registerAction(ACTIONS.GO_TO_CONVERSATION, requireNPC(ACTIONS.GO_TO_CONVERSATION, (action) => {
+      this.renderDialogue(action.node);
+    }));
+
+    this.engine.registerAction(ACTIONS.TRADE, requireNPC(ACTIONS.TRADE, (action) => {
+      const pct = typeof action.tradeDiscount === 'string'
+        ? parseFloat(action.tradeDiscount)
+        : (action.tradeDiscount || 0);
+      this.activeDiscount = pct / 100;
+
+      // Optionally save this discount permanently in the session state
+      if (action.persistDiscount && pct > 0) {
+        gameState.setFlag(FLAG_KEYS.tradeDiscount(this.currentNPCId), pct);
+      }
+      this.renderStore();
+    }));
+
+    this.engine.registerAction(ACTIONS.LEAVE, (_action, engine) => {
+      engine.renderScene(gameState.getCurrentSceneId());
+    });
+
+    this.engine.registerAction(ACTIONS.MAKE_FRIENDLY, requireNPC(ACTIONS.MAKE_FRIENDLY, () => {
+      gameState.setFlag(FLAG_KEYS.friendly(this.currentNPCId), true);
+    }));
+
+    this.engine.registerAction(ACTIONS.QUEST_TRIGGER, (action, engine) => {
+      engine.handleQuestTrigger(action);
     });
   }
 
@@ -64,9 +117,9 @@ export class DialogueSystem {
   }
 
   /**
-   * Evaluates dialogue-specific actions inside a conversation node pipeline.
-   * Unrecognized action types are forwarded to the global RPGEngine action registry.
-   * 
+   * Runs a conversation node's action pipeline through the global action
+   * registry (dialogue actions are registered there too — see _registerActions).
+   *
    * @private
    * @param {object[]} actions - Array of actions to run.
    * @returns {boolean} True if navigation occurred (dialogue closed, new node, or trade opened).
@@ -74,54 +127,15 @@ export class DialogueSystem {
   _runActions(actions) {
     let navigated = false;
     for (const action of (actions || [])) {
-      const globalHandler = this.engine.getActionHandler(action.type);
-      
-      // Handoff to global engine actions (e.g. loot, set_flag, navigate)
-      if (globalHandler) {
-        globalHandler(action, this.engine);
-        // Clearing currentNPC acts as the "left dialogue" signal
-        if (!this.currentNPC) navigated = true;
+      const handler = this.engine.getActionHandler(action.type);
+      if (!handler) {
+        console.warn(`[Gravity] dialogue: unrecognized action node type "${action.type}"`);
         continue;
       }
-      
-      // Dialogue-specific local actions
-      switch (action.type) {
-        case 'goToConversation':
-          this.renderDialogue(action.node);
-          navigated = true;
-          break;
-          
-        case 'trade': {
-          const pct = typeof action.tradeDiscount === 'string'
-            ? parseFloat(action.tradeDiscount)
-            : (action.tradeDiscount || 0);
-          this.activeDiscount = pct / 100;
-          
-          // Optionally save this discount permanently in the session state
-          if (action.persistDiscount && pct > 0) {
-            gameState.setFlag(FLAG_KEYS.tradeDiscount(this.currentNPCId), pct);
-          }
-          this.renderStore();
-          navigated = true;
-          break;
-        }
-        
-        case 'leave':
-          this.engine.renderScene(gameState.getCurrentSceneId());
-          navigated = true;
-          break;
-          
-        case 'makeFriendly':
-          gameState.setFlag(FLAG_KEYS.friendly(this.currentNPCId), true);
-          break;
-          
-        case 'questTrigger':
-          this.engine.handleQuestTrigger(action);
-          break;
-          
-        default:
-          console.warn(`[Gravity] dialogue: unrecognized action node type "${action.type}"`);
-      }
+      handler(action, this.engine);
+      // Clearing currentNPC acts as the "left dialogue" signal (e.g. a navigate
+      // action rendered a scene); the nav set covers in-dialogue panel changes.
+      if (DIALOGUE_NAV_ACTIONS.has(action.type) || !this.currentNPC) navigated = true;
     }
     return navigated;
   }
@@ -308,7 +322,21 @@ export class DialogueSystem {
     };
     container.appendChild(leaveBtn);
 
-    // ── 1. Buy Panel ────────────────────────────────────────────────────────
+    this._buildBuySection(panel, skillsContainer);
+    this._buildSellSection(panel, skillsContainer);
+
+    this.engine.scrollNarrativeToBottom();
+  }
+
+  /**
+   * Builds the merchant "Buy" section: one button per in-stock carried item,
+   * with discount-adjusted prices and stock bookkeeping in persistent flags.
+   *
+   * @private
+   * @param {HTMLElement} panel - The scene options panel.
+   * @param {HTMLElement} skillsContainer - Insertion anchor for option sections.
+   */
+  _buildBuySection(panel, skillsContainer) {
     const buyItems = (this.currentNPC.carriedItems || [])
       .map(entry => {
         const id = typeof entry === 'string' ? entry : entry.item;
@@ -318,37 +346,45 @@ export class DialogueSystem {
       })
       .filter(({ item, stock }) => item && stock !== 0);
 
-    if (buyItems.length) {
-      const buySection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);
-      buySection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('dialogue.buyGroup')));
-      
-      buyItems.forEach(({ id: itemId, item, stock, npcAmount }) => {
-        const displayName = stock !== null ? `${item.name} (x${stock})` : item.name;
-        // Compute custom discount: Math.floor(Value * (1 - Discount))
-        const price = this.activeDiscount > 0 ? Math.floor(item.value * (1 - this.activeDiscount)) : item.value;
-        const btn = buildOptionButton(
-          this.engine.t('dialogue.buyButton', { name: displayName }),
-          this.engine.t('dialogue.buyPrice', { amount: price })
-        );
-        
-        if (gameState.getPlayer().resources.gold < price) btn.disabled = true;
-        
-        btn.onclick = () => {
-          if (npcAmount !== null) {
-            gameState.setFlag(FLAG_KEYS.merchantStock(this.currentNPCId, itemId), stock - 1);
-          }
-          gameState.modifyPlayerStat('gold', -price);
-          gameState.addToInventory(itemId, 1);
-          this.engine.log(LOG.PLAYER, this.engine.t('dialogue.bought', { name: item.name, price }), 'loot');
-          this.renderStore(true);
-        };
-        buySection.appendChild(btn);
-      });
-      panel.insertBefore(buySection, skillsContainer);
-    }
+    if (!buyItems.length) return;
 
-    // ── 2. Sell Panel ───────────────────────────────────────────────────────
-    // Sell value = floor(ItemValue * merchantSellRatio)
+    const buySection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);
+    buySection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('dialogue.buyGroup')));
+
+    buyItems.forEach(({ id: itemId, item, stock, npcAmount }) => {
+      const displayName = stock !== null ? `${item.name} (x${stock})` : item.name;
+      // Compute custom discount: Math.floor(Value * (1 - Discount))
+      const price = this.activeDiscount > 0 ? Math.floor(item.value * (1 - this.activeDiscount)) : item.value;
+      const btn = buildOptionButton(
+        this.engine.t('dialogue.buyButton', { name: displayName }),
+        this.engine.t('dialogue.buyPrice', { amount: price })
+      );
+
+      if (gameState.getPlayer().resources.gold < price) btn.disabled = true;
+
+      btn.onclick = () => {
+        if (npcAmount !== null) {
+          gameState.setFlag(FLAG_KEYS.merchantStock(this.currentNPCId, itemId), stock - 1);
+        }
+        gameState.modifyPlayerStat('gold', -price);
+        gameState.addToInventory(itemId, 1);
+        this.engine.log(LOG.PLAYER, this.engine.t('dialogue.bought', { name: item.name, price }), 'loot');
+        this.renderStore(true);
+      };
+      buySection.appendChild(btn);
+    });
+    panel.insertBefore(buySection, skillsContainer);
+  }
+
+  /**
+   * Builds the merchant "Sell" section: one button per sellable inventory item.
+   * Sell value = floor(itemValue * rules.merchantSellRatio).
+   *
+   * @private
+   * @param {HTMLElement} panel - The scene options panel.
+   * @param {HTMLElement} skillsContainer - Insertion anchor for option sections.
+   */
+  _buildSellSection(panel, skillsContainer) {
     const player = gameState.getPlayer();
     const sellRatio = this.engine.data.rules?.merchantSellRatio ?? 0.5;
     const sellItems = player.inventory.filter(invItem => {
@@ -356,29 +392,27 @@ export class DialogueSystem {
       return item && item.value > 0 && Math.floor(item.value * sellRatio) > 0;
     });
 
-    if (sellItems.length) {
-      const sellSection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);
-      sellSection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('dialogue.sellGroup')));
-      
-      sellItems.forEach(invItem => {
-        const item = this.engine.data.items[invItem.item];
-        const sellValue = Math.floor(item.value * sellRatio);
-        const btn = buildOptionButton(
-          this.engine.t('dialogue.sellButton', { name: item.name, count: invItem.amount }),
-          this.engine.t('dialogue.sellPrice', { amount: sellValue })
-        );
-        
-        btn.onclick = () => {
-          gameState.removeFromInventory(invItem.item, 1);
-          gameState.modifyPlayerStat('gold', sellValue);
-          this.engine.log(LOG.PLAYER, this.engine.t('dialogue.sold', { name: item.name, price: sellValue }), 'loot');
-          this.renderStore(true);
-        };
-        sellSection.appendChild(btn);
-      });
-      panel.insertBefore(sellSection, skillsContainer);
-    }
+    if (!sellItems.length) return;
 
-    this.engine.scrollNarrativeToBottom();
+    const sellSection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);
+    sellSection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('dialogue.sellGroup')));
+
+    sellItems.forEach(invItem => {
+      const item = this.engine.data.items[invItem.item];
+      const sellValue = Math.floor(item.value * sellRatio);
+      const btn = buildOptionButton(
+        this.engine.t('dialogue.sellButton', { name: item.name, count: invItem.amount }),
+        this.engine.t('dialogue.sellPrice', { amount: sellValue })
+      );
+
+      btn.onclick = () => {
+        gameState.removeFromInventory(invItem.item, 1);
+        gameState.modifyPlayerStat('gold', sellValue);
+        this.engine.log(LOG.PLAYER, this.engine.t('dialogue.sold', { name: item.name, price: sellValue }), 'loot');
+        this.renderStore(true);
+      };
+      sellSection.appendChild(btn);
+    });
+    panel.insertBefore(sellSection, skillsContainer);
   }
 }

@@ -5,7 +5,8 @@ import { QuestSystem } from "../systems/quests.js";
 import { NarrativeLog } from "../systems/narrative.js";
 import { UIManager } from "../ui/ui.js";
 import { SceneRenderer } from "../systems/scene.js";
-import { DEFAULT_WORLD_MAP_SIZE, GOLD_ITEM_ID, LOG } from "./config.js";
+import { DEFAULT_WORLD_MAP_SIZE, LOG } from "./config.js";
+import { validateGameData } from "./validate.js";
 import { registerBuiltinActions } from "../systems/actions.js";
 import { parseDamage } from "../systems/dice.js";
 import { CharCreationScreen } from "../screens/char-creation.js";
@@ -85,6 +86,8 @@ class RPGEngine {
       );
     }
 
+    this._validateData();
+
     // Initialise state from rules, then register missions and flags on it.
     gameState.init(this.data.rules, this.data.items);
     gameState.registerMissions(this.data.missions);
@@ -156,8 +159,9 @@ class RPGEngine {
       this.data = { items, npcs, scenes, missions, tables, regions: manifest.regions || {}, worldMapSize: manifest.worldMapSize || DEFAULT_WORLD_MAP_SIZE, locale: this.data.locale, rules, flags };
 
       // Note: registerMissions and registerSceneFlags are called by init()
-      // after gameState.init(rules) — they must NOT be called here.
-      this._validateData();
+      // after gameState.init(rules) — they must NOT be called here. Data
+      // validation also happens in init(), after plugins have registered
+      // their action types.
       return manifest;
     } catch (e) {
       console.error("Failed to load game data:", e);
@@ -166,9 +170,15 @@ class RPGEngine {
     }
   }
 
-  // Looks up a locale string by dot-separated key and substitutes {param} placeholders.
-  // Falls back to the key itself if the string is not found, so missing translations
-  // are visible but don't crash the game.
+  /**
+   * Looks up a locale string by dot-separated key and substitutes {param}
+   * placeholders. Falls back to the key itself if the string is not found,
+   * so missing translations are visible but don't crash the game.
+   *
+   * @param {string} key - Dot-separated locale key (e.g. 'dialogue.buyButton').
+   * @param {Object<string, *>} [params] - Values for {param} placeholders.
+   * @returns {string} The translated string, or the key when missing.
+   */
   t(key, params = {}) {
     const parts = key.split('.');
     let str = this.data.locale;
@@ -177,102 +187,25 @@ class RPGEngine {
     return str.replace(/\{(\w+)\}/g, (_, k) => (k in params ? params[k] : `{${k}}`));
   }
 
-  // Recursively checks a condition tree for unknown item IDs.
-  _validateCondition(condition, context, items, warn) {
-    if (!condition) return;
-    if (condition.and) { condition.and.forEach(c => this._validateCondition(c, context, items, warn)); return; }
-    if (condition.or)  { condition.or.forEach(c => this._validateCondition(c, context, items, warn)); return; }
-    if (condition.not) { this._validateCondition(condition.not, context, items, warn); return; }
-    if ('item' in condition && !items[condition.item])
-      warn(`${context}: condition references unknown item "${condition.item}"`);
-    if ('mission' in condition && !this.data.missions[condition.mission])
-      warn(`${context}: condition references unknown mission "${condition.mission}"`);
-  }
-
-  // Validates cross-references in game data after load and warns about broken links.
-  // Developer tooling only — logs to console, no in-game effect.
+  // Validates all loaded game data (see core/validate.js) and prints the
+  // issues grouped per source entity. Developer tooling only — logs to the
+  // console, no in-game effect. Runs after plugin loading so plugin-registered
+  // action types are known.
   _validateData() {
-    const { items, npcs, scenes, rules } = this.data;
-    const warn = (msg) => console.warn(`[Gravity] ${msg}`);
+    const issues = validateGameData(this.data, new Set(this._actionRegistry.keys()));
+    if (!issues.length) return;
 
-    for (const [tableId, table] of Object.entries(this.data.tables || {})) {
-      for (const entry of (table.entries || [])) {
-        if (entry.item && entry.item !== GOLD_ITEM_ID && !items[entry.item])
-          warn(`Table "${tableId}": entry references unknown item "${entry.item}"`);
-      }
+    const byGroup = new Map();
+    for (const { group, message } of issues) {
+      if (!byGroup.has(group)) byGroup.set(group, []);
+      byGroup.get(group).push(message);
     }
 
-    for (const [sceneId, scene] of Object.entries(scenes)) {
-      for (const skill of (scene.skills || [])) {
-        if (skill.condition)
-          this._validateCondition(skill.condition, `Scene "${sceneId}": skill "${skill.text}"`, items, warn);
-        for (const item of (skill.items || [])) {
-          if (item.table && !this.data.tables[item.table])
-            warn(`Scene "${sceneId}": skill "${skill.text}" references unknown table "${item.table}"`);
-        }
-      }
-      for (const opt of (scene.options || [])) {
-        if (opt.condition)
-          this._validateCondition(opt.condition, `Scene "${sceneId}": option "${opt.text}"`, items, warn);
-        if (opt.requirements?.item && !items[opt.requirements.item])
-          warn(`Scene "${sceneId}": option "${opt.text}" requires unknown item "${opt.requirements.item}"`);
-        for (const action of (opt.actions || [])) {
-          if (!this._actionRegistry.has(action.type))
-            warn(`Scene "${sceneId}": option "${opt.text}" has unknown action type "${action.type}"`);
-          if (action.type === 'navigate' && action.destination && !scenes[action.destination])
-            warn(`Scene "${sceneId}": navigate → unknown destination "${action.destination}"`);
-          if (action.type === 'loot' && action.item && action.item !== GOLD_ITEM_ID && !items[action.item])
-            warn(`Scene "${sceneId}": loot → unknown item "${action.item}"`);
-          if (action.type === 'dialogue' && action.npc && !npcs[action.npc])
-            warn(`Scene "${sceneId}": dialogue → unknown NPC "${action.npc}"`);
-          if (action.type === 'combat') {
-            const ids = action.enemies || [];
-            ids.forEach(id => { if (!npcs[id]) warn(`Scene "${sceneId}": combat → unknown enemy "${id}"`); });
-            for (const va of (action.onVictory || [])) {
-              if (va.type === 'navigate' && va.destination && !scenes[va.destination])
-                warn(`Scene "${sceneId}": combat.onVictory → unknown destination "${va.destination}"`);
-              if (va.type === 'loot' && va.item && va.item !== GOLD_ITEM_ID && !items[va.item])
-                warn(`Scene "${sceneId}": combat.onVictory → unknown item "${va.item}"`);
-            }
-          }
-        }
-      }
-      if (scene.autoAttack) {
-        const ids = scene.autoAttack.enemies || [];
-        ids.forEach(id => { if (!npcs[id]) warn(`Scene "${sceneId}": autoAttack → unknown enemy "${id}"`); });
-        for (const va of (scene.autoAttack.onVictory || [])) {
-          if (va.type === 'navigate' && va.destination && !scenes[va.destination])
-            warn(`Scene "${sceneId}": autoAttack.onVictory → unknown destination "${va.destination}"`);
-          if (va.type === 'loot' && va.item && va.item !== GOLD_ITEM_ID && !items[va.item])
-            warn(`Scene "${sceneId}": autoAttack.onVictory → unknown item "${va.item}"`);
-        }
-      }
-    }
-
-    for (const [npcId, npc] of Object.entries(npcs)) {
-      for (const entry of (npc.carriedItems || [])) {
-        const itemId = typeof entry === 'string' ? entry : entry.item;
-        if (!items[itemId]) warn(`NPC "${npcId}": carriedItems → unknown item "${itemId}"`);
-      }
-      for (const [slot, itemId] of Object.entries(npc.equipment || {}))
-        if (itemId && !items[itemId]) warn(`NPC "${npcId}": equipment[${slot}] → unknown item "${itemId}"`);
-    }
-
-    const playerFallback = rules?.fallbackWeapons?.player;
-    const enemyFallback  = rules?.fallbackWeapons?.enemy;
-    if (playerFallback && !items[playerFallback])
-      warn(`Missing required fallback item "${playerFallback}" — add to data/items/ and index.json`);
-    if (enemyFallback && !items[enemyFallback])
-      warn(`Missing required fallback item "${enemyFallback}" — add to data/items/ and index.json`);
-
-    for (const attr of (rules?.customAttributes || [])) {
-      if (!this.data.locale?.actions?.skillBadge?.[attr.id])
-        warn(`customAttributes "${attr.id}": missing locale entry at actions.skillBadge.${attr.id}`);
-    }
-
-    for (const stat of (rules?.charCreation?.stats || [])) {
-      if (!this.data.locale?.charCreation?.stats?.[stat.localeKey])
-        warn(`charCreation.stats "${stat.id}": missing locale entry at charCreation.stats.${stat.localeKey}`);
+    console.warn(`[Gravity] Data validation found ${issues.length} issue(s):`);
+    for (const [group, messages] of byGroup) {
+      console.groupCollapsed(`[Gravity] ${group} — ${messages.length} issue(s)`);
+      messages.forEach(m => console.warn(m));
+      console.groupEnd();
     }
   }
 
@@ -384,6 +317,11 @@ class RPGEngine {
   get inDialogue() { return !!this.dialogueSystem.currentNPC; }
   get inCustomUI() { return !!this._customUIOpen; }
 
+  // Marks a custom UI panel (chest, curator dashboard, …) as open or closed.
+  // Custom UIs call this when they take over / release the options panel so
+  // scene re-render logic knows not to draw options over them.
+  setCustomUIOpen(open) { this._customUIOpen = !!open; }
+
   get isGameStart() { return this.narrative.isGameStart; }
   set isGameStart(v) { this.narrative.isGameStart = v; }
 
@@ -396,8 +334,13 @@ class RPGEngine {
     const label = this.t(localeKey) !== localeKey ? this.t(localeKey) : type;
     return this.narrative.log(label, message, variant, persist);
   }
-  // Runs an action pipeline through the registered action handlers.
-  // Shared by SceneRenderer, CombatSystem, and any plugin that needs it.
+  /**
+   * Runs an action pipeline through the registered action handlers.
+   * Shared by SceneRenderer, CombatSystem, DialogueSystem, and plugins.
+   *
+   * @param {Array<{type: string}>} actions - Action objects executed in order;
+   *   each carries its handler-specific params (e.g. { type: 'loot', item, amount }).
+   */
   runActions(actions) {
     for (const action of (actions || [])) {
       const handler = this.getActionHandler(action.type);
@@ -422,11 +365,25 @@ class RPGEngine {
   // no knowledge of who is listening. Use for cross-system notifications where
   // a direct call would create unwanted coupling.
 
+  /**
+   * Subscribes a handler to an engine event. Current events:
+   *   'scene:entered'  { sceneId, scene } — a questTrigger scene was entered
+   *   'player:apSpent' { remaining }      — the player spent AP in combat
+   *
+   * @param {string} event - Event name.
+   * @param {(data: object) => void} handler
+   */
   on(event, handler) {
     if (!this._events.has(event)) this._events.set(event, []);
     this._events.get(event).push(handler);
   }
 
+  /**
+   * Unsubscribes a handler previously registered with on().
+   *
+   * @param {string} event - Event name.
+   * @param {(data: object) => void} handler - The same function reference.
+   */
   off(event, handler) {
     const handlers = this._events.get(event);
     if (!handlers) return;
@@ -434,6 +391,12 @@ class RPGEngine {
     if (idx !== -1) handlers.splice(idx, 1);
   }
 
+  /**
+   * Emits an engine event to all subscribed handlers.
+   *
+   * @param {string} event - Event name.
+   * @param {object} [data] - Payload passed to each handler.
+   */
   emit(event, data) {
     const handlers = this._events.get(event);
     if (!handlers) return;
@@ -442,6 +405,15 @@ class RPGEngine {
     [...handlers].forEach(h => h(data));
   }
 
+  /**
+   * Registers a handler for an action type so it can be used in scene option,
+   * dialogue, and onVictory pipelines. Registering an existing name overwrites
+   * it (with a console warning).
+   *
+   * @param {string} name - The action type string used in game data JSON.
+   * @param {(action: object, engine: RPGEngine) => void} handlerFn - Owns only
+   *   its side effect; navigation is a separate 'navigate' action.
+   */
   registerAction(name, handlerFn) {
     if (this._actionRegistry.has(name)) {
       console.warn(`[Gravity] registerAction: "${name}" already registered — overwriting`);
@@ -449,24 +421,45 @@ class RPGEngine {
     this._actionRegistry.set(name, handlerFn);
   }
 
+  /**
+   * @param {string} name - The action type string.
+   * @returns {((action: object, engine: RPGEngine) => void)|null}
+   */
   getActionHandler(name) {
     return this._actionRegistry.get(name) || null;
   }
 
+  /**
+   * Registers a named description hook. A scene opts in by declaring
+   * "descriptionHook": "name" in its JSON; the hook's return value is
+   * appended to that scene's description.
+   *
+   * @param {string} name - The hook name scenes reference.
+   * @param {(engine: RPGEngine) => string} fn - Returns an HTML string.
+   */
   registerDescriptionHook(name, fn) {
     this._descriptionHooks.set(name, fn);
   }
 
+  /**
+   * @param {string} name - The hook name.
+   * @returns {((engine: RPGEngine) => string)|null}
+   */
   getDescriptionHook(name) {
     return this._descriptionHooks.get(name) || null;
   }
 
-  // Registers a scene decorator — an object with optional `description` and
-  // `options` functions invoked for every rendered scene:
-  //   description(scene, sceneId, engine) → HTML string appended to the scene description
-  //   options(scene, optionsContainer, engine) → may append extra option buttons
-  // Plugins use this to inject content into scenes they don't own; the per-scene
-  // descriptionHook covers content a scene declares explicitly in its JSON.
+  /**
+   * Registers a scene decorator, invoked for every rendered scene. Plugins use
+   * this to inject content into scenes they don't own; the per-scene
+   * descriptionHook covers content a scene declares explicitly in its JSON.
+   *
+   * @param {object} decorator
+   * @param {(scene: object, sceneId: string, engine: RPGEngine) => string} [decorator.description]
+   *   Returns an HTML string appended to the scene description.
+   * @param {(scene: object, optionsContainer: HTMLElement, engine: RPGEngine) => void} [decorator.options]
+   *   May append extra option buttons to the options container.
+   */
   registerSceneDecorator(decorator) {
     this._sceneDecorators.push(decorator);
   }

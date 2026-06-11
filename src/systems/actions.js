@@ -88,7 +88,7 @@ function handleLog(action, engine) {
 }
 
 function handleManageChest(action, engine) {
-  engine._customUIOpen = true;
+  engine.setCustomUIOpen(true);
   engine.ui.renderChestUI(action.chest);
 }
 

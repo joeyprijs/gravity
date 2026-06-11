@@ -32,6 +32,15 @@ export const ACTIONS = {
   MANAGE_CHEST:    'manage_chest',
   MANAGE_EXHIBITS: 'manage_exhibits',
   ADD_DISPLAY:     'add_display',
+
+  // Dialogue actions — registered by DialogueSystem (see dialogue.js). They
+  // live in the same registry as the actions above; the camelCase names match
+  // the strings used in NPC conversation JSON.
+  GO_TO_CONVERSATION: 'goToConversation',
+  TRADE:              'trade',
+  LEAVE:              'leave',
+  MAKE_FRIENDLY:      'makeFriendly',
+  QUEST_TRIGGER:      'questTrigger',
 };
 
 // CSS class names referenced from JavaScript. Centralised here so that renaming

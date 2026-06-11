@@ -2,7 +2,7 @@
 
 *Audit date: 2026-06-10. Scope: all JavaScript under `src/`, plus `tests/`, `schemas/`, `data/` contracts, and docs. The `/studio` directory is excluded. Line numbers refer to the codebase at commit `5ac1511`.*
 
-> **Remediation status (updated 2026-06-10):** every item in the "Before release" roadmap group has been implemented — see the checked boxes in [Section 7](#7-remediation-roadmap) and the ✅ annotations on individual findings. Line numbers in resolved findings refer to the pre-fix code. The remaining work is the "First pass after release" and "Nice to have" groups.
+> **Remediation status (updated 2026-06-11):** every item in the "Before release" **and** "First pass after release" roadmap groups has been implemented — see the checked boxes in [Section 7](#7-remediation-roadmap) and the ✅ annotations on individual findings. Line numbers in resolved findings refer to the pre-fix code. The remaining work is the "Nice to have" group.
 
 ---
 
@@ -78,7 +78,9 @@ Every file in `schemas/` declares `"$schema": "http://json-schema.org/draft-07/s
 
 **Recommendation:** Move this rendering into `curator.js` using the `registerDescriptionHook` mechanism that already exists for exactly this purpose (the hook dispatch is right above, `scene.js:420-423`). Move the inline styles to classes in `css/`. Related: the display/exhibit state helpers in `state.js` (`getDisplaysForScene`, `addDisplayToScene`, migration v3) are also curator-flavored — worth a deliberate decision on whether "displays" are a generic engine feature or plugin state.
 
-### 3.3 No data validation layer at load time
+### 3.3 No data validation layer at load time ✅ *Resolved*
+
+> **Resolution:** validation now lives in a headless `src/core/validate.js` with per-collection validators (tables, scenes, NPCs incl. conversation trees, rules), covered by `tests/validate.test.js`. New checks beyond the old cross-reference pass: unknown action types in dialogue pipelines, unknown `skillCheck` names, enemies missing the attributes combat requires, broken `goToConversation` node references, and unknown items in skill discovery lists. Output is grouped per source entity via `console.groupCollapsed`. Validation runs after plugin loading so plugin-registered action types are known. `addToInventory` now rejects unknown item IDs at the state layer (when an item database was provided to `init()`).
 
 `engine._validateData()` (`engine.js:193-276`) only checks cross-references (unknown IDs) and only emits ungrouped `console.warn`s. The schemas are never enforced (3.1). Concrete failure modes today:
 
@@ -91,7 +93,9 @@ For an engine whose pitch is "author your own content as JSON," fail-fast valida
 
 **Recommendation:** After fixing the schemas, validate all loaded data on boot (a small hand-rolled checker is fine given the zero-dependency goal; full schema validation is the stretch goal). Group output ("12 issues in data/scenes/…") instead of one `console.warn` per issue. Also guard `addToInventory` against unknown item IDs at the state layer.
 
-### 3.4 The plugin API has no formal surface — curator patches internals
+### 3.4 The plugin API has no formal surface — curator patches internals ✅ *Resolved*
+
+> **Resolution:** `StateManager` gained a formal plugin surface — `onMutation(fn)` (post-mutation hooks), `registerStatHandler(stat, fn)` (custom-stat interception), and `setPlayerAttribute(attr, value)` (absolute writes for derived stats). The engine gained `setCustomUIOpen(bool)`; all four external `_customUIOpen` writes now go through it. `curator.js`'s `patchState()` is gone — the plugin registers hooks instead of replacing methods, so two plugins can no longer trample each other. Documented in ARCHITECTURE.md's plugin section.
 
 Two patterns in `curator.js` show the plugin API's current limits:
 
@@ -130,7 +134,9 @@ The same five patterns were independently reimplemented:
 
 Plugin locale loading hardcodes `const currentLang = 'en'` (`engine.js:53`). The locale plumbing (namespaced plugin locales, `t()` with params) is genuinely good — but there is no way to select a language, so the manifest's `locales` map is misleading. Either add a language setting (rules.json or browser-language detection) or document English-only status until then.
 
-### 4.4 Browser/DOM concerns in the state layer
+### 4.4 Browser/DOM concerns in the state layer ✅ *Resolved*
+
+> **Resolution:** `downloadSave()` was split — `gameState.getSaveString()` returns the encoded string (headless), and `UIManager._downloadSave()` owns the Blob/anchor/click mechanics next to the matching load path.
 
 `state.js:100-129` `downloadSave()` builds a Blob, creates an anchor, appends and clicks it. That is UI work inside StateManager — the one module that should stay headless (it's also what makes the current Node tests possible). Split it: state produces the encoded string; `ui.js` (which already owns the matching *load* path at `ui.js:31-58`) owns the download mechanics.
 
@@ -142,7 +148,9 @@ Plugin locale loading hardcodes `const currentLang = 'en'` (`engine.js:53`). The
 
 **Recommendation:** Make the third parameter `textContent` and add an explicit opt-in (separate helper or options flag) for the few call sites that intentionally render authored HTML. Decide and document the policy: "game data is text unless explicitly HTML."
 
-### 4.6 Long functions / deep nesting
+### 4.6 Long functions / deep nesting ✅ *Resolved*
+
+> **Resolution:** all five split — `renderStore` → `_buildBuySection`/`_buildSellSection`; `char-creation._render` → `_buildNameSection`/`_buildStatsSection`/`_buildStatRow`/`_buildActionsRow`; `scene.render` → `_registerInitialDisplays`/`_appendSceneDescription`/`_resetSkillDcs`/`_maybeStartAutoAttack`; `_validateData` → per-collection validators in `core/validate.js`; `_buildItemDiscoveryButton` → `_resolveDiscovery`/`_awardDiscoveredLoot`.
 
 Five functions account for most of the hard-to-read code; each mixes several responsibilities and embeds multi-level logic inside `onclick` closures:
 
@@ -164,9 +172,9 @@ Current coverage is real and good where it exists: `state`, `combat`, `condition
 - README's test-file list omits `display.test.js`, `reputation.test.js`, `char-creation.test.js`.
 - `CONTRIBUTING.md:15` mandates JSDoc on all functions, but UI and systems methods widely lack it and nothing enforces it. Either soften the requirement or meet it (public APIs first: StateManager methods, engine registration methods, condition/action contracts). Inconsistency between stated rules and the codebase is exactly what new contributors notice.
 
-### 4.9 Implicit contracts with no written documentation 🟡 *Partially resolved*
+### 4.9 Implicit contracts with no written documentation ✅ *Resolved*
 
-> **Resolution:** `docs/ARCHITECTURE.md` now documents the boot flow, module graph, state contracts, condition AST, action pipeline, events, hooks/decorators, and the plugin how-to; README and CONTRIBUTING link to it. Still open: unifying dialogue-local actions with the action registry, and JSDoc coverage of public APIs.
+> **Resolution:** `docs/ARCHITECTURE.md` now documents the boot flow, module graph, state contracts, condition AST, action pipeline, events, hooks/decorators, and the plugin how-to; README and CONTRIBUTING link to it. The dialogue-local action switch is gone — `DialogueSystem` registers `goToConversation`/`trade`/`leave`/`makeFriendly`/`questTrigger` on the global registry, so there is one extension mechanism. Public APIs (StateManager, engine registration/event methods, condition/action handler shapes) now carry JSDoc.
 
 These are the engine's real extension surface, currently discoverable only by reading source:
 
@@ -225,12 +233,12 @@ During the audit these suspected issues were checked and found **not** to be pro
 
 ### First pass after release
 
-- [ ] Load-time data validation with grouped, actionable messages; guard `addToInventory` against unknown IDs. *(3.3)*
-- [ ] Formal plugin lifecycle: state mutation hooks replacing `patchState`, public custom-UI open/close API replacing `_customUIOpen` writes. *(3.4)*
-- [ ] Split the five long functions (`renderStore`, `_render`, `scene.render`, `_validateData`, `_buildItemDiscoveryButton`). *(4.6)*
-- [ ] Move `downloadSave()` DOM work into the UI layer. *(4.4)*
-- [ ] JSDoc the public APIs (StateManager, engine registration methods, condition/action shapes). *(4.8, 4.9)*
-- [ ] Unify dialogue actions with the action registry. *(4.9)*
+- [x] Load-time data validation with grouped, actionable messages; guard `addToInventory` against unknown IDs. *(3.3)*
+- [x] Formal plugin lifecycle: state mutation hooks replacing `patchState`, public custom-UI open/close API replacing `_customUIOpen` writes. *(3.4)*
+- [x] Split the five long functions (`renderStore`, `_render`, `scene.render`, `_validateData`, `_buildItemDiscoveryButton`). *(4.6)*
+- [x] Move `downloadSave()` DOM work into the UI layer. *(4.4)*
+- [x] JSDoc the public APIs (StateManager, engine registration methods, condition/action shapes). *(4.8, 4.9)*
+- [x] Unify dialogue actions with the action registry. *(4.9)*
 
 ### Nice to have
 

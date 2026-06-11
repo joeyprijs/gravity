@@ -43,20 +43,7 @@ export class SceneRenderer {
       return;
     }
 
-    // Auto-register initial displays defined in the scene file if not already registered in state
-    if (scene.displays?.length) {
-      const existing = gameState.getDisplaysForScene(sceneId);
-      if (existing.length === 0) {
-        scene.displays.forEach(d => {
-          gameState.addDisplayToScene(sceneId, {
-            id: d.id,
-            name: d.name,
-            item: d.item || null,
-            allowedTypes: d.allowedTypes || null
-          });
-        });
-      }
-    }
+    this._registerInitialDisplays(scene, sceneId);
 
     // addVisitedScene must be called BEFORE setCurrentSceneId because
     // setCurrentSceneId triggers notifyListeners → ui.update() → renderMinimap(),
@@ -65,24 +52,57 @@ export class SceneRenderer {
     gameState.addVisitedScene(sceneId);
     gameState.setCurrentSceneId(sceneId);
 
-    const currentDesc = this._resolveDescription(scene);
+    this._appendSceneDescription(scene, sceneId);
+    this._resetSkillDcs(scene, sceneId);
+    this.renderOptions(scene);
 
-    // Only append a new narrative block when the scene or its description has
-    // actually changed — prevents duplicate entries when options re-render.
-    if (this.lastRenderedSceneId !== sceneId || this.lastRenderedDesc !== currentDesc) {
-      this.engine.openScene();
-      // Scene content comes from developer-authored JSON, not user input —
-      // buildSceneDescription uses innerHTML for the body to allow basic formatting.
-      const descEl = buildSceneDescription(scene.title || scene.name, currentDesc);
-      this._lastDescBodyEl = descEl.querySelector(`.${CSS.SCENE_BODY}`);
-      this.engine.currentSceneEl.appendChild(descEl);
-      gameState.appendLog({ type: 'scene', title: scene.title || scene.name, desc: currentDesc });
-
-      this.lastRenderedSceneId = sceneId;
-      this.lastRenderedDesc = currentDesc;
+    // Emit scene:entered once per actual entry so quest triggers and other
+    // listeners don't fire on skill-check re-renders or save restores.
+    if (scene.questTrigger) {
+      this.engine.emit('scene:entered', { sceneId, scene });
     }
 
-    // Reset skill-check DCs on re-entry. Found items persist; escalated DCs reset.
+    if (this._maybeStartAutoAttack(scene)) return;
+
+    this.engine.scrollNarrativeToBottom();
+  }
+
+  // Auto-registers initial displays defined in the scene file, unless the
+  // scene already has displays registered in state (e.g. from a loaded save).
+  _registerInitialDisplays(scene, sceneId) {
+    if (!scene.displays?.length) return;
+    if (gameState.getDisplaysForScene(sceneId).length > 0) return;
+    scene.displays.forEach(d => {
+      gameState.addDisplayToScene(sceneId, {
+        id: d.id,
+        name: d.name,
+        item: d.item || null,
+        allowedTypes: d.allowedTypes || null
+      });
+    });
+  }
+
+  // Appends the scene description as a new narrative block — but only when the
+  // scene or its description actually changed, preventing duplicate entries
+  // when options re-render.
+  _appendSceneDescription(scene, sceneId) {
+    const currentDesc = this._resolveDescription(scene);
+    if (this.lastRenderedSceneId === sceneId && this.lastRenderedDesc === currentDesc) return;
+
+    this.engine.openScene();
+    // Scene content comes from developer-authored JSON, not user input —
+    // buildSceneDescription uses innerHTML for the body to allow basic formatting.
+    const descEl = buildSceneDescription(scene.title || scene.name, currentDesc);
+    this._lastDescBodyEl = descEl.querySelector(`.${CSS.SCENE_BODY}`);
+    this.engine.currentSceneEl.appendChild(descEl);
+    gameState.appendLog({ type: 'scene', title: scene.title || scene.name, desc: currentDesc });
+
+    this.lastRenderedSceneId = sceneId;
+    this.lastRenderedDesc = currentDesc;
+  }
+
+  // Resets skill-check DCs on scene re-entry. Found items persist; escalated DCs reset.
+  _resetSkillDcs(scene, sceneId) {
     (scene.skills || []).forEach(opt => {
       if (!opt.skillCheck) return;
       const key = FLAG_KEYS.skillDc(opt.skillCheck, sceneId);
@@ -97,27 +117,16 @@ export class SceneRenderer {
         gameState.setFlag(key, {});
       }
     });
+  }
 
-    this.renderOptions(scene);
-
-    // Emit scene:entered once per actual entry so quest triggers and other
-    // listeners don't fire on skill-check re-renders or save restores.
-    if (scene.questTrigger) {
-      this.engine.emit('scene:entered', { sceneId, scene });
-    }
-
-    if (scene.autoAttack) {
-      const cond = scene.autoAttack.condition ?? null;
-      if (!cond || evaluateCondition(cond, gameState)) {
-        this.engine.combatSystem.startCombat(
-          scene.autoAttack.enemies,
-          scene.autoAttack
-        );
-        return;
-      }
-    }
-
-    this.engine.scrollNarrativeToBottom();
+  // Starts the scene's autoAttack encounter when its condition allows.
+  // Returns true when combat was started (the caller stops rendering).
+  _maybeStartAutoAttack(scene) {
+    if (!scene.autoAttack) return false;
+    const cond = scene.autoAttack.condition ?? null;
+    if (cond && !evaluateCondition(cond, gameState)) return false;
+    this.engine.combatSystem.startCombat(scene.autoAttack.enemies, scene.autoAttack);
+    return true;
   }
 
   renderOptions(scene) {
@@ -243,64 +252,86 @@ export class SceneRenderer {
     btn.onclick = () => {
       this.engine.isGameStart = false;
       this.engine.log(LOG.PLAYER, opt.text, 'choice');
-      const mod = gameState.getPlayer().attributes[opt.skillCheck] || 0;
-      const hitRoll = roll(1, MAX_D20_ROLL) + mod;
-      const newlyFound = [];
-      items.forEach((l, idx) => {
-        if (state.found[idx]) return;
-        if (hitRoll >= state.dcs[idx]) { state.found[idx] = true; newlyFound.push(l); }
-        else { state.dcs[idx] += l.increment ?? 1; }
-      });
-      const anyFound = newlyFound.length > 0;
-      const stillMore = anyFound && !state.found.every(f => f);
-      const msgKey = anyFound
-        ? (stillMore ? 'actions.lookAroundFoundMore' : 'actions.lookAroundFound')
-        : 'actions.lookAroundFail';
-      this.engine.log(LOG.SYSTEM, this.engine.t(msgKey, { roll: hitRoll, mod }), anyFound ? 'loot' : 'system');
-      const drops = [];
-      newlyFound.forEach(l => {
-        if (l.table) {
-          for (let i = 0; i < (l.itemDrops ?? 1); i++) {
-            const resolved = this._rollTable(l.table);
-            if (resolved) drops.push(resolved);
-          }
-        } else {
-          drops.push(l);
-        }
-      });
-      const aggregated = new Map();
-      drops.forEach(d => {
-        const existing = aggregated.get(d.item);
-        if (existing) existing.amount += (d.amount ?? 1);
-        else aggregated.set(d.item, { item: d.item, amount: d.amount ?? 1 });
-      });
-      const lootItems = [];
-      aggregated.forEach(d => {
-        if (d.item === GOLD_ITEM_ID) {
-          gameState.modifyPlayerStat('gold', d.amount);
-          lootItems.push(`${d.amount} ${this.engine.t('loot.gold')}`);
-        } else {
-          gameState.addToInventory(d.item, d.amount);
-          lootItems.push(getItemLabel(this.engine.data.items, d.item, d.amount));
-        }
-      });
-      if (lootItems.length > 0) {
-        let listStr = "";
-        if (lootItems.length === 1) {
-          listStr = lootItems[0];
-        } else if (lootItems.length === 2) {
-          listStr = `${lootItems[0]} and ${lootItems[1]}`;
-        } else {
-          listStr = `${lootItems.slice(0, -1).join(', ')}, and ${lootItems[lootItems.length - 1]}`;
-        }
-        const message = this.engine.t('loot.foundItems', { list: listStr });
-        const fallbackMessage = message !== 'loot.foundItems' ? message : `Found ${listStr}.`;
-        this.engine.log(LOG.SYSTEM, fallbackMessage, 'loot');
-      }
-      gameState.setFlag(skillKey, state);
-      this.renderOptions(scene);
+      this._resolveDiscovery(opt, state, skillKey, scene);
     };
     return btn;
+  }
+
+  // Resolves one discovery attempt: rolls once against every still-hidden
+  // item's DC, marks hits as found, escalates the DCs of misses, awards the
+  // found loot, persists the updated state, and re-renders the options.
+  _resolveDiscovery(opt, state, skillKey, scene) {
+    const items = opt.items;
+    const mod = gameState.getPlayer().attributes[opt.skillCheck] || 0;
+    const hitRoll = roll(1, MAX_D20_ROLL) + mod;
+
+    const newlyFound = [];
+    items.forEach((l, idx) => {
+      if (state.found[idx]) return;
+      if (hitRoll >= state.dcs[idx]) { state.found[idx] = true; newlyFound.push(l); }
+      else { state.dcs[idx] += l.increment ?? 1; }
+    });
+
+    const anyFound = newlyFound.length > 0;
+    const stillMore = anyFound && !state.found.every(f => f);
+    const msgKey = anyFound
+      ? (stillMore ? 'actions.lookAroundFoundMore' : 'actions.lookAroundFound')
+      : 'actions.lookAroundFail';
+    this.engine.log(LOG.SYSTEM, this.engine.t(msgKey, { roll: hitRoll, mod }), anyFound ? 'loot' : 'system');
+
+    this._awardDiscoveredLoot(newlyFound);
+
+    gameState.setFlag(skillKey, state);
+    this.renderOptions(scene);
+  }
+
+  // Awards the loot for newly found discovery entries: rolls table entries
+  // into concrete drops, aggregates duplicates, adds gold/items to the player,
+  // and logs one summary line listing everything found.
+  _awardDiscoveredLoot(newlyFound) {
+    const drops = [];
+    newlyFound.forEach(l => {
+      if (l.table) {
+        for (let i = 0; i < (l.itemDrops ?? 1); i++) {
+          const resolved = this._rollTable(l.table);
+          if (resolved) drops.push(resolved);
+        }
+      } else {
+        drops.push(l);
+      }
+    });
+
+    const aggregated = new Map();
+    drops.forEach(d => {
+      const existing = aggregated.get(d.item);
+      if (existing) existing.amount += (d.amount ?? 1);
+      else aggregated.set(d.item, { item: d.item, amount: d.amount ?? 1 });
+    });
+
+    const lootItems = [];
+    aggregated.forEach(d => {
+      if (d.item === GOLD_ITEM_ID) {
+        gameState.modifyPlayerStat('gold', d.amount);
+        lootItems.push(`${d.amount} ${this.engine.t('loot.gold')}`);
+      } else {
+        gameState.addToInventory(d.item, d.amount);
+        lootItems.push(getItemLabel(this.engine.data.items, d.item, d.amount));
+      }
+    });
+
+    if (lootItems.length === 0) return;
+
+    let listStr = "";
+    if (lootItems.length === 1) {
+      listStr = lootItems[0];
+    } else if (lootItems.length === 2) {
+      listStr = `${lootItems[0]} and ${lootItems[1]}`;
+    } else {
+      listStr = `${lootItems.slice(0, -1).join(', ')}, and ${lootItems[lootItems.length - 1]}`;
+    }
+    const message = this.engine.t('loot.foundItems', { list: listStr });
+    const fallbackMessage = message !== 'loot.foundItems' ? message : `Found ${listStr}.`;
+    this.engine.log(LOG.SYSTEM, fallbackMessage, 'loot');
   }
 
   // Flavor-only skill check: no roll, shown once then hidden permanently.

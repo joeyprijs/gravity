@@ -24,7 +24,8 @@ export class UIManager {
         this.engine.log(LOG.SYSTEM, this.engine.t('player.noCombatSave'));
         return;
       }
-      if (gameState.downloadSave()) this.engine.log(LOG.SYSTEM, this.engine.t('system.saved'));
+      this._downloadSave(gameState.getSaveString());
+      this.engine.log(LOG.SYSTEM, this.engine.t('system.saved'));
     });
 
     // Load
@@ -37,7 +38,7 @@ export class UIManager {
       reader.onload = (ev) => {
         try {
           let raw = ev.target.result;
-          // Decode the base64+UTF-8 encoding written by state.js downloadSave().
+          // Decode the base64+UTF-8 encoding written by gameState.getSaveString().
           // TextDecoder is the modern replacement for the deprecated escape() approach.
           try {
             const binary = atob(raw);
@@ -162,6 +163,29 @@ export class UIManager {
         else if (action === "unequip") this.engine.unequipItem(slot);
       };
     });
+  }
+
+  // Offers an encoded save string (from gameState.getSaveString()) as a
+  // timestamped file download. Counterpart of the load path above.
+  _downloadSave(encoded) {
+    const blob = new Blob([encoded], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const dt = new Date();
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const d = String(dt.getDate()).padStart(2, '0');
+    const h = String(dt.getHours()).padStart(2, '0');
+    const min = String(dt.getMinutes()).padStart(2, '0');
+    const name = `Gravity_${y}${m}${d}_${h}${min}.json`;
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   // Applies a parsed save object and restores the game to its saved state.

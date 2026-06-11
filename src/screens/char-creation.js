@@ -38,13 +38,20 @@ export class CharCreationScreen {
     const panel = document.createElement('div');
     panel.className = `${CSS.CC_PANEL} ${CSS.PANEL}`;
 
-    // Title
     const title = document.createElement('h1');
     title.className = CSS.CC_TITLE;
     title.textContent = this.t('charCreation.title');
     panel.appendChild(title);
 
-    // Name input
+    panel.appendChild(this._buildNameSection());
+    panel.appendChild(this._buildStatsSection());
+    panel.appendChild(this._buildActionsRow());
+
+    this.overlay.appendChild(panel);
+  }
+
+  // Name input with a random suggestion from the names table.
+  _buildNameSection() {
     const nameSection = document.createElement('div');
     nameSection.className = CSS.CC_SECTION;
     const nameLabel = document.createElement('label');
@@ -62,10 +69,13 @@ export class CharCreationScreen {
     }
     nameSection.appendChild(nameLabel);
     nameSection.appendChild(nameInput);
-    panel.appendChild(nameSection);
     this.nameInput = nameInput;
+    return nameSection;
+  }
 
-    // Stat allocation
+  // Point-allocation section: the remaining-points counter plus one row per
+  // stat declared in rules.charCreation.stats.
+  _buildStatsSection() {
     const statsSection = document.createElement('div');
     statsSection.className = CSS.CC_SECTION;
     const statsTitle = document.createElement('div');
@@ -79,75 +89,78 @@ export class CharCreationScreen {
     statsTitle.appendChild(this.pointsEl);
 
     const stats = this.rules.charCreation?.stats || [];
-    stats.forEach(stat => {
-      const row = document.createElement('div');
-      row.className = CSS.CC_STAT_ROW;
+    stats.forEach(stat => statsSection.appendChild(this._buildStatRow(stat)));
+    return statsSection;
+  }
 
-      const info = document.createElement('div');
-      info.className = CSS.CC_STAT_INFO;
-      const statLabel = document.createElement('span');
-      statLabel.className = CSS.CC_STAT_LABEL;
-      // Use localeKey for locale lookup (avoids dot-path traversal issues)
-      statLabel.textContent = this.t(`charCreation.stats.${stat.localeKey}.label`);
-      const statDesc = document.createElement('span');
-      statDesc.className = CSS.CC_STAT_DESC;
-      statDesc.textContent = this.t(`charCreation.stats.${stat.localeKey}.description`);
-      info.appendChild(statLabel);
-      info.appendChild(statDesc);
+  // One stat row: label + description on the left, −/value/+ controls on the right.
+  _buildStatRow(stat) {
+    const row = document.createElement('div');
+    row.className = CSS.CC_STAT_ROW;
 
-      const controls = document.createElement('div');
-      controls.className = CSS.CC_STAT_CONTROLS;
+    const info = document.createElement('div');
+    info.className = CSS.CC_STAT_INFO;
+    const statLabel = document.createElement('span');
+    statLabel.className = CSS.CC_STAT_LABEL;
+    // Use localeKey for locale lookup (avoids dot-path traversal issues)
+    statLabel.textContent = this.t(`charCreation.stats.${stat.localeKey}.label`);
+    const statDesc = document.createElement('span');
+    statDesc.className = CSS.CC_STAT_DESC;
+    statDesc.textContent = this.t(`charCreation.stats.${stat.localeKey}.description`);
+    info.appendChild(statLabel);
+    info.appendChild(statDesc);
 
-      const decrementBtn = document.createElement('button');
-      decrementBtn.className = `${CSS.BTN} ${CSS.CC_STAT_BTN}`;
-      decrementBtn.textContent = '−';
-      decrementBtn.onclick = () => {
-        if (this.spent[stat.id] > (stat.min ?? 0)) {
-          this.spent[stat.id]--;
-          this._updateStatRow(stat, valueEl, decrementBtn, incrementBtn);
-          this._updatePointsDisplay();
-          this._updateConfirmBtn();
-        }
-      };
+    const controls = document.createElement('div');
+    controls.className = CSS.CC_STAT_CONTROLS;
 
-      const valueEl = document.createElement('span');
-      valueEl.className = CSS.CC_STAT_VALUE;
-      this._setStatValueText(valueEl, stat);
+    const decrementBtn = document.createElement('button');
+    decrementBtn.className = `${CSS.BTN} ${CSS.CC_STAT_BTN}`;
+    decrementBtn.textContent = '−';
+    decrementBtn.onclick = () => {
+      if (this.spent[stat.id] > (stat.min ?? 0)) {
+        this.spent[stat.id]--;
+        this._updateStatRow(stat, valueEl, decrementBtn, incrementBtn);
+        this._updatePointsDisplay();
+        this._updateConfirmBtn();
+      }
+    };
 
-      const incrementBtn = document.createElement('button');
-      incrementBtn.className = `${CSS.BTN} ${CSS.CC_STAT_BTN}`;
-      incrementBtn.textContent = '+';
-      incrementBtn.onclick = () => {
-        if (this.pointsRemaining > 0) {
-          this.spent[stat.id]++;
-          this._updateStatRow(stat, valueEl, decrementBtn, incrementBtn);
-          this._updatePointsDisplay();
-          this._updateConfirmBtn();
-        }
-      };
+    const valueEl = document.createElement('span');
+    valueEl.className = CSS.CC_STAT_VALUE;
+    this._setStatValueText(valueEl, stat);
 
-      controls.appendChild(decrementBtn);
-      controls.appendChild(valueEl);
-      controls.appendChild(incrementBtn);
-      row.appendChild(info);
-      row.appendChild(controls);
-      statsSection.appendChild(row);
+    const incrementBtn = document.createElement('button');
+    incrementBtn.className = `${CSS.BTN} ${CSS.CC_STAT_BTN}`;
+    incrementBtn.textContent = '+';
+    incrementBtn.onclick = () => {
+      if (this.pointsRemaining > 0) {
+        this.spent[stat.id]++;
+        this._updateStatRow(stat, valueEl, decrementBtn, incrementBtn);
+        this._updatePointsDisplay();
+        this._updateConfirmBtn();
+      }
+    };
 
-      // Store refs for external updates
-      stat._decrementBtn = decrementBtn;
-      stat._incrementBtn = incrementBtn;
-      stat._valueEl = valueEl;
+    controls.appendChild(decrementBtn);
+    controls.appendChild(valueEl);
+    controls.appendChild(incrementBtn);
+    row.appendChild(info);
+    row.appendChild(controls);
 
-      this._updateStatRow(stat, valueEl, decrementBtn, incrementBtn);
-    });
+    // Store refs for external updates
+    stat._decrementBtn = decrementBtn;
+    stat._incrementBtn = incrementBtn;
+    stat._valueEl = valueEl;
 
-    panel.appendChild(statsSection);
+    this._updateStatRow(stat, valueEl, decrementBtn, incrementBtn);
+    return row;
+  }
 
-    // Actions row
+  // Confirm + Load Save buttons.
+  _buildActionsRow() {
     const actions = document.createElement('div');
     actions.className = CSS.CC_ACTIONS;
 
-    // Confirm button
     this.confirmBtn = document.createElement('button');
     this.confirmBtn.className = `${CSS.BTN} ${CSS.CC_CONFIRM_BTN}`;
     this.confirmBtn.textContent = this.t('charCreation.confirmBtn');
@@ -162,8 +175,7 @@ export class CharCreationScreen {
     loadBtn.onclick = () => document.getElementById(EL.FILE_UPLOAD).click();
     actions.appendChild(loadBtn);
 
-    panel.appendChild(actions);
-    this.overlay.appendChild(panel);
+    return actions;
   }
 
   _setStatValueText(el, stat) {

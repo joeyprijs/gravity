@@ -35,7 +35,7 @@ export class ChestUI {
 
     const doneBtn = buildOptionButton(this.tChest('Done'));
     doneBtn.onclick = () => {
-      this.engine._customUIOpen = false;
+      this.engine.setCustomUIOpen(false);
       const scene = this.engine.data.scenes[gameState.getCurrentSceneId()];
       if (scene) this.engine.scene.renderOptions(scene);
     };

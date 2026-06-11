@@ -95,6 +95,20 @@ test('removeFromInventory: decrements amount', () => {
   assert.equal(entry.amount, 1);
 });
 
+test('addToInventory: rejects unknown item ID when an item database is provided', () => {
+  gameState.init(TEST_RULES, { rusty_sword: { name: 'Rusty Sword' } });
+  const added = gameState.addToInventory('no_such_item');
+  assert.equal(added, false);
+  assert.equal(gameState.getPlayer().inventory.find(i => i.item === 'no_such_item'), undefined);
+});
+
+test('addToInventory: accepts known item ID when an item database is provided', () => {
+  gameState.init(TEST_RULES, { rusty_sword: { name: 'Rusty Sword' } });
+  const added = gameState.addToInventory('rusty_sword');
+  assert.equal(added, true);
+  assert.equal(gameState.getPlayer().inventory.find(i => i.item === 'rusty_sword').amount, 2);
+});
+
 test('removeFromInventory: removes entry when amount hits 0', () => {
   // healing_potion starts at 2, remove both
   gameState.removeFromInventory('healing_potion', 2);
