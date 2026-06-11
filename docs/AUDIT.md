@@ -130,7 +130,9 @@ The same five patterns were independently reimplemented:
 - **`'gold'`** as the special currency ID is hardcoded in ~8 places (`engine.js:199,223,233,245,287,…`, `scene.js:301`). One constant in `config.js`.
 - **Hardcoded balance values in code:** curator install cost `50` (`curator.js:284`); `merchantSellRatio ?? 0.5` fallback (`dialogue.js:393`) duplicating a number that `item.schema.json` documents; minimap `padding = 40` (`map.js:74`) while sibling sizes live in `config.js`. Balance numbers belong in `rules.json`; layout constants in `config.js`.
 
-### 4.3 i18n is wired but dead-ended
+### 4.3 i18n is wired but dead-ended ✅ *Resolved*
+
+> **Resolution:** the manifest now declares its locale files (`locales` map + `defaultLanguage`), and the engine resolves the active language from `navigator.languages` via the pure `resolveLanguage()` helper in `core/i18n.js` (exact tag, then base code, then fallback — covered by `tests/i18n.test.js`). Plugin locales load for the same resolved language, falling back to their `en` file. Documented in ARCHITECTURE.md's new Localisation section.
 
 Plugin locale loading hardcodes `const currentLang = 'en'` (`engine.js:53`). The locale plumbing (namespaced plugin locales, `t()` with params) is genuinely good — but there is no way to select a language, so the manifest's `locales` map is misleading. Either add a language setting (rules.json or browser-language detection) or document English-only status until then.
 
@@ -245,5 +247,5 @@ During the audit these suspected issues were checked and found **not** to be pro
 ### Nice to have
 
 - [x] Tests for `actions.js`, `dialogue.js`, `scene.js`; curator plugin tests. jsdom UI smoke tests skipped — they would require a dev dependency, which the project deliberately avoids. *(4.7)*
-- [ ] Real language selection for i18n. *(4.3)*
+- [x] Real language selection for i18n. *(4.3)*
 - [ ] Normalize `carriedItems` at load; standardize event binding and `??` usage; remaining Section 5 items. *(4.10, 5)*

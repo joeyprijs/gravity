@@ -14,8 +14,8 @@ This document explains how the engine boots, how the modules fit together, and �
 `index.html` loads a single entry point, `src/core/engine.js`, which constructs `RPGEngine` on `DOMContentLoaded`:
 
 1. **Construct subsystems** — combat, dialogue, quests, narrative log, scene renderer, UI manager. Each receives the engine instance.
-2. **`init()`** registers the built-in actions, then loads `data/index.json` (the manifest) and fetches every registered asset in parallel.
-3. **Plugins load next** — *before* state initialisation, so they can register save migrations. Plugin locales declared in the manifest are loaded into a namespaced `plugin.<id>.*` locale tree.
+2. **`init()`** registers the built-in actions, then loads `data/index.json` (the manifest), resolves the active language (see *Localisation*), and fetches every registered asset in parallel.
+3. **Plugins load next** — *before* state initialisation, so they can register save migrations. Plugin locales declared in the manifest are loaded into a namespaced `plugin.<id>.*` locale tree, using the active language (falling back to the plugin's `en` file).
 4. **Data validation** (`core/validate.js`, invoked via `_validateData`) checks all loaded data: dangling IDs (items, scenes, enemies, NPCs, tables, conversation nodes), unknown action types and `skillCheck` names, enemies missing the attributes combat requires, and missing locale keys. Issues are printed to the console grouped per source entity. Developer tooling only — it never blocks the game.
 5. **`gameState.init(rules)`** replaces the skeleton state with defaults derived from `rules.json`; missions and scene flags are registered on top.
 6. **UI setup + subscription** — `gameState.subscribe((_, hint) => ui.update(hint))` makes every state change reactively re-render the relevant UI region.
@@ -27,6 +27,7 @@ This document explains how the engine boots, how the modules fit together, and �
 engine.js (orchestrator, delegate API, event bus, registries)
 ├── core/state.js      gameState singleton, listeners, save/load + migrations
 ├── core/config.js     CSS/EL registries, ACTIONS, FLAG_KEYS, constants
+├── core/i18n.js       language resolution (pure)
 ├── core/utils.js      DOM helpers (createElement, resetOptionsPanel, …)
 ├── systems/
 │   ├── scene.js       scene rendering, options, item discovery
@@ -136,6 +137,22 @@ The default export receives the engine instance at boot (before state init). Ava
 Do **not** replace or wrap StateManager/engine methods on the live singletons — two plugins doing that will trample each other. Plugin-owned save fields (e.g. the curator's `museumReputation`/`obtainedItems`) are introduced via `registerMigration` and live at the top level of the save object.
 
 `src/plugins/curator.js` (museum curation + reputation) is the reference implementation.
+
+## Localisation
+
+Every player-facing string resolves through `engine.t(key, params)` against the active locale tree; missing keys fall back to the key itself so they are visible without crashing.
+
+The manifest may declare the locale files a game ships, plus the language used when the player's browser matches none of them:
+
+```json
+"defaultLanguage": "en",
+"locales": {
+  "en": "data/locales.json",
+  "nl": "data/locales.nl.json"
+}
+```
+
+At boot the engine matches `navigator.languages` against the declared codes — exact tag first (`pt-BR`), then base code (`pt`); the matching is implemented in `core/i18n.js` (`resolveLanguage`). The resolved code is exposed as `engine.language`, and plugin locale maps are resolved against the same language. `data/locales.json` is always loaded first as the fallback so error messages stay translatable even when the manifest fails to load; single-language games can omit `locales` entirely.
 
 ## UI Layer
 

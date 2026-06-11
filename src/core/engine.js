@@ -6,11 +6,16 @@ import { NarrativeLog } from "../systems/narrative.js";
 import { UIManager } from "../ui/ui.js";
 import { SceneRenderer } from "../systems/scene.js";
 import { DEFAULT_WORLD_MAP_SIZE, LOG } from "./config.js";
+import { resolveLanguage } from "./i18n.js";
 import { validateGameData } from "./validate.js";
 import { registerBuiltinActions } from "../systems/actions.js";
 import { parseDamage } from "../systems/dice.js";
 import { CharCreationScreen } from "../screens/char-creation.js";
 import curatorPlugin from "../plugins/curator.js";
+
+// The locale file loaded before anything else, and the fallback when the
+// manifest declares no locale for the resolved language.
+const DEFAULT_LOCALE_PATH = 'data/locales.json';
 
 // RPGEngine is the central orchestrator. It owns all subsystems, loads game
 // data from JSON, and exposes a thin delegate API so subsystems can call each
@@ -20,6 +25,10 @@ class RPGEngine {
     // Populated by loadData(). Kept as an empty shell here so subsystems
     // constructed below can safely reference this.engine.data without null checks.
     this.data = { items: {}, npcs: {}, scenes: {}, missions: {}, tables: {}, regions: {}, worldMapSize: DEFAULT_WORLD_MAP_SIZE, locale: {}, rules: null, flags: {} };
+
+    // Active language code. Resolved properly in loadData() once the manifest's
+    // declared locales are known; 'en' until then.
+    this.language = 'en';
 
     this._actionRegistry = new Map();
     this._descriptionHooks = new Map();
@@ -50,10 +59,10 @@ class RPGEngine {
           const id = isObject ? pluginConfig.id : null;
           const locales = isObject ? pluginConfig.locales : null;
 
-          // Load locales first if declared in manifest
+          // Load locales first if declared in manifest. Plugins that don't
+          // ship the active language fall back to their English file.
           if (id && locales) {
-            const currentLang = 'en'; // default active language
-            const localePath = locales[currentLang];
+            const localePath = locales[this.language] || locales.en;
             if (localePath) {
               try {
                 const res = await fetch(localePath, { cache: 'no-cache' });
@@ -115,13 +124,29 @@ class RPGEngine {
 
   // Returns the manifest object so init() can read manifest.plugins.
   async loadData() {
-    // Load locale first — must be available before the try-catch below so
-    // error messages can still be translated if game data fails to load.
-    this.data.locale = await fetch('data/locales.json', { cache: 'no-cache' }).then(r => r.json()).catch(() => ({}));
+    // Load the default locale first — must be available before the try-catch
+    // below so error messages can still be translated if game data fails to load.
+    this.data.locale = await fetch(DEFAULT_LOCALE_PATH, { cache: 'no-cache' }).then(r => r.json()).catch(() => ({}));
 
     try {
       const manifestRes = await fetch('data/index.json', { cache: 'no-cache' });
       const manifest = await manifestRes.json();
+
+      // Resolve the active language from the manifest's declared locale files
+      // and the browser's language preferences. The default locale is already
+      // loaded as the fallback; re-fetch only for a different locale file.
+      this.language = resolveLanguage(
+        Object.keys(manifest.locales || {}),
+        navigator.languages || [navigator.language],
+        manifest.defaultLanguage || 'en'
+      );
+      const localePath = manifest.locales?.[this.language];
+      if (localePath && localePath !== DEFAULT_LOCALE_PATH) {
+        this.data.locale = await fetch(localePath, { cache: 'no-cache' }).then(r => r.json()).catch(err => {
+          console.warn(`[Gravity] Failed to load locale "${this.language}" from ${localePath} — using the default locale`, err);
+          return this.data.locale;
+        });
+      }
 
       const loadCategory = async (categoryObj) => {
         const results = {};

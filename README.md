@@ -99,6 +99,8 @@ gravity/
 │   │   ├── engine.js        # Subsystem orchestrator & startup validator
 │   │   ├── state.js         # Reactive StateManager & base64 serializer
 │   │   ├── config.js        # Global elements, action keys, and enums
+│   │   ├── i18n.js          # Language resolution for manifest locales
+│   │   ├── validate.js      # Load-time game data validation
 │   │   └── utils.js         # DOM helpers & dot-path traversal utilities
 │   ├── systems/
 │   │   ├── actions.js       # Composable action pipeline handlers
@@ -130,6 +132,7 @@ gravity/
 │   ├── dialogue.test.js
 │   ├── dice.test.js
 │   ├── display.test.js
+│   ├── i18n.test.js
 │   ├── reputation.test.js
 │   ├── scene.test.js
 │   ├── state.test.js

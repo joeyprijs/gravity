@@ -1,5 +1,9 @@
 {
   "worldMapSize": { "width": 3000, "height": 2000 },
+  "defaultLanguage": "en",
+  "locales": {
+    "en": "data/locales.json"
+  },
   "rules": "data/rules.json",
   "plugins": [
     {
