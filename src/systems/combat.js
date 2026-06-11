@@ -333,7 +333,7 @@ export class CombatSystem {
       this.enemies.forEach(enemy => {
         if (enemy.attributes.xpReward) {
           gameState.addXP(enemy.attributes.xpReward);
-          this.engine.log(LOG.SYSTEM, `${enemy.name}: ${this.engine.t('loot.xpGained', { amount: enemy.attributes.xpReward })}`, 'loot');
+          this.engine.log(LOG.SYSTEM, this.engine.t('loot.xpGained', { amount: enemy.attributes.xpReward }), 'loot');
         }
       });
 
