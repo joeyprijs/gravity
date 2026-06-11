@@ -160,7 +160,9 @@ Five functions account for most of the hard-to-read code; each mixes several res
 - `engine._validateData()` — 84 lines (`engine.js:193-276`) of nested loops; extract per-collection validators (also enables 3.3).
 - `scene._buildItemDiscoveryButton()` — 73 lines (`scene.js:255-328`) with table rolling, aggregation, and logging inline in the click handler; extract a named `_resolveDiscovery()`.
 
-### 4.7 Test coverage stops at the systems/UI boundary
+### 4.7 Test coverage stops at the systems/UI boundary ✅ *Resolved (headless scope)*
+
+> **Resolution:** `actions.test.js`, `dialogue.test.js`, `scene.test.js`, and `curator.test.js` now cover the action handlers, dialogue/store flow logic, scene description/discovery/loot-table logic, and the curator plugin's registration surface — all headless against mock engines, in keeping with the suite's zero-dependency style. The jsdom-based UI smoke tests were **deliberately skipped**: they would require adding jsdom as a dev dependency, and the project owner chose to keep the repo dependency-free. DOM-coupled render paths (`renderOptions`, `renderStore`, `src/ui/*`) therefore remain untested.
 
 Current coverage is real and good where it exists: `state`, `combat`, `condition`, `dice`, `display`, `reputation`, `char-creation` logic — 98 tests against real modules. Zero coverage: `dialogue.js`, `scene.js`, `actions.js`, `narrative.js`, `map.js`, all of `src/ui/`, and `curator.js`. The untested trio dialogue/scene/actions contains the most intricate game logic in the repo (merchant stock, DC escalation, loot aggregation) — and notably, the duplication in 4.1 lives almost entirely in untested files, which raises refactoring risk. Priority order: actions → dialogue (mostly pure logic, testable today) → scene → jsdom-based UI smoke tests.
 
@@ -242,6 +244,6 @@ During the audit these suspected issues were checked and found **not** to be pro
 
 ### Nice to have
 
-- [ ] Tests for `actions.js`, `dialogue.js`, `scene.js`; jsdom smoke tests for the UI layer; curator plugin tests. *(4.7)*
+- [x] Tests for `actions.js`, `dialogue.js`, `scene.js`; curator plugin tests. jsdom UI smoke tests skipped — they would require a dev dependency, which the project deliberately avoids. *(4.7)*
 - [ ] Real language selection for i18n. *(4.3)*
 - [ ] Normalize `carriedItems` at load; standardize event binding and `??` usage; remaining Section 5 items. *(4.10, 5)*

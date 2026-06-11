@@ -122,13 +122,18 @@ gravity/
 │       ├── curator.js       # Museum curation & reputation plugin
 │       └── curator/locales/ # Plugin locale namespaces
 ├── tests/                   # Synchronous Node unit tests (npm test)
+│   ├── actions.test.js
 │   ├── char-creation.test.js
 │   ├── combat.test.js
 │   ├── condition.test.js
+│   ├── curator.test.js
+│   ├── dialogue.test.js
 │   ├── dice.test.js
 │   ├── display.test.js
 │   ├── reputation.test.js
-│   └── state.test.js
+│   ├── scene.test.js
+│   ├── state.test.js
+│   └── validate.test.js
 ├── schemas/                 # Project JSON Schema validation files
 │   ├── item.schema.json
 │   ├── scene.schema.json
