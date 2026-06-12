@@ -99,7 +99,7 @@ function renderParams(action, container, onChange) {
       container.appendChild(param('Mode',
         select([['item', 'Item'], ['xp', 'XP']], isXp ? 'xp' : 'item', v => {
           if (v === 'xp') {
-            delete action.item; delete action.amount; action.xpReward = 0;
+            delete action.item; delete action.amount; delete action.received; action.xpReward = 0;
           } else {
             delete action.xpReward; action.item = itemIds[0] ?? ''; action.amount = 1;
           }
@@ -116,6 +116,15 @@ function renderParams(action, container, onChange) {
           }, 'form-select')
         ));
         container.appendChild(param('Amount', numInput(action.amount ?? 1, v => { action.amount = v; onChange(); }, 'sm')));
+
+        const receivedCheck = el('input', { type: 'checkbox' });
+        if (action.received) receivedCheck.checked = true;
+        receivedCheck.addEventListener('change', () => {
+          if (receivedCheck.checked) action.received = true;
+          else delete action.received;
+          onChange();
+        });
+        container.appendChild(param('Received', receivedCheck));
       }
       break;
     }
