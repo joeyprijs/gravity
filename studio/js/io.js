@@ -155,21 +155,34 @@ export async function deleteEntry(key) {
 }
 
 // Fields the engine never reads — strip them from saved JSON.
-const DEAD_KEYS = new Set(['disposition', 'droppedLoot', 'npcName']);
+const DEAD_KEYS = new Set(['disposition', 'droppedLoot', 'npcName', '_studioLayout']);
 // Optional array fields — omit when empty so the JSON stays clean.
-const STRIP_EMPTY_ARRAYS = new Set(['actions', 'onFailure', 'items']);
+const STRIP_EMPTY_ARRAYS = new Set(['actions', 'onFailure', 'items', 'skills', 'displays', 'carriedItems']);
+// Optional object fields, stripped from NPC files only: rules nests
+// attributes/equipment under playerDefaults too, and the engine clones those
+// without guards, so they must survive even when empty.
+const STRIP_EMPTY_NPC_OBJECTS = new Set(['attributes', 'equipment', 'conversations']);
 
-function saveReplacer(key, value) {
-  if (DEAD_KEYS.has(key)) return undefined;
-  if (STRIP_EMPTY_ARRAYS.has(key) && Array.isArray(value) && value.length === 0) return undefined;
-  return value;
+function isEmptyObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    && Object.keys(value).length === 0;
+}
+
+function makeReplacer(fileKey) {
+  const isNpc = fileKey.startsWith('npcs:');
+  return (key, value) => {
+    if (DEAD_KEYS.has(key)) return undefined;
+    if (STRIP_EMPTY_ARRAYS.has(key) && Array.isArray(value) && value.length === 0) return undefined;
+    if (isNpc && STRIP_EMPTY_NPC_OBJECTS.has(key) && isEmptyObject(value)) return undefined;
+    return value;
+  };
 }
 
 export async function saveFile(key) {
   const handle = store.fileHandles[key];
   if (!handle) throw new Error(`No file handle for "${key}"`);
   const writable = await handle.createWritable();
-  await writable.write(JSON.stringify(store.files[key], saveReplacer, 2) + '\n');
+  await writable.write(JSON.stringify(store.files[key], makeReplacer(key), 2) + '\n');
   await writable.close();
 }
 

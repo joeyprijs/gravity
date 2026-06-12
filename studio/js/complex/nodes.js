@@ -4,7 +4,19 @@ import { el } from '../utils.js';
 const NODE_W   = 240;
 const COL_GAP  = 320;
 const ROW_GAP  = 200;
-const LAYOUT   = '_studioLayout';
+// Node positions are editor state, not game data — they live in localStorage
+// so saved NPC JSON stays pure (io.js strips the legacy _studioLayout key).
+const LAYOUT_STORE_PREFIX = 'gravity-studio:layout:';
+
+function loadLayout(npcKey) {
+  try { return JSON.parse(localStorage.getItem(LAYOUT_STORE_PREFIX + npcKey)); }
+  catch { return null; }
+}
+
+function saveLayout(npcKey, pos) {
+  try { localStorage.setItem(LAYOUT_STORE_PREFIX + npcKey, JSON.stringify(pos)); }
+  catch { /* storage unavailable — the layout can be re-dragged */ }
+}
 
 export function openDialogueGraph(npcKey) {
   document.querySelectorAll('.sidebar-item').forEach(n => {
@@ -46,8 +58,7 @@ function buildGraph(npcKey) {
   canvas.appendChild(svg);
 
   // Ensure layout exists and covers all current nodes
-  if (!npc[LAYOUT]) npc[LAYOUT] = autoLayout(convs);
-  const pos = npc[LAYOUT];
+  const pos = loadLayout(npcKey) ?? autoLayout(convs);
   for (const id of Object.keys(convs)) {
     if (!pos[id]) {
       const maxY = Object.values(pos).reduce((m, p) => Math.max(m, p.y), 0);
@@ -264,7 +275,7 @@ function makeDraggable(handle, card, nodeId, pos, npcKey, scrollWrap, redraw) {
     const onUp = () => {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup',   onUp);
-      markDirty(npcKey);
+      saveLayout(npcKey, pos);
     };
 
     document.addEventListener('mousemove', onMove);
