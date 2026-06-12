@@ -68,10 +68,19 @@ function buildGraph(npcKey) {
     }
   }
 
+  // Coalesce redraw requests to one per animation frame — node dragging
+  // fires mousemove far faster than the screen repaints.
+  let redrawScheduled = false;
+  function scheduleRedraw() {
+    if (redrawScheduled) return;
+    redrawScheduled = true;
+    requestAnimationFrame(() => { redrawScheduled = false; redraw(); });
+  }
+
   // Build node elements
   const nodeEls = {};
   for (const [nodeId, node] of Object.entries(convs)) {
-    const card = makeNode(nodeId, node, pos[nodeId], npcKey, convs, pos, scrollWrap, svg, redraw);
+    const card = makeNode(nodeId, node, pos[nodeId], npcKey, convs, pos, scrollWrap, svg, scheduleRedraw);
     nodeEls[nodeId] = card;
     canvas.appendChild(card);
   }
@@ -87,34 +96,25 @@ function buildGraph(npcKey) {
     redraw();
   });
 
+  // Structured as one read phase (measure every rect, cards cached per node)
+  // followed by one write phase (draw all paths), so a full redraw costs a
+  // single layout reflow no matter how many connections exist.
   function redraw() {
     clearSvg(svg);
     addArrowDef(svg, NS);
 
     const wRect = scrollWrap.getBoundingClientRect();
+    const cardRects = new Map();
+    const rectOf = id => {
+      if (!cardRects.has(id)) cardRects.set(id, nodeEls[id].getBoundingClientRect());
+      return cardRects.get(id);
+    };
 
-    // Pass 1: count how many connections arrive at each (target, side) pair
-    // so we can spread them evenly along that edge.
+    // Read phase: collect every connection with its measurements, counting
+    // how many arrive at each (target, side) pair so we can spread them
+    // evenly along that edge.
+    const conns = [];
     const inCount = {};
-    for (const [nodeId, node] of Object.entries(convs)) {
-      const card = nodeEls[nodeId];
-      if (!card) continue;
-      for (const resp of node.responses ?? []) {
-        const target = (resp.actions ?? []).find(a => a.type === 'goToConversation')?.node;
-        if (!target || !nodeEls[target]) continue;
-        const sc   = card.getBoundingClientRect();
-        const tc   = nodeEls[target].getBoundingClientRect();
-        const side = tc.left < sc.right ? 'r' : 'l';
-        const key  = `${target}_${side}`;
-        inCount[key] = (inCount[key] ?? 0) + 1;
-      }
-    }
-
-    // Pass 2: draw, assigning each connection its spread port position
-    const inIdx = {};
-    const ARROW  = 8;
-    const MARGIN = 16;
-
     for (const [nodeId, node] of Object.entries(convs)) {
       const card = nodeEls[nodeId];
       if (!card) continue;
@@ -124,38 +124,46 @@ function buildGraph(npcKey) {
         if (!target || !nodeEls[target]) return;
 
         const anchor = card.querySelector(`[data-anchor="${ri}"]`);
-        const tCard  = nodeEls[target];
-        const tHdr   = tCard?.querySelector('.dg-node-hdr');
-        if (!anchor || !tCard || !tHdr) return;
+        if (!anchor) return;
 
         const a  = anchor.getBoundingClientRect();
-        const sc = card.getBoundingClientRect();
-        const tc = tCard.getBoundingClientRect();
-        const th = tHdr.getBoundingClientRect();
-
-        const ax = a.right  - wRect.left + scrollWrap.scrollLeft;
-        const ay = (a.top + a.bottom) / 2 - wRect.top + scrollWrap.scrollTop;
+        const sc = rectOf(nodeId);
+        const tc = rectOf(target);
 
         const backward = tc.left < sc.right;
-        const side     = backward ? 'r' : 'l';
-        const key      = `${target}_${side}`;
-        const total    = inCount[key] ?? 1;
-        const idx      = inIdx[key] ?? 0;
-        inIdx[key]     = idx + 1;
+        const key      = `${target}_${backward ? 'r' : 'l'}`;
+        inCount[key] = (inCount[key] ?? 0) + 1;
 
-        // Spread ports evenly between MARGIN from top and MARGIN from bottom.
-        const portY = total === 1
-          ? (tc.top + tc.bottom) / 2
-          : tc.top + MARGIN + idx * (tc.height - 2 * MARGIN) / (total - 1);
-        const ty = portY - wRect.top + scrollWrap.scrollTop;
-
-        const tx = backward
-          ? tc.right - wRect.left + scrollWrap.scrollLeft + ARROW
-          : tc.left  - wRect.left + scrollWrap.scrollLeft - ARROW;
-
-        drawBezier(svg, NS, ax, ay, tx, ty);
-        anchor.classList.add('dg-anchor-on');
+        conns.push({
+          anchor, tc, backward, key,
+          ax: a.right - wRect.left + scrollWrap.scrollLeft,
+          ay: (a.top + a.bottom) / 2 - wRect.top + scrollWrap.scrollTop,
+        });
       });
+    }
+
+    // Write phase: draw, assigning each connection its spread port position.
+    const inIdx = {};
+    const ARROW  = 8;
+    const MARGIN = 16;
+
+    for (const { anchor, tc, backward, key, ax, ay } of conns) {
+      const total = inCount[key] ?? 1;
+      const idx   = inIdx[key] ?? 0;
+      inIdx[key]  = idx + 1;
+
+      // Spread ports evenly between MARGIN from top and MARGIN from bottom.
+      const portY = total === 1
+        ? (tc.top + tc.bottom) / 2
+        : tc.top + MARGIN + idx * (tc.height - 2 * MARGIN) / (total - 1);
+      const ty = portY - wRect.top + scrollWrap.scrollTop;
+
+      const tx = backward
+        ? tc.right - wRect.left + scrollWrap.scrollLeft + ARROW
+        : tc.left  - wRect.left + scrollWrap.scrollLeft - ARROW;
+
+      drawBezier(svg, NS, ax, ay, tx, ty);
+      anchor.classList.add('dg-anchor-on');
     }
   }
 

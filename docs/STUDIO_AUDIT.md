@@ -211,4 +211,4 @@ Checked and found *not* to be problems — recorded so future audits don't re-li
 
 - [x] Export the pure logic (`pack`/`unpack`/`detectType`, `autoLayout`, `saveReplacer`, normalizers) and cover it in the existing `node --test` suite (`tests/studio-logic.test.js`). *(4.7)*
 - [x] One `contracts.js` for the hand-copied engine enums; `GOLD_ITEM_ID` now imported straight from `src/core/config.js`, and a test pins `ACTION_TYPES` to the engine's core registrations. *(4.1)*
-- [x] Sidebar state preservation across rebuilds; the Section 5 paper cuts (graph `redraw()` perf left as-is — fine at demo scale, as noted). *(4.8, 5)*
+- [x] Sidebar state preservation across rebuilds; the Section 5 paper cuts. Graph `redraw()` was subsequently fixed too: redraws coalesce to one per animation frame, and rect reads are batched ahead of path writes so a redraw costs a single reflow regardless of connection count. *(4.8, 5)*
