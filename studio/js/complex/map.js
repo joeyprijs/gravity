@@ -1,4 +1,4 @@
-import { store, markDirty, setActiveFile } from '../app.js';
+import { store, markDirty, setActiveFile } from '../store.js';
 import { el, select } from '../utils.js';
 
 const GRID = 5;

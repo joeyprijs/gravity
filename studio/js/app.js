@@ -1,48 +1,10 @@
+import { store, setActiveFile, setFormRenderer, updateSaveButton } from './store.js';
 import { openWorkspace, saveFile, resetWorkspace } from './io.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderForm } from './components/forms.js';
 import { toast, showConfirm } from './ui.js';
 
-export const store = {
-  files: {},        // { "items:rusty_sword": { ...json }, "__rules": { ... }, ... }
-  fileHandles: {},  // { "items:rusty_sword": FileSystemFileHandle, ... }
-  index: null,      // parsed data/index.json
-  dirHandle: null,  // root FileSystemDirectoryHandle
-  activeFile: null,
-  dirtyFiles: new Set(),
-  descriptionHooks: new Set(),
-};
-
-export function setActiveFile(key) {
-  store.activeFile = key;
-
-  const editor = document.getElementById('editor');
-  editor.innerHTML = '';
-
-  if (key && store.files[key] !== undefined) {
-    editor.appendChild(renderForm(key, store.files[key]));
-  } else {
-    editor.innerHTML = '<div id="editor-placeholder">Select a file from the sidebar.</div>';
-  }
-
-  document.querySelectorAll('.sidebar-item').forEach(node => {
-    node.classList.toggle('active', node.dataset.key === key);
-  });
-}
-
-export function markDirty(key) {
-  store.dirtyFiles.add(key);
-  updateSaveButton();
-  const node = document.querySelector(`.sidebar-item[data-key="${CSS.escape(key)}"]`);
-  if (node) node.classList.add('dirty');
-}
-
-function updateSaveButton() {
-  const btn = document.getElementById('btn-save');
-  const count = store.dirtyFiles.size;
-  btn.disabled = count === 0;
-  btn.textContent = count > 0 ? `Save (${count})` : 'Save';
-}
+setFormRenderer(renderForm);
 
 async function handleSave() {
   // Warn about empty required fields but don't block save

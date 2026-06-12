@@ -1,4 +1,4 @@
-import { store } from './app.js';
+import { store } from './store.js';
 
 /** Navigate a FileSystemDirectoryHandle to a file by slash-separated path. */
 async function getFileHandle(rootHandle, path) {

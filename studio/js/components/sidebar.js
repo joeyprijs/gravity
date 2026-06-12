@@ -1,4 +1,4 @@
-import { store, setActiveFile } from '../app.js';
+import { store, setActiveFile } from '../store.js';
 import { el } from '../utils.js';
 import { openMapView } from '../complex/map.js';
 import { createEntry, deleteEntry } from '../io.js';

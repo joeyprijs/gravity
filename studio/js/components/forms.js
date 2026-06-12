@@ -1,4 +1,4 @@
-import { store, markDirty } from '../app.js';
+import { store, markDirty } from '../store.js';
 import { el, formRow, getPath, setPath, select } from '../utils.js';
 import { renderSceneForm } from './scene-form.js';
 import { renderNpcForm }   from './npc-form.js';

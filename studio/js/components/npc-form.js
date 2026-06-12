@@ -1,4 +1,4 @@
-import { store, markDirty } from '../app.js';
+import { store, markDirty } from '../store.js';
 import { el, formRow, select } from '../utils.js';
 import { renderActionPipeline } from './actions.js';
 import { renderInlineCondition } from './condition-inline.js';

@@ -1,4 +1,4 @@
-import { store } from '../app.js';
+import { store } from '../store.js';
 import { el, select } from '../utils.js';
 
 const ALL_TYPES = [
