@@ -102,7 +102,6 @@
       "skillCheck": "charisma",
       "dc": 18,
       "increment": 2,
-      "npcName": "Goblin Guard",
       "condition": {
         "and": [
           { "flag": "defeated_goblin_guard", "value": false },

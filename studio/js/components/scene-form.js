@@ -10,7 +10,7 @@ export function renderSceneForm(key, data) {
   } else if (!Array.isArray(data.description)) {
     data.description = [];
   }
-  data.description.forEach(d => { if (typeof d === 'string') Object.assign(d, { text: d }); });
+  data.description = data.description.map(d => typeof d === 'string' ? { text: d } : d);
   if (!Array.isArray(data.options)) data.options = [];
   if (!Array.isArray(data.skills))  data.skills  = [];
 
@@ -378,13 +378,6 @@ function renderSkills(data, onChange) {
       if (!Array.isArray(skill.items)) skill.items = [];
 
       const cardBody = el('div', { class: 'card-body' });
-
-      const npcNameInput = el('input', { type: 'text', class: 'form-input', value: skill.npcName ?? '', placeholder: 'NPC name (optional)' });
-      npcNameInput.addEventListener('input', () => { skill.npcName = npcNameInput.value || undefined; onChange(); });
-      const npcParam = el('div', { class: 'action-param' });
-      npcParam.appendChild(el('span', { class: 'action-param-label' }, ['NPC Name']));
-      npcParam.appendChild(npcNameInput);
-      cardBody.appendChild(npcParam);
 
       const dcWrap = el('div', { class: 'card-section' });
       const dcRow = el('div', { class: 'drop-rhs' });

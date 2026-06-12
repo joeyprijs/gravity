@@ -1,5 +1,6 @@
 import { store } from '../app.js';
 import { el, select } from '../utils.js';
+import { showConfirm } from '../ui.js';
 
 const ACTION_TYPES = [
   ['navigate',          'Navigate to Scene'],
@@ -33,7 +34,15 @@ export function renderActionPipeline(actions, onChange) {
       const card = el('div', { class: 'action-card' });
 
       const hdr = el('div', { class: 'action-card-hdr' });
-      const typeSel = select(ACTION_TYPES, action.type, v => {
+      const typeSel = select(ACTION_TYPES, action.type, async v => {
+        const known = ACTION_TYPES.some(([t]) => t === action.type);
+        if (action.type && !known) {
+          const ok = await showConfirm(
+            `This action has type "${action.type}", which Studio doesn't recognize (it may come from a plugin). Changing the type will erase all of its data.`,
+            'Change Type'
+          );
+          if (!ok) { rebuild(); return; }
+        }
         Object.keys(action).forEach(k => { if (k !== 'type') delete action[k]; });
         action.type = v;
         onChange();

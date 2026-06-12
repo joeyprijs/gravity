@@ -104,10 +104,10 @@ async function scanDirectoryForHooks(dirHandle, currentPath = '') {
 }
 
 const DEFAULTS = {
-  items:    () => ({ name: 'New Item', type: 'Misc' }),
+  items:    () => ({ name: 'New Item', type: 'Flavour' }),
   npcs:     () => ({ name: 'New NPC', conversations: {}, carriedItems: [], attributes: {} }),
   scenes:   () => ({ title: 'New Scene', region: '', description: [], options: [] }),
-  missions: () => ({ name: 'New Mission', stages: [] }),
+  missions: () => ({ name: 'New Mission' }),
   tables:   () => ({ entries: [] }),
   flags:    () => ({}),
 };
@@ -130,6 +130,7 @@ export async function createEntry(type, id) {
 
   if (!store.index[type]) store.index[type] = {};
   store.index[type][id] = path;
+  await saveFile('__index');
 
   return key;
 }
@@ -150,10 +151,11 @@ export async function deleteEntry(key) {
   delete store.files[key];
   delete store.index[type][id];
   store.dirtyFiles.delete(key);
+  await saveFile('__index');
 }
 
 // Fields the engine never reads — strip them from saved JSON.
-const DEAD_KEYS = new Set(['disposition', 'droppedLoot']);
+const DEAD_KEYS = new Set(['disposition', 'droppedLoot', 'npcName']);
 // Optional array fields — omit when empty so the JSON stays clean.
 const STRIP_EMPTY_ARRAYS = new Set(['actions', 'onFailure', 'items']);
 
@@ -225,7 +227,7 @@ export async function resetWorkspace() {
     title: "A New Beginning",
     region: "world",
     description: [
-      "You stand at the beginning of a brand new adventure. The world lies before you, waiting to be shaped."
+      { text: "You stand at the beginning of a brand new adventure. The world lies before you, waiting to be shaped." }
     ],
     options: []
   };

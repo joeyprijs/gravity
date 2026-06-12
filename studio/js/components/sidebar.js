@@ -1,4 +1,4 @@
-import { store, setActiveFile, markDirty } from '../app.js';
+import { store, setActiveFile } from '../app.js';
 import { el } from '../utils.js';
 import { openMapView } from '../complex/map.js';
 import { createEntry, deleteEntry } from '../io.js';
@@ -16,7 +16,6 @@ function makeItem(label, key, deletable = false) {
       if (!confirmed) return;
       try {
         await deleteEntry(key);
-        markDirty('__index');
         if (store.activeFile === key) {
           document.getElementById('editor').innerHTML =
             '<div id="editor-placeholder">Select a file from the sidebar.</div>';
@@ -71,7 +70,6 @@ async function addEntry(type) {
 
   try {
     const key = await createEntry(type, id);
-    markDirty('__index');
     renderSidebar(document.getElementById('sidebar'));
     setActiveFile(key);
   } catch (e) {

@@ -44,12 +44,20 @@ export function setPath(obj, path, val) {
   cur[parts[parts.length - 1]] = val;
 }
 
-/** Build a <select> from an options array of [value, label] pairs. */
+/** Build a <select> from an options array of [value, label] pairs.
+ *  A non-empty currentVal that matches no option is surfaced as a disabled
+ *  "unknown" entry instead of silently displaying the first option. */
 export function select(options, currentVal, onChange, className = 'form-select') {
   const sel = el('select', { class: className });
+  const cur = currentVal ?? '';
+  if (cur !== '' && !options.some(([val]) => val === cur)) {
+    const warn = el('option', { value: cur, disabled: '' }, [`⚠ ${cur} (unknown)`]);
+    warn.selected = true;
+    sel.appendChild(warn);
+  }
   for (const [val, label] of options) {
     const opt = el('option', { value: val }, [label]);
-    if (val === (currentVal ?? '')) opt.selected = true;
+    if (val === cur) opt.selected = true;
     sel.appendChild(opt);
   }
   sel.addEventListener('change', () => onChange(sel.value));

@@ -112,3 +112,7 @@ document.addEventListener('keydown', e => {
     if (store.dirtyFiles.size > 0) handleSave();
   }
 });
+
+window.addEventListener('beforeunload', e => {
+  if (store.dirtyFiles.size > 0) e.preventDefault();
+});
