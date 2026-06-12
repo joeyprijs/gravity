@@ -1,5 +1,5 @@
 import { store, setActiveFile } from '../store.js';
-import { el } from '../utils.js';
+import { el, makeCollapsible } from '../utils.js';
 import { openMapView } from '../complex/map.js';
 import { createEntry, deleteEntry } from '../io.js';
 import { showModal, showConfirm, toast } from '../ui.js';
@@ -44,15 +44,7 @@ function makeSection(title, children, nested = false, onAdd = null) {
   const body = el('div', { class: 'sidebar-section-body' }, children);
   const section = el('div', { class: nested ? 'sidebar-section nested' : 'sidebar-section' }, [header, body]);
 
-  let collapsed = true;
-  body.style.display = 'none';
-  header.classList.add('collapsed');
-
-  header.addEventListener('click', () => {
-    collapsed = !collapsed;
-    body.style.display = collapsed ? 'none' : '';
-    header.classList.toggle('collapsed', collapsed);
-  });
+  makeCollapsible(header, body);
 
   return section;
 }

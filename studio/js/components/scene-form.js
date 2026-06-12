@@ -1,6 +1,6 @@
 import { store, markDirty } from '../store.js';
-import { el, formRow, select } from '../utils.js';
-import { renderActionPipeline } from './actions.js';
+import { el, formRow, select, makeCollapsible, dcIncrementInputs } from '../utils.js';
+import { renderActionPipeline, renderEnemyList } from './actions.js';
 import { renderInlineCondition } from './condition-inline.js';
 
 export function renderSceneForm(key, data) {
@@ -212,15 +212,7 @@ function renderDescBlocks(data, onChange) {
       cardBody.appendChild(descCondWrap);
       card.appendChild(cardBody);
 
-      let collapsed = true;
-      cardBody.style.display = 'none';
-      hdr.classList.add('collapsed');
-      hdr.addEventListener('click', e => {
-        if (e.target.closest('.btn-hdr')) return;
-        collapsed = !collapsed;
-        cardBody.style.display = collapsed ? 'none' : '';
-        hdr.classList.toggle('collapsed', collapsed);
-      });
+      makeCollapsible(hdr, cardBody);
 
       container.appendChild(card);
     });
@@ -326,15 +318,7 @@ function renderOptions(data, onChange) {
       cardBody.appendChild(actWrap);
       item.appendChild(cardBody);
 
-      let collapsed = true;
-      cardBody.style.display = 'none';
-      hdr.classList.add('collapsed');
-      hdr.addEventListener('click', e => {
-        if (textInput.contains(e.target) || rm.contains(e.target)) return;
-        collapsed = !collapsed;
-        cardBody.style.display = collapsed ? 'none' : '';
-        hdr.classList.toggle('collapsed', collapsed);
-      });
+      makeCollapsible(hdr, cardBody);
 
       container.appendChild(item);
     });
@@ -381,11 +365,7 @@ function renderSkills(data, onChange) {
 
       const dcWrap = el('div', { class: 'card-section' });
       const dcRow = el('div', { class: 'drop-rhs' });
-      const dcInput = el('input', { type: 'number', class: 'form-input sm', value: skill.dc ?? '', placeholder: 'DC' });
-      dcInput.addEventListener('input', () => { skill.dc = dcInput.value === '' ? undefined : Number(dcInput.value); onChange(); });
-      const incInput = el('input', { type: 'number', class: 'form-input sm', value: skill.increment ?? '', placeholder: 'Increment' });
-      incInput.addEventListener('input', () => { skill.increment = incInput.value === '' ? undefined : Number(incInput.value); onChange(); });
-      dcRow.append(el('span', { class: 'list-label' }, ['DC']), dcInput, el('span', { class: 'list-label' }, ['+ Increment']), incInput);
+      dcRow.append(...dcIncrementInputs(skill, onChange));
       dcWrap.appendChild(dcRow);
       cardBody.appendChild(dcWrap);
 
@@ -414,15 +394,7 @@ function renderSkills(data, onChange) {
 
       item.appendChild(cardBody);
 
-      let collapsed = true;
-      cardBody.style.display = 'none';
-      hdr.classList.add('collapsed');
-      hdr.addEventListener('click', e => {
-        if (textInput.contains(e.target) || skillSel.contains(e.target) || rm.contains(e.target)) return;
-        collapsed = !collapsed;
-        cardBody.style.display = collapsed ? 'none' : '';
-        hdr.classList.toggle('collapsed', collapsed);
-      });
+      makeCollapsible(hdr, cardBody);
 
       container.appendChild(item);
     });
@@ -475,11 +447,7 @@ function renderDropsList(skill, itemIds, tableIds, onChange) {
       row.appendChild(lhs);
 
       const rhs = el('div', { class: 'drop-rhs' });
-      const dcInput = el('input', { type: 'number', class: 'form-input sm', value: drop.dc ?? '', placeholder: 'DC' });
-      dcInput.addEventListener('input', () => { drop.dc = dcInput.value === '' ? undefined : Number(dcInput.value); onChange(); });
-      const incInput = el('input', { type: 'number', class: 'form-input sm', value: drop.increment ?? '', placeholder: 'Increment' });
-      incInput.addEventListener('input', () => { drop.increment = incInput.value === '' ? undefined : Number(incInput.value); onChange(); });
-      rhs.append(el('span', { class: 'list-label' }, ['DC']), dcInput, el('span', { class: 'list-label' }, ['+ Increment']), incInput);
+      rhs.append(...dcIncrementInputs(drop, onChange));
       const rmBtn = el('button', { class: 'btn-hdr' }, ['✕']);
       rmBtn.addEventListener('click', () => { skill.items.splice(i, 1); onChange(); render(); });
       rhs.appendChild(rmBtn);
@@ -530,24 +498,7 @@ function renderAutoAttack(data, onChange) {
       // Enemies
       const enemyParam = el('div', { class: 'action-param' });
       enemyParam.appendChild(el('span', { class: 'action-param-label' }, ['Enemies']));
-      const enemyList = el('div', { class: 'mini-list' });
-      function rebuildEnemies() {
-        enemyList.innerHTML = '';
-        aa.enemies.forEach((id, i) => {
-          const row = el('div', { class: 'list-row' });
-          const sel = select(npcIds.map(nid => [nid, nid]), id, v => { aa.enemies[i] = v; onChange(); });
-          sel.className = 'form-select';
-          const rm = el('button', { class: 'btn-hdr' }, ['✕']);
-          rm.addEventListener('click', () => { aa.enemies.splice(i, 1); onChange(); rebuildEnemies(); });
-          row.append(sel, rm);
-          enemyList.appendChild(row);
-        });
-        const addE = el('button', { class: 'btn btn-secondary btn-sm' }, ['+ Enemy']);
-        addE.addEventListener('click', () => { aa.enemies.push(npcIds[0] ?? ''); onChange(); rebuildEnemies(); });
-        enemyList.appendChild(addE);
-      }
-      rebuildEnemies();
-      enemyParam.appendChild(enemyList);
+      enemyParam.appendChild(renderEnemyList(aa.enemies, npcIds, onChange));
       cardBody.appendChild(enemyParam);
 
       const aaCondWrap = el('div', { class: 'card-section' });
@@ -636,15 +587,7 @@ function renderDisplaysList(data, onChange) {
 
       card.appendChild(cardBody);
 
-      let collapsed = true;
-      cardBody.style.display = 'none';
-      hdr.classList.add('collapsed');
-      hdr.addEventListener('click', e => {
-        if (nameInput.contains(e.target) || rm.contains(e.target)) return;
-        collapsed = !collapsed;
-        cardBody.style.display = collapsed ? 'none' : '';
-        hdr.classList.toggle('collapsed', collapsed);
-      });
+      makeCollapsible(hdr, cardBody);
 
       container.appendChild(card);
     });

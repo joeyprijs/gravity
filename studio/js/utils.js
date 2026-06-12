@@ -44,6 +44,69 @@ export function setPath(obj, path, val) {
   cur[parts[parts.length - 1]] = val;
 }
 
+/** Collapsible card: clicking the header toggles the body. Clicks on
+ *  interactive elements inside the header don't toggle. Starts collapsed. */
+export function makeCollapsible(hdr, body) {
+  let collapsed = true;
+  body.style.display = 'none';
+  hdr.classList.add('collapsed');
+  hdr.addEventListener('click', e => {
+    if (e.target.closest('input, select, textarea, button')) return;
+    collapsed = !collapsed;
+    body.style.display = collapsed ? 'none' : '';
+    hdr.classList.toggle('collapsed', collapsed);
+  });
+}
+
+/** Number input; onChange receives a Number, or undefined when cleared. */
+export function numInput(val, onChange, sizeCls = '') {
+  const input = el('input', { type: 'number', class: `form-input${sizeCls ? ' ' + sizeCls : ''}`, value: String(val) });
+  input.addEventListener('input', () => onChange(input.value === '' ? undefined : Number(input.value)));
+  return input;
+}
+
+/** Labeled DC + increment input pair bound to obj.dc / obj.increment.
+ *  Returns nodes to spread into a row container. */
+export function dcIncrementInputs(obj, onChange) {
+  const bind = (field, placeholder) => {
+    const input = el('input', { type: 'number', class: 'form-input sm', value: obj[field] ?? '', placeholder });
+    input.addEventListener('input', () => { obj[field] = input.value === '' ? undefined : Number(input.value); onChange(); });
+    return input;
+  };
+  return [
+    el('span', { class: 'list-label' }, ['DC']), bind('dc', 'DC'),
+    el('span', { class: 'list-label' }, ['+ Increment']), bind('increment', 'Increment'),
+  ];
+}
+
+/** List editor for {item, amount} entries: item select × amount + ✕ rows. */
+export function renderItemAmountList(list, itemIds, onChange) {
+  const container = el('div', { class: 'list-editor' });
+
+  function render() {
+    container.innerHTML = '';
+    list.forEach((entry, i) => {
+      const row = el('div', { class: 'list-row' });
+      const sel = select(itemIds.map(id => [id, id]), entry.item, v => { entry.item = v; onChange(); });
+      const amtInput = el('input', { type: 'number', class: 'form-input sm', min: '1', value: entry.amount ?? 1 });
+      amtInput.addEventListener('input', () => { entry.amount = Number(amtInput.value); onChange(); });
+      const rm = el('button', { class: 'btn-hdr' }, ['✕']);
+      rm.addEventListener('click', () => { list.splice(i, 1); onChange(); render(); });
+      row.append(sel, el('span', { class: 'list-label' }, ['×']), amtInput, rm);
+      container.appendChild(row);
+    });
+    const add = el('button', { class: 'btn btn-secondary' }, ['+ Add Item']);
+    add.addEventListener('click', () => {
+      list.push({ item: itemIds[0] ?? '', amount: 1 });
+      onChange(); render();
+    });
+    container.appendChild(add);
+  }
+
+  render();
+  return container;
+}
+
 /** Build a <select> from an options array of [value, label] pairs.
  *  A non-empty currentVal that matches no option is surfaced as a disabled
  *  "unknown" entry instead of silently displaying the first option. */

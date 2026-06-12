@@ -1,5 +1,5 @@
 import { store } from '../store.js';
-import { el, select } from '../utils.js';
+import { el, select, numInput as numInputBase } from '../utils.js';
 
 const ALL_TYPES = [
   ['flag',      'Flag'],
@@ -298,11 +298,7 @@ function op(symbol) {
   return el('span', { class: 'cond-op' }, [symbol]);
 }
 
+// Condition values must always be numbers — a cleared input coerces to 0.
 function numInput(initialVal, onChange) {
-  const input = el('input', {
-    type: 'number', class: 'form-input sm',
-    value: String(initialVal ?? ''),
-  });
-  input.addEventListener('input', () => onChange(Number(input.value) || 0));
-  return input;
+  return numInputBase(initialVal ?? '', v => onChange(v ?? 0), 'sm');
 }

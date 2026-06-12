@@ -1,5 +1,5 @@
 import { store, markDirty } from '../store.js';
-import { el, formRow, getPath, setPath, select } from '../utils.js';
+import { el, formRow, getPath, setPath, select, renderItemAmountList } from '../utils.js';
 import { renderSceneForm } from './scene-form.js';
 import { renderNpcForm }   from './npc-form.js';
 
@@ -233,52 +233,11 @@ function renderRulesForm(key, data) {
     form.appendChild(formRow(slot, sel));
   }
 
-  // Starting inventory
+  // Starting inventory (the engine requires the array to exist, so
+  // materializing it here is safe)
   form.appendChild(el('h3', { class: 'form-section-title' }, ['Starting Inventory']));
-  const invContainer = el('div', { class: 'list-editor' });
-  form.appendChild(invContainer);
-
-  function renderInventory() {
-    invContainer.innerHTML = '';
-    const inv = data.playerDefaults?.inventory ?? [];
-
-    inv.forEach((entry, i) => {
-      const row = el('div', { class: 'list-row' });
-
-      const itemSel = select(itemIds.map(id => [id, id]), entry.item, v => {
-        entry.item = v;
-        markDirty(key);
-      });
-      itemSel.className = 'form-select';
-
-      const amtInput = el('input', { type: 'number', class: 'form-input sm', min: '1', value: entry.amount ?? 1 });
-      amtInput.addEventListener('input', () => {
-        entry.amount = Number(amtInput.value);
-        markDirty(key);
-      });
-
-      const rmBtn = el('button', { class: 'btn-hdr' }, ['✕']);
-      rmBtn.addEventListener('click', () => {
-        inv.splice(i, 1);
-        markDirty(key);
-        renderInventory();
-      });
-
-      row.append(itemSel, el('span', { class: 'list-label' }, ['×']), amtInput, rmBtn);
-      invContainer.appendChild(row);
-    });
-
-    const addBtn = el('button', { class: 'btn btn-secondary' }, ['+ Add Item']);
-    addBtn.addEventListener('click', () => {
-      if (!data.playerDefaults) data.playerDefaults = {};
-      if (!data.playerDefaults.inventory) data.playerDefaults.inventory = [];
-      data.playerDefaults.inventory.push({ item: itemIds[0] ?? '', amount: 1 });
-      markDirty(key);
-      renderInventory();
-    });
-    invContainer.appendChild(addBtn);
-  }
-  renderInventory();
+  if (!data.playerDefaults.inventory) data.playerDefaults.inventory = [];
+  form.appendChild(renderItemAmountList(data.playerDefaults.inventory, itemIds, () => markDirty(key)));
 
   // Custom attributes
   form.appendChild(el('h3', { class: 'form-section-title' }, ['Custom Attributes (Skills)']));

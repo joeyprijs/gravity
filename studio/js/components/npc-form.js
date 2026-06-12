@@ -1,5 +1,5 @@
 import { store, markDirty } from '../store.js';
-import { el, formRow, select } from '../utils.js';
+import { el, formRow, select, makeCollapsible, dcIncrementInputs, renderItemAmountList } from '../utils.js';
 import { showConfirm } from '../ui.js';
 import { renderActionPipeline } from './actions.js';
 import { renderInlineCondition } from './condition-inline.js';
@@ -93,7 +93,7 @@ export function renderNpcForm(key, data) {
   // ── Carried Items ─────────────────────────────────────────────────────────
 
   form.appendChild(el('h3', { class: 'form-section-title' }, ['Carried Items']));
-  form.appendChild(renderCarriedItems(data, itemIds, onChange));
+  form.appendChild(renderItemAmountList(data.carriedItems, itemIds, onChange));
 
   // ── Conversations ─────────────────────────────────────────────────────────
 
@@ -108,36 +108,6 @@ export function renderNpcForm(key, data) {
   form.appendChild(renderConversations(data, onChange));
 
   return wrap;
-}
-
-// ── Carried Items ──────────────────────────────────────────────────────────
-
-function renderCarriedItems(data, itemIds, onChange) {
-  const container = el('div', { class: 'list-editor' });
-
-  function render() {
-    container.innerHTML = '';
-    data.carriedItems.forEach((entry, i) => {
-      const row = el('div', { class: 'list-row' });
-      const sel = select(itemIds.map(id => [id, id]), entry.item, v => { entry.item = v; onChange(); });
-      sel.className = 'form-select';
-      const amtInput = el('input', { type: 'number', class: 'form-input sm', min: '1', value: entry.amount ?? 1 });
-      amtInput.addEventListener('input', () => { entry.amount = Number(amtInput.value); onChange(); });
-      const rm = el('button', { class: 'btn-hdr' }, ['✕']);
-      rm.addEventListener('click', () => { data.carriedItems.splice(i, 1); onChange(); render(); });
-      row.append(sel, el('span', { class: 'list-label' }, ['×']), amtInput, rm);
-      container.appendChild(row);
-    });
-    const add = el('button', { class: 'btn btn-secondary' }, ['+ Add Item']);
-    add.addEventListener('click', () => {
-      data.carriedItems.push({ item: itemIds[0] ?? '', amount: 1 });
-      onChange(); render();
-    });
-    container.appendChild(add);
-  }
-
-  render();
-  return container;
 }
 
 // ── Conversations ──────────────────────────────────────────────────────────
@@ -269,15 +239,7 @@ function renderNode(nodeId, node, data, onChange, rerenderAll) {
   }
   renderRespCards();
 
-  let collapsed = true;
-  body.style.display = 'none';
-  header.classList.add('collapsed');
-  header.addEventListener('click', e => {
-    if (e.target === idInput || rmBtn.contains(e.target)) return;
-    collapsed = !collapsed;
-    body.style.display = collapsed ? 'none' : '';
-    header.classList.toggle('collapsed', collapsed);
-  });
+  makeCollapsible(header, body);
 
   return card;
 }
@@ -315,15 +277,7 @@ function makeResponseCard(resp, i, node, onChange, rerender) {
   body.appendChild(failSection);
   item.appendChild(body);
 
-  let collapsed = true;
-  body.style.display = 'none';
-  hdr.classList.add('collapsed');
-  hdr.addEventListener('click', e => {
-    if (textInput.contains(e.target) || rm.contains(e.target)) return;
-    collapsed = !collapsed;
-    body.style.display = collapsed ? 'none' : '';
-    hdr.classList.toggle('collapsed', collapsed);
-  });
+  makeCollapsible(hdr, body);
 
   return item;
 }
@@ -354,15 +308,7 @@ function renderSkillCheckRow(resp, onChange) {
     ctrl.appendChild(sel);
 
     if (resp.skillCheck) {
-      ctrl.appendChild(el('span', { class: 'list-label' }, ['DC']));
-      const dcInput = el('input', { type: 'number', class: 'form-input sm', value: resp.dc ?? '', placeholder: 'DC' });
-      dcInput.addEventListener('input', () => { resp.dc = dcInput.value === '' ? undefined : Number(dcInput.value); onChange(); });
-      ctrl.appendChild(dcInput);
-
-      ctrl.appendChild(el('span', { class: 'list-label' }, ['+ Increment']));
-      const incInput = el('input', { type: 'number', class: 'form-input sm', value: resp.increment ?? '', placeholder: 'Increment' });
-      incInput.addEventListener('input', () => { resp.increment = incInput.value === '' ? undefined : Number(incInput.value); onChange(); });
-      ctrl.appendChild(incInput);
+      ctrl.append(...dcIncrementInputs(resp, onChange));
     }
   }
 

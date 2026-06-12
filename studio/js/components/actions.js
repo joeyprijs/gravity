@@ -1,5 +1,5 @@
 import { store } from '../store.js';
-import { el, select } from '../utils.js';
+import { el, select, numInput } from '../utils.js';
 import { showConfirm } from '../ui.js';
 
 export const ACTION_TYPES = [
@@ -223,13 +223,7 @@ function param(label, input) {
   ]);
 }
 
-function numInput(val, onChange, sizeCls = '') {
-  const input = el('input', { type: 'number', class: `form-input${sizeCls ? ' ' + sizeCls : ''}`, value: String(val) });
-  input.addEventListener('input', () => onChange(input.value === '' ? undefined : Number(input.value)));
-  return input;
-}
-
-function renderEnemyList(enemies, npcIds, onChange) {
+export function renderEnemyList(enemies, npcIds, onChange) {
   const wrap = el('div', { class: 'mini-list' });
   function rebuild() {
     wrap.innerHTML = '';
