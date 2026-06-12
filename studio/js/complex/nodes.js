@@ -4,6 +4,8 @@ import { el } from '../utils.js';
 const NODE_W   = 240;
 const COL_GAP  = 320;
 const ROW_GAP  = 200;
+const GRID     = 5;
+const snap     = v => Math.round(v / GRID) * GRID;
 // Node positions are editor state, not game data — they live in localStorage
 // so saved NPC JSON stays pure (io.js strips the legacy _studioLayout key).
 const LAYOUT_STORE_PREFIX = 'gravity-studio:layout:';
@@ -41,7 +43,7 @@ function buildGraph(npcKey) {
   backBtn.addEventListener('click', () => setActiveFile(npcKey));
   hdr.append(backBtn, el('span', { class: 'dg-title' }, [`${npc?.name ?? npcKey} — Dialogue Graph`]));
   hdr.appendChild(el('span', { class: 'map-hint' },
-    ['Drag nodes to reposition · drag anchor dot to connect']));
+    ['Drag nodes to reposition · drag anchor dot to connect · drop it on empty space to disconnect']));
   wrap.appendChild(hdr);
 
   // Scroll area
@@ -240,6 +242,14 @@ function makeResponseRow(ri, resp, nodeId, convs, npcKey, scrollWrap, svg, redra
         if (existing) existing.node = target;
         else actions.push({ type: 'goToConversation', node: target });
         markDirty(npcKey);
+      } else if (!tHdr) {
+        // Dropped on empty canvas — remove the existing connection, if any.
+        const idx = (resp.actions ?? []).findIndex(a => a.type === 'goToConversation');
+        if (idx !== -1) {
+          resp.actions.splice(idx, 1);
+          anchor.classList.remove('dg-anchor-on');
+          markDirty(npcKey);
+        }
       }
       redraw();
     };
@@ -263,8 +273,8 @@ function makeDraggable(handle, card, nodeId, pos, npcKey, scrollWrap, redraw) {
     const oy = e.clientY - wRect.top  + scrollWrap.scrollTop  - pos[nodeId].y;
 
     const onMove = e => {
-      const x = e.clientX - wRect.left + scrollWrap.scrollLeft - ox;
-      const y = e.clientY - wRect.top  + scrollWrap.scrollTop  - oy;
+      const x = snap(e.clientX - wRect.left + scrollWrap.scrollLeft - ox);
+      const y = snap(e.clientY - wRect.top  + scrollWrap.scrollTop  - oy);
       card.style.left = x + 'px';
       card.style.top  = y + 'px';
       pos[nodeId].x = x;

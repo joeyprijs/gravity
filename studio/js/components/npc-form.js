@@ -1,7 +1,7 @@
 import { store, markDirty } from '../store.js';
 import { el, formRow, select, makeCollapsible, dcIncrementInputs, renderItemAmountList } from '../utils.js';
 import { EQUIPMENT_SLOTS } from '../contracts.js';
-import { showConfirm } from '../ui.js';
+import { showConfirm, toast } from '../ui.js';
 import { renderActionPipeline } from './actions.js';
 import { renderInlineCondition } from './condition-inline.js';
 import { openDialogueGraph } from '../complex/nodes.js';
@@ -36,7 +36,7 @@ export function renderNpcForm(key, data) {
   });
   form.appendChild(formRow('Name', nameInput));
 
-  const descTa = el('textarea', { class: 'form-textarea', style: 'min-height:56px' }, [data.description ?? '']);
+  const descTa = el('textarea', { class: 'form-textarea ta-sm' }, [data.description ?? '']);
   descTa.addEventListener('input', () => { data.description = descTa.value || undefined; onChange(); });
   form.appendChild(formRow('Description', descTa));
 
@@ -99,7 +99,7 @@ export function renderNpcForm(key, data) {
   // ── Conversations ─────────────────────────────────────────────────────────
 
   const convHdr = el('div', { class: 'section-hdr-row' });
-  convHdr.appendChild(el('h3', { class: 'form-section-title', style: 'margin:0;border:none;padding:0' }, ['Conversations']));
+  convHdr.appendChild(el('h3', { class: 'form-section-title bare' }, ['Conversations']));
   if (Object.keys(data.conversations ?? {}).length > 0) {
     const graphBtn = el('button', { class: 'btn btn-secondary btn-sm' }, ['View Graph']);
     graphBtn.addEventListener('click', () => openDialogueGraph(key));
@@ -174,6 +174,11 @@ function renderNode(nodeId, node, data, onChange, rerenderAll) {
   idInput.addEventListener('change', async () => {
     const newId = idInput.value.trim();
     if (!newId || newId === currentId) return;
+    if (data.conversations[newId]) {
+      toast(`Node "${newId}" already exists`, 'error');
+      idInput.value = currentId;
+      return;
+    }
 
     const warnings = [];
     if (currentId === 'start') {
@@ -208,7 +213,7 @@ function renderNode(nodeId, node, data, onChange, rerenderAll) {
   const body = el('div', { class: 'card-body' });
   card.appendChild(body);
 
-  const npcTa = el('textarea', { class: 'form-textarea', style: 'min-height:56px', placeholder: 'NPC text…' }, [node.npcText ?? '']);
+  const npcTa = el('textarea', { class: 'form-textarea ta-sm', placeholder: 'NPC text…' }, [node.npcText ?? '']);
   npcTa.addEventListener('input', () => { node.npcText = npcTa.value; onChange(); });
   body.appendChild(npcTa);
 

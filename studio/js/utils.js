@@ -45,16 +45,19 @@ export function setPath(obj, path, val) {
 }
 
 /** Collapsible card: clicking the header toggles the body. Clicks on
- *  interactive elements inside the header don't toggle. Starts collapsed. */
-export function makeCollapsible(hdr, body) {
-  let collapsed = true;
-  body.style.display = 'none';
-  hdr.classList.add('collapsed');
+ *  interactive elements inside the header don't toggle. */
+export function makeCollapsible(hdr, body, { startCollapsed = true, onToggle } = {}) {
+  let collapsed = startCollapsed;
+  const apply = () => {
+    body.style.display = collapsed ? 'none' : '';
+    hdr.classList.toggle('collapsed', collapsed);
+  };
+  apply();
   hdr.addEventListener('click', e => {
     if (e.target.closest('input, select, textarea, button')) return;
     collapsed = !collapsed;
-    body.style.display = collapsed ? 'none' : '';
-    hdr.classList.toggle('collapsed', collapsed);
+    apply();
+    onToggle?.(collapsed);
   });
 }
 
@@ -89,7 +92,9 @@ export function renderItemAmountList(list, itemIds, onChange) {
       const row = el('div', { class: 'list-row' });
       const sel = select(itemIds.map(id => [id, id]), entry.item, v => { entry.item = v; onChange(); });
       const amtInput = el('input', { type: 'number', class: 'form-input sm', min: '1', value: entry.amount ?? 1 });
-      amtInput.addEventListener('input', () => { entry.amount = Number(amtInput.value); onChange(); });
+      // Clamp to ≥1: a cleared field would otherwise store 0 and the engine
+      // silently drops zero-amount entries.
+      amtInput.addEventListener('input', () => { entry.amount = Math.max(1, Number(amtInput.value) || 1); onChange(); });
       const rm = el('button', { class: 'btn-hdr' }, ['✕']);
       rm.addEventListener('click', () => { list.splice(i, 1); onChange(); render(); });
       row.append(sel, el('span', { class: 'list-label' }, ['×']), amtInput, rm);

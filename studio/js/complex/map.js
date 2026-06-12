@@ -66,17 +66,22 @@ function makeSceneCard(sceneKey, scene, scrollWrap) {
 
   card.appendChild(el('span', { class: 'map-scene-label' }, [scene.title || sceneKey]));
 
-  let dragged = false;
+  // Below this movement a mousedown still counts as a click-to-open,
+  // and a jittery click can't mark the scene dirty.
+  const DRAG_THRESHOLD = 4;
 
   card.addEventListener('mousedown', e => {
     e.preventDefault();
-    dragged = false;
+    let dragged = false;
+    const startX = e.clientX;
+    const startY = e.clientY;
 
     const wRect  = scrollWrap.getBoundingClientRect();
     const origX  = e.clientX - wRect.left + scrollWrap.scrollLeft - md.left;
     const origY  = e.clientY - wRect.top  + scrollWrap.scrollTop  - md.top;
 
     const onMove = e => {
+      if (!dragged && Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY) < DRAG_THRESHOLD) return;
       dragged = true;
       const x = snap(e.clientX - wRect.left + scrollWrap.scrollLeft - origX);
       const y = snap(e.clientY - wRect.top  + scrollWrap.scrollTop  - origY);
@@ -90,8 +95,11 @@ function makeSceneCard(sceneKey, scene, scrollWrap) {
 
       if (!dragged) { setActiveFile(sceneKey); return; }
 
-      md.left = parseInt(card.style.left);
-      md.top  = parseInt(card.style.top);
+      const newLeft = parseInt(card.style.left);
+      const newTop  = parseInt(card.style.top);
+      if (newLeft === md.left && newTop === md.top) return;
+      md.left = newLeft;
+      md.top  = newTop;
       markDirty(sceneKey);
     };
 

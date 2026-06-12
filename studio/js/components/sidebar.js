@@ -4,6 +4,10 @@ import { openMapView } from '../complex/map.js';
 import { createEntry, deleteEntry } from '../io.js';
 import { showModal, showConfirm, toast } from '../ui.js';
 
+// UI state preserved across rebuilds (create/delete re-render the sidebar).
+const expandedSections = new Set();
+let searchQuery = '';
+
 function makeItem(label, key, deletable = false) {
   const item = el('div', { class: 'sidebar-item', 'data-key': key, 'data-label': label.toLowerCase() }, [label]);
   item.addEventListener('click', () => setActiveFile(key));
@@ -44,7 +48,14 @@ function makeSection(title, children, nested = false, onAdd = null) {
   const body = el('div', { class: 'sidebar-section-body' }, children);
   const section = el('div', { class: nested ? 'sidebar-section nested' : 'sidebar-section' }, [header, body]);
 
-  makeCollapsible(header, body);
+  const stateKey = nested ? `nested:${title}` : title;
+  makeCollapsible(header, body, {
+    startCollapsed: !expandedSections.has(stateKey),
+    onToggle: collapsed => {
+      if (collapsed) expandedSections.delete(stateKey);
+      else expandedSections.add(stateKey);
+    },
+  });
 
   return section;
 }
@@ -54,6 +65,11 @@ async function addEntry(type) {
   if (!raw) return;
   const id = raw.trim().replace(/\s+/g, '_');
   if (!id) return;
+
+  if (!/^[a-z0-9_]+$/.test(id)) {
+    toast('IDs must be snake_case: lowercase letters, digits, and underscores', 'error');
+    return;
+  }
 
   if (store.index[type]?.[id]) {
     toast(`"${id}" already exists in ${type}`, 'error');
@@ -75,9 +91,8 @@ export function renderSidebar(container) {
   if (!index) return;
 
   // Search
-  const search = el('input', { type: 'text', class: 'sidebar-search', placeholder: 'Search…' });
-  search.addEventListener('input', () => {
-    const q = search.value.toLowerCase().trim();
+  function applyFilter() {
+    const q = searchQuery;
     container.querySelectorAll('.sidebar-item').forEach(item => {
       const match = !q
         || (item.dataset.key || '').toLowerCase().includes(q)
@@ -90,6 +105,13 @@ export function renderSidebar(container) {
         .some(item => item.style.display !== 'none');
       section.style.display = hasVisible ? '' : 'none';
     });
+  }
+
+  const search = el('input', { type: 'text', class: 'sidebar-search', placeholder: 'Search…' });
+  search.value = searchQuery;
+  search.addEventListener('input', () => {
+    searchQuery = search.value.toLowerCase().trim();
+    applyFilter();
   });
   container.appendChild(search);
 
@@ -143,4 +165,6 @@ export function renderSidebar(container) {
   // Tables
   const tableItems = Object.keys(index.tables ?? {}).map(id => makeItem(id, `tables:${id}`, true));
   container.appendChild(makeSection('Tables', tableItems, false, () => addEntry('tables')));
+
+  if (searchQuery) applyFilter();
 }

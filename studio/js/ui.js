@@ -37,7 +37,10 @@ export function showConfirm(message, confirmLabel = 'Delete') {
     const confirm = el('button', { class: 'btn btn-danger'    }, [confirmLabel]);
 
     const close = val => { overlay.remove(); document.removeEventListener('keydown', onKey); resolve(val); };
-    const onKey = e => { if (e.key === 'Escape') close(false); };
+    const onKey = e => {
+      if (e.key === 'Escape') close(false);
+      if (e.key === 'Enter')  close(true);
+    };
     cancel.addEventListener('click', () => close(false));
     confirm.addEventListener('click', () => close(true));
     overlay.addEventListener('click', e => { if (e.target === overlay) close(false); });

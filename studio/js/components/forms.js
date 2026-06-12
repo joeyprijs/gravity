@@ -1,6 +1,7 @@
 import { store, markDirty } from '../store.js';
 import { el, formRow, getPath, setPath, select, renderItemAmountList } from '../utils.js';
 import { ITEM_TYPES, EQUIPMENT_SLOTS, GOLD_ITEM_ID } from '../contracts.js';
+import { toast } from '../ui.js';
 import { renderSceneForm } from './scene-form.js';
 import { renderNpcForm }   from './npc-form.js';
 
@@ -305,18 +306,18 @@ function renderRulesForm(key, data) {
     const stats = data.charCreation.stats ?? [];
 
     stats.forEach((stat, i) => {
-      const row = el('div', { class: 'list-row', style: 'flex-flow:wrap;gap:8px;padding-bottom:8px;border-bottom:1px dashed var(--border)' });
+      const row = el('div', { class: 'list-row wrap' });
 
-      const idInput = el('input', { type: 'text', class: 'form-input', value: stat.id ?? '', placeholder: 'path, e.g. attributes.perception', style: 'flex: 1 1 200px' });
+      const idInput = el('input', { type: 'text', class: 'form-input grow', value: stat.id ?? '', placeholder: 'path, e.g. attributes.perception' });
       idInput.addEventListener('input', () => { stat.id = idInput.value; markDirty(key); });
 
-      const localeInput = el('input', { type: 'text', class: 'form-input sm', value: stat.localeKey ?? '', placeholder: 'localeKey', style: 'width:100px' });
+      const localeInput = el('input', { type: 'text', class: 'form-input sm w-100', value: stat.localeKey ?? '', placeholder: 'localeKey' });
       localeInput.addEventListener('input', () => { stat.localeKey = localeInput.value; markDirty(key); });
 
-      const bonusInput = el('input', { type: 'number', class: 'form-input sm', value: stat.bonusPerPoint ?? 1, placeholder: 'bonus', style: 'width:60px' });
+      const bonusInput = el('input', { type: 'number', class: 'form-input sm w-60', value: stat.bonusPerPoint ?? 1, placeholder: 'bonus' });
       bonusInput.addEventListener('input', () => { stat.bonusPerPoint = Number(bonusInput.value) || 1; markDirty(key); });
 
-      const minInput = el('input', { type: 'number', class: 'form-input sm', value: stat.min ?? 0, placeholder: 'min', style: 'width:50px' });
+      const minInput = el('input', { type: 'number', class: 'form-input sm w-50', value: stat.min ?? 0, placeholder: 'min' });
       minInput.addEventListener('input', () => { stat.min = Number(minInput.value) || 0; markDirty(key); });
 
       const rmBtn = el('button', { class: 'btn-hdr' }, ['✕']);
@@ -359,12 +360,12 @@ function renderRulesForm(key, data) {
     const tabs = data.tabs ?? [];
 
     tabs.forEach((tab, i) => {
-      const row = el('div', { class: 'list-row', style: 'flex-flow:wrap;gap:8px;padding-bottom:8px;border-bottom:1px dashed var(--border)' });
+      const row = el('div', { class: 'list-row wrap' });
 
-      const idInput = el('input', { type: 'text', class: 'form-input', value: tab.id ?? '', placeholder: 'tab-id', style: 'width:120px' });
+      const idInput = el('input', { type: 'text', class: 'form-input w-120', value: tab.id ?? '', placeholder: 'tab-id' });
       idInput.addEventListener('input', () => { tab.id = idInput.value; markDirty(key); });
 
-      const localeInput = el('input', { type: 'text', class: 'form-input', value: tab.localeKey ?? '', placeholder: 'localeKey', style: 'width:120px' });
+      const localeInput = el('input', { type: 'text', class: 'form-input w-120', value: tab.localeKey ?? '', placeholder: 'localeKey' });
       localeInput.addEventListener('input', () => { tab.localeKey = localeInput.value; markDirty(key); });
 
       const widgetSel = select([
@@ -375,10 +376,9 @@ function renderRulesForm(key, data) {
         tab.widget = v || undefined;
         markDirty(key);
       });
-      widgetSel.className = 'form-select';
-      widgetSel.style.width = '180px';
+      widgetSel.className = 'form-select w-180';
 
-      const defaultCheck = el('input', { type: 'checkbox', style: 'margin: 0 4px' });
+      const defaultCheck = el('input', { type: 'checkbox', class: 'checkbox-inline' });
       if (tab.default) defaultCheck.checked = true;
       defaultCheck.addEventListener('change', () => {
         tabs.forEach((t, idx) => {
@@ -434,7 +434,7 @@ function renderRulesForm(key, data) {
         data.itemTypeOrder[t] = input.value === '' ? 99 : Number(input.value);
         markDirty(key);
       });
-      row.append(el('span', { class: 'list-label', style: 'width:120px' }, [t]), input);
+      row.append(el('span', { class: 'list-label w-120' }, [t]), input);
       orderContainer.appendChild(row);
     });
   }
@@ -467,11 +467,17 @@ function renderFlagsForm(key, data) {
       nameInput.addEventListener('change', () => {
         const newName = nameInput.value.trim();
         if (!newName || newName === currentName) return;
+        if (newName in data) {
+          toast(`Flag "${newName}" already exists`, 'error');
+          nameInput.value = currentName;
+          return;
+        }
         const val = data[currentName];
         delete data[currentName];
         data[newName] = val;
         currentName = newName;
         markDirty(key);
+        renderFlags();
       });
 
       const valSel = select([['false', 'false'], ['true', 'true']], String(data[flagName]), v => {
@@ -523,6 +529,10 @@ function renderMissionForm(key, data) {
     input.addEventListener('input', () => {
       const v = type === 'number' ? (input.value === '' ? undefined : Number(input.value)) : input.value;
       setPath(data, path, v);
+      // Clearing both reward fields would otherwise leave missionRewards: {}
+      if (data.missionRewards && Object.values(data.missionRewards).every(x => x === undefined)) {
+        delete data.missionRewards;
+      }
       markDirty(key);
       if (path === 'name') title.textContent = input.value || missionId;
     });
@@ -574,22 +584,25 @@ function renderTableForm(key, data) {
       itemSel.className = 'form-select';
 
       const amtInput = el('input', {
-        type: 'number', class: 'form-input sm',
+        type: 'number', class: 'form-input sm', min: '1',
         value: entry.amount ?? '', placeholder: 'amt',
       });
       amtInput.addEventListener('input', () => {
-        entry.amount = amtInput.value === '' ? undefined : Number(amtInput.value);
-        if (entry.amount === undefined) delete entry.amount;
+        // Empty falls back to the engine default; explicit values clamp to ≥1
+        // so authored entries can't silently evaporate as zero-amount drops.
+        if (amtInput.value === '') delete entry.amount;
+        else entry.amount = Math.max(1, Number(amtInput.value) || 1);
         markDirty(key);
       });
 
       const weightInput = el('input', {
-        type: 'number', class: 'form-input sm',
+        type: 'number', class: 'form-input sm', min: '0',
         value: entry.weight ?? '', placeholder: 'wt',
       });
       weightInput.addEventListener('input', () => {
-        entry.weight = weightInput.value === '' ? undefined : Number(weightInput.value);
-        if (entry.weight === undefined) delete entry.weight;
+        // Negative weights would corrupt the weighted-roll loop.
+        if (weightInput.value === '') delete entry.weight;
+        else entry.weight = Math.max(0, Number(weightInput.value) || 0);
         markDirty(key);
       });
 
@@ -618,13 +631,13 @@ function renderTableForm(key, data) {
   return wrap;
 }
 
-// ── Raw JSON fallback (NPCs, Scenes in Phase 1) ────────────────────────────
+// ── Raw JSON fallback (keys with no dedicated form) ────────────────────────
 
 function renderRawJson(key, data) {
   const label = key.replace(':', ': ').replace('__', '');
   const wrap = el('div', { class: 'form-wrap' });
   wrap.appendChild(el('h2', { class: 'form-title' }, [label]));
-  wrap.appendChild(el('p', { class: 'form-hint' }, ['Visual editor coming in Phase 2. Edit raw JSON below.']));
+  wrap.appendChild(el('p', { class: 'form-hint' }, ['No visual editor for this file — edit the raw JSON below.']));
 
   const ta = el('textarea', { class: 'form-textarea raw-json' }, [JSON.stringify(data, null, 2)]);
   const errMsg = el('p', { class: 'form-error', style: 'display:none' });

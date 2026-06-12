@@ -8,11 +8,20 @@ import { validateGameData, normalizeCarriedItems } from '../../src/core/validate
 
 setFormRenderer(renderForm);
 
+// The field each file type can't meaningfully ship without. Checked at the
+// data level so dirty files edited earlier don't escape the warning (the
+// [data-required] DOM check only ever sees the currently open form).
+const REQUIRED_FIELDS = { items: 'name', npcs: 'name', scenes: 'title', missions: 'name' };
+
 async function handleSave() {
   // Warn about empty required fields but don't block save
-  const emptyRequired = [...document.querySelectorAll('[data-required]')]
-    .filter(input => !input.value.trim());
-  emptyRequired.forEach(input => input.classList.add('form-input-error'));
+  document.querySelectorAll('[data-required]').forEach(input => {
+    input.classList.toggle('form-input-error', !input.value.trim());
+  });
+  const missingRequired = [...store.dirtyFiles].filter(key => {
+    const field = REQUIRED_FIELDS[key.split(':')[0]];
+    return field && !String(store.files[key]?.[field] ?? '').trim();
+  });
 
   try {
     for (const key of [...store.dirtyFiles]) {
@@ -22,8 +31,8 @@ async function handleSave() {
       if (node) node.classList.remove('dirty');
     }
     updateSaveButton();
-    if (emptyRequired.length > 0) {
-      toast('Saved — but some required fields are empty', 'error');
+    if (missingRequired.length > 0) {
+      toast(`Saved — but ${missingRequired.length} file${missingRequired.length === 1 ? ' has' : 's have'} empty required fields`, 'error');
     } else {
       toast('Saved', 'success');
     }

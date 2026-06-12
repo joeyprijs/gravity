@@ -141,8 +141,7 @@ function renderQuestTrigger(data, onChange) {
       sSel.className = 'form-select sm';
       wrap.appendChild(formRow('Status', sSel));
 
-      const rm = el('button', { class: 'btn btn-danger btn-sm' }, ['Remove']);
-      rm.style.marginTop = '4px';
+      const rm = el('button', { class: 'btn btn-danger btn-sm mt-4' }, ['Remove']);
       rm.addEventListener('click', () => { delete data.questTrigger; onChange(); render(); });
       wrap.appendChild(rm);
     }
@@ -177,8 +176,7 @@ function renderMapDefs(data, onChange) {
       bg.addEventListener('input', () => { md.background = bg.value || undefined; onChange(); });
       wrap.appendChild(formRow('Background', bg));
 
-      const rm = el('button', { class: 'btn btn-danger btn-sm' }, ['Remove']);
-      rm.style.marginTop = '4px';
+      const rm = el('button', { class: 'btn btn-danger btn-sm mt-4' }, ['Remove']);
       rm.addEventListener('click', () => { delete data.mapDefinitions; onChange(); render(); });
       wrap.appendChild(rm);
     }
@@ -273,11 +271,11 @@ function renderOptions(data, onChange) {
 
       const customLogInput = el('input', {
         type: 'text',
-        class: 'form-input',
+        class: 'form-input mt-4',
         value: typeof opt.log === 'string' ? opt.log : '',
         placeholder: 'Enter custom log description…',
-        style: logMode === 'custom' ? 'margin-top:4px' : 'display:none;margin-top:4px'
       });
+      if (logMode !== 'custom') customLogInput.style.display = 'none';
       customLogInput.addEventListener('input', () => {
         opt.log = customLogInput.value;
         onChange();
@@ -305,7 +303,7 @@ function renderOptions(data, onChange) {
 
       const logParam = el('div', { class: 'action-param' });
       logParam.appendChild(el('span', { class: 'action-param-label' }, ['Narrative Log']));
-      logParam.appendChild(el('div', { style: 'display:flex;flex-direction:column;flex-grow:1' }, [logModeSel, customLogInput]));
+      logParam.appendChild(el('div', { class: 'stack-col' }, [logModeSel, customLogInput]));
       cardBody.appendChild(logParam);
       const optCondWrap = el('div', { class: 'card-section' });
       optCondWrap.appendChild(renderInlineCondition(
