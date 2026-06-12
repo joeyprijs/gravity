@@ -1,10 +1,28 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import { pack, unpack, detectType } from '../studio/js/complex/logic.js';
 import { autoLayout } from '../studio/js/complex/nodes.js';
 import { makeReplacer } from '../studio/js/io.js';
 import { normalizeDescription } from '../studio/js/components/scene-form.js';
+import { ACTION_TYPES } from '../studio/js/contracts.js';
+import { ACTIONS } from '../src/core/config.js';
+
+// ── contracts.js stays in sync with the engine (audit 4.1) ──────────────────
+
+test('contracts ACTION_TYPES matches the engine core registrations exactly', () => {
+  const code = ['../src/systems/actions.js', '../src/systems/dialogue.js']
+    .map(p => readFileSync(new URL(p, import.meta.url), 'utf8'))
+    .join('\n');
+  // Core systems register via ACTIONS.X constants; resolve through the map.
+  // Plugin registrations (string literals outside src/systems) are out of
+  // scope — Studio discovers those at workspace load.
+  const registered = new Set();
+  for (const m of code.matchAll(/registerAction\(\s*ACTIONS\.([A-Z_]+)/g)) registered.add(ACTIONS[m[1]]);
+  for (const m of code.matchAll(/registerAction\(\s*['"]([^'"]+)['"]/g)) registered.add(m[1]);
+  assert.deepEqual(new Set(ACTION_TYPES.map(([t]) => t)), registered);
+});
 
 // ── normalizeDescription (audit 3.1) ────────────────────────────────────────
 

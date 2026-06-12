@@ -1,5 +1,6 @@
 import { store, markDirty } from '../store.js';
 import { el, formRow, select, makeCollapsible, dcIncrementInputs, renderItemAmountList } from '../utils.js';
+import { EQUIPMENT_SLOTS } from '../contracts.js';
 import { showConfirm } from '../ui.js';
 import { renderActionPipeline } from './actions.js';
 import { renderInlineCondition } from './condition-inline.js';
@@ -80,7 +81,7 @@ export function renderNpcForm(key, data) {
   if (!data.equipment) data.equipment = {};
   const itemIds = Object.keys(store.index?.items ?? {});
 
-  for (const slot of ['Head', 'Amulet', 'Torso', 'Left Hand', 'Right Hand', 'Legs']) {
+  for (const slot of EQUIPMENT_SLOTS) {
     const sel = select(
       [['', 'None'], ...itemIds.map(id => [id, id])],
       data.equipment[slot] ?? '',

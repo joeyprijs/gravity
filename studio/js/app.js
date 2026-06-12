@@ -2,7 +2,7 @@ import { store, setActiveFile, setFormRenderer, updateSaveButton } from './store
 import { openWorkspace, saveFile, resetWorkspace } from './io.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderForm } from './components/forms.js';
-import { ACTION_TYPES } from './components/actions.js';
+import { ACTION_TYPES } from './contracts.js';
 import { toast, showConfirm, showValidationResults } from './ui.js';
 import { validateGameData, normalizeCarriedItems } from '../../src/core/validate.js';
 

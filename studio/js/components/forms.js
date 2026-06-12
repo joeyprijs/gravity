@@ -1,5 +1,6 @@
 import { store, markDirty } from '../store.js';
 import { el, formRow, getPath, setPath, select, renderItemAmountList } from '../utils.js';
+import { ITEM_TYPES, EQUIPMENT_SLOTS, GOLD_ITEM_ID } from '../contracts.js';
 import { renderSceneForm } from './scene-form.js';
 import { renderNpcForm }   from './npc-form.js';
 
@@ -54,7 +55,7 @@ function renderItemForm(key, data) {
   form.appendChild(formRow('Name', nameInput));
 
   // Type select
-  const typeOpts = ['Weapon', 'Spell', 'Armor', 'Consumable', 'Flavour'].map(t => [t, t]);
+  const typeOpts = ITEM_TYPES.map(t => [t, t]);
   const typeSelect = select(typeOpts, data.type, v => {
     data.type = v;
     markDirty(key);
@@ -64,8 +65,7 @@ function renderItemForm(key, data) {
   form.appendChild(formRow('Type', typeSelect));
 
   // Slot select (conditional)
-  const slotOpts = [['', 'None'], 'Head', 'Amulet', 'Torso', 'Left Hand', 'Right Hand', 'Legs']
-    .map(s => typeof s === 'string' ? [s, s] : s);
+  const slotOpts = [['', 'None'], ...EQUIPMENT_SLOTS.map(s => [s, s])];
   const slotSelect = select(slotOpts, data.slot ?? '', v => {
     data.slot = v || undefined;
     markDirty(key);
@@ -219,7 +219,7 @@ function renderRulesForm(key, data) {
   form.appendChild(el('h3', { class: 'form-section-title' }, ['Starting Equipment']));
   if (!data.playerDefaults) data.playerDefaults = {};
   if (!data.playerDefaults.equipment) data.playerDefaults.equipment = {};
-  for (const slot of ['Head', 'Amulet', 'Torso', 'Left Hand', 'Right Hand', 'Legs']) {
+  for (const slot of EQUIPMENT_SLOTS) {
     const sel = select(
       [['', 'None'], ...itemIds.map(id => [id, id])],
       data.playerDefaults.equipment[slot] ?? '',
@@ -427,8 +427,7 @@ function renderRulesForm(key, data) {
   function renderTypeOrder() {
     orderContainer.innerHTML = '';
     if (!data.itemTypeOrder) data.itemTypeOrder = {};
-    const types = ['Weapon', 'Spell', 'Armor', 'Consumable', 'Flavour'];
-    types.forEach(t => {
+    ITEM_TYPES.forEach(t => {
       const row = el('div', { class: 'list-row' });
       const input = el('input', { type: 'number', class: 'form-input sm', value: data.itemTypeOrder[t] ?? 99 });
       input.addEventListener('input', () => {
@@ -568,7 +567,7 @@ function renderTableForm(key, data) {
     entries.forEach((entry, i) => {
       const row = el('div', { class: 'list-row' });
 
-      const itemSel = select(['gold', ...itemIds].map(id => [id, id]), entry.item, v => {
+      const itemSel = select([GOLD_ITEM_ID, ...itemIds].map(id => [id, id]), entry.item, v => {
         entry.item = v;
         markDirty(key);
       });
@@ -608,7 +607,7 @@ function renderTableForm(key, data) {
     const addBtn = el('button', { class: 'btn btn-secondary' }, ['+ Add Entry']);
     addBtn.addEventListener('click', () => {
       if (!data.entries) data.entries = [];
-      data.entries.push({ item: itemIds[0] ?? 'gold' });
+      data.entries.push({ item: itemIds[0] ?? GOLD_ITEM_ID });
       markDirty(key);
       renderEntries();
     });

@@ -1,24 +1,7 @@
 import { store } from '../store.js';
 import { el, select, numInput } from '../utils.js';
 import { showConfirm } from '../ui.js';
-
-export const ACTION_TYPES = [
-  ['navigate',          'Navigate to Scene'],
-  ['set_flag',          'Set Flag'],
-  ['loot',              'Loot (Item / XP)'],
-  ['combat',            'Start Combat'],
-  ['dialogue',          'Start Dialogue'],
-  ['heal',              'Heal Player'],
-  ['full_rest',         'Full Rest'],
-  ['return',            'Return'],
-  ['log',               'Log Message'],
-  ['questTrigger',      'Quest Trigger'],
-  ['manage_chest',      'Manage Chest'],
-  ['goToConversation',  'Go To Conversation'],
-  ['trade',             'Open Trade'],
-  ['leave',             'Leave Dialogue'],
-  ['makeFriendly',      'Make NPC Friendly'],
-];
+import { ACTION_TYPES, GOLD_ITEM_ID } from '../contracts.js';
 
 /** Render a reusable action pipeline editor.
  *  `actions` — mutable array of action objects.
@@ -120,7 +103,7 @@ function renderParams(action, container, onChange) {
         container.appendChild(param('XP', xpInput));
       } else {
         container.appendChild(param('Item',
-          select(['gold', ...itemIds].map(id => [id, id]), action.item ?? 'gold', v => {
+          select([GOLD_ITEM_ID, ...itemIds].map(id => [id, id]), action.item ?? GOLD_ITEM_ID, v => {
             action.item = v; onChange();
           }, 'form-select')
         ));
