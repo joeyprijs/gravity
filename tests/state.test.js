@@ -174,3 +174,69 @@ test('setMissionStatus / getMissionStatus round-trips', () => {
 test('getMissionStatus: unregistered mission returns not_started', () => {
   assert.equal(gameState.getMissionStatus('unknown_mission'), 'not_started');
 });
+
+test('equipItem: fails and returns false if item is not in inventory', () => {
+  const success = gameState.equipItem('Right Hand', 'no_such_item');
+  assert.equal(success, false);
+  assert.equal(gameState.getPlayer().equipment['Right Hand'], undefined);
+});
+
+test('depositToChest: clamps to actual inventory amount', () => {
+  // healing_potion starts at 2
+  gameState.depositToChest('chest1', 'healing_potion', 5);
+  // Should only deposit 2
+  const chest = gameState.getChest('chest1');
+  assert.equal(chest.find(i => i.item === 'healing_potion').amount, 2);
+  // Inventory should have 0
+  const invEntry = gameState.getPlayer().inventory.find(i => i.item === 'healing_potion');
+  assert.equal(invEntry, undefined);
+});
+
+test('withdrawFromChest: clamps to actual chest amount', () => {
+  // Deposit 2 first
+  gameState.depositToChest('chest1', 'healing_potion', 2);
+  // Withdraw 5
+  gameState.withdrawFromChest('chest1', 'healing_potion', 5);
+  // Should only withdraw 2
+  const chest = gameState.getChest('chest1');
+  assert.equal(chest.length, 0);
+  const invEntry = gameState.getPlayer().inventory.find(i => i.item === 'healing_potion');
+  assert.equal(invEntry.amount, 2);
+});
+
+test('placeItemInDisplay: fails if item is not in inventory', () => {
+  gameState.addDisplayToScene('museum', { id: 'pedestal', name: 'Pedestal' });
+  const success = gameState.placeItemInDisplay('museum', 'pedestal', 'no_such_item');
+  assert.equal(success, false);
+  const displays = gameState.getDisplaysForScene('museum');
+  assert.equal(displays[0].item, null);
+});
+
+test('countPlayerItem: correctly counts and filters equipped vs unequipped items', () => {
+  // Reset and initialize with starting items
+  gameState.init(TEST_RULES);
+  
+  // 'healing_potion' starts with amount: 2 in inventory, none equipped
+  assert.equal(gameState.countPlayerItem('healing_potion'), 2);
+  assert.equal(gameState.countPlayerItem('healing_potion', { includeEquipped: false }), 2);
+
+  // Equip 'rusty_sword' (starts at 1 in inventory)
+  gameState.equipItem('Right Hand', 'rusty_sword');
+  
+  // Total count should still be 1 (equipped)
+  assert.equal(gameState.countPlayerItem('rusty_sword'), 1);
+  // Unequipped inventory count should be 0
+  assert.equal(gameState.countPlayerItem('rusty_sword', { includeEquipped: false }), 0);
+
+  // Add another 'rusty_sword' to inventory
+  gameState.addToInventory('rusty_sword', 1);
+
+  // Total count should now be 2 (1 equipped, 1 in inventory)
+  assert.equal(gameState.countPlayerItem('rusty_sword'), 2);
+  // Unequipped inventory count should be 1
+  assert.equal(gameState.countPlayerItem('rusty_sword', { includeEquipped: false }), 1);
+
+  // Check non-existent item
+  assert.equal(gameState.countPlayerItem('unknown_item'), 0);
+  assert.equal(gameState.countPlayerItem('unknown_item', { includeEquipped: false }), 0);
+});

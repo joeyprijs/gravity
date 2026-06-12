@@ -86,11 +86,11 @@ export function evaluateCondition(condition, gameState) {
     return gameState.getMissionStatus(condition.mission) === condition.status;
   }
 
-  // ITEM Leaf: Evaluates if the player possesses the item, checking quantities if "count" is specified
+  // ITEM Leaf: Evaluates if the player possesses the item, checking quantities if "count" is specified.
+  // Checks both the unequipped inventory and equipped slots.
   if ('item' in condition) {
-    const entry = gameState.getPlayer().inventory.find(i => i.item === condition.item);
-    if (!entry) return false;
-    return condition.count ? entry.amount >= condition.count : true;
+    const totalCount = gameState.countPlayerItem(condition.item);
+    return condition.count ? totalCount >= condition.count : totalCount > 0;
   }
 
   // Core character resources: evaluated via the general compare helper

@@ -2,11 +2,21 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { evaluateCondition } from '../src/systems/condition.js';
 
-function makeState({ flags = {}, inventory = [], level = 1, gold = 0, missions = {}, attrs = {} } = {}) {
+function makeState({ flags = {}, inventory = [], equipment = {}, level = 1, gold = 0, missions = {}, attrs = {} } = {}) {
   return {
     getFlag: (f) => flags[f] ?? false,
-    getPlayer: () => ({ inventory, level, resources: { gold }, attributes: attrs }),
+    getPlayer: () => ({ inventory, equipment, level, resources: { gold }, attributes: attrs }),
     getMissionStatus: (m) => missions[m] ?? 'not_started',
+    countPlayerItem(itemId, { includeEquipped = true } = {}) {
+      const invEntry = inventory.find(i => i.item === itemId);
+      const invCount = invEntry ? invEntry.amount : 0;
+      if (!includeEquipped) return invCount;
+      const equipCount = Object.values(equipment).filter(id => id === itemId).length;
+      return invCount + equipCount;
+    },
+    getPlayerItemCount(itemId) {
+      return this.countPlayerItem(itemId);
+    }
   };
 }
 
@@ -110,4 +120,20 @@ test('mission leaf: matching status returns true', () => {
 test('mission leaf: non-matching status returns false', () => {
   const state = makeState({ missions: { quest_1: 'active' } });
   assert.equal(evaluateCondition({ mission: 'quest_1', status: 'complete' }, state), false);
+});
+
+test('item leaf: equipped item returns true', () => {
+  const state = makeState({ equipment: { 'Right Hand': 'sword' } });
+  assert.equal(evaluateCondition({ item: 'sword' }, state), true);
+});
+
+test('item leaf: item both in inventory and equipped aggregates count', () => {
+  const state = makeState({
+    inventory: [{ item: 'sword', amount: 1 }],
+    equipment: { 'Right Hand': 'sword' }
+  });
+  // Total 2 swords, should satisfy count: 2
+  assert.equal(evaluateCondition({ item: 'sword', count: 2 }, state), true);
+  // Total 2 swords, does not satisfy count: 3
+  assert.equal(evaluateCondition({ item: 'sword', count: 3 }, state), false);
 });

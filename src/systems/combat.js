@@ -95,7 +95,7 @@ export class CombatSystem {
     // Rolled as: 1d20 + flat initiative modifier.
     // Ties are sorted alphabetically or index-wise. Higher values act earlier.
     this.playerInit = roll(1, MAX_D20_ROLL) + (player.attributes.initiative ?? 0);
-    let highestEnemyInit = 0;
+    let highestEnemyInit = -Infinity;
     
     this.enemies.forEach(e => {
       e.initiativeRoll = roll(1, MAX_D20_ROLL) + (e.attributes.initiative ?? 0);

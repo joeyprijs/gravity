@@ -157,8 +157,8 @@ export class SceneRenderer {
       let reqText = null;
       let disabled = false;
       if (opt.requirements?.item) {
-        const hasItem = gameState.getPlayer().inventory.find(i => i.item === opt.requirements.item);
-        if (!hasItem) {
+        const totalCount = gameState.countPlayerItem(opt.requirements.item);
+        if (totalCount <= 0) {
           disabled = true;
           reqText = this.engine.t('ui.itemRequires', { name: getItemLabel(this.engine.data.items, opt.requirements.item) });
         }

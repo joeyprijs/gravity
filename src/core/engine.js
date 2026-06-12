@@ -247,6 +247,8 @@ class RPGEngine {
     const itemData = this.data.items[itemId];
     if (!itemData) return;
 
+    if (gameState.countPlayerItem(itemId, { includeEquipped: false }) <= 0) return;
+
     const apCost = itemData.actionPoints ?? 0;
     if (this.inCombat && gameState.getPlayer().resources.ap.current < apCost) {
       this.log(LOG.SYSTEM, this.t('player.notEnoughAP', { cost: apCost }));
@@ -290,6 +292,8 @@ class RPGEngine {
     const targetSlot = slot || itemData?.slot;
     if (!itemData || !targetSlot) return;
 
+    if (gameState.countPlayerItem(itemId, { includeEquipped: false }) <= 0) return;
+
     const apCost = itemData.actionPoints ?? 0;
     if (this.inCombat && gameState.getPlayer().resources.ap.current < apCost) {
       this.log(LOG.SYSTEM, this.t('player.notEnoughAP', { cost: apCost }));
@@ -299,7 +303,8 @@ class RPGEngine {
     const oldItemId = gameState.getPlayer().equipment[targetSlot];
     const oldBonus = (oldItemId && this.data.items[oldItemId]?.attributes?.armorClassBonus) || 0;
     const newBonus = itemData.attributes?.armorClassBonus ?? 0;
-    gameState.equipItem(targetSlot, itemId);
+    const success = gameState.equipItem(targetSlot, itemId);
+    if (!success) return;
     if (newBonus - oldBonus !== 0) gameState.modifyPlayerStat('ac', newBonus - oldBonus);
     this.log(LOG.PLAYER, this.t('player.equipped', { name: itemData.name, slot: targetSlot }));
     this._spendAP(apCost);
@@ -307,14 +312,15 @@ class RPGEngine {
 
   unequipItem(slot) {
     if (this.isGameOver) return;
+    const itemId = gameState.getPlayer().equipment[slot];
+    if (!itemId) return;
     const unequipCost = this.data.rules?.unequipApCost ?? 1;
     if (this.inCombat && gameState.getPlayer().resources.ap.current < unequipCost) {
       this.log(LOG.SYSTEM, this.t('player.notEnoughAP', { cost: unequipCost }));
       return;
     }
-    const itemId = gameState.getPlayer().equipment[slot];
-    const itemName = itemId ? (this.data.items[itemId]?.name || itemId) : slot;
-    const bonus = (itemId && this.data.items[itemId]?.attributes?.armorClassBonus) || 0;
+    const itemName = this.data.items[itemId]?.name || itemId;
+    const bonus = this.data.items[itemId]?.attributes?.armorClassBonus ?? 0;
     gameState.equipItem(slot, null);
     if (bonus !== 0) gameState.modifyPlayerStat('ac', -bonus);
     this.log(LOG.PLAYER, this.t('player.unequipped', { name: itemName, slot }));

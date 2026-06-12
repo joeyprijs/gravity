@@ -370,8 +370,12 @@ class StateManager {
    *
    * @param {string} slot - The equipment slot name (e.g. 'Right Hand').
    * @param {string|null} itemId - The item to equip, or null to clear the slot.
+   * @returns {boolean} True if successfully equipped or unequipped, false otherwise.
    */
   equipItem(slot, itemId) {
+    if (itemId) {
+      if (this.countPlayerItem(itemId, { includeEquipped: false }) <= 0) return false;
+    }
     if (this.state.player.equipment[slot]) {
       this.addToInventory(this.state.player.equipment[slot], 1, { silent: true });
     }
@@ -381,6 +385,7 @@ class StateManager {
     this.state.player.equipment[slot] = itemId;
     this.notifyListeners('inventory');
     this._emitMutation('equipItem', { slot, itemId });
+    return true;
   }
 
   getMissionStatus(missionId) { return this.state.missions[missionId] || MISSION_STATUS.NOT_STARTED; }
@@ -401,6 +406,38 @@ class StateManager {
   getReturnSceneId() { return this.state.returnSceneId; }
   setReturnSceneId(sceneId) { this.state.returnSceneId = sceneId; }
 
+  /**
+   * Returns the total quantity of the item in the player's possession.
+   * By default, includes both unequipped inventory stacks and equipped slots.
+   *
+   * @param {string} itemId - The item identifier.
+   * @param {object} [options]
+   * @param {boolean} [options.includeEquipped=true] - Whether to include equipped slots.
+   * @returns {number} The total count.
+   */
+  countPlayerItem(itemId, { includeEquipped = true } = {}) {
+    const player = this.state.player;
+    if (!player) return 0;
+    const invEntry = player.inventory?.find(i => i.item === itemId);
+    const invCount = invEntry ? invEntry.amount : 0;
+    if (!includeEquipped) return invCount;
+    const equipCount = player.equipment
+      ? Object.values(player.equipment).filter(id => id === itemId).length
+      : 0;
+    return invCount + equipCount;
+  }
+
+  /**
+   * Returns the total quantity of the item in the player's possession
+   * (includes both unequipped inventory stacks and equipped slots).
+   *
+   * @param {string} itemId - The item identifier.
+   * @returns {number} The total count.
+   */
+  getPlayerItemCount(itemId) {
+    return this.countPlayerItem(itemId);
+  }
+
 
   /**
    * @param {string} chestId - The chest identifier (from a manage_chest action).
@@ -417,9 +454,14 @@ class StateManager {
    * @param {number} [amount=1] - Stack size to move.
    */
   depositToChest(chestId, itemId, amount = 1) {
+    const existing = this.state.player.inventory.find(i => i.item === itemId);
+    if (!existing) return;
+    const actualAmount = Math.min(amount, existing.amount);
+    if (actualAmount <= 0) return;
+
     if (!this.state.chests[chestId]) this.state.chests[chestId] = [];
-    this._addToItemList(this.state.chests[chestId], itemId, amount);
-    this.removeFromInventory(itemId, amount, { silent: true });
+    this._addToItemList(this.state.chests[chestId], itemId, actualAmount);
+    this.removeFromInventory(itemId, actualAmount, { silent: true });
     this.notifyListeners('inventory');
   }
 
@@ -433,9 +475,13 @@ class StateManager {
    */
   withdrawFromChest(chestId, itemId, amount = 1) {
     const chest = this.state.chests[chestId];
-    if (!chest?.find(i => i.item === itemId)) return;
-    this.state.chests[chestId] = this._removeFromItemList(chest, itemId, amount);
-    this.addToInventory(itemId, amount, { silent: true });
+    const existing = chest?.find(i => i.item === itemId);
+    if (!existing) return;
+    const actualAmount = Math.min(amount, existing.amount);
+    if (actualAmount <= 0) return;
+
+    this.state.chests[chestId] = this._removeFromItemList(chest, itemId, actualAmount);
+    this.addToInventory(itemId, actualAmount, { silent: true });
     this.notifyListeners('inventory');
   }
 
@@ -479,12 +525,14 @@ class StateManager {
    * @param {string} sceneId - The scene holding the display.
    * @param {string} displayId - The display case ID.
    * @param {string} itemId - The item to place.
-   * @returns {boolean} False when the display doesn't exist.
+   * @returns {boolean} False when the display or item doesn't exist.
    */
   placeItemInDisplay(sceneId, displayId, itemId) {
     const displays = this.getDisplaysForScene(sceneId);
     const display = displays.find(d => d.id === displayId);
     if (!display) return false;
+    
+    if (this.countPlayerItem(itemId, { includeEquipped: false }) <= 0) return false;
     
     display.item = itemId;
     this.removeFromInventory(itemId, 1, { silent: true });
