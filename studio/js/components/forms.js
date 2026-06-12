@@ -1,19 +1,42 @@
-import { store, markDirty } from '../store.js';
+import { store, markDirty, setActiveFile } from '../store.js';
 import { el, formRow, getPath, setPath, select, renderItemAmountList } from '../utils.js';
 import { ITEM_TYPES, EQUIPMENT_SLOTS, GOLD_ITEM_ID } from '../contracts.js';
 import { toast } from '../ui.js';
 import { renderSceneForm } from './scene-form.js';
 import { renderNpcForm }   from './npc-form.js';
 
+// Files the author has switched to the raw JSON editor; survives navigating
+// away and back, reset only by toggling or reloading Studio.
+const rawJsonKeys = new Set();
+
+function visualRendererFor(key) {
+  if (key.startsWith('items:'))    return renderItemForm;
+  if (key === '__rules')           return renderRulesForm;
+  if (key.startsWith('flags:'))    return renderFlagsForm;
+  if (key.startsWith('missions:')) return renderMissionForm;
+  if (key.startsWith('tables:'))   return renderTableForm;
+  if (key.startsWith('scenes:'))   return renderSceneForm;
+  if (key.startsWith('npcs:'))     return renderNpcForm;
+  return null;
+}
+
 export function renderForm(key, data) {
-  if (key.startsWith('items:'))    return renderItemForm(key, data);
-  if (key === '__rules')           return renderRulesForm(key, data);
-  if (key.startsWith('flags:'))    return renderFlagsForm(key, data);
-  if (key.startsWith('missions:')) return renderMissionForm(key, data);
-  if (key.startsWith('tables:'))   return renderTableForm(key, data);
-  if (key.startsWith('scenes:'))   return renderSceneForm(key, data);
-  if (key.startsWith('npcs:'))     return renderNpcForm(key, data);
-  return renderRawJson(key, data);
+  const visual = visualRendererFor(key);
+  if (!visual) return renderRawJson(key, data);
+
+  const isRaw = rawJsonKeys.has(key);
+  const wrap = isRaw ? renderRawJson(key, data) : visual(key, data);
+
+  const toggle = el('button', { class: 'btn btn-secondary btn-sm raw-toggle' },
+    [isRaw ? 'Visual Editor' : 'Edit as JSON']);
+  toggle.addEventListener('click', () => {
+    if (isRaw) rawJsonKeys.delete(key);
+    else rawJsonKeys.add(key);
+    setActiveFile(key);
+  });
+  wrap.appendChild(toggle);
+
+  return wrap;
 }
 
 // ── Item form ──────────────────────────────────────────────────────────────
@@ -637,7 +660,10 @@ function renderRawJson(key, data) {
   const label = key.replace(':', ': ').replace('__', '');
   const wrap = el('div', { class: 'form-wrap' });
   wrap.appendChild(el('h2', { class: 'form-title' }, [label]));
-  wrap.appendChild(el('p', { class: 'form-hint' }, ['No visual editor for this file — edit the raw JSON below.']));
+  const hint = visualRendererFor(key)
+    ? 'Editing raw JSON — every valid parse is applied; invalid JSON is never saved.'
+    : 'No visual editor for this file — edit the raw JSON below.';
+  wrap.appendChild(el('p', { class: 'form-hint' }, [hint]));
 
   const ta = el('textarea', { class: 'form-textarea raw-json' }, [JSON.stringify(data, null, 2)]);
   const errMsg = el('p', { class: 'form-error', style: 'display:none' });

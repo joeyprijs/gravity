@@ -220,7 +220,7 @@ body {
 
 /* ── Form layout ─────────────────────────────────── */
 
-.form-wrap { max-width: 700px; }
+.form-wrap { max-width: 700px; position: relative; }
 
 .form-title {
   font-size: 20px;
@@ -1069,4 +1069,10 @@ body {
   margin: 0;
   border: none;
   padding: 0;
+}
+
+.raw-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
 }
