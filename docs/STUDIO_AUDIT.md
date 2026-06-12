@@ -202,10 +202,10 @@ Checked and found *not* to be problems — recorded so future audits don't re-li
 
 ### First pass after that
 
-- [ ] "Validate" toolbar button reusing the engine's `validateGameData`; warn on missing `start` conversation node and on renames with inbound references. *(4.2)*
-- [ ] Extend `saveReplacer` to strip the remaining phantom empties; add `_studioLayout` to the strip list and move graph layout to `localStorage`. *(4.3, 4.4)*
-- [ ] Extract `store.js` to break the `app.js` import cycles. *(4.6)*
-- [ ] Consolidate the duplicated list/collapsible/numInput widgets into `utils.js`. *(4.5)*
+- [x] "Validate" toolbar button reusing the engine's `validateGameData`; warn on missing `start` conversation node and on renames with inbound references. *(4.2)*
+- [x] Extend `saveReplacer` to strip the remaining phantom empties; add `_studioLayout` to the strip list and move graph layout to `localStorage`. *(4.3, 4.4)*
+- [x] Extract `store.js` to break the `app.js` import cycles. *(4.6)*
+- [x] Consolidate the duplicated list/collapsible/numInput widgets into `utils.js` (table editor kept its own rows — the weight column makes it a different widget). *(4.5)*
 
 ### Nice to have
 
