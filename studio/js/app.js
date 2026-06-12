@@ -2,7 +2,9 @@ import { store, setActiveFile, setFormRenderer, updateSaveButton } from './store
 import { openWorkspace, saveFile, resetWorkspace } from './io.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderForm } from './components/forms.js';
-import { toast, showConfirm } from './ui.js';
+import { ACTION_TYPES } from './components/actions.js';
+import { toast, showConfirm, showValidationResults } from './ui.js';
+import { validateGameData, normalizeCarriedItems } from '../../src/core/validate.js';
 
 setFormRenderer(renderForm);
 
@@ -38,9 +40,49 @@ async function handleOpen() {
     const count = Object.keys(store.files).length;
     toast(`Loaded ${count} files`, 'success');
     document.getElementById('btn-reset').disabled = false;
+    document.getElementById('btn-validate').disabled = false;
   } catch (e) {
     if (e.name !== 'AbortError') toast(`Error: ${e.message}`, 'error');
   }
+}
+
+function collectType(prefix) {
+  const out = {};
+  for (const [key, value] of Object.entries(store.files)) {
+    if (key.startsWith(prefix)) out[key.slice(prefix.length)] = value;
+  }
+  return out;
+}
+
+function handleValidate() {
+  // NPCs are cloned because the engine's carriedItems normalization rewrites
+  // them in place — validation must not touch the editor's data.
+  const npcs = structuredClone(collectType('npcs:'));
+  normalizeCarriedItems(npcs);
+  const data = {
+    items: collectType('items:'),
+    npcs,
+    scenes: collectType('scenes:'),
+    missions: collectType('missions:'),
+    tables: collectType('tables:'),
+    rules: store.files['__rules'] ?? {},
+    locale: store.locale,
+  };
+  const knownActionTypes = new Set([...ACTION_TYPES.map(([t]) => t), ...store.actionTypes]);
+  const issues = validateGameData(data, knownActionTypes);
+
+  // Studio extra: the engine hardwires dialogue to open at the "start" node.
+  for (const [id, npc] of Object.entries(npcs)) {
+    const convs = npc.conversations ?? {};
+    if (Object.keys(convs).length > 0 && !convs.start) {
+      issues.push({
+        group: `NPC "${id}"`,
+        message: 'has conversations but no "start" node — the engine opens dialogue at "start"',
+      });
+    }
+  }
+
+  showValidationResults(issues);
 }
 
 async function handleReset() {
@@ -62,6 +104,7 @@ async function handleReset() {
 
 document.getElementById('btn-open').addEventListener('click', handleOpen);
 document.getElementById('btn-save').addEventListener('click', handleSave);
+document.getElementById('btn-validate').addEventListener('click', handleValidate);
 document.getElementById('btn-reset').addEventListener('click', handleReset);
 
 document.addEventListener('input', e => {

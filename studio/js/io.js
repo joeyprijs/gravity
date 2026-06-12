@@ -47,6 +47,16 @@ export async function loadWorkspace(dirHandle) {
     store.files['__rules'] = await readJson(h);
   }
 
+  // Locale (read-only) — lets Validate run the engine's locale-key checks
+  // without false positives.
+  store.locale = {};
+  const localePath = store.index.locales?.[store.index.defaultLanguage ?? 'en'] ?? 'data/locales.json';
+  try {
+    store.locale = await readJson(await getFileHandle(store.dirHandle, localePath));
+  } catch {
+    // No locale file — Validate falls back to an empty locale.
+  }
+
   // Typed collections
   for (const type of ['items', 'npcs', 'scenes', 'missions', 'tables']) {
     const entries = store.index[type];
@@ -70,8 +80,9 @@ export async function loadWorkspace(dirHandle) {
     }
   }
 
-  // Scan for custom description hooks
+  // Scan for custom description hooks and registered action types
   store.descriptionHooks.clear();
+  store.actionTypes.clear();
   try {
     await scanDirectoryForHooks(store.dirHandle);
   } catch (e) {
@@ -93,6 +104,10 @@ async function scanDirectoryForHooks(dirHandle, currentPath = '') {
         let match;
         while ((match = hookRegex.exec(code)) !== null) {
           store.descriptionHooks.add(match[1]);
+        }
+        const actionRegex = /registerAction\(\s*['"]([^'"]+)['"]/g;
+        while ((match = actionRegex.exec(code)) !== null) {
+          store.actionTypes.add(match[1]);
         }
       } catch (e) {
         console.warn(`[Studio] Failed to scan file "${entryPath}":`, e);

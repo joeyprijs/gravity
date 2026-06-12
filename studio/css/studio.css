@@ -1040,3 +1040,36 @@ body {
 .card-body > .btn {
   align-self: flex-start;
 }
+
+/* ── Validation results ──────────────────────────── */
+
+.validate-box {
+  max-width: 680px;
+  width: 90%;
+}
+
+.validate-list {
+  max-height: 60vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.validate-group {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-bright);
+  margin-top: 8px;
+}
+
+.validate-group:first-child {
+  margin-top: 0;
+}
+
+.validate-msg {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+  padding-left: 12px;
+}

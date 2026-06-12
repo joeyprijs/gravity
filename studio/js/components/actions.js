@@ -2,7 +2,7 @@ import { store } from '../store.js';
 import { el, select } from '../utils.js';
 import { showConfirm } from '../ui.js';
 
-const ACTION_TYPES = [
+export const ACTION_TYPES = [
   ['navigate',          'Navigate to Scene'],
   ['set_flag',          'Set Flag'],
   ['loot',              'Loot (Item / XP)'],

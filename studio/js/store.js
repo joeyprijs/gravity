@@ -9,6 +9,8 @@ export const store = {
   activeFile: null,
   dirtyFiles: new Set(),
   descriptionHooks: new Set(),
+  actionTypes: new Set(),  // registerAction(...) names found in workspace JS (core + plugins)
+  locale: {},              // default-language locale, read-only (used by Validate)
 };
 
 let renderForm = null;

@@ -51,6 +51,45 @@ export function showConfirm(message, confirmLabel = 'Delete') {
   });
 }
 
+/** Show validateGameData findings grouped per source entity. */
+export function showValidationResults(issues) {
+  if (!issues.length) {
+    toast('No issues found', 'success');
+    return;
+  }
+
+  const overlay = el('div', { class: 'modal-overlay' });
+  const box     = el('div', { class: 'modal-box validate-box' });
+  box.appendChild(el('div', { class: 'modal-title' },
+    [`Validation — ${issues.length} issue${issues.length === 1 ? '' : 's'}`]));
+
+  const byGroup = new Map();
+  for (const { group, message } of issues) {
+    if (!byGroup.has(group)) byGroup.set(group, []);
+    byGroup.get(group).push(message);
+  }
+
+  const list = el('div', { class: 'validate-list' });
+  for (const [group, messages] of byGroup) {
+    list.appendChild(el('div', { class: 'validate-group' }, [group]));
+    for (const msg of messages) list.appendChild(el('div', { class: 'validate-msg' }, [msg]));
+  }
+  box.appendChild(list);
+
+  const actions  = el('div', { class: 'modal-actions' });
+  const closeBtn = el('button', { class: 'btn btn-primary' }, ['Close']);
+  const close = () => { overlay.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  closeBtn.addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', onKey);
+
+  actions.appendChild(closeBtn);
+  box.appendChild(actions);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
 export function toast(message, type = 'info') {
   let container = document.getElementById('toast-container');
   if (!container) {
