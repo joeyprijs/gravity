@@ -3,14 +3,16 @@ import { el, formRow, select, makeCollapsible, dcIncrementInputs } from '../util
 import { renderActionPipeline, renderEnemyList } from './actions.js';
 import { renderInlineCondition } from './condition-inline.js';
 
+/** Normalize a scene description to array-of-objects (the engine accepts
+ *  a plain string, an array of strings, or {text, condition?} entries). */
+export function normalizeDescription(description) {
+  if (typeof description === 'string') return [{ text: description }];
+  if (!Array.isArray(description)) return [];
+  return description.map(d => typeof d === 'string' ? { text: d } : d);
+}
+
 export function renderSceneForm(key, data) {
-  // Normalize description to array-of-objects (engine accepts both formats)
-  if (typeof data.description === 'string') {
-    data.description = [{ text: data.description }];
-  } else if (!Array.isArray(data.description)) {
-    data.description = [];
-  }
-  data.description = data.description.map(d => typeof d === 'string' ? { text: d } : d);
+  data.description = normalizeDescription(data.description);
   if (!Array.isArray(data.options)) data.options = [];
   if (!Array.isArray(data.skills))  data.skills  = [];
 

@@ -223,7 +223,7 @@ function renderLeaf(wrap, typeSel, type, cond, onReplace, onChange) {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-function detectType(cond) {
+export function detectType(cond, customAttrIds = store.files['__rules']?.customAttributes?.map(a => a.id) ?? []) {
   if (!cond || typeof cond !== 'object') return 'flag';
   if (Array.isArray(cond.and)) return 'and';
   if (Array.isArray(cond.or))  return 'or';
@@ -233,8 +233,7 @@ function detectType(cond) {
   if ('gold' in cond)          return 'gold';
   if ('level' in cond)         return 'level';
   if ('mission' in cond)       return 'mission';
-  const customIds = store.files['__rules']?.customAttributes?.map(a => a.id) ?? [];
-  if (customIds.some(id => id in cond)) return 'attribute';
+  if (customAttrIds.some(id => id in cond)) return 'attribute';
   return 'flag';
 }
 
@@ -282,7 +281,7 @@ function opOptions() {
 }
 
 /** Unpack a comparison value: number → {op:'at_least', val:N}, {op:N} → {op, val:N} */
-function unpack(raw) {
+export function unpack(raw) {
   if (raw == null)              return { op: 'at_least', val: 0 };
   if (typeof raw === 'number')  return { op: 'at_least', val: raw };
   const [opKey] = Object.keys(raw);
@@ -290,7 +289,7 @@ function unpack(raw) {
 }
 
 /** Pack back: at_least → shorthand number; others → {op: val} */
-function pack(opKey, val) {
+export function pack(opKey, val) {
   return opKey === 'at_least' ? val : { [opKey]: val };
 }
 

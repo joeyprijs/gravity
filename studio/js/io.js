@@ -183,7 +183,7 @@ function isEmptyObject(value) {
     && Object.keys(value).length === 0;
 }
 
-function makeReplacer(fileKey) {
+export function makeReplacer(fileKey) {
   const isNpc = fileKey.startsWith('npcs:');
   return (key, value) => {
     if (DEAD_KEYS.has(key)) return undefined;

@@ -285,7 +285,7 @@ function makeDraggable(handle, card, nodeId, pos, npcKey, scrollWrap, redraw) {
 
 // ── Auto-layout (BFS columns) ─────────────────────────────────────────────
 
-function autoLayout(convs) {
+export function autoLayout(convs) {
   const ids = Object.keys(convs);
   if (!ids.length) return {};
 
