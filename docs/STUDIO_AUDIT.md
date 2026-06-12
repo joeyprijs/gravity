@@ -209,6 +209,6 @@ Checked and found *not* to be problems — recorded so future audits don't re-li
 
 ### Nice to have
 
-- [ ] Export the pure logic (`pack`/`unpack`/`detectType`, `autoLayout`, `saveReplacer`, normalizers) and cover it in the existing `node --test` suite. *(4.7)*
-- [ ] One `contracts.js` for the hand-copied engine enums; explore importing browser-safe engine modules directly. *(4.1)*
-- [ ] Sidebar state preservation across rebuilds; the Section 5 paper cuts. *(4.8, 5)*
+- [x] Export the pure logic (`pack`/`unpack`/`detectType`, `autoLayout`, `saveReplacer`, normalizers) and cover it in the existing `node --test` suite (`tests/studio-logic.test.js`). *(4.7)*
+- [x] One `contracts.js` for the hand-copied engine enums; `GOLD_ITEM_ID` now imported straight from `src/core/config.js`, and a test pins `ACTION_TYPES` to the engine's core registrations. *(4.1)*
+- [x] Sidebar state preservation across rebuilds; the Section 5 paper cuts (graph `redraw()` perf left as-is — fine at demo scale, as noted). *(4.8, 5)*
