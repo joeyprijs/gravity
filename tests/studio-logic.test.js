@@ -6,6 +6,7 @@ import { pack, unpack, detectType } from '../studio/js/complex/logic.js';
 import { autoLayout } from '../studio/js/complex/nodes.js';
 import { makeReplacer } from '../studio/js/io.js';
 import { normalizeDescription } from '../studio/js/components/scene-form.js';
+import { rewriteInboundRefs } from '../studio/js/components/npc-form.js';
 import { ACTION_TYPES } from '../studio/js/contracts.js';
 import { ACTIONS } from '../src/core/config.js';
 
@@ -165,4 +166,28 @@ test('autoLayout handles cycles without infinite looping', () => {
   const convs = { start: goTo('loop'), loop: goTo('start') };
   const pos = autoLayout(convs);
   assert.equal(Object.keys(pos).length, 2);
+});
+
+// ── rewriteInboundRefs (audit M8: node rename must not leave dangling refs) ───
+
+test('rewriteInboundRefs repoints node-level, response, and onFailure references', () => {
+  const conversations = {
+    start: {
+      npcText: 'Hi',
+      actions: [{ type: 'goToConversation', node: 'old' }],
+      responses: [
+        { text: 'A', actions: [{ type: 'goToConversation', node: 'old' }] },
+        { text: 'B', onFailure: [{ type: 'goToConversation', node: 'old' }], actions: [{ type: 'leave' }] },
+        { text: 'C', actions: [{ type: 'goToConversation', node: 'other' }] },
+      ],
+    },
+    old: { npcText: 'Renamed me' },
+  };
+
+  rewriteInboundRefs(conversations, 'old', 'new');
+
+  assert.equal(conversations.start.actions[0].node, 'new');
+  assert.equal(conversations.start.responses[0].actions[0].node, 'new');
+  assert.equal(conversations.start.responses[1].onFailure[0].node, 'new');
+  assert.equal(conversations.start.responses[2].actions[0].node, 'other'); // unrelated ref untouched
 });

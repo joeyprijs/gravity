@@ -59,9 +59,28 @@ Legend: ✅ done · 🔧 in progress · ⬜ not started · ➖ won't fix (with r
 
 All Critical, High, and Medium findings are resolved, along with every Low/Nit except the two documented deferrals (L3, L11) which are accepted-as-designed.
 
-- **Tests:** 232 → **244 passing, 0 failing.** New coverage: malformed-save rejection and migration version math (`state.test.js`), `xpPerLevel`-zero guard, reserved-attribute and `xpPerLevel` validation (`validate.test.js`), malformed-range dice fallback (`dice.test.js`), nested dead-key survival (`studio-logic.test.js`), and a new `data-integrity.test.js` that validates the shipped game and its schema conformance.
-- **New files:** `CODE_OF_CONDUCT.md`, `SECURITY.md`, `.github/PULL_REQUEST_TEMPLATE.md`, `tests/data-integrity.test.js`; `package.json` fleshed out with name/version/license/repository/engines.
+- **Tests:** 232 → **252 passing, 0 failing.** New coverage: malformed-save rejection and migration version math (`state.test.js`), `xpPerLevel`-zero guard, reserved-attribute and `xpPerLevel` validation (`validate.test.js`), malformed-range dice fallback (`dice.test.js`), nested dead-key survival and node-rename ref-rewrite (`studio-logic.test.js`), a `data-integrity.test.js` that validates the shipped game and its schema conformance, and a `studio-io.test.js` that drives the real `io.js` against an in-memory File System Access API mock.
+- **New files:** `CODE_OF_CONDUCT.md`, `SECURITY.md`, `.github/PULL_REQUEST_TEMPLATE.md`, `tests/data-integrity.test.js`, `tests/studio-io.test.js`; `package.json` fleshed out with name/version/license/repository/engines.
 - **Verification:** full suite green; all edited modules pass `node --check`; all 36 data files parse; the real example game validates clean and conforms to its schemas.
+
+### Studio validation (H1, H2, M8, M9)
+
+The File System Access API can't run headlessly, but `io.js` operates on injected
+handles, so `tests/studio-io.test.js` runs the **real** `io.js` against an
+in-memory mock of the API and asserts on-disk results exactly:
+
+- **H1** — after `resetWorkspace`, the written `index.json` contains
+  `defaultLanguage`, `locales`, and `plugins`, and `data/locales.json` is
+  preserved; the workspace reloads cleanly.
+- **H2** — a forced write failure leaves the original file content intact
+  (abort path); unserializable data throws *before* `createWritable` is called,
+  so the file is never opened/truncated. `createEntry`/`deleteEntry` keep the
+  index and on-disk files consistent.
+- **M8** — `rewriteInboundRefs` (exported for testing) repoints node-level,
+  response, and `onFailure` `goToConversation` references and leaves unrelated
+  references untouched.
+- **M9** — `beforeunload` now sets `e.returnValue = ''`. This is a one-line,
+  spec-compliance change with no headless test surface; verified by inspection.
 
 ---
 

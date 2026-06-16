@@ -164,8 +164,8 @@ function countInboundRefs(conversations, nodeId) {
 }
 
 // Repoints every goToConversation action that targets oldId to newId, so a
-// node rename never leaves dangling references behind.
-function rewriteInboundRefs(conversations, oldId, newId) {
+// node rename never leaves dangling references behind. Exported for testing.
+export function rewriteInboundRefs(conversations, oldId, newId) {
   const scan = actions => {
     for (const a of actions ?? []) {
       if (a.type === 'goToConversation' && a.node === oldId) a.node = newId;
