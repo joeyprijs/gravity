@@ -83,6 +83,10 @@
         "type": "object",
         "properties": {
           "text": { "type": "string" },
+          "isBack": {
+            "type": "boolean",
+            "description": "If true, sorts this option to the bottom as a 'back'/exit choice (locale-independent alternative to a 'return' action)."
+          },
           "log": {
             "type": ["boolean", "string"],
             "description": "False silences logging; a string prints a custom narrative description."
@@ -169,9 +173,13 @@
       }
     }
   },
-  "required": ["name", "region"],
+  "required": ["region"],
+  "anyOf": [
+    { "required": ["title"] },
+    { "required": ["name"] }
+  ],
   "additionalProperties": false,
-  
+
   "definitions": {
     "condition": {
       "type": "object",

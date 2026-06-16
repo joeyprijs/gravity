@@ -3,17 +3,31 @@ import { CSS, EL } from "./config.js";
 /**
  * Reads a value from a nested object using a dot-separated path.
  * e.g. getByPath(player, 'resources.hp.current') → player.resources.hp.current
+ *
+ * @param {object} obj - The object to read from.
+ * @param {string} path - Dot-separated path (e.g. 'resources.hp.current').
+ * @returns {*} The value at the path, or undefined if any segment is missing.
  */
 export function getByPath(obj, path) {
   return path.split('.').reduce((cur, key) => cur?.[key], obj);
 }
 
+// Keys that would let a dotted path reach an object's prototype chain. Blocked
+// so setByPath can never be used as a prototype-pollution sink.
+const UNSAFE_PATH_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 /**
  * Sets a value on a nested object using a dot-separated path.
  * e.g. setByPath(player, 'resources.hp.max', 15)
+ * Path segments touching the prototype chain are rejected.
+ *
+ * @param {object} obj - The target object.
+ * @param {string} path - Dot-separated path (e.g. 'resources.hp.max').
+ * @param {*} value - The value to assign at the path.
  */
 export function setByPath(obj, path, value) {
   const parts = path.split('.');
+  if (parts.some(p => UNSAFE_PATH_KEYS.has(p))) return;
   let cur = obj;
   for (let i = 0; i < parts.length - 1; i++) cur = cur[parts[i]];
   cur[parts[parts.length - 1]] = value;

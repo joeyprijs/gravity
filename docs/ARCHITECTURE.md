@@ -7,7 +7,7 @@ This document explains how the engine boots, how the modules fit together, and �
 1. **Zero dependencies.** The engine runs as native ES Modules in the browser; tests run on Node's built-in test runner. Nothing is compiled or bundled.
 2. **Data-driven.** All game content (scenes, NPCs, items, quests, rules, loot tables) lives in JSON under `data/`. Authoring a game requires no JavaScript.
 3. **Unidirectional reactive state.** All mutations go through `gameState` (a `StateManager` singleton); the UI re-renders via listeners. Game logic never touches DOM values directly, and UI code never owns game rules.
-4. **Decoupled subsystems.** Systems never import each other. They communicate through the engine's delegate methods or its event bus.
+4. **Decoupled subsystems.** Stateful subsystems (combat, dialogue, scene, quests, narrative) never import each other — they communicate through the engine's delegate methods or its event bus. The exception is the pure, stateless helper modules `dice.js`, `condition.js`, and `skill-checks.js`: they hold no state and touch neither the engine nor the DOM, so subsystems import them directly the way they would any library function. The rule that prevents tangling is "no subsystem reaches into another subsystem's state," not "no file imports another."
 
 ## Boot Flow
 
@@ -45,7 +45,7 @@ engine.js (orchestrator, delegate API, event bus, registries)
 └── plugins/           optional modules loaded via the manifest
 ```
 
-There are no circular imports. Subsystems reach each other only through `engine.*` delegates (`engine.renderScene()`, `engine.log()`, `engine.runActions()`, …) or events.
+There are no circular imports. Stateful subsystems reach each other only through `engine.*` delegates (`engine.renderScene()`, `engine.log()`, `engine.runActions()`, …) or events. The pure helpers (`dice.js`, `condition.js`, `skill-checks.js`) are leaf modules: they import nothing from `systems/` and are imported freely by the subsystems that need their math.
 
 ## State Management
 

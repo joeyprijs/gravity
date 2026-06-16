@@ -18,6 +18,7 @@
     },
     {
       "text": "Return to Living Room",
+      "isBack": true,
       "actions": [
         { "type": "navigate", "destination": "home_living_room" }
       ]

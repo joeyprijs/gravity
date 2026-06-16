@@ -16,5 +16,9 @@
   "curatorNoEligibleItems":  "No eligible artifacts in your inventory.",
   "curatorInstallPrompt":    "Enter a name for your new display case:",
   "curatorInstallDefault":   "Display Case {count}",
-  "curatorInstallSuccess":   "You spent {cost} Gold and installed the \"{name}\"."
+  "curatorInstallSuccess":   "You spent {cost} Gold and installed the \"{name}\".",
+  "displayDefaultName":      "Display Pedestal",
+  "displayAddedLog":         "A new {name} has been added to the room.",
+  "inspectValue":            "Value: {value} Gold",
+  "inspectApCost":           "AP Cost: {ap}"
 }

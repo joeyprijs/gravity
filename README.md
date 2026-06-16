@@ -485,7 +485,3 @@ export default function(engine) {
 ## License
 
 This is free and unencumbered software released into the public domain. For more details, see the [LICENSE](LICENSE) file.
-
-## This is a test
-
-Let's see what Gemini does.

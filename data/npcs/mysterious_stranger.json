@@ -2,9 +2,6 @@
   "name": "Mysterious Stranger",
   "isMerchant": true,
   "storeExitText": "No problem.",
-  "attributes": {
-    "initiative": 0
-  },
   "carriedItems": [
     { "item": "healing_potion", "amount": 3 },
     { "item": "leather_armor", "amount": 1 }

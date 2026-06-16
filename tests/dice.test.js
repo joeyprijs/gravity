@@ -72,3 +72,11 @@ test('parseDamage: rollStr includes negative modifier', () => {
   assert.ok(result.string.includes('-1'), `Expected "-1" in "${result.string}"`);
   Math.random = orig;
 });
+
+test('parseDamage: malformed range falls back to a flat 1 instead of NaN', () => {
+  for (const bad of ['a-b', '1-2-3', '2-x']) {
+    const result = parseDamage(bad);
+    assert.ok(Number.isFinite(result.total), `${bad} produced non-finite total`);
+    assert.equal(result.total, 1);
+  }
+});

@@ -264,6 +264,17 @@ function renderOptions(data, onChange) {
       reqParam.appendChild(reqSel);
       cardBody.appendChild(reqParam);
 
+      const backCheck = el('input', { type: 'checkbox' });
+      if (opt.isBack) backCheck.checked = true;
+      backCheck.addEventListener('change', () => {
+        opt.isBack = backCheck.checked || undefined;
+        onChange();
+      });
+      const backParam = el('div', { class: 'action-param' });
+      backParam.appendChild(el('span', { class: 'action-param-label' }, ['Back / Exit option']));
+      backParam.appendChild(backCheck);
+      cardBody.appendChild(backParam);
+
       const curLog = opt.log;
       let logMode = 'default';
       if (curLog === false) logMode = 'silent';
@@ -594,7 +605,12 @@ function renderDisplaysList(data, onChange) {
 
     const add = el('button', { class: 'btn btn-secondary' }, ['+ Add Display Stand']);
     add.addEventListener('click', () => {
-      const id = `display_${Date.now()}`;
+      // Derive a unique id from the existing ids rather than Date.now(), which
+      // collides when two stands are added within the same millisecond.
+      const existing = new Set(data.displays.map(d => d.id));
+      let n = data.displays.length + 1;
+      let id = `display_${n}`;
+      while (existing.has(id)) id = `display_${++n}`;
       data.displays.push({ id, name: 'New Display Stand' });
       onChange();
       render();

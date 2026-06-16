@@ -191,13 +191,19 @@ export class UIManager {
   // Applies a parsed save object and restores the game to its saved state.
   // Called both from the in-game Load button and from the char creation screen.
   _applyLoadedSave(data) {
+    // Reject a malformed save before touching the UI, so a bad file leaves the
+    // current screen intact instead of showing a half-loaded game.
+    if (!gameState.loadFromObject(data)) {
+      this.engine.log(LOG.SYSTEM, this.engine.t('system.loadFailed'));
+      return false;
+    }
+
     // Ensure the game UI is visible (handles the case where this is called
     // from the char creation screen before the main game has been shown).
     const charCreation = document.getElementById(EL.CHAR_CREATION);
     if (charCreation) charCreation.hidden = true;
     document.getElementById('game-container').hidden = false;
 
-    gameState.loadFromObject(data);
     this.engine.isGameStart = true;
     clearElement(EL.SCENE_NARRATIVE);
     this.engine.currentSceneEl = null;
@@ -205,6 +211,7 @@ export class UIManager {
     this.engine.log(LOG.SYSTEM, this.engine.t('system.loaded'), 'system', false);
     const lastDesc = this.engine.narrative.restore(gameState.getLog());
     this.engine.restoreScene(gameState.getCurrentSceneId(), lastDesc);
+    return true;
   }
 
   renderChestUI(chestId) {

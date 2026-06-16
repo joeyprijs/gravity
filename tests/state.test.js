@@ -240,3 +240,30 @@ test('countPlayerItem: correctly counts and filters equipped vs unequipped items
   assert.equal(gameState.countPlayerItem('unknown_item'), 0);
   assert.equal(gameState.countPlayerItem('unknown_item', { includeEquipped: false }), 0);
 });
+
+test('loadFromObject: rejects malformed saves and returns false', () => {
+  assert.equal(gameState.loadFromObject(null), false);
+  assert.equal(gameState.loadFromObject({}), false);
+  assert.equal(gameState.loadFromObject({ player: null, log: [] }), false);
+  assert.equal(gameState.loadFromObject({ player: {}, log: 'not-an-array' }), false);
+});
+
+test('loadFromObject: applies a valid save and migrates an old one forward', () => {
+  const ok = gameState.loadFromObject({ player: {}, log: [] }); // no saveVersion → migrates from 0
+  assert.equal(ok, true);
+  assert.equal(gameState.getPlayer().name, ''); // migration 1 added player.name
+  assert.equal(gameState.state.saveVersion, 3); // brought up to the current version
+});
+
+test('migrate: leaves a future-versioned save untouched (no backward rewrite)', () => {
+  gameState.loadFromObject({ saveVersion: 99, player: { name: 'x' }, log: [] });
+  assert.equal(gameState.state.saveVersion, 99);
+});
+
+test('addXP: does not hang when xpPerLevel is 0 — banks XP without leveling', () => {
+  gameState.init({ ...TEST_RULES, xpPerLevel: 0 });
+  gameState.addXP(50);
+  const p = gameState.getPlayer();
+  assert.equal(p.level, 1);
+  assert.equal(p.xp, 50);
+});

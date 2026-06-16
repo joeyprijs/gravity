@@ -23,8 +23,13 @@ async function handleSave() {
     return field && !String(store.files[key]?.[field] ?? '').trim();
   });
 
+  let currentKey;
   try {
     for (const key of [...store.dirtyFiles]) {
+      currentKey = key;
+      // Dirty flag is cleared only after the write fully commits (saveFile
+      // awaits close()); a mid-batch failure leaves the failed file and every
+      // file after it still marked dirty so no change is silently lost.
       await saveFile(key);
       store.dirtyFiles.delete(key);
       const node = document.querySelector(`.sidebar-item[data-key="${CSS.escape(key)}"]`);
@@ -37,7 +42,8 @@ async function handleSave() {
       toast('Saved', 'success');
     }
   } catch (e) {
-    toast(`Save failed: ${e.message}`, 'error');
+    updateSaveButton();
+    toast(`Save failed on "${currentKey}": ${e.message}. Other unsaved changes were kept.`, 'error');
   }
 }
 
@@ -128,5 +134,9 @@ document.addEventListener('keydown', e => {
 });
 
 window.addEventListener('beforeunload', e => {
-  if (store.dirtyFiles.size > 0) e.preventDefault();
+  if (store.dirtyFiles.size > 0) {
+    e.preventDefault();
+    // Some browsers only show the unsaved-changes prompt when returnValue is set.
+    e.returnValue = '';
+  }
 });

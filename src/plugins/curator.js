@@ -5,8 +5,11 @@ import { ACTIONS, CSS, LOG } from "../core/config.js";
 // The curator's reputation model: a permanent score (state.museumReputation,
 // earned by acquiring relics for the first time) plus a dynamic bonus from
 // relics currently on display. player.attributes.reputation is the derived sum.
-// All of it is driven through the formal StateManager plugin API — mutation
-// hooks, a custom stat handler, and a save migration — no method wrapping.
+// Reputation recalculation hangs off the formal StateManager plugin API —
+// mutation hooks, a custom stat handler, and a save migration; no engine or
+// StateManager methods are wrapped. The plugin's own top-level save fields
+// (museumReputation, obtainedItems) are read/written directly on the state
+// object, which is the documented pattern for plugin-owned save data.
 
 // Item database reference, set by registerCuratorState(). Module-level because
 // the hook callbacks need it and the engine owns the loaded data.
@@ -173,10 +176,9 @@ export default function curatorPlugin(engine) {
       return;
     }
     gameState.modifyPlayerStat('gold', -cost);
-    gameState.addDisplayToScene(sceneId, {
-      name: action.name || "Display Pedestal"
-    });
-    engine.log(LOG.SYSTEM, `A new ${action.name || "Display Pedestal"} has been added to the room.`);
+    const displayName = action.name || engine.t('plugin.curator.displayDefaultName');
+    gameState.addDisplayToScene(sceneId, { name: displayName });
+    engine.log(LOG.SYSTEM, engine.t('plugin.curator.displayAddedLog', { name: displayName }));
   });
 
   // 4. Inject reputation stat DOM element into header
@@ -325,8 +327,8 @@ export class CuratorUI {
     }
     
     if (itemData?.value !== undefined || itemData?.actionPoints !== undefined) {
-      let stats = `Value: ${itemData.value ?? 0} Gold`;
-      if (itemData.actionPoints) stats += ` | AP Cost: ${itemData.actionPoints}`;
+      let stats = this.engine.t('plugin.curator.inspectValue', { value: itemData.value ?? 0 });
+      if (itemData.actionPoints) stats += ` | ${this.engine.t('plugin.curator.inspectApCost', { ap: itemData.actionPoints })}`;
       infoContainer.appendChild(createElement('p', CSS.ITEM_STATS, stats));
     }
 

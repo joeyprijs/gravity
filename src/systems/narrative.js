@@ -50,6 +50,15 @@ export class NarrativeLog {
       .forEach(el => el.classList.remove(CSS.SCENE_NEW));
   }
 
+  /**
+   * Appends a line to the current scene block in the narrative log.
+   *
+   * @param {string} type - The label prefix (e.g. LOG.SYSTEM, LOG.PLAYER).
+   * @param {string} message - The message text (rendered as plain text).
+   * @param {string} [variant='system'] - CSS variant suffix for styling.
+   * @param {boolean} [persist=true] - When false, the entry is shown but not
+   *   saved to the persisted log (used for transient notices like "loaded").
+   */
   log(type, message, variant = 'system', persist = true) {
     if (!this.currentSceneEl) this.openScene();
     const p = createElement('p', [CSS.SCENE_LOG, `${CSS.SCENE_LOG}--${variant}`, CSS.SCENE_NEW]);
@@ -59,8 +68,13 @@ export class NarrativeLog {
     if (persist) gameState.appendLog({ type, message, variant });
   }
 
-  // Rebuilds the narrative DOM from a persisted log (used on save load).
-  // Returns the last rendered scene description so SceneRenderer can restore its state.
+  /**
+   * Rebuilds the narrative DOM from a persisted log (used on save load).
+   *
+   * @param {object[]} logEntries - The persisted log entries (see appendLog).
+   * @returns {?string} The last rendered scene description, so SceneRenderer can
+   *   restore its state; null if no scene entry was present.
+   */
   restore(logEntries) {
     let lastDesc = null;
     logEntries.forEach(entry => {

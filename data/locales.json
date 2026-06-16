@@ -111,6 +111,7 @@
     "equipped":          "Equipped {name} to {slot}.",
     "unequipped":        "Unequipped {name} from {slot}.",
     "usedItem":          "You used {name} and recovered {amount} HP{rollSuffix}.",
+    "rollSuffix":        " (Roll: {roll})",
     "teleported":        "You gripped the {name} and vanished into thin air...",
     "alreadyHere":       "You are already here.",
     "notEnoughAP":       "Not enough AP! Need {cost}.",

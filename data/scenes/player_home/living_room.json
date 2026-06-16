@@ -42,6 +42,7 @@
     },
     {
       "text": "Leave House",
+      "isBack": true,
       "actions": [
         { "type": "navigate", "destination": "home_door" }
       ]

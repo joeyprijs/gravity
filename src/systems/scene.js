@@ -34,6 +34,12 @@ export class SceneRenderer {
     if (scene) this.renderOptions(scene);
   }
 
+  /**
+   * Renders a scene: its description, options, skills, and any auto-combat.
+   * No-op while combat is active.
+   *
+   * @param {string} sceneId - The id of the scene to render.
+   */
   render(sceneId) {
     if (this.engine.inCombat) return;
 
@@ -135,11 +141,12 @@ export class SceneRenderer {
     const standardOpts = [];
     const backOpts = [];
 
+    // A "back" option is sorted to the bottom of the list. Detected by the
+    // `return` action type or an explicit `"isBack": true` flag — never by
+    // matching English words in the text, which would break in other locales.
     const isBackOption = (opt) => {
-      const text = (opt.text || '').toLowerCase();
-      const hasReturnAction = opt.actions?.some(a => a.type === 'return');
-      const isBackText = text.includes('return') || text.includes('go back') || text.includes('leave') || text.includes('exit');
-      return hasReturnAction || isBackText;
+      if (opt.isBack === true) return true;
+      return opt.actions?.some(a => a.type === 'return') ?? false;
     };
 
     (scene.options || []).forEach(opt => {
@@ -219,6 +226,12 @@ export class SceneRenderer {
     backOpts.forEach(renderOptionBtn);
   }
 
+  /**
+   * Executes a chosen scene option: logs the choice (unless silenced) and runs
+   * its action pipeline.
+   *
+   * @param {object} opt - The option object from the scene's `options` array.
+   */
   handleOption(opt) {
     this.engine.isGameStart = false;
     if (opt.log !== false) this.engine.log(LOG.PLAYER, opt.text, 'choice');

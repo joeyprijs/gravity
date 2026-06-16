@@ -155,19 +155,18 @@ export const MISSION_STATUS = {
 
 // Log type labels — the [Label] prefix shown in every narrative log entry.
 export const LOG = {
-  SYSTEM: 'System',
-  PLAYER: 'Player',
-  COMBAT: 'Combat',
-  QUEST:  'Quest',
+  SYSTEM:   'System',
+  PLAYER:   'Player',
+  COMBAT:   'Combat',
+  QUEST:    'Quest',
   NARRATOR: 'Narrator',
 };
 
-// System messages shared across multiple modules. Keeping them here ensures
-// that e.g. the load-filter in state.js and the log call in ui.js always match.
+// System messages shared across multiple modules, kept here so every consumer
+// references one definition.
 export const MSG = {
-  GAME_LOADED:        'Game Loaded from Disk.',
-  GAME_LOAD_FAILED:   'Failed to parse save file.',
-  GAME_DATA_ERROR:    'Error loading game data.',
+  GAME_LOAD_FAILED: 'Failed to parse save file.',
+  GAME_DATA_ERROR:  'Error loading game data.',
 };
 
 // Default world canvas dimensions used when worldMapSize is absent from index.json

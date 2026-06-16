@@ -13,9 +13,13 @@ export class QuestSystem {
     });
   }
 
-  // Called when a scene has a questTrigger block.
-  // triggerData: { mission: <id>, status: "active" | "complete" }
-  // Returns true if a transition occurred, false if the trigger was skipped.
+  /**
+   * Applies a scene's questTrigger block to mission state.
+   *
+   * @param {{ mission: string, status: ('active'|'complete') }} triggerData - The trigger.
+   * @returns {boolean} True if a mission transition occurred; false if skipped
+   *   (unknown mission, already complete, or no state change needed).
+   */
   handleTrigger(triggerData) {
     if (!triggerData.mission) return false;
     const mId = triggerData.mission;
@@ -37,7 +41,12 @@ export class QuestSystem {
     return false;
   }
 
-  // Marks a mission complete, logs the result, and grants any XP/gold rewards.
+  /**
+   * Marks a mission complete, logs the result, and grants any XP/gold rewards.
+   *
+   * @param {string} mId - The mission id.
+   * @param {object} mData - The mission definition (name, missionRewards).
+   */
   completeMission(mId, mData) {
     gameState.setMissionStatus(mId, MISSION_STATUS.COMPLETE);
     this.engine.log(LOG.QUEST, this.engine.t('quest.completed', { name: mData.name }), 'quest');

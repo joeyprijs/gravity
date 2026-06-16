@@ -51,6 +51,7 @@ function makeCleanData() {
     missions: { escape: { title: 'Escape' } },
     tables: { loot: { entries: [{ item: 'potion' }, { item: 'gold', amount: 5 }] } },
     rules: {
+      xpPerLevel: 100,
       playerDefaults: { attributes: { ac: 10 } },
       customAttributes: [{ id: 'perception', default: 0 }],
       fallbackWeapons: { player: 'sword', enemy: 'sword' },
@@ -166,4 +167,19 @@ test('handles empty data without throwing', () => {
     new Set()
   );
   assert.deepEqual(issues, []);
+});
+
+test('flags a custom attribute id that collides with a reserved condition keyword', () => {
+  const data = makeCleanData();
+  data.rules.customAttributes.push({ id: 'gold', default: 0 });
+  data.locale.actions.skillBadge.gold = 'GOLD {dc}';
+  const issues = validate(data);
+  assert.ok(issues.some(i => i.group === 'Rules' && /reserved/.test(i.message)));
+});
+
+test('flags a missing or non-positive xpPerLevel', () => {
+  const data = makeCleanData();
+  data.rules.xpPerLevel = 0;
+  const issues = validate(data);
+  assert.ok(issues.some(i => /xpPerLevel must be a positive number/.test(i.message)));
 });

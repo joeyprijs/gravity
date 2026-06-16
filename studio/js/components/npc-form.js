@@ -163,6 +163,23 @@ function countInboundRefs(conversations, nodeId) {
   return count;
 }
 
+// Repoints every goToConversation action that targets oldId to newId, so a
+// node rename never leaves dangling references behind.
+function rewriteInboundRefs(conversations, oldId, newId) {
+  const scan = actions => {
+    for (const a of actions ?? []) {
+      if (a.type === 'goToConversation' && a.node === oldId) a.node = newId;
+    }
+  };
+  for (const node of Object.values(conversations ?? {})) {
+    scan(node.actions);
+    for (const resp of node.responses ?? []) {
+      scan(resp.actions);
+      scan(resp.onFailure);
+    }
+  }
+}
+
 function renderNode(nodeId, node, data, onChange, rerenderAll) {
   let currentId = nodeId;
 
@@ -180,22 +197,24 @@ function renderNode(nodeId, node, data, onChange, rerenderAll) {
       return;
     }
 
+    const inbound = countInboundRefs(data.conversations, currentId);
     const warnings = [];
     if (currentId === 'start') {
       warnings.push('the engine opens dialogue at "start", so this NPC will lose its entry node');
     }
-    const inbound = countInboundRefs(data.conversations, currentId);
     if (inbound > 0) {
-      warnings.push(`${inbound} goToConversation action${inbound === 1 ? '' : 's'} still point${inbound === 1 ? 's' : ''} at "${currentId}" and will dangle`);
+      warnings.push(`${inbound} goToConversation action${inbound === 1 ? '' : 's'} pointing at "${currentId}" will be updated to "${newId}"`);
     }
     if (warnings.length > 0) {
       const ok = await showConfirm(`Rename "${currentId}" to "${newId}"? Note: ${warnings.join('; ')}.`, 'Rename');
       if (!ok) { idInput.value = currentId; return; }
     }
 
-    const nodeData = data.conversations[currentId];
-    delete data.conversations[currentId];
+    const oldId = currentId;
+    const nodeData = data.conversations[oldId];
+    delete data.conversations[oldId];
     data.conversations[newId] = nodeData;
+    rewriteInboundRefs(data.conversations, oldId, newId);
     currentId = newId;
     onChange();
   });

@@ -75,7 +75,13 @@ class RPGEngine {
             }
           }
 
-          if (url.includes('curator.js')) {
+          // The curator ships with the engine and is statically imported so it
+          // works without dynamic import() (e.g. on the file:// protocol).
+          // Match it precisely — by id (object form) or an exact path tail —
+          // rather than a loose substring that could match an unrelated URL.
+          const isBuiltInCurator = id === 'curator'
+            || url === 'curator.js' || url.endsWith('/curator.js');
+          if (isBuiltInCurator) {
             try {
               curatorPlugin(this);
               return;
@@ -84,6 +90,9 @@ class RPGEngine {
             }
           }
 
+          // Trust boundary: a plugin URL from the manifest is dynamically
+          // imported and runs with full engine access. Only load manifests and
+          // plugins you trust — treat third-party game packs as untrusted code.
           const absoluteUrl = new URL(url, document.baseURI).href;
           try {
             const m = await import(absoluteUrl);
@@ -263,7 +272,7 @@ class RPGEngine {
       if (typeof amount === 'string') {
         const result = parseDamage(amount);
         amount = result.total;
-        rollSuffix = ` (Roll: ${result.string})`;
+        rollSuffix = this.t('player.rollSuffix', { roll: result.string });
       }
       gameState.modifyPlayerStat('hp', amount);
       this.log(LOG.SYSTEM, this.t('player.usedItem', { name: itemData.name, amount, rollSuffix }), 'loot');

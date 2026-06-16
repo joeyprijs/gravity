@@ -185,8 +185,13 @@ function isEmptyObject(value) {
 
 export function makeReplacer(fileKey) {
   const isNpc = fileKey.startsWith('npcs:');
-  return (key, value) => {
-    if (DEAD_KEYS.has(key)) return undefined;
+  let root;
+  return function (key, value) {
+    // JSON.stringify calls the replacer once with key '' for the root object;
+    // capture it so dead keys are only stripped at the top level. A nested
+    // field that happens to share a dead-key name is real data and must survive.
+    if (key === '') { root = value; return value; }
+    if (this === root && DEAD_KEYS.has(key)) return undefined;
     if (STRIP_EMPTY_ARRAYS.has(key) && Array.isArray(value) && value.length === 0) return undefined;
     if (isNpc && STRIP_EMPTY_NPC_OBJECTS.has(key) && isEmptyObject(value)) return undefined;
     return value;
@@ -196,9 +201,19 @@ export function makeReplacer(fileKey) {
 export async function saveFile(key) {
   const handle = store.fileHandles[key];
   if (!handle) throw new Error(`No file handle for "${key}"`);
+  // Serialize before opening the writable: createWritable() truncates the file
+  // immediately, so a serialization error here must be caught before we touch
+  // the file on disk. On a write failure, abort() discards the stream so the
+  // file is never left truncated.
+  const contents = JSON.stringify(store.files[key], makeReplacer(key), 2) + '\n';
   const writable = await handle.createWritable();
-  await writable.write(JSON.stringify(store.files[key], makeReplacer(key), 2) + '\n');
-  await writable.close();
+  try {
+    await writable.write(contents);
+    await writable.close();
+  } catch (e) {
+    await writable.abort?.();
+    throw e;
+  }
 }
 
 export async function resetWorkspace() {
@@ -289,7 +304,10 @@ export async function resetWorkspace() {
   const indexHandle = await dataDir.getFileHandle('index.json', { create: true });
   const indexData = {
     worldMapSize: { width: 3000, height: 2000 },
+    defaultLanguage: "en",
+    locales: { en: "data/locales.json" },
     rules: "data/rules.json",
+    plugins: [],
     flags: {},
     regions: {
       world: { name: "Starting Region" }

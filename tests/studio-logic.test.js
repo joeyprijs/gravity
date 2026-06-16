@@ -63,6 +63,13 @@ test('makeReplacer keeps non-empty arrays', () => {
   assert.deepEqual(serialize('scenes:s', data), data);
 });
 
+test('makeReplacer keeps a dead-key name when it is nested, not top-level', () => {
+  // Dead keys are stripped only at the top level; a nested field that happens
+  // to share the name is real data and must survive the save.
+  const data = { keep: 1, nested: { disposition: 'real', x: 2 } };
+  assert.deepEqual(serialize('npcs:guard', data), { keep: 1, nested: { disposition: 'real', x: 2 } });
+});
+
 test('makeReplacer strips empty objects from NPC files only', () => {
   const data = { attributes: {}, equipment: {}, conversations: {} };
   assert.deepEqual(serialize('npcs:guard', data), {});

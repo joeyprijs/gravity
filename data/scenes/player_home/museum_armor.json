@@ -25,6 +25,7 @@
   "options": [
     {
       "text": "Go back to Museum Lobby",
+      "isBack": true,
       "actions": [
         { "type": "navigate", "destination": "home_museum" }
       ]

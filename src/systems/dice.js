@@ -33,7 +33,14 @@ export function parseDamage(dmgString) {
   // Legacy range syntax (e.g., "1-4"). Evaluated first because the standard
   // dice regex does not parse bare hyphens without a 'd' designator.
   if (dmgString.includes('-') && !dmgString.includes('d')) {
-    const [a, b] = dmgString.split('-').map(Number);
+    const parts = dmgString.split('-').map(Number);
+    const [a, b] = parts;
+    // Reject malformed ranges ("1-2-3", "-3", "1-") that would otherwise roll
+    // NaN and silently corrupt combat math.
+    if (parts.length !== 2 || !Number.isFinite(a) || !Number.isFinite(b)) {
+      console.warn(`[Gravity] parseDamage: malformed range "${dmgString}". Defaulting to a flat roll of 1.`);
+      return { total: 1, string: "1" };
+    }
     // Sort parameters dynamically to handle descending declarations (e.g., "4-1") safely
     const actualMin = Math.min(a, b);
     const actualMax = Math.max(a, b);

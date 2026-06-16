@@ -1,4 +1,4 @@
-import { MSG, MISSION_STATUS } from "./config.js";
+import { MISSION_STATUS } from "./config.js";
 
 const MAX_LOG_ENTRIES = 200;
 
@@ -31,6 +31,10 @@ function migrate(data, extraMigrations = {}) {
   const from = data.saveVersion ?? 0;
   const allMigrations = { ...MIGRATIONS, ...extraMigrations };
   const maxVersion = Math.max(SAVE_VERSION, ...Object.keys(extraMigrations).map(Number));
+  // A save from a newer engine (from >= maxVersion) is already current or ahead;
+  // leave it untouched rather than re-running migrations or rewriting its
+  // version backwards.
+  if (from >= maxVersion) return;
   for (let v = from + 1; v <= maxVersion; v++) {
     if (allMigrations[v]) allMigrations[v](data);
   }
@@ -189,17 +193,26 @@ class StateManager {
    * save versions forward first. Notifies all listeners.
    *
    * @param {object} parsedData - The parsed save JSON (see getSaveString).
+   * @returns {boolean} True if the save was applied; false if it was rejected
+   *   as malformed (callers can surface a clean error instead of crashing).
    */
   loadFromObject(parsedData) {
+    // Saves are user-supplied files and may be hand-edited or corrupt. Reject a
+    // structurally invalid save before committing to it, so a bad load fails
+    // cleanly instead of throwing mid-migration with state half-replaced.
+    if (!parsedData || typeof parsedData !== 'object'
+        || typeof parsedData.player !== 'object' || parsedData.player === null
+        || !Array.isArray(parsedData.log)) {
+      console.warn('[Gravity] loadFromObject: save data is missing required fields; load aborted.');
+      return false;
+    }
+
     // Run schema migrations so older saves stay compatible.
     migrate(parsedData, this._extraMigrations);
-
-    // Strip the "game loaded" notification from the restored log so it doesn't
-    // appear as a duplicate each time the player loads a save.
-    parsedData.log = parsedData.log.filter(e => e.message !== MSG.GAME_LOADED);
     this.state = parsedData;
     this.notifyListeners();
     this._emitMutation('loadFromObject');
+    return true;
   }
 
   appendLog(entry) {
@@ -298,13 +311,19 @@ class StateManager {
   addXP(amount) {
     const p = this.state.player;
     p.xp += amount;
-    let threshold = p.level * this._rules.xpPerLevel;
-    while (p.xp >= threshold) {
-      p.xp -= threshold;
-      p.level++;
-      p.resources.hp.max += this._rules.levelUpHpBonus;
-      p.resources.hp.current = p.resources.hp.max;
-      threshold = p.level * this._rules.xpPerLevel;
+    const xpPerLevel = this._rules.xpPerLevel;
+    // Guard against a missing or non-positive xpPerLevel (bad rules data): a
+    // threshold of 0 would make `xp >= threshold` always true and loop forever.
+    // XP still banks; validate.js flags the misconfiguration on boot.
+    if (xpPerLevel > 0) {
+      let threshold = p.level * xpPerLevel;
+      while (p.xp >= threshold) {
+        p.xp -= threshold;
+        p.level++;
+        p.resources.hp.max += this._rules.levelUpHpBonus;
+        p.resources.hp.current = p.resources.hp.max;
+        threshold = p.level * xpPerLevel;
+      }
     }
     this.notifyListeners('stats');
     this._emitMutation('addXP', { amount });
@@ -506,7 +525,10 @@ class StateManager {
     if (!this.state.displays) this.state.displays = {};
     if (!this.state.displays[sceneId]) this.state.displays[sceneId] = [];
     
-    const id = displayConfig.id || `display_${Date.now()}`;
+    // Sequence suffix guarantees uniqueness even when two displays are added
+    // within the same millisecond (Date.now() alone would collide).
+    this._displaySeq = (this._displaySeq ?? 0) + 1;
+    const id = displayConfig.id || `display_${Date.now()}_${this._displaySeq}`;
     const newDisplay = {
       id,
       name: displayConfig.name || "Display Case",

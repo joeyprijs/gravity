@@ -62,9 +62,12 @@ export class DialogueSystem {
     }));
 
     this.engine.registerAction(ACTIONS.TRADE, requireNPC(ACTIONS.TRADE, (action) => {
-      const pct = typeof action.tradeDiscount === 'string'
+      const rawPct = typeof action.tradeDiscount === 'string'
         ? parseFloat(action.tradeDiscount)
         : (action.tradeDiscount ?? 0);
+      // Guard against malformed discount data (e.g. "abc") that would make every
+      // price NaN; an unparseable discount means no discount.
+      const pct = Number.isFinite(rawPct) ? rawPct : 0;
       this.activeDiscount = pct / 100;
 
       // Optionally save this discount permanently in the session state

@@ -10,6 +10,14 @@ import { GOLD_ITEM_ID } from "./config.js";
 // Attributes an NPC needs to participate in combat without crashing it.
 const COMBAT_NPC_ATTRIBUTES = ['healthPoints', 'armorClass', 'actionPoints'];
 
+// Words a condition leaf already uses structurally. A custom attribute sharing
+// one of these names is indistinguishable from the built-in leaf (e.g. a
+// `{ "gold": 5 }` condition), so the engine — and the Studio condition editor —
+// would mis-resolve it. Reserved to prevent that ambiguity.
+const RESERVED_CONDITION_KEYS = new Set([
+  'and', 'or', 'not', 'flag', 'value', 'item', 'count', 'gold', 'level', 'mission', 'status',
+]);
+
 /**
  * Normalizes every NPC's carriedItems to the object form
  * { item: string, amount: number|null } (amount null = unlimited stock).
@@ -198,6 +206,11 @@ function validateRules(ctx) {
   const { rules, items, locale } = ctx;
   const group = 'Rules';
 
+  // xpPerLevel scales the level-up threshold; a missing or non-positive value
+  // makes the threshold 0 and hangs addXP in an infinite loop on the first XP gain.
+  if (rules && !(rules.xpPerLevel > 0))
+    ctx.add(group, `xpPerLevel must be a positive number (got ${rules.xpPerLevel}) — required for level-up math`);
+
   for (const role of ['player', 'enemy']) {
     const fallback = rules?.fallbackWeapons?.[role];
     if (fallback && !items[fallback])
@@ -205,6 +218,8 @@ function validateRules(ctx) {
   }
 
   for (const attr of (rules?.customAttributes || [])) {
+    if (RESERVED_CONDITION_KEYS.has(attr.id))
+      ctx.add(group, `customAttributes "${attr.id}": name is reserved — it collides with a built-in condition leaf and cannot be used as an attribute id`);
     if (!locale?.actions?.skillBadge?.[attr.id])
       ctx.add(group, `customAttributes "${attr.id}": missing locale entry at actions.skillBadge.${attr.id}`);
   }
