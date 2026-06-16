@@ -394,14 +394,15 @@ export class SceneRenderer {
   }
 
   // Picks a random entry from a loot table using weighted probability.
-  // Each entry may carry an optional `weight` field (defaults to 1).
+  // Each entry may carry an optional `dropWeight` field (relative likelihood,
+  // defaults to 1) — higher means more common, not item carry weight.
   _rollTable(tableId) {
     const table = this.engine.data.tables[tableId];
     if (!table?.entries?.length) return null;
-    const totalWeight = table.entries.reduce((sum, e) => sum + (e.weight ?? 1), 0);
+    const totalWeight = table.entries.reduce((sum, e) => sum + (e.dropWeight ?? 1), 0);
     let r = Math.random() * totalWeight;
     for (const entry of table.entries) {
-      r -= (entry.weight ?? 1);
+      r -= (entry.dropWeight ?? 1);
       if (r <= 0) return entry;
     }
     return table.entries[table.entries.length - 1];

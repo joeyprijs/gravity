@@ -423,14 +423,14 @@ Items define weapons, shields, spells, armor protections, or consumables:
 ---
 
 ### Loot Tables
-Loot tables support probability-weighted random item drops:
+Loot tables support probability-weighted random item drops. Each entry's `dropWeight` is its relative likelihood (higher = more common; defaults to 1) — it is *not* item carry weight:
 
 ```json
 {
   "entries": [
-    { "item": "gold", "amount": 10, "weight": 5 },
-    { "item": "healing_potion", "weight": 2 },
-    { "item": "rusty_sword", "weight": 1 }
+    { "item": "gold", "amount": 10, "dropWeight": 5 },
+    { "item": "healing_potion", "dropWeight": 2 },
+    { "item": "rusty_sword", "dropWeight": 1 }
   ]
 }
 ```

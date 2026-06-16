@@ -620,12 +620,13 @@ function renderTableForm(key, data) {
 
       const weightInput = el('input', {
         type: 'number', class: 'form-input sm', min: '0',
-        value: entry.weight ?? '', placeholder: 'wt',
+        value: entry.dropWeight ?? '', placeholder: 'drop wt',
+        title: 'Drop weight: relative likelihood of this entry (higher = more common). Defaults to 1.',
       });
       weightInput.addEventListener('input', () => {
         // Negative weights would corrupt the weighted-roll loop.
-        if (weightInput.value === '') delete entry.weight;
-        else entry.weight = Math.max(0, Number(weightInput.value) || 0);
+        if (weightInput.value === '') delete entry.dropWeight;
+        else entry.dropWeight = Math.max(0, Number(weightInput.value) || 0);
         markDirty(key);
       });
 
