@@ -142,7 +142,7 @@ export class CombatSystem {
       const dmgResult = parseDamage(weapon.attributes.damageRoll);
       targetEnemy.attributes.healthPoints -= dmgResult.total;
       
-      this.engine.log(gameState.getPlayer().name || LOG.PLAYER, this.engine.t('combat.attackHit', {
+      this.engine.log(LOG.PLAYER, this.engine.t('combat.attackHit', {
         weapon: weapon.name, roll: hitRoll, mod: modStr,
         ac: targetEnemy.attributes.armorClass, damage: dmgResult.total, 
         dice: weapon.attributes.damageRoll, rollStr: dmgResult.string
@@ -158,7 +158,7 @@ export class CombatSystem {
       }
     } else {
       // Missed attack logging
-      this.engine.log(gameState.getPlayer().name || LOG.PLAYER, this.engine.t('combat.attackMiss', {
+      this.engine.log(LOG.PLAYER, this.engine.t('combat.attackMiss', {
         weapon: weapon.name, roll: hitRoll, mod: modStr, ac: targetEnemy.attributes.armorClass
       }), 'damage');
     }
