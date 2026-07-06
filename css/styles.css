@@ -512,10 +512,11 @@ body {
   margin-top: calc(var(--spacing) * 3);
 }
 
+/* No opacity dimming here: log variants are colored (damage red, loot gold),
+   and dimming those below ~4.5:1 contrast fails WCAG AA on the dark panel. */
 .scene__log-prefix {
   display: block;
   font-weight: 600;
-  opacity: 0.6;
 }
 
 .scene__log--choice  { color: var(--text-primary); }

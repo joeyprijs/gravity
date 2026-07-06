@@ -39,8 +39,12 @@ export class SceneRenderer {
    * No-op while combat is active.
    *
    * @param {string} sceneId - The id of the scene to render.
+   * @param {object} [opts]
+   * @param {boolean} [opts.skipAutoAttack=false] - Suppresses the scene's
+   *   autoAttack encounter. Used by the post-victory re-render so winning a
+   *   fight on an auto-attack scene doesn't immediately restart it.
    */
-  render(sceneId) {
+  render(sceneId, { skipAutoAttack = false } = {}) {
     if (this.engine.inCombat) return;
 
     const scene = this.engine.data.scenes[sceneId];
@@ -68,7 +72,7 @@ export class SceneRenderer {
       this.engine.emit('scene:entered', { sceneId, scene });
     }
 
-    if (this._maybeStartAutoAttack(scene)) return;
+    if (!skipAutoAttack && this._maybeStartAutoAttack(scene)) return;
 
     this.engine.scrollNarrativeToBottom();
   }
@@ -373,18 +377,21 @@ export class SceneRenderer {
       this.engine.isGameStart = false;
       this.engine.log(LOG.PLAYER, opt.text, 'choice');
       const { success } = performSkillCheck(this.engine, opt.skillCheck, dc);
+      // Like handleOption, a re-render must also be skipped when the actions
+      // opened a dialogue or custom UI — rendering the scene would clobber it.
+      const didNavigate = (sceneIdBefore) =>
+        gameState.getCurrentSceneId() !== sceneIdBefore ||
+        this.engine.inCombat || this.engine.inDialogue || this.engine.inCustomUI;
       if (success) {
         const sceneIdBefore = gameState.getCurrentSceneId();
         this.engine.runActions(opt.actions || []);
-        const didNavigate = gameState.getCurrentSceneId() !== sceneIdBefore || this.engine.inCombat;
-        if (!didNavigate) this.engine.renderScene(gameState.getCurrentSceneId());
+        if (!didNavigate(sceneIdBefore)) this.engine.renderScene(gameState.getCurrentSceneId());
       } else {
         escalateDc(skillKey, i, dc, opt.increment ?? 1);
         if (opt.onFailure?.length) {
           const sceneIdBefore = gameState.getCurrentSceneId();
           this.engine.runActions(opt.onFailure);
-          const didNavigate = gameState.getCurrentSceneId() !== sceneIdBefore || this.engine.inCombat;
-          if (!didNavigate) this.renderOptions(scene);
+          if (!didNavigate(sceneIdBefore)) this.renderOptions(scene);
         } else {
           this.renderOptions(scene);
         }

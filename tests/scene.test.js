@@ -4,6 +4,19 @@ import { gameState } from '../src/core/state.js';
 import { SceneRenderer } from '../src/systems/scene.js';
 import { FLAG_KEYS } from '../src/core/config.js';
 
+// Minimal DOM stand-in — just enough for createElement/buildOptionButton to run
+// headless. Elements are only built by the code under test, never queried back.
+const fakeEl = () => ({
+  classList: { add() {} },
+  children: [],
+  appendChild(child) { this.children.push(child); return child; },
+  setAttribute() {},
+  removeAttribute() {},
+  querySelector: () => null,
+  querySelectorAll: () => [],
+});
+globalThis.document = { createElement: fakeEl, getElementById: fakeEl };
+
 // Minimal rules required by gameState.init() — mirrors the key values from rules.json.
 const TEST_RULES = {
   playerDefaults: {
@@ -40,6 +53,9 @@ function makeEngine({ items = TEST_ITEMS, scenes = {}, tables = {}, hooks = {}, 
     combatSystem: { startCombat: (enemies, cfg) => calls.combat.push({ enemies, cfg }) },
     renderScene: (sceneId) => calls.renderedScenes.push(sceneId),
     runActions: () => {},
+    openScene: () => {},
+    currentSceneEl: { appendChild: () => {} },
+    scrollNarrativeToBottom: () => {},
     inCombat: false,
     inDialogue: false,
     inCustomUI: false,
@@ -270,6 +286,15 @@ test('_maybeStartAutoAttack: starts combat and reports true when allowed', () =>
   assert.deepEqual(calls.combat[0].enemies, ['goblin_grunt']);
 });
 
+test('render: skipAutoAttack suppresses the scene autoAttack (post-victory re-render)', () => {
+  const scene = { description: 'Goblins block the way.', autoAttack: { enemies: ['goblin_grunt'] } };
+  const { sr, calls } = makeSR({ scenes: { corridor: scene } });
+  sr.render('corridor', { skipAutoAttack: true });
+  assert.equal(calls.combat.length, 0);
+  sr.render('corridor');
+  assert.equal(calls.combat.length, 1);
+});
+
 // ── render guards / handleOption / restoreFromSave ────────────────────────────
 
 test('render: refuses to render during combat', () => {
@@ -324,4 +349,32 @@ test('restoreFromSave: a null description leaves the cache empty', () => {
   const { sr } = makeSR({ scenes: { cell: {} } });
   sr.restoreFromSave('cell', null);
   assert.equal(sr.lastRenderedSceneId, null);
+});
+
+// ── _buildPassFailButton: re-render guards ────────────────────────────────────
+
+test('_buildPassFailButton: success that opens a dialogue skips the scene re-render', () => {
+  const { sr, engine, calls } = makeSR({ scenes: { cell: {} } });
+  gameState.setCurrentSceneId('cell');
+  engine.runActions = () => { engine.inDialogue = true; };
+  mock.method(Math, 'random', () => 0.99); // d20 roll of 20 — passes DC 5
+  const btn = sr._buildPassFailButton(
+    { text: 'Persuade the guard', skillCheck: 'perception', dc: 5, actions: [{ type: 'dialogue', npc: 'guard' }] },
+    0, 'cell', {}
+  );
+  btn.onclick();
+  assert.equal(calls.renderedScenes.length, 0);
+});
+
+test('_buildPassFailButton: failure whose onFailure opens a custom UI skips the options re-render', () => {
+  const { sr, engine } = makeSR({ scenes: { cell: {} } });
+  gameState.setCurrentSceneId('cell');
+  engine.runActions = () => { engine.inCustomUI = true; };
+  mock.method(Math, 'random', () => 0); // d20 roll of 1 — fails DC 5
+  const btn = sr._buildPassFailButton(
+    { text: 'Pick the lock', skillCheck: 'perception', dc: 5, onFailure: [{ type: 'manage_chest' }] },
+    0, 'cell', {}
+  );
+  btn.onclick();
+  assert.equal(sr.renderOptions.mock.callCount(), 0);
 });

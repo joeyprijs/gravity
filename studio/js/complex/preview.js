@@ -54,7 +54,9 @@ function buildBundle() {
 }
 
 function sendBundle() {
-  iframe?.contentWindow?.postMessage({ type: 'gravity:bundle', bundle: buildBundle() }, '*');
+  // Same-origin target only: the bundle is the author's entire workspace and
+  // must never be delivered to a foreign page the iframe may have navigated to.
+  iframe?.contentWindow?.postMessage({ type: 'gravity:bundle', bundle: buildBundle() }, location.origin);
   updateValidation();
 }
 
@@ -113,7 +115,10 @@ function scheduleAutoRefresh() {
 }
 
 // The engine announces readiness after every (re)load — answer with the bundle.
+// Only our own same-origin preview iframe is answered; anything else could be
+// a foreign page trying to request the workspace.
 window.addEventListener('message', (e) => {
+  if (e.origin !== location.origin || e.source !== iframe?.contentWindow) return;
   if (e.data?.type === 'gravity:preview-ready') sendBundle();
 });
 

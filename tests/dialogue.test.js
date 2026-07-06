@@ -4,6 +4,19 @@ import { gameState } from '../src/core/state.js';
 import { DialogueSystem } from '../src/systems/dialogue.js';
 import { ACTIONS, FLAG_KEYS } from '../src/core/config.js';
 
+// Minimal DOM stand-in — just enough for the real renderDialogue to run
+// headless (createElement/buildSceneDescription/resetOptionsPanel).
+const fakeEl = () => ({
+  classList: { add() {} },
+  children: [],
+  appendChild(child) { this.children.push(child); return child; },
+  setAttribute() {},
+  removeAttribute() {},
+  querySelector: () => null,
+  querySelectorAll: () => [],
+});
+globalThis.document = { createElement: fakeEl, getElementById: fakeEl };
+
 // Minimal rules required by gameState.init() — mirrors the key values from rules.json.
 const TEST_RULES = {
   playerDefaults: {
@@ -48,6 +61,8 @@ function makeEngine({ npcs = TEST_NPCS, items = {}, rules = TEST_RULES } = {}) {
     resetScene: () => calls.resetScene++,
     handleQuestTrigger: (action) => calls.questTriggers.push(action),
     scrollNarrativeToBottom: () => {},
+    openScene: () => {},
+    currentSceneEl: { appendChild: () => {} },
   };
   return { engine, registry, calls };
 }
@@ -240,4 +255,25 @@ test('_getStock: a sold-out stock of 0 is preserved, not reset', () => {
   ds.startDialogue('quiet_merchant');
   gameState.setFlag(FLAG_KEYS.merchantStock('quiet_merchant', 'healing_potion'), 0);
   assert.equal(ds._getStock('healing_potion', 3), 0);
+});
+
+// ── renderDialogue: overrideText (store exit) ─────────────────────────────────
+
+test('renderDialogue: overrideText re-shows the node without re-running its actions', () => {
+  const npcs = {
+    gifter: {
+      name: 'Gifter',
+      conversations: { start: { npcText: 'Take this, friend.', actions: [{ type: 'give_gift' }], responses: [] } },
+    },
+  };
+  const { engine } = makeEngine({ npcs });
+  let gifts = 0;
+  engine.registerAction('give_gift', () => gifts++);
+  const ds = new DialogueSystem(engine); // real renderDialogue — not the makeDS stub
+
+  ds.startDialogue('gifter');
+  assert.equal(gifts, 1, 'entering the node runs its actions once');
+
+  ds.renderDialogue('start', 'Come again!'); // the store-exit path
+  assert.equal(gifts, 1, 'an overrideText re-show must not re-run the pipeline');
 });

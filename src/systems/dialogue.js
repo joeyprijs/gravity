@@ -148,7 +148,10 @@ export class DialogueSystem {
    * Compiles player reply choices and checks dynamic skill check gates.
    * 
    * @param {string} [nodeId="start"] - The node key inside the NPC's conversation tree.
-   * @param {string|null} [overrideText=null] - Text override (e.g. store farewell lines).
+   * @param {string|null} [overrideText=null] - Text override (e.g. store farewell
+   *   lines). An override means the node is being re-shown, not entered, so its
+   *   action pipeline is NOT re-run (a greeting gift must not be granted again
+   *   every time the player backs out of the store).
    * @param {boolean} [optionsOnly=false] - If true, skips appending narrative text blocks.
    */
   renderDialogue(nodeId = "start", overrideText = null, optionsOnly = false) {
@@ -170,7 +173,7 @@ export class DialogueSystem {
         this.engine.log(this.currentNPC.name, displayString);
       }
 
-      this._runActions(node.actions || []);
+      if (!overrideText) this._runActions(node.actions || []);
     }
 
     const { container, skillsContainer } = resetOptionsPanel(

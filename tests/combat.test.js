@@ -395,3 +395,35 @@ test('enemyTurn: calls endCombat(false) when player HP hits 0', () => {
 
   Math.random = orig;
 });
+
+// ─── endCombat: victory re-render ────────────────────────────────────────────
+
+test('endCombat: victory re-render skips the scene autoAttack', () => {
+  const cs = makeCS();
+  const rendered = [];
+  cs.engine.renderScene = (sceneId, opts) => rendered.push({ sceneId, opts });
+  gameState.setCurrentSceneId('corridor');
+  cs.inCombat = true;
+  cs.enemies = [makeEnemy({ hp: 0 })];
+  cs.originOption = { onVictory: [] };
+
+  cs.endCombat(true);
+
+  assert.equal(cs.inCombat, false);
+  assert.deepEqual(rendered, [{ sceneId: 'corridor', opts: { skipAutoAttack: true } }]);
+});
+
+test('endCombat: no re-render when onVictory opened a dialogue', () => {
+  const cs = makeCS();
+  let rendered = 0;
+  cs.engine.renderScene = () => rendered++;
+  cs.engine.runActions = () => { cs.engine.inDialogue = true; };
+  gameState.setCurrentSceneId('corridor');
+  cs.inCombat = true;
+  cs.enemies = [makeEnemy({ hp: 0 })];
+  cs.originOption = { onVictory: [{ type: 'dialogue', npc: 'stranger' }] };
+
+  cs.endCombat(true);
+
+  assert.equal(rendered, 0);
+});

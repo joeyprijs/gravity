@@ -450,11 +450,11 @@ class RPGEngine {
     }
   }
 
-  renderScene(sceneId) {
+  renderScene(sceneId, opts) {
     this.dialogueSystem.storeOpen = false;
     this.dialogueSystem.currentNPC = null;
     this.dialogueSystem.currentNPCId = null;
-    return this.scene.render(sceneId);
+    return this.scene.render(sceneId, opts);
   }
   restoreScene(sceneId, lastDesc) { return this.scene.restoreFromSave(sceneId, lastDesc); }
   resetScene()                   { return this.scene.reset(); }
@@ -572,16 +572,17 @@ window.addEventListener('DOMContentLoaded', () => {
   // Studio live-preview mode (index.html?preview=1): don't boot immediately.
   // Announce readiness to the parent window, then boot the engine against the
   // in-memory data bundle it posts back. See studio/js/complex/preview.js.
-  // Only data is injected (no code), and the page is embedded by Studio itself,
-  // so accepting the parent's message is safe for this local dev tooling.
+  // Bundles are accepted only from a same-origin parent (Studio serves the
+  // game from its own origin): scene descriptions render via innerHTML, so a
+  // foreign page embedding a deployed game must never be able to inject one.
   if (new URLSearchParams(location.search).get('preview') === '1') {
     window.addEventListener('message', (e) => {
-      if (e.source !== window.parent) return;
+      if (e.origin !== location.origin || e.source !== window.parent) return;
       const msg = e.data;
       if (!msg || msg.type !== 'gravity:bundle' || window.gameEngine) return;
       window.gameEngine = new RPGEngine(msg.bundle);
     });
-    window.parent.postMessage({ type: 'gravity:preview-ready' }, '*');
+    window.parent.postMessage({ type: 'gravity:preview-ready' }, location.origin);
     return;
   }
   window.gameEngine = new RPGEngine();

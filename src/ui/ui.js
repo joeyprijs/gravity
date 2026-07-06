@@ -198,6 +198,13 @@ export class UIManager {
       return false;
     }
 
+    // The loaded save replaces all state, so any combat (or game-over screen)
+    // in progress is over. Without this reset, isGameOver keeps blocking item
+    // use after "Load Last Save", and a mid-combat load leaves inCombat stuck
+    // true, which blocks all scene rendering.
+    this.engine.combatSystem.inCombat = false;
+    this.engine.combatSystem.isGameOver = false;
+
     // Ensure the game UI is visible (handles the case where this is called
     // from the char creation screen before the main game has been shown).
     const charCreation = document.getElementById(EL.CHAR_CREATION);

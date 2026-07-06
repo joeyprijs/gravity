@@ -345,10 +345,14 @@ export class CombatSystem {
       // Execute onVictory action pipeline
       const sceneIdBefore = gameState.getCurrentSceneId();
       this.engine.runActions(this.originOption?.onVictory || []);
-      
-      // If the victory pipeline did not trigger scene navigation, force re-render options
-      const didNavigate = gameState.getCurrentSceneId() !== sceneIdBefore;
-      if (!didNavigate) this.engine.renderScene(gameState.getCurrentSceneId());
+
+      // If the victory pipeline did not trigger scene navigation (or open a
+      // dialogue, custom UI, or new combat), force re-render options. The
+      // re-render skips the scene's autoAttack — without that, victory on an
+      // auto-attack scene would instantly restart the same encounter.
+      const didNavigate = gameState.getCurrentSceneId() !== sceneIdBefore ||
+        this.engine.inCombat || this.engine.inDialogue || this.engine.inCustomUI;
+      if (!didNavigate) this.engine.renderScene(gameState.getCurrentSceneId(), { skipAutoAttack: true });
 
     } else {
       this.renderer.renderGameOver();
