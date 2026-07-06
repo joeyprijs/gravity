@@ -17,9 +17,9 @@
     }
   },
   "system": {
-    "saved":      "Game Saved to Disk.",
-    "loaded":     "Game Loaded from Disk.",
-    "loadFailed": "Failed to parse save file.",
+    "saved":      "Your tale is recorded.",
+    "loaded":     "Your tale resumes where it left off.",
+    "loadFailed": "That record is damaged beyond reading.",
     "dataError":  "Error loading game data."
   },
   "stats": {
@@ -114,9 +114,9 @@
     "rollSuffix":        " (Roll: {roll})",
     "teleported":        "You gripped the {name} and vanished into thin air...",
     "alreadyHere":       "You are already here.",
-    "notEnoughAP":       "Not enough AP! Need {cost}.",
+    "notEnoughAP":       "You're too spent for that — it takes {cost} AP.",
     "noCombatSave":      "Cannot save during combat.",
-    "noCombatTeleport":  "Cannot use teleport items during combat!"
+    "noCombatTeleport":  "There's no slipping away like that mid-fight!"
   },
   "combat": {
     "fightingTitle":        "Fighting: {names}",
@@ -166,10 +166,10 @@
     "leave":              "Leave"
   },
   "log": {
-    "System": "System",
+    "System": "Narrator",
     "Player": "Player",
-    "Combat": "Combat",
-    "Quest":  "Quest",
+    "Combat": "Narrator",
+    "Quest":  "Narrator",
     "Narrator": "Narrator"
   },
   "quest": {
