@@ -14,6 +14,7 @@ export class NarrativeLog {
     this.t = t;
     this.el = document.getElementById(EL.SCENE_NARRATIVE);
     this.currentSceneEl = null;
+    this._lastLogType = null;
     this.isGameStart = true;
     this._scrollRaf = undefined;
 
@@ -35,6 +36,7 @@ export class NarrativeLog {
     this.el.appendChild(scene);
     this.scrollToBottom();
     this.currentSceneEl = scene;
+    this._lastLogType = null;
     return scene;
   }
 
@@ -62,8 +64,15 @@ export class NarrativeLog {
   log(type, message, variant = 'system', persist = true) {
     if (!this.currentSceneEl) this.openScene();
     const p = createElement('p', [CSS.SCENE_LOG, `${CSS.SCENE_LOG}--${variant}`, CSS.SCENE_NEW]);
-    p.appendChild(createElement('span', CSS.SCENE_LOG_PREFIX, `[${type}]`));
+    // Consecutive entries from the same source group into one block: the
+    // repeated [Label] is omitted and the gap tightened (scene__log--grouped).
+    if (type === this._lastLogType) {
+      p.classList.add(`${CSS.SCENE_LOG}--grouped`);
+    } else {
+      p.appendChild(createElement('span', CSS.SCENE_LOG_PREFIX, `[${type}]`));
+    }
     p.append(` ${message}`);
+    this._lastLogType = type;
     this.currentSceneEl.appendChild(p);
     this.scrollToBottom();
     if (persist) gameState.appendLog({ type, message, variant });
@@ -86,8 +95,14 @@ export class NarrativeLog {
       } else {
         if (!this.currentSceneEl) this.openScene();
         const p = createElement('p', [CSS.SCENE_LOG, `${CSS.SCENE_LOG}--${entry.variant}`]);
-        p.appendChild(createElement('span', CSS.SCENE_LOG_PREFIX, `[${entry.type}]`));
+        // Mirror log()'s grouping so a restored log reads the same as it did live.
+        if (entry.type === this._lastLogType) {
+          p.classList.add(`${CSS.SCENE_LOG}--grouped`);
+        } else {
+          p.appendChild(createElement('span', CSS.SCENE_LOG_PREFIX, `[${entry.type}]`));
+        }
         p.append(` ${entry.message}`);
+        this._lastLogType = entry.type;
         this.currentSceneEl.appendChild(p);
       }
     });

@@ -328,15 +328,13 @@ export class CombatSystem {
     
     if (isVictory) {
       const names = this.enemies.map(e => e.name).join(' & ');
-      this.engine.log(LOG.SYSTEM, this.engine.t('combat.victory', { names }), 'loot');
 
-      // Award XP from defeated enemies
-      this.enemies.forEach(enemy => {
-        if (enemy.attributes.xpReward) {
-          gameState.addXP(enemy.attributes.xpReward);
-          this.engine.log(LOG.SYSTEM, this.engine.t('loot.xpGained', { amount: enemy.attributes.xpReward }), 'loot');
-        }
-      });
+      // Award XP from defeated enemies, folded into the victory line — one
+      // event, one message. addXP carries surplus across level-ups, so a
+      // single summed call matches the per-enemy awards it replaces.
+      const totalXp = this.enemies.reduce((sum, e) => sum + (e.attributes.xpReward || 0), 0);
+      if (totalXp > 0) gameState.addXP(totalXp);
+      this.engine.log(LOG.SYSTEM, this.engine.t(totalXp > 0 ? 'combat.victoryXp' : 'combat.victory', { names, xp: totalXp }), 'loot');
 
       // Restore player AP back to max capacity after battle
       const player = gameState.getPlayer();

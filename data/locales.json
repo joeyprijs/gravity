@@ -140,6 +140,7 @@
     "attackTwice":          "twice",
     "attackMany":           "{count} times",
     "victory":              "You defeated {names}!",
+    "victoryXp":            "You defeated {names}! (+{xp} XP)",
     "gameOverTitle":        "Game Over",
     "gameOverBody":         "Your adventure ends here.",
     "avoided":              "They regard you peacefully.",

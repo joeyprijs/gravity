@@ -517,6 +517,14 @@ body {
 .scene__log-prefix {
   display: block;
   font-weight: 600;
+  /* Same gap as between grouped output lines (.scene__log--grouped). */
+  margin-bottom: var(--spacing);
+}
+
+/* Continuation line in a run of same-source messages: the repeated [Label]
+   is omitted, so tighten the gap to read as one block. */
+.scene__log--grouped {
+  margin-top: var(--spacing);
 }
 
 .scene__log--choice  { color: var(--text-primary); }
