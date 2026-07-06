@@ -3,7 +3,16 @@ import { createElement, buildSceneDescription, buildOptionButton, getItemLabel, 
 import { CSS, FLAG_KEYS, GOLD_ITEM_ID, LOG, MAX_D20_ROLL } from "../core/config.js";
 import { evaluateCondition } from "./condition.js";
 import { roll } from "./dice.js";
-import { performSkillCheck, getEscalatedDc, escalateDc } from "./skill-checks.js";
+import { performSkillCheck, getEscalatedDc, escalateDc, getAttempts, recordAttempt } from "./skill-checks.js";
+
+// Resolves the display/log text for a skill option. Once the check has been
+// attempted, an optional `retryText` takes over: a string, or an array walked
+// per failed attempt (clamping to the last entry).
+function resolveRetryText(opt, attempts) {
+  if (!attempts || !opt.retryText) return opt.text;
+  const variants = Array.isArray(opt.retryText) ? opt.retryText : [opt.retryText];
+  return variants[Math.min(attempts - 1, variants.length - 1)];
+}
 
 // SceneRenderer handles navigating to scenes, resolving their descriptions,
 // and rendering their option buttons. It is the main driver of scene-to-scene
@@ -265,10 +274,11 @@ export class SceneRenderer {
     if (state.found.every(f => f)) return null;
 
     const lowestDc = Math.min(...state.dcs.filter((_, idx) => !state.found[idx]));
-    const btn = buildOptionButton(opt.text, this.engine.t(`actions.skillBadge.${opt.skillCheck}`, { dc: lowestDc }));
+    const displayText = resolveRetryText(opt, state.tries || 0);
+    const btn = buildOptionButton(displayText, this.engine.t(`actions.skillBadge.${opt.skillCheck}`, { dc: lowestDc }));
     btn.onclick = () => {
       this.engine.isGameStart = false;
-      this.engine.log(LOG.PLAYER, opt.text, 'choice');
+      this.engine.log(LOG.PLAYER, displayText, 'choice');
       this._resolveDiscovery(opt, state, skillKey, scene);
     };
     return btn;
@@ -298,6 +308,7 @@ export class SceneRenderer {
 
     this._awardDiscoveredLoot(newlyFound);
 
+    state.tries = (state.tries || 0) + 1;
     gameState.setFlag(skillKey, state);
     this.renderOptions(scene);
   }
@@ -372,10 +383,11 @@ export class SceneRenderer {
   _buildPassFailButton(opt, i, sceneId, scene) {
     const skillKey = FLAG_KEYS.skillDc(opt.skillCheck, sceneId);
     const dc = getEscalatedDc(skillKey, i, opt.dc);
-    const btn = buildOptionButton(opt.text, this.engine.t(`actions.skillBadge.${opt.skillCheck}`, { dc }));
+    const displayText = resolveRetryText(opt, getAttempts(skillKey, i));
+    const btn = buildOptionButton(displayText, this.engine.t(`actions.skillBadge.${opt.skillCheck}`, { dc }));
     btn.onclick = () => {
       this.engine.isGameStart = false;
-      this.engine.log(LOG.PLAYER, opt.text, 'choice');
+      this.engine.log(LOG.PLAYER, displayText, 'choice');
       const { success } = performSkillCheck(this.engine, opt.skillCheck, dc);
       // Like handleOption, a re-render must also be skipped when the actions
       // opened a dialogue or custom UI — rendering the scene would clobber it.
@@ -388,6 +400,7 @@ export class SceneRenderer {
         if (!didNavigate(sceneIdBefore)) this.engine.renderScene(gameState.getCurrentSceneId());
       } else {
         escalateDc(skillKey, i, dc, opt.increment ?? 1);
+        recordAttempt(skillKey, i);
         if (opt.onFailure?.length) {
           const sceneIdBefore = gameState.getCurrentSceneId();
           this.engine.runActions(opt.onFailure);

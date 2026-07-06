@@ -115,6 +115,13 @@
         "type": "object",
         "properties": {
           "text": { "type": "string" },
+          "retryText": {
+            "description": "Replacement option/log text once the check has been attempted: a string, or an array walked per failed attempt (clamped to the last entry). Attempt counts reset on scene re-entry, like escalated DCs.",
+            "oneOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+            ]
+          },
           "skillCheck": { "type": "string", "description": "Attribute ID to roll d20 check against." },
           "dc": { "type": "integer", "minimum": 1 },
           "increment": { "type": "integer", "description": "Difficulty escalation points added per failure." },

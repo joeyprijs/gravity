@@ -49,3 +49,27 @@ export function escalateDc(flagKey, entryKey, currentDc, increment = 1) {
   state[entryKey] = currentDc + increment;
   gameState.setFlag(flagKey, state);
 }
+
+/**
+ * Reads how many failed attempts have been recorded for one check. Attempt
+ * counts live in the same flag-backed map as the escalated DCs (under a
+ * `tries_` sibling key), so they reset together on scene re-entry.
+ * @param {string} flagKey - The state flag holding the DC map.
+ * @param {string|number} entryKey - Key of the specific check inside the map.
+ * @returns {number}
+ */
+export function getAttempts(flagKey, entryKey) {
+  const state = gameState.getFlag(flagKey) || {};
+  return state[`tries_${entryKey}`] || 0;
+}
+
+/**
+ * Records one failed attempt for a check (see getAttempts).
+ * @param {string} flagKey - The state flag holding the DC map.
+ * @param {string|number} entryKey - Key of the specific check inside the map.
+ */
+export function recordAttempt(flagKey, entryKey) {
+  const state = gameState.getFlag(flagKey) || {};
+  state[`tries_${entryKey}`] = (state[`tries_${entryKey}`] || 0) + 1;
+  gameState.setFlag(flagKey, state);
+}

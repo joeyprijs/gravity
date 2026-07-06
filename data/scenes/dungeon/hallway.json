@@ -64,6 +64,7 @@
   "skills": [
     {
       "text": "Look Around",
+      "retryText": "Comb the hallway once more.",
       "skillCheck": "perception",
       "items": [
         { "table": "basic_loot", "dc": 12, "increment": 0, "itemDrops": 2 }
@@ -99,6 +100,10 @@
     },
     {
       "text": "Easy. I mean no harm. Let's not do this.",
+      "retryText": [
+        "Easy! Again — I mean no harm. I really don't want to do this!",
+        "Please. Lower the blades. Nobody has to bleed today."
+      ],
       "skillCheck": "charisma",
       "dc": 18,
       "increment": 2,

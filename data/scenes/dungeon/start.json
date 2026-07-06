@@ -63,6 +63,7 @@
   "skills": [
     {
       "text": "Look Around",
+      "retryText": "Search the cellar again.",
       "skillCheck": "perception",
       "items": [
         {
