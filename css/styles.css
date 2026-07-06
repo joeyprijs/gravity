@@ -232,11 +232,9 @@ body {
   min-height: 0;
 }
 
-
 /* ==========================================================================
  GLOBAL UI COMPONENTS
  ========================================================================== */
-
 
 .controls__hidden-input {
   display: none;
@@ -512,6 +510,12 @@ body {
 
 .scene__log {
   margin-top: calc(var(--spacing) * 3);
+}
+
+.scene__log-prefix {
+  display: block;
+  font-weight: 600;
+  opacity: 0.6;
 }
 
 .scene__log--choice  { color: var(--text-primary); }

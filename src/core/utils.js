@@ -129,6 +129,22 @@ export function resetOptionsPanel(reminderText = null) {
 }
 
 /**
+ * Wraps a leading "[label]" prefix in a styling span so it can be themed
+ * separately from the body that follows. Only a prefix at the very start is
+ * matched (the engine treats a leading bracket as a speaker/log label); a
+ * no-op when the text has no leading prefix.
+ *
+ * @param {string} html - Trusted HTML that may start with a "[label]" prefix.
+ * @returns {string} The HTML with any leading prefix wrapped in a span.
+ */
+export function wrapLogPrefix(html) {
+  return String(html).replace(
+    /^(\s*)\[([^\]]*)\]/,
+    `$1<span class="${CSS.SCENE_LOG_PREFIX}">[$2]</span>`
+  );
+}
+
+/**
  * Builds the standard scene header block:
  *   div.scene__description > h2.scene__title + optional p.scene__body
  *
@@ -157,7 +173,7 @@ export function buildSceneDescription(title, body = null, t = null) {
       const label = translated && translated !== 'log.Narrator' ? translated : 'Narrator';
       html = `[${label}] ${body}`;
     }
-    p.innerHTML = html;
+    p.innerHTML = wrapLogPrefix(html);
     div.appendChild(p);
   }
   return div;

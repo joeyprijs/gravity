@@ -62,7 +62,8 @@ export class NarrativeLog {
   log(type, message, variant = 'system', persist = true) {
     if (!this.currentSceneEl) this.openScene();
     const p = createElement('p', [CSS.SCENE_LOG, `${CSS.SCENE_LOG}--${variant}`, CSS.SCENE_NEW]);
-    p.innerText = `[${type}] ${message}`;
+    p.appendChild(createElement('span', CSS.SCENE_LOG_PREFIX, `[${type}]`));
+    p.append(` ${message}`);
     this.currentSceneEl.appendChild(p);
     this.scrollToBottom();
     if (persist) gameState.appendLog({ type, message, variant });
@@ -85,7 +86,8 @@ export class NarrativeLog {
       } else {
         if (!this.currentSceneEl) this.openScene();
         const p = createElement('p', [CSS.SCENE_LOG, `${CSS.SCENE_LOG}--${entry.variant}`]);
-        p.innerText = `[${entry.type}] ${entry.message}`;
+        p.appendChild(createElement('span', CSS.SCENE_LOG_PREFIX, `[${entry.type}]`));
+        p.append(` ${entry.message}`);
         this.currentSceneEl.appendChild(p);
       }
     });

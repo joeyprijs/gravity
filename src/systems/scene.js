@@ -1,5 +1,5 @@
 import { gameState } from "../core/state.js";
-import { createElement, buildSceneDescription, buildOptionButton, getItemLabel, resetOptionsPanel } from "../core/utils.js";
+import { createElement, buildSceneDescription, buildOptionButton, getItemLabel, resetOptionsPanel, wrapLogPrefix } from "../core/utils.js";
 import { CSS, FLAG_KEYS, GOLD_ITEM_ID, LOG, MAX_D20_ROLL } from "../core/config.js";
 import { evaluateCondition } from "./condition.js";
 import { roll } from "./dice.js";
@@ -454,6 +454,6 @@ export class SceneRenderer {
       const label = translated !== 'log.Narrator' ? translated : 'Narrator';
       desc = `[${label}] ${desc}`;
     }
-    this._lastDescBodyEl.innerHTML = desc;
+    this._lastDescBodyEl.innerHTML = wrapLogPrefix(desc);
   }
 }
