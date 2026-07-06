@@ -58,6 +58,7 @@ export const CSS = {
   SCENE_TITLE:            'scene__title',
   SCENE_TITLE_GAME_OVER:  'scene__title--game-over',
   SCENE_BODY:             'scene__body',
+  SCENE_BODY_TEXT:        'scene__body-text',
   SCENE_LOG:              'scene__log',
   SCENE_LOG_PREFIX:       'scene__log-prefix',
   SCENE_OPTIONS:          'scene__options',

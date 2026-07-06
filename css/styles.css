@@ -53,6 +53,9 @@
   --font-md: 14px;
   --font-lg: 16px;
   --font-xl: 18px;
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  /* Book face for the story text; UI stays on --font-ui. */
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
 
   /* Spacing */
   --spacing: 8px;
@@ -134,7 +137,7 @@ body {
   color: var(--text-primary);
   font-size: var(--font-md);
   line-height: 24px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  font-family: var(--font-ui);
   height: 100vh;
   overflow: hidden;
   display: flex;
@@ -491,17 +494,91 @@ body {
   background: var(--scrollbar-thumb-hover);
 }
 
+/* The story column reads like a book page: serif face, a capped measure
+   centered in the panel, and generous leading. UI chrome stays sans. */
+.scene {
+  font-family: var(--font-serif);
+  font-size: var(--font-lg);
+  max-width: 68ch;
+  margin-inline: auto;
+}
+
+/* Let the opening of the tale breathe instead of hugging the panel edge. */
+.scene:first-child {
+  padding-top: calc(var(--spacing) * 5);
+}
+
+/* Everything that appeared since the player's last action carries a slim
+   accent rail in the left gutter. The narrative log strips scene--new on the
+   next interaction, so the rail reads as "new since your last move".
+   Drawn on ::after — ::before belongs to the scene-break ornament. */
+.scene--new {
+  position: relative;
+}
+
+.scene--new::after {
+  content: "";
+  position: absolute;
+  left: calc(var(--spacing) * -3.5);
+  top: 2px;
+  bottom: 2px;
+  width: 2px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--accent-color) 55%, transparent);
+}
+
+/* A brand-new scene block already carries the rail — don't stack a second
+   one on the entries inside it. */
+.scene--new .scene--new::after {
+  display: none;
+}
+
 .scene + .scene {
   margin-top: calc(var(--spacing) * 3);
   padding-top: calc(var(--spacing) * 3);
-  border-top: 1px solid var(--panel-border);
+}
+
+/* Chapter-break ornament between scenes instead of a hard rule. */
+.scene + .scene::before {
+  content: "✦ ✦ ✦";
+  display: block;
+  text-align: center;
+  font-size: var(--font-sm);
+  letter-spacing: calc(var(--spacing) * 1.5);
+  color: var(--text-secondary);
+  opacity: 0.6;
+  margin-bottom: calc(var(--spacing) * 3);
+}
+
+/* New scenes and log entries breathe in; scene--new is flushed by the
+   narrative log on the next interaction, the animation runs on insert. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes scene-entry-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .scene--new { animation: scene-entry-in 0.35s ease-out; }
 }
 
 .scene__description {  }
 
 .scene__body {
-  line-height: calc(var(--spacing) * 3);
+  line-height: 1.65;
   margin-top: calc(var(--spacing) * 3);
+}
+
+.scene__body-text {
+  display: block;
+}
+
+/* Storybook drop cap on narration (the span is only wrapped around
+   engine-labelled narrator bodies, so NPC speech is exempt). */
+.scene__body-text::first-letter {
+  float: left;
+  font-size: 3em;
+  line-height: 0.8;
+  font-weight: 600;
+  padding-right: calc(var(--spacing) * 0.75);
 }
 
 .scene__title--game-over {
@@ -510,6 +587,7 @@ body {
 
 .scene__log {
   margin-top: calc(var(--spacing) * 3);
+  line-height: 1.65;
 }
 
 /* No opacity dimming here: log variants are colored (damage red, loot gold),
@@ -517,6 +595,8 @@ body {
 .scene__log-prefix {
   display: block;
   font-weight: 600;
+  font-family: var(--font-ui);
+  font-size: var(--font-md);
   /* Same gap as between grouped output lines (.scene__log--grouped). */
   margin-bottom: var(--spacing);
 }
@@ -527,11 +607,19 @@ body {
   margin-top: var(--spacing);
 }
 
+/* The label carries the channel color at full strength; the body text is
+   pulled most of the way toward neutral so long lines stay readable while
+   damage still scans red and loot gold at a glance. */
 .scene__log--choice  { color: var(--text-primary); }
-.scene__log--loot    { color: var(--gold-color); }
-.scene__log--damage  { color: var(--health-color); }
-.scene__log--combat  { color: var(--accent-color); }
-.scene__log--quest   { color: var(--gold-color); }
+.scene__log--loot    { color: color-mix(in srgb, var(--gold-color)   30%, var(--text-primary)); }
+.scene__log--damage  { color: color-mix(in srgb, var(--health-color) 30%, var(--text-primary)); }
+.scene__log--combat  { color: color-mix(in srgb, var(--accent-color) 30%, var(--text-primary)); }
+.scene__log--quest   { color: color-mix(in srgb, var(--gold-color)   30%, var(--text-primary)); }
+
+.scene__log--loot   .scene__log-prefix { color: var(--gold-color); }
+.scene__log--damage .scene__log-prefix { color: var(--health-color); }
+.scene__log--combat .scene__log-prefix { color: var(--accent-color); }
+.scene__log--quest  .scene__log-prefix { color: var(--gold-color); }
 
 /* ==========================================================================
  MAIN: SCENE ACTIONS

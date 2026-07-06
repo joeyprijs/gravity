@@ -171,7 +171,9 @@ export function buildSceneDescription(title, body = null, t = null) {
     if (body && !/^\s*\[/.test(body)) {
       const translated = t ? t('log.Narrator') : null;
       const label = translated && translated !== 'log.Narrator' ? translated : 'Narrator';
-      html = `[${label}] ${body}`;
+      // The span scopes ::first-letter styling (drop caps) to narration —
+      // pre-labelled bodies (NPC speech) stay unwrapped on purpose.
+      html = `[${label}] <span class="${CSS.SCENE_BODY_TEXT}">${body}</span>`;
     }
     p.innerHTML = wrapLogPrefix(html);
     div.appendChild(p);
