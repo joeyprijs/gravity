@@ -70,7 +70,8 @@ This keeps the preview **decoupled from feature work** — it renders whatever d
 From the agreed "later list" (see [`exploration.md`](exploration.md) → *Where it feels thin*):
 
 - `[ ]` Tactical combat — multi-target/AoE, status effects/buffs/DoT, damage types.
-- `[ ]` A sense of time — turn/day counters, cooldowns, scheduler, time-gated content.
+- `[ ]` A sense of time — turn/day counters, cooldowns, scheduler, time-gated content. Design proposal drafted: [`time.md`](time.md).
+- `[ ]` Luck — a Fighting-Fantasy-style depleting push-your-luck resource; retry currency for skill checks. *New candidate (not on the original later list), awaiting a go/no-go.* Design proposal drafted: [`luck.md`](luck.md).
 - `[ ]` Quest depth — chained/branching objectives, failure states.
 - `[ ]` Party / companions (acknowledged as complex; lower priority).
 - `[ ]` Content *creation* (not just layout) inside Studio's visual map/dialogue tools.
