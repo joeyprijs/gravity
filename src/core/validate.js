@@ -338,6 +338,8 @@ function validateRules(ctx) {
       ctx.add(group, `customAttributes "${attr.id}": name is reserved — it collides with a built-in condition leaf and cannot be used as an attribute id`);
     if (!locale?.actions?.skillBadge?.[attr.id])
       ctx.add(group, `customAttributes "${attr.id}": missing locale entry at actions.skillBadge.${attr.id}`);
+    if (!locale?.actions?.skillBadgeFree?.[attr.id])
+      ctx.add(group, `customAttributes "${attr.id}": missing locale entry at actions.skillBadgeFree.${attr.id} — roll breakdowns fall back to the capitalized id`);
   }
 
   for (const stat of (rules?.charCreation?.stats || [])) {

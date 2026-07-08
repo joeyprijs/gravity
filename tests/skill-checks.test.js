@@ -4,6 +4,7 @@ import { gameState } from '../src/core/state.js';
 import {
   normalizeOutcomes, pickTier, performSkillCheck, formatMod, resolveRetryText,
   getAttempts, recordAttempt, isResolved, markResolved, resetAttempts,
+  rollBreakdown, skillLabel,
 } from '../src/systems/skill-checks.js';
 
 const TEST_RULES = {
@@ -184,4 +185,38 @@ test('resolveRetryText: walks the variants per attempt and clamps to the last', 
   assert.equal(resolveRetryText(opt, 9), 'Once more');
   assert.equal(resolveRetryText({ text: 'Try', retryText: 'Retry' }, 3), 'Retry');
   assert.equal(resolveRetryText({ text: 'Try' }, 3), 'Try');
+});
+
+test('rollBreakdown: formats breakdown strings correctly', () => {
+  assert.equal(rollBreakdown(15, 0, 'Perception'), '1d20: 15');
+  assert.equal(rollBreakdown(12, 3, 'Stealth'), '1d20: 12 + 3 Stealth');
+  assert.equal(rollBreakdown(10, -2, 'Weakness'), '1d20: 10 - 2 Weakness');
+});
+
+test('skillLabel: resolves localized name or falls back to capitalized id', () => {
+  const engineWithTranslation = { t: (key) => key === 'actions.skillBadgeFree.perception' ? 'Perception Skill' : key };
+  const engineWithoutTranslation = { t: (key) => key };
+
+  assert.equal(skillLabel(engineWithTranslation, 'perception'), 'Perception Skill');
+  assert.equal(skillLabel(engineWithoutTranslation, 'stealth'), 'Stealth');
+});
+
+test('performSkillCheck: passes breakdown parameters to translation engine', () => {
+  const loggedParams = [];
+  const engine = {
+    t: (key, params) => {
+      loggedParams.push(params);
+      return key;
+    },
+    log: () => {}
+  };
+  mock.method(Math, 'random', () => 0.5); // roll(1,20) = 11, +2 perception = 13
+  performSkillCheck(engine, 'perception', 12);
+
+  assert.equal(loggedParams.length, 2);
+  assert.equal(loggedParams[0], undefined);
+  assert.equal(loggedParams[1].roll, 13);
+  assert.equal(loggedParams[1].dc, 12);
+  assert.equal(loggedParams[1].skill, 'perception');
+  assert.equal(loggedParams[1].breakdown, '1d20: 11 + 2 Perception');
 });

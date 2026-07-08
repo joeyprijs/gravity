@@ -26,6 +26,33 @@ export function formatMod(mod) {
 }
 
 /**
+ * Formats a displayed d20 roll naming the modifier's source, so the math is
+ * legible in the log: "1d20: 17 + 1 Perception". A zero modifier renders as
+ * just "1d20: 17". Callers append "= {total}" where the sum isn't shown nearby.
+ * @param {number} base - The natural die result.
+ * @param {number} mod - The modifier added to it.
+ * @param {string} label - Where the modifier comes from (skill name, weapon name).
+ * @returns {string}
+ */
+export function rollBreakdown(base, mod, label) {
+  if (!mod) return `1d20: ${base}`;
+  return `1d20: ${base} ${mod < 0 ? '-' : '+'} ${Math.abs(mod)} ${label}`;
+}
+
+/**
+ * The localized display name of a skill (actions.skillBadgeFree.<id>),
+ * falling back to the capitalized id when the locale has no entry.
+ * @param {object} engine - The RPGEngine instance (used for locale).
+ * @param {string} skillId - Attribute ID (e.g. "perception").
+ * @returns {string}
+ */
+export function skillLabel(engine, skillId) {
+  const key = `actions.skillBadgeFree.${skillId}`;
+  const name = engine.t(key);
+  return name !== key ? name : skillId.charAt(0).toUpperCase() + skillId.slice(1);
+}
+
+/**
  * Resolves the display/log text for a check that has been attempted before.
  * Once at least one attempt has been made, an optional `retryText` takes over:
  * a string, or an array walked per attempt (clamping to the last entry).
@@ -116,7 +143,10 @@ export function performSkillCheck(engine, skillId, dc, outcomes = null) {
   const success = tier === 'critical' || tier === 'success';
   engine.log(
     LOG.SYSTEM,
-    engine.t(TIER_LOG_KEYS[tier], { roll: rolled, base, mod: formatMod(mod), dc, skill: skillId }),
+    engine.t(TIER_LOG_KEYS[tier], {
+      roll: rolled, dc, skill: skillId,
+      breakdown: rollBreakdown(base, mod, skillLabel(engine, skillId)),
+    }),
     success ? 'loot' : 'system'
   );
   const tierText = tiers[tier]?.text;

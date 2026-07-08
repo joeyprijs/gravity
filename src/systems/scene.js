@@ -5,10 +5,10 @@ import { evaluateCondition } from "./condition.js";
 import { roll } from "./dice.js";
 import { resolveTimeCost } from "./time.js";
 import {
-  performSkillCheck, normalizeOutcomes, formatMod, resolveRetryText,
+  performSkillCheck, normalizeOutcomes, resolveRetryText,
   getAttempts, recordAttempt, isResolved, markResolved, resetAttempts,
   performLuckCheck, luckEnabled, luckOdds,
-  skillBadge, retryGate, applyRetryGate
+  skillBadge, retryGate, applyRetryGate, rollBreakdown, skillLabel
 } from "./skill-checks.js";
 
 // SceneRenderer handles navigating to scenes, resolving their descriptions,
@@ -398,7 +398,10 @@ export class SceneRenderer {
     const msgKey = anyFound
       ? (stillMore ? 'actions.lookAroundFoundMore' : 'actions.lookAroundFound')
       : 'actions.lookAroundFail';
-    this.engine.log(LOG.SYSTEM, this.engine.t(msgKey, { roll: hitRoll, base: baseRoll, mod: formatMod(mod) }), anyFound ? 'loot' : 'system');
+    this.engine.log(LOG.SYSTEM, this.engine.t(msgKey, {
+      roll: hitRoll,
+      breakdown: rollBreakdown(baseRoll, mod, skillLabel(this.engine, opt.skillCheck)),
+    }), anyFound ? 'loot' : 'system');
 
     this._awardDiscoveredLoot(newlyFound);
 

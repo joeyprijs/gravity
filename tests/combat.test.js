@@ -191,8 +191,8 @@ test('_resolveEnemyAttacks: bonusHitChance is reflected in hitRolls string', () 
   const enemy = makeEnemy();
   const result = cs._resolveEnemyAttacks(weapon, 1, enemy);
 
-  // Roll = 20, modifier = +2, so string should contain "+2"
-  assert.ok(result.hitRolls[0].includes('+2'), `Expected "+2" in "${result.hitRolls[0]}"`);
+  // Roll = 20, modifier = +2, named after its source weapon
+  assert.equal(result.hitRolls[0], '22 (1d20: 20 + 2 Test Sword)');
 
   Math.random = orig;
 });

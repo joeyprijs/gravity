@@ -2,7 +2,7 @@ import { gameState } from "../core/state.js";
 import { createElement, buildSceneDescription, buildOptionButton, resetOptionsPanel } from "../core/utils.js";
 import { MAX_D20_ROLL, EL, CSS, LOG, WEAPON_SLOTS, ENEMY_CLAW_ID } from "../core/config.js";
 import { roll, parseDamage } from "./dice.js";
-import { performLuckCheck, luckOdds } from "./skill-checks.js";
+import { performLuckCheck, luckOdds, rollBreakdown } from "./skill-checks.js";
 
 /**
  * CombatSystem manages the full lifecycle of a turn-based combat encounter.
@@ -108,11 +108,18 @@ export class CombatSystem {
     // ── Initiative Calculations ─────────────────────────────────────────────
     // Rolled as: 1d20 + flat initiative modifier.
     // Ties are sorted alphabetically or index-wise. Higher values act earlier.
-    this.playerInit = roll(1, MAX_D20_ROLL) + (player.attributes.initiative ?? 0);
+    const initLabel = this.engine.t('combat.initiativeLabel');
+    const playerInitBase = roll(1, MAX_D20_ROLL);
+    const playerInitMod = player.attributes.initiative ?? 0;
+    this.playerInit = playerInitBase + playerInitMod;
+    const playerBreakdown = rollBreakdown(playerInitBase, playerInitMod, initLabel);
     let highestEnemyInit = -Infinity;
-    
+
     this.enemies.forEach(e => {
-      e.initiativeRoll = roll(1, MAX_D20_ROLL) + (e.attributes.initiative ?? 0);
+      const base = roll(1, MAX_D20_ROLL);
+      const mod = e.attributes.initiative ?? 0;
+      e.initiativeRoll = base + mod;
+      e.initiativeBreakdown = rollBreakdown(base, mod, initLabel);
       if (e.initiativeRoll > highestEnemyInit) highestEnemyInit = e.initiativeRoll;
     });
 
@@ -120,7 +127,7 @@ export class CombatSystem {
 
     // Build the visual round ordering log entry for the player's reference
     const enemyRolls = this.enemies
-      .map(e => this.engine.t('combat.initiativeEnemy', { name: e.name, roll: e.initiativeRoll }))
+      .map(e => this.engine.t('combat.initiativeEnemy', { name: e.name, roll: e.initiativeRoll, breakdown: e.initiativeBreakdown }))
       .join(', ');
     
     const allCombatants = [
@@ -129,7 +136,7 @@ export class CombatSystem {
     ].sort((a, b) => b.roll - a.roll);
 
     const turnOrder = allCombatants.map(c => c.name).join(' → ');
-    this.engine.log(LOG.COMBAT, this.engine.t('combat.initiative', { playerRoll: this.playerInit, enemyRolls, turnOrder }), 'combat');
+    this.engine.log(LOG.COMBAT, this.engine.t('combat.initiative', { playerRoll: this.playerInit, playerBreakdown, enemyRolls, turnOrder }), 'combat');
 
     this.renderer.render();
 
@@ -152,7 +159,8 @@ export class CombatSystem {
     const hitModifier = weapon.bonusHitChance ?? 0;
     const baseRoll = roll(1, MAX_D20_ROLL);
     const hitRoll = baseRoll + hitModifier;
-    const modStr = hitModifier !== 0 ? (hitModifier > 0 ? `+${hitModifier}` : hitModifier) : "";
+    // The hit bonus comes from the weapon, so the weapon names the modifier.
+    const breakdown = rollBreakdown(baseRoll, hitModifier, weapon.name);
 
     // D&D AC Check: Attack roll must equal or exceed target Armor Class to connect
     if (hitRoll >= targetEnemy.attributes.armorClass) {
@@ -160,7 +168,7 @@ export class CombatSystem {
       targetEnemy.attributes.healthPoints -= dmgResult.total;
 
       this.engine.log(LOG.PLAYER, this.engine.t('combat.attackHit', {
-        weapon: weapon.name, roll: hitRoll, base: baseRoll, mod: modStr,
+        weapon: weapon.name, roll: hitRoll, breakdown,
         ac: targetEnemy.attributes.armorClass, damage: dmgResult.total,
         dice: weapon.attributes.damageRoll, rollStr: dmgResult.string
       }), 'damage');
@@ -180,7 +188,7 @@ export class CombatSystem {
 
     // Missed attack logging
     this.engine.log(LOG.PLAYER, this.engine.t('combat.attackMiss', {
-      weapon: weapon.name, roll: hitRoll, base: baseRoll, mod: modStr, ac: targetEnemy.attributes.armorClass
+      weapon: weapon.name, roll: hitRoll, breakdown, ac: targetEnemy.attributes.armorClass
     }), 'damage');
 
     // Spend the weapon's AP cost, triggering interface updates or enemy phases
@@ -398,12 +406,12 @@ export class CombatSystem {
       const hitModifier = eWeapon.bonusHitChance ?? 0;
       const baseRoll = roll(1, MAX_D20_ROLL);
       const hitRoll = baseRoll + hitModifier;
-      const modStr = hitModifier !== 0 ? (hitModifier > 0 ? `+${hitModifier}` : hitModifier) : "";
+      const breakdown = rollBreakdown(baseRoll, hitModifier, eWeapon.name);
 
       // D&D AC Check: Attack roll must meet or exceed player Armor Class
       if (hitRoll >= player.attributes.ac) {
         hits++;
-        hitRolls.push(`${hitRoll} (1d20: ${baseRoll}${modStr})`);
+        hitRolls.push(`${hitRoll} (${breakdown})`);
         
         const dmgResult = parseDamage(eWeapon.attributes.damageRoll);
         totalDamage += dmgResult.total;
@@ -413,7 +421,7 @@ export class CombatSystem {
         gameState.modifyPlayerStat('hp', -dmgResult.total);
       } else {
         misses++;
-        missRolls.push(`${hitRoll} (1d20: ${baseRoll}${modStr})`);
+        missRolls.push(`${hitRoll} (${breakdown})`);
       }
       if (player.resources.hp.current <= 0) break;
     }

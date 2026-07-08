@@ -56,7 +56,7 @@ function makeCleanData() {
       customAttributes: [{ id: 'perception', default: 0 }],
       fallbackWeapons: { player: 'sword', enemy: 'sword' },
     },
-    locale: { actions: { skillBadge: { perception: 'PER {dc}' } } },
+    locale: { actions: { skillBadge: { perception: 'PER {dc}' }, skillBadgeFree: { perception: 'Perception' } } },
   };
 }
 
