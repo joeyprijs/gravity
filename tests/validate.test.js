@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeCarriedItems, validateGameData } from '../src/core/validate.js';
+import { normalizeCarriedItems, normalizeRules, validateGameData } from '../src/core/validate.js';
 
 const KNOWN_ACTIONS = new Set(['loot', 'combat', 'navigate', 'set_flag', 'dialogue', 'goToConversation', 'leave']);
 
@@ -321,13 +321,24 @@ test('flags day/segment conditions without time config and unknown segments', ()
 test('flags luck knobs and restore_luck in games without the luck resource', () => {
   const data = makeToolkitData();
   delete data.rules.playerDefaults.resources;
-  data.rules.skillRetryLuckCost = 1;
-  data.rules.combatLuck = true;
+  data.rules.luck = { retryCost: 1, combat: true };
   data.scenes.cave.options.push({ text: 'Pray', actions: [{ type: 'restore_luck', amount: 1 }] });
   const messages = issuesFor(data);
-  assert.ok(messages.some(m => m.includes('skillRetryLuckCost is set but')));
-  assert.ok(messages.some(m => m.includes('combatLuck is set but')));
+  assert.ok(messages.some(m => m.includes('luck.retryCost is set but')));
+  assert.ok(messages.some(m => m.includes('luck.combat is set but')));
   assert.ok(messages.some(m => m.includes('restore_luck without a luck resource')));
+});
+
+test('normalizeRules folds legacy luck knobs under rules.luck; validator flags the old keys', () => {
+  const rules = { skillRetryLuckCost: 2, combatLuck: true, luck: { retryCost: 5 } };
+  normalizeRules(rules);
+  assert.equal(rules.luck.retryCost, 5);   // existing nested value wins
+  assert.equal(rules.luck.combat, true);   // legacy value adopted
+
+  const data = makeToolkitData();
+  data.rules.combatLuck = true;
+  const messages = issuesFor(data);
+  assert.ok(messages.some(m => m.includes('"combatLuck" moved to rules.luck.combat')));
 });
 
 test('flags malformed time config: bad segments, ranges, costs, locale entries', () => {

@@ -179,11 +179,11 @@ export function performLuckCheck(engine) {
 /**
  * The luck cost of RETRYING a failed skill check (first attempts are always
  * free). 0 — the default — disables the mechanic entirely.
- * @param {object|null} rules - The loaded rules object.
+ * @param {object|null} rules - The loaded rules object (reads rules.luck.retryCost).
  * @returns {number}
  */
 export function retryLuckCost(rules) {
-  return luckEnabled() ? (rules?.skillRetryLuckCost ?? 0) : 0;
+  return luckEnabled() ? (rules?.luck?.retryCost ?? 0) : 0;
 }
 
 /**
@@ -201,7 +201,7 @@ export function skillBadge(engine, skillId, dc) {
 }
 
 /**
- * Retry-costs-luck gate (rules.skillRetryLuckCost): the first attempt at a
+ * Retry-costs-luck gate (rules.luck.retryCost): the first attempt at a
  * check is free; each retry spends luck. `blocked` means the player can't
  * afford the retry — callers render the button disabled, like unmet item
  * requirements. cost 0 (the default) disables the mechanic.

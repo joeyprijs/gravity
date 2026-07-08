@@ -386,8 +386,6 @@ function renderSkills(data, onChange) {
       hdr.appendChild(rm);
       item.appendChild(hdr);
 
-      if (!Array.isArray(skill.actions)) skill.actions = [];
-      if (!Array.isArray(skill.onFailure)) skill.onFailure = [];
       if (!Array.isArray(skill.items)) skill.items = [];
 
       const cardBody = el('div', { class: 'card-body' });
@@ -428,16 +426,6 @@ function renderSkills(data, onChange) {
       ));
       cardBody.appendChild(skillCondWrap);
 
-      const actWrap = el('div', { class: 'card-section' });
-      actWrap.appendChild(el('div', { class: 'card-section-label' }, ['On Success']));
-      actWrap.appendChild(renderActionPipeline(skill.actions, onChange));
-      cardBody.appendChild(actWrap);
-
-      const failWrap = el('div', { class: 'card-section' });
-      failWrap.appendChild(el('div', { class: 'card-section-label' }, ['On Failure']));
-      failWrap.appendChild(renderActionPipeline(skill.onFailure, onChange));
-      cardBody.appendChild(failWrap);
-
       const dropsWrap = el('div', { class: 'card-section' });
       dropsWrap.appendChild(el('div', { class: 'card-section-label' }, ['Item Drops']));
       dropsWrap.appendChild(renderDropsList(skill, itemIds, tableIds, onChange));
@@ -452,7 +440,7 @@ function renderSkills(data, onChange) {
 
     const add = el('button', { class: 'btn btn-secondary' }, ['+ Add Skill Check']);
     add.addEventListener('click', () => {
-      data.skills.push({ text: '', skillCheck: customAttrs[0]?.[0] ?? '', dc: 10, actions: [], onFailure: [] });
+      data.skills.push({ text: '', skillCheck: customAttrs[0]?.[0] ?? '', dc: 10 });
       onChange(); render();
     });
     container.appendChild(add);

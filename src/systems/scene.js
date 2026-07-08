@@ -486,13 +486,16 @@ export class SceneRenderer {
       this._chargeTime(opt, 'skillAttempt');
       const { lucky } = performLuckCheck(this.engine);
       if (opt.resolveOnce !== false) markResolved(skillKey, i);
+      // Lucky lands on the success tier, unlucky on failure — same outcome
+      // table as skill checks, including authored tier narration.
+      const outcomes = normalizeOutcomes(opt);
+      const tier = outcomes[lucky ? 'success' : 'failure'];
+      if (tier.text) this.engine.log(LOG.NARRATOR, tier.text);
       const sceneIdBefore = gameState.getCurrentSceneId();
-      if (lucky) {
-        this.engine.runActions(opt.actions || []);
-        if (!this._didNavigate(sceneIdBefore)) this.engine.renderScene(gameState.getCurrentSceneId());
-      } else {
-        this.engine.runActions(opt.onFailure || []);
-        if (!this._didNavigate(sceneIdBefore)) this.renderOptions(scene);
+      this.engine.runActions(tier.actions);
+      if (!this._didNavigate(sceneIdBefore)) {
+        if (lucky) this.engine.renderScene(gameState.getCurrentSceneId());
+        else this.renderOptions(scene);
       }
     };
     return btn;
@@ -532,7 +535,7 @@ export class SceneRenderer {
       }
 
       const sceneIdBefore = gameState.getCurrentSceneId();
-      this.engine.runActions(opt.actions || []);
+      this.engine.runActions(normalizeOutcomes(opt).success.actions);
       if (!this._didNavigate(sceneIdBefore)) this.renderOptions(scene);
     };
     return btn;

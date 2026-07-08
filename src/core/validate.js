@@ -30,6 +30,31 @@ function hasLuck(rules) {
   return !!rules?.playerDefaults?.resources?.luck;
 }
 
+// The luck tuning knobs live together under rules.luck; these top-level names
+// are their deprecated originals (still read via normalizeRules).
+const LEGACY_LUCK_KEYS = {
+  combatLuck:          'combat',
+  combatLuckMinDamage: 'combatMinDamage',
+  skillRetryLuckCost:  'retryCost',
+  fullRestLuckRestore: 'restRestore',
+};
+
+/**
+ * Normalizes the rules object in place: legacy top-level luck knobs are
+ * folded into the rules.luck block (existing rules.luck values win). Runs at
+ * load, before validateGameData, so engine consumers only read rules.luck.
+ *
+ * @param {object|null} rules - The loaded rules object.
+ */
+export function normalizeRules(rules) {
+  if (!rules) return;
+  for (const [legacy, key] of Object.entries(LEGACY_LUCK_KEYS)) {
+    if (rules[legacy] === undefined) continue;
+    rules.luck ??= {};
+    rules.luck[key] ??= rules[legacy];
+  }
+}
+
 /**
  * Normalizes every NPC's carriedItems to the object form
  * { item: string, amount: number|null } (amount null = unlimited stock).
@@ -353,11 +378,15 @@ function validateRules(ctx) {
   // Luck knobs configured without the luck resource silently do nothing —
   // that mismatch is always an authoring mistake.
   if (rules && !hasLuck(rules)) {
-    for (const knob of ['skillRetryLuckCost', 'combatLuck', 'fullRestLuckRestore', 'combatLuckMinDamage']) {
-      if (rules[knob])
-        ctx.add(group, `${knob} is set but rules.playerDefaults.resources has no luck resource — it will do nothing`);
+    for (const [knob, value] of Object.entries(rules.luck ?? {})) {
+      if (value)
+        ctx.add(group, `luck.${knob} is set but rules.playerDefaults.resources has no luck resource — it will do nothing`);
     }
   }
-  if (rules?.combatLuckMinDamage && !rules.combatLuck)
-    ctx.add(group, 'combatLuckMinDamage is set but combatLuck is off — it will do nothing');
+  if (rules?.luck?.combatMinDamage && !rules.luck.combat)
+    ctx.add(group, 'luck.combatMinDamage is set but luck.combat is off — it will do nothing');
+  for (const [legacy, key] of Object.entries(LEGACY_LUCK_KEYS)) {
+    if (rules?.[legacy] !== undefined)
+      ctx.add(group, `"${legacy}" moved to rules.luck.${key} — the old key still works but is deprecated`);
+  }
 }

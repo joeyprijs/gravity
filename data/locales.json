@@ -172,7 +172,7 @@
     "gameOverTitle":        "Game Over",
     "gameOverBody":         "Your adventure ends here.",
     "avoided":              "They regard you peacefully.",
-    "luckOffensePrompt":    "Press your advantage against {name}",
+    "luckOffensePrompt":    "Twist the blade — make the wound count",
     "luckOffenseBadge":     "Lucky: +2 damage · Unlucky: {name} shrugs one off · roll {luck} or less on 2d6 ({odds}%), costs 1 Luck",
     "luckOffenseSkip":      "Let the hit stand (no gamble)",
     "luckOffenseLose":      "You overreach — {name} shrugs off part of the blow.",

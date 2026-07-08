@@ -471,7 +471,7 @@ test('_buildPassFailButton: exhausting maxAttempts runs onExhausted and retires 
 test('_buildPassFailButton: retries cost luck when configured, and block at zero luck', () => {
   gameState.init(LUCK_SCENE_RULES);
   const { sr, engine } = makeSR();
-  engine.data.rules = { skillRetryLuckCost: 2 };
+  engine.data.rules = { luck: { retryCost: 2 } };
   gameState.setCurrentSceneId('cell');
   const key = FLAG_KEYS.skillDc('perception', 'cell');
   const opt = { text: 'Pick the lock', skillCheck: 'perception', dc: 15 };
@@ -560,6 +560,24 @@ test('_buildLuckButton: unlucky runs onFailure; resolveOnce false keeps the gamb
   sr._buildLuckButton(opt, 0, 'cell', {}).onclick();
   assert.deepEqual(ran, [onFailure]);
   assert.notEqual(sr._buildLuckButton(opt, 0, 'cell', {}), null);
+});
+
+test('_buildLuckButton: reads the outcomes shape and logs tier narration', () => {
+  gameState.init(LUCK_SCENE_RULES);
+  const { sr, engine, calls } = makeSR();
+  gameState.setCurrentSceneId('cell');
+  const ran = [];
+  engine.runActions = (a) => ran.push(a);
+  const failureActions = [{ type: 'heal', amount: -2 }];
+  const opt = {
+    text: 'Wrench', luckCheck: true,
+    outcomes: { failure: { text: 'The rubble slams down.', actions: failureActions } },
+  };
+
+  mock.method(Math, 'random', () => 0.99); // 2d6 = 12 > 7 → unlucky
+  sr._buildLuckButton(opt, 0, 'cell', {}).onclick();
+  assert.deepEqual(ran, [failureActions]);
+  assert.ok(calls.logs.some(l => l.message === 'The rubble slams down.'));
 });
 
 test('_buildLuckButton: hidden in games without the luck resource', () => {

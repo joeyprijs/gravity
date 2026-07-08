@@ -7,7 +7,7 @@ import { UIManager } from "../ui/ui.js";
 import { SceneRenderer } from "../systems/scene.js";
 import { DEFAULT_WORLD_MAP_SIZE, LOG, TIMER_SAFE_ACTIONS } from "./config.js";
 import { resolveLanguage } from "./i18n.js";
-import { normalizeCarriedItems, validateGameData } from "./validate.js";
+import { normalizeCarriedItems, normalizeRules, validateGameData } from "./validate.js";
 import { registerBuiltinActions } from "../systems/actions.js";
 import { parseDamage } from "../systems/dice.js";
 import { getDay, getSegment } from "../systems/time.js";
@@ -205,8 +205,10 @@ class RPGEngine {
       ]);
 
       // Normalize once at load so consumers (merchant store, validation) only
-      // ever see carriedItems in its { item, amount } object form.
+      // ever see carriedItems in its { item, amount } object form — and luck
+      // knobs under rules.luck.
       normalizeCarriedItems(npcs);
+      normalizeRules(rules);
 
       this.data = { items, npcs, scenes, missions, tables, regions: manifest.regions || {}, worldMapSize: manifest.worldMapSize || DEFAULT_WORLD_MAP_SIZE, locale: this.data.locale, rules, flags };
 
@@ -246,6 +248,7 @@ class RPGEngine {
     // validation only ever see carriedItems in { item, amount } form.
     normalizeCarriedItems(npcs);
     const rules = bundle.rules || null;
+    normalizeRules(rules);
     // Skip character creation in preview so authors land straight on their
     // content: give the player a placeholder name when the rules leave it blank,
     // which satisfies init()'s new-game gate. The bundle is a postMessage copy,

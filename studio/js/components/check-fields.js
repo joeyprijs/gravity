@@ -1,12 +1,28 @@
 // Shared editor for the check-behavior fields that scene skill options and
 // dialogue responses have in common: luck gambles, one-shot resolution,
 // attempt budgets (with onExhausted), time costs, retry wording, and the
-// margin-based outcome tiers. Success/failure ACTIONS stay in the forms'
-// existing "On Success"/"On Failure" pipelines (the engine treats those as the
-// success/failure tiers); here the tiers add text, and critical/partial add
-// margin + their own pipelines.
+// margin-based outcome tiers. The `outcomes` object is the one authoring
+// shape: every tier (critical/success/partial/failure) carries its own
+// narration and action pipeline. The engine still reads the legacy fields
+// (`actions` = success pipeline, `onFailure` = failure pipeline), but Studio
+// folds them into `outcomes` on open and only ever writes the new shape.
 import { el } from '../utils.js';
 import { renderActionPipeline } from './actions.js';
+
+function migrateLegacyPipelines(check) {
+  if (check.actions?.length) {
+    check.outcomes ??= {};
+    check.outcomes.success ??= {};
+    check.outcomes.success.actions ??= check.actions;
+  }
+  if (check.onFailure?.length) {
+    check.outcomes ??= {};
+    check.outcomes.failure ??= {};
+    check.outcomes.failure.actions ??= check.onFailure;
+  }
+  delete check.actions;
+  delete check.onFailure;
+}
 
 // retryText / resultText / tier text areas: one line → string, several → array.
 function linesValue(v) {
@@ -99,6 +115,7 @@ function renderTier(check, tierName, onChange, { hasMargin, hasActions, hint }) 
  *   Test-Your-Luck toggle; retry: offer the retryText editor.
  */
 export function renderCheckBehavior(check, onChange, { luck = true, retry = true } = {}) {
+  migrateLegacyPipelines(check);
   const wrap = el('div', { class: 'card-section' });
   wrap.appendChild(el('div', { class: 'card-section-label' }, ['Check Behavior']));
 
@@ -150,10 +167,10 @@ export function renderCheckBehavior(check, onChange, { luck = true, retry = true
     wrap.appendChild(retryTa);
   }
 
+  wrap.appendChild(renderTier(check, 'success', onChange, { hasMargin: false, hasActions: true, hint: 'a pass (or choosing a plain reply)' }));
+  wrap.appendChild(renderTier(check, 'failure', onChange, { hasMargin: false, hasActions: true, hint: 'a miss' }));
   wrap.appendChild(renderTier(check, 'critical', onChange, { hasMargin: true, hasActions: true, hint: 'beat the DC big' }));
   wrap.appendChild(renderTier(check, 'partial', onChange, { hasMargin: true, hasActions: true, hint: 'fail forward' }));
-  wrap.appendChild(renderTier(check, 'success', onChange, { hasMargin: false, hasActions: false, hint: 'text only; actions live in On Success' }));
-  wrap.appendChild(renderTier(check, 'failure', onChange, { hasMargin: false, hasActions: false, hint: 'text only; actions live in On Failure' }));
 
   // onExhausted: the authored way out when maxAttempts runs dry.
   const exWrap = el('div');

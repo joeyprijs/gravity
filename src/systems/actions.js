@@ -64,9 +64,9 @@ function handleFullRest(action, engine) {
   const p = gameState.getPlayer();
   gameState.modifyPlayerStat('hp', p.resources.hp.max - p.resources.hp.current);
   gameState.modifyPlayerStat('ap', p.resources.ap.max - p.resources.ap.current);
-  // A good night's sleep can trickle luck back (rules.fullRestLuckRestore,
+  // A good night's sleep can trickle luck back (rules.luck.restRestore,
   // default 0) — the natural counterweight when retries spend luck.
-  const luckRestore = engine.data.rules?.fullRestLuckRestore ?? 0;
+  const luckRestore = engine.data.rules?.luck?.restRestore ?? 0;
   if (luckRestore > 0 && p.resources.luck) {
     gameState.modifyPlayerStat('luck', luckRestore);
   }

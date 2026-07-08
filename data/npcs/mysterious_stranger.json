@@ -3,8 +3,14 @@
   "isMerchant": true,
   "storeExitText": "No problem.",
   "carriedItems": [
-    { "item": "healing_potion", "amount": 3 },
-    { "item": "leather_armor", "amount": 1 }
+    {
+      "item": "healing_potion",
+      "amount": 3
+    },
+    {
+      "item": "leather_armor",
+      "amount": 1
+    }
   ],
   "conversations": {
     "start": {
@@ -12,41 +18,91 @@
       "responses": [
         {
           "text": "Let's trade.",
-          "actions": [{ "type": "trade" }]
+          "actions": [
+            {
+              "type": "trade"
+            }
+          ]
         },
         {
           "text": "Trader, huh? How about a discount?!",
           "skillCheck": "charisma",
           "dc": 10,
           "resolveOnce": true,
-          "condition": { "not": { "flag": "stranger_reputation_known", "value": true } },
+          "condition": {
+            "not": {
+              "flag": "stranger_reputation_known",
+              "value": true
+            }
+          },
           "outcomes": {
             "critical": {
               "text": "The stranger laughs so hard he has to steady himself on his pack. \"Oh, I LIKE you. Here — and don't tell a soul what I charge you.\"",
               "actions": [
-                { "type": "loot", "item": "healing_potion", "received": true },
-                { "type": "loot", "item": "lucky_clover", "received": true },
-                { "type": "set_flag", "flag": "stranger_reputation_known", "value": true },
-                { "type": "trade", "tradeDiscount": 20, "persistDiscount": true }
+                {
+                  "type": "loot",
+                  "item": "healing_potion",
+                  "received": true
+                },
+                {
+                  "type": "loot",
+                  "item": "lucky_clover",
+                  "received": true
+                },
+                {
+                  "type": "set_flag",
+                  "flag": "stranger_reputation_known",
+                  "value": true
+                },
+                {
+                  "type": "trade",
+                  "tradeDiscount": 20,
+                  "persistDiscount": true
+                }
               ]
             },
             "failure": {
               "text": "The stranger's smile doesn't move, but something behind it shuts. \"A discount. Of course. For you — special prices.\"",
               "actions": [
-                { "type": "set_flag", "flag": "stranger_reputation_known", "value": true },
-                { "type": "trade", "tradeDiscount": -10 }
+                {
+                  "type": "set_flag",
+                  "flag": "stranger_reputation_known",
+                  "value": true
+                },
+                {
+                  "type": "trade",
+                  "tradeDiscount": -10
+                }
+              ]
+            },
+            "success": {
+              "actions": [
+                {
+                  "type": "loot",
+                  "item": "healing_potion",
+                  "received": true
+                },
+                {
+                  "type": "set_flag",
+                  "flag": "stranger_reputation_known",
+                  "value": true
+                },
+                {
+                  "type": "trade",
+                  "tradeDiscount": 10,
+                  "persistDiscount": true
+                }
               ]
             }
-          },
-          "actions": [
-            { "type": "loot", "item": "healing_potion", "received": true },
-            { "type": "set_flag", "flag": "stranger_reputation_known", "value": true },
-            { "type": "trade", "tradeDiscount": 10, "persistDiscount": true }
-          ]
+          }
         },
         {
           "text": "I must be going.",
-          "actions": [{ "type": "leave" }]
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
         }
       ]
     }

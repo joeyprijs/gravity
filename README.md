@@ -365,11 +365,11 @@ A location the player can visit, supporting conditional text blocks, option grid
       "dc": 14,
       "resolveOnce": true,
       "outcomes": {
-        "critical": { "margin": 5, "text": "You scale it without a sound.", "actions": [] },
-        "partial":  { "margin": 3, "text": "You make it — barely.", "actions": [ { "type": "heal", "amount": -2 } ] }
-      },
-      "actions":   [ { "type": "navigate", "destination": "dungeon_corridor" } ],
-      "onFailure": [ { "type": "combat", "enemies": ["goblin_guard"] } ]
+        "critical": { "margin": 5, "text": "You scale it without a sound." },
+        "success":  { "actions": [ { "type": "navigate", "destination": "dungeon_corridor" } ] },
+        "partial":  { "margin": 3, "text": "You make it — barely.", "actions": [ { "type": "heal", "amount": -2 } ] },
+        "failure":  { "actions": [ { "type": "combat", "enemies": ["goblin_guard"] } ] }
+      }
     }
   ],
   "passiveChecks": [
@@ -409,8 +409,10 @@ NPCs define aggressive monsters to fight, branching conversations, or shop merch
         { 
           "text": "[Persuade] I mean no harm.",
           "skillCheck": "charisma", "dc": 12, "resolveOnce": true,
-          "actions": [ { "type": "goToConversation", "node": "friendly" } ],
-          "onFailure": [ { "type": "goToConversation", "node": "hostile" } ]
+          "outcomes": {
+            "success": { "actions": [ { "type": "goToConversation", "node": "friendly" } ] },
+            "failure": { "actions": [ { "type": "goToConversation", "node": "hostile" } ] }
+          }
         },
         { "text": "[Attack] Prepare to fight!", "actions": [ { "type": "leave" }, { "type": "combat", "enemies": ["goblin_guard"] } ] }
       ]

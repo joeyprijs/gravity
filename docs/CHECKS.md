@@ -33,16 +33,17 @@ Pass/fail checks (scene and dialogue) resolve against margin-based tiers:
   "dc": 14,
   "outcomes": {
     "critical": { "margin": 5, "text": "You move like a rumor.", "actions": [ ... ] },
-    "partial":  { "margin": 3, "text": "You make it — barely.",  "actions": [ ... ] }
-  },
-  "actions":   [ ... ],
-  "onFailure": [ ... ]
+    "success":  { "actions": [ ... ] },
+    "partial":  { "margin": 3, "text": "You make it — barely.",  "actions": [ ... ] },
+    "failure":  { "actions": [ ... ] }
+  }
 }
 ```
 
 - `margin` on `critical`: beat the DC by at least this much (default 5).
 - `margin` on `partial`: miss the DC by at most this much (default 3).
-- `critical` and `partial` exist **only when authored**. Legacy `actions`/`onFailure` are the success/failure tiers; `outcomes.success`/`outcomes.failure` can add narration `text` (and override the pipelines, though the validator nags if you define both).
+- `critical` and `partial` exist **only when authored**. A `critical` without its own pipeline runs the success actions — the best roll never does less than a plain success.
+- `outcomes` is the one authoring shape. The legacy fields (`actions` = success pipeline, `onFailure` = failure pipeline) are still read for older data, but Studio migrates them on edit and the validator nags when both shapes define the same tier.
 - **`partial` is the fail-forward tier**: the player gets the thing, with a catch (took damage, made noise, annoyed the trader). Partial still counts as a failed attempt for retry purposes — it just isn't *empty* failure.
 - Each tier's `text` logs as narration when it lands, after the locale-driven roll line (`actions.skillCritical` / `skillSuccess` / `skillPartial` / `skillFail`).
 
@@ -107,11 +108,17 @@ Opt in by declaring the resource:
 
 A depleting meta-currency (Fighting Fantasy's Test Your Luck): 2d6 at-or-under current luck = lucky, then **luck −1 regardless of outcome**. Odds decay as you spend; every invocation is a real decision. The button always shows the odds.
 
-- **Test Your Luck checks** — `"luckCheck": true` on scene skills or dialogue responses; `actions` on lucky, `onFailure` on unlucky; one-shot by default.
-- **Retry currency** — `"skillRetryLuckCost": 1` in rules: first attempt at any pass/fail or discovery check is free, each retry spends luck. Unaffordable retries render disabled (like unmet item requirements). This is the direct anti-spam replacement for DC escalation.
-- **Restoration (authored and scarce)** — the `restore_luck` action; item attributes `luckAmount` (consumable restore) and `luckMaxBonus` (permanent max increase); `"fullRestLuckRestore": 1` lets sleep trickle a point back.
+The tuning knobs live together in one rules block (legacy top-level names — `skillRetryLuckCost`, `fullRestLuckRestore`, `combatLuck`, `combatLuckMinDamage` — are still read, but deprecated):
+
+```json
+"luck": { "retryCost": 1, "restRestore": 1, "combat": true, "combatMinDamage": 3 }
+```
+
+- **Test Your Luck checks** — `"luckCheck": true` on scene skills or dialogue responses; `outcomes.success` on lucky, `outcomes.failure` on unlucky; one-shot by default.
+- **Retry currency** — `"retryCost": 1`: first attempt at any pass/fail or discovery check is free, each retry spends luck. Unaffordable retries render disabled (like unmet item requirements). This is the direct anti-spam replacement for DC escalation.
+- **Restoration (authored and scarce)** — the `restore_luck` action; item attributes `luckAmount` (consumable restore) and `luckMaxBonus` (permanent max increase); `"restRestore": 1` lets sleep trickle a point back.
 - **Conditions** — `{ "luck": { "at_most": 2 } }` lets the world notice desperation or fortune.
-- **Combat luck** — `"combatLuck": true` (default off): after landing a hit, gamble to press the advantage (+2 damage / target shrugs 1 off); after a bruising enemy phase, gamble to steel yourself (recover up to 2 / the wound bites 1 deeper — which can kill). The prompt buttons spell out the full stakes plus the odds (`combat.luckOffenseBadge` / `luckDefenseBadge` locale keys). `"combatLuckMinDamage": 3` (default 1) keeps trivial hits from prompting every swing — only damage at or above the threshold offers the gamble.
+- **Combat luck** — `"combat": true` (default off): after landing a hit, gamble to twist the blade (+2 damage / target shrugs 1 off); after a bruising enemy phase, gamble to steel yourself (recover up to 2 / the wound bites 1 deeper — which can kill). The prompt buttons spell out the full stakes plus the odds (`combat.luckOffenseBadge` / `luckDefenseBadge` locale keys). `"combatMinDamage": 3` (default 1) keeps trivial hits from prompting every swing — only damage at or above the threshold offers the gamble.
 - **Character creation** — add `{ "id": "resources.luck.max", "localeKey": "luck", "bonusPerPoint": 1 }` to `charCreation.stats` and "lucky" becomes a build identity.
 - Old saves are safe: rules-declared resources missing from a save are seeded on load.
 

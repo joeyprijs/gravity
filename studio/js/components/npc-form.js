@@ -253,12 +253,11 @@ function renderNode(nodeId, node, data, onChange, rerenderAll) {
   function renderRespCards() {
     respContainer.innerHTML = '';
     node.responses.forEach((resp, i) => {
-      if (!Array.isArray(resp.actions)) resp.actions = [];
       respContainer.appendChild(makeResponseCard(resp, i, node, onChange, renderRespCards));
     });
     const addRespBtn = el('button', { class: 'btn btn-secondary' }, ['+ Add Response']);
     addRespBtn.addEventListener('click', () => {
-      node.responses.push({ text: '', actions: [] });
+      node.responses.push({ text: '' });
       onChange(); renderRespCards();
     });
     respContainer.appendChild(addRespBtn);
@@ -282,10 +281,11 @@ function makeResponseCard(resp, i, node, onChange, rerender) {
   hdr.appendChild(rm);
   item.appendChild(hdr);
 
-  if (!Array.isArray(resp.onFailure)) resp.onFailure = [];
-
   const body = el('div', { class: 'card-body' });
   body.appendChild(renderSkillCheckRow(resp, onChange));
+  // Response pipelines live in the outcomes tiers: success is what the reply
+  // does (checked or plain); failure/critical/partial only land when the
+  // response carries a check.
   body.appendChild(renderCheckBehavior(resp, onChange));
   const respCondWrap = el('div', { class: 'card-section' });
   respCondWrap.appendChild(renderInlineCondition(
@@ -294,14 +294,6 @@ function makeResponseCard(resp, i, node, onChange, rerender) {
     onChange
   ));
   body.appendChild(respCondWrap);
-  const actSection = el('div', { class: 'card-section' });
-  actSection.appendChild(el('div', { class: 'card-section-label' }, ['On Success']));
-  actSection.appendChild(renderActionPipeline(resp.actions, onChange));
-  body.appendChild(actSection);
-  const failSection = el('div', { class: 'card-section' });
-  failSection.appendChild(el('div', { class: 'card-section-label' }, ['On Failure']));
-  failSection.appendChild(renderActionPipeline(resp.onFailure, onChange));
-  body.appendChild(failSection);
   item.appendChild(body);
 
   makeCollapsible(hdr, body);

@@ -134,7 +134,7 @@ test('performLuckCheck: warns and resolves unlucky without the resource', () => 
 test('retryLuckCost: defaults to 0, reads rules, and requires the resource', () => {
   assert.equal(retryLuckCost(null), 0);
   assert.equal(retryLuckCost({}), 0);
-  assert.equal(retryLuckCost({ skillRetryLuckCost: 2 }), 2);
+  assert.equal(retryLuckCost({ luck: { retryCost: 2 } }), 2);
   gameState.init(NO_LUCK_RULES);
-  assert.equal(retryLuckCost({ skillRetryLuckCost: 2 }), 0);
+  assert.equal(retryLuckCost({ luck: { retryCost: 2 } }), 0);
 });

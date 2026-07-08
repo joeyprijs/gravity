@@ -155,10 +155,10 @@ export class CombatSystem {
         dice: weapon.attributes.damageRoll, rollStr: dmgResult.string
       }), 'damage');
 
-      // Combat luck (rules.combatLuck): after landing a hit that didn't drop
-      // the target, offer to press the advantage — lucky: +2 damage, unlucky:
+      // Combat luck (rules.luck.combat): after landing a hit that didn't drop
+      // the target, offer to twist the blade — lucky: +2 damage, unlucky:
       // the target shrugs 1 off. The attack finishes after the choice. Small
-      // hits below rules.combatLuckMinDamage aren't worth interrupting for.
+      // hits below rules.luck.combatMinDamage aren't worth interrupting for.
       if (this._canGambleLuck(dmgResult.total) && targetEnemy.attributes.healthPoints > 0) {
         this.renderer.renderLuckPrompt('offense', {
           name: targetEnemy.name,
@@ -205,14 +205,14 @@ export class CombatSystem {
   }
 
   // Combat luck gambles are available when the game opts in via
-  // rules.combatLuck AND has the luck resource AND the player has luck left
-  // AND the triggering damage clears rules.combatLuckMinDamage (default 1) —
+  // rules.luck.combat AND has the luck resource AND the player has luck left
+  // AND the triggering damage clears rules.luck.combatMinDamage (default 1) —
   // the anti-spam gate that keeps trivial hits from prompting every swing.
   _canGambleLuck(damage) {
-    const rules = this.engine.data.rules;
+    const luckRules = this.engine.data.rules?.luck;
     const luck = gameState.getPlayer().resources?.luck;
-    return !!rules?.combatLuck && !!luck && luck.current > 0
-      && damage >= (rules.combatLuckMinDamage ?? 1);
+    return !!luckRules?.combat && !!luck && luck.current > 0
+      && damage >= (luckRules.combatMinDamage ?? 1);
   }
 
   /**
@@ -305,7 +305,7 @@ export class CombatSystem {
   // Combat luck, defensive side: after an enemy phase that hurt the player,
   // offer to steel yourself — lucky: recover up to 2 of the damage just
   // taken, unlucky: the wound bites 1 deeper (which can end the fight).
-  // Without a gamble (or with combatLuck off) control flows on unchanged.
+  // Without a gamble (or with luck.combat off) control flows on unchanged.
   _maybeDefenseGamble(damageTaken, continueFn) {
     if (damageTaken <= 0 || !this._canGambleLuck(damageTaken)) {
       continueFn();

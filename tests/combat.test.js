@@ -438,23 +438,23 @@ const LUCK_COMBAT_RULES = {
   },
 };
 
-test('_canGambleLuck: needs combatLuck, the luck resource, luck left, and enough damage', () => {
+test('_canGambleLuck: needs luck.combat, the luck resource, luck left, and enough damage', () => {
   gameState.init(LUCK_COMBAT_RULES);
   const engine = makeMockEngine();
   const cs = new CombatSystem(engine);
 
-  engine.data.rules = { combatLuck: true };
+  engine.data.rules = { luck: { combat: true } };
   assert.equal(cs._canGambleLuck(1), true);   // default threshold is 1
   assert.equal(cs._canGambleLuck(0), false);  // no damage, nothing to gamble on
 
-  engine.data.rules = { combatLuck: true, combatLuckMinDamage: 3 };
+  engine.data.rules = { luck: { combat: true, combatMinDamage: 3 } };
   assert.equal(cs._canGambleLuck(2), false);  // gated: trivial hit
   assert.equal(cs._canGambleLuck(3), true);
 
-  engine.data.rules = { combatLuckMinDamage: 3 };
-  assert.equal(cs._canGambleLuck(5), false);  // combatLuck off
+  engine.data.rules = { luck: { combatMinDamage: 3 } };
+  assert.equal(cs._canGambleLuck(5), false);  // luck.combat off
 
-  engine.data.rules = { combatLuck: true };
+  engine.data.rules = { luck: { combat: true } };
   gameState.modifyPlayerStat('luck', -7);
   assert.equal(cs._canGambleLuck(5), false);  // no luck left to spend
 });
@@ -462,7 +462,7 @@ test('_canGambleLuck: needs combatLuck, the luck resource, luck left, and enough
 test('_canGambleLuck: false in games without the luck resource', () => {
   gameState.init(TEST_RULES);
   const engine = makeMockEngine();
-  engine.data.rules = { combatLuck: true };
+  engine.data.rules = { luck: { combat: true } };
   const cs = new CombatSystem(engine);
   assert.equal(cs._canGambleLuck(5), false);
 });
@@ -470,7 +470,7 @@ test('_canGambleLuck: false in games without the luck resource', () => {
 test('_maybeDefenseGamble: below-threshold damage flows straight through', () => {
   gameState.init(LUCK_COMBAT_RULES);
   const engine = makeMockEngine();
-  engine.data.rules = { combatLuck: true, combatLuckMinDamage: 3 };
+  engine.data.rules = { luck: { combat: true, combatMinDamage: 3 } };
   const cs = new CombatSystem(engine);
   let prompted = false;
   let continued = false;

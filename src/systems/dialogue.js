@@ -235,8 +235,11 @@ export class DialogueSystem {
         if (isLuckCheck) {
           const { lucky } = performLuckCheck(this.engine);
           if (res.resolveOnce !== false) markResolved(resolvedKey, resKey);
-          const pipeline = lucky ? (res.actions || []) : (res.onFailure || []);
-          const navigated = pipeline.length ? this._runActions(pipeline) : false;
+          // Same outcome table as skill checks: lucky → success tier,
+          // unlucky → failure, including authored tier narration.
+          const tierOutcome = normalizeOutcomes(res)[lucky ? 'success' : 'failure'];
+          if (tierOutcome.text) this.engine.log(LOG.NARRATOR, tierOutcome.text);
+          const navigated = tierOutcome.actions.length ? this._runActions(tierOutcome.actions) : false;
           if (!navigated) this.renderDialogue(nodeId, null, true);
           return;
         }
@@ -271,8 +274,10 @@ export class DialogueSystem {
           return;
         }
 
-        // Action routing for plain (check-free) responses
-        this._runActions(res.actions || []);
+        // Action routing for plain (check-free) responses. Read through
+        // normalizeOutcomes so a response Studio migrated to the outcomes
+        // shape keeps working if its check is later removed.
+        this._runActions(normalizeOutcomes(res).success.actions);
       };
 
       if (needsCheck || isLuckCheck) {
