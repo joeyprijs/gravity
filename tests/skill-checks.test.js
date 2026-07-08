@@ -213,10 +213,11 @@ test('performSkillCheck: passes breakdown parameters to translation engine', () 
   mock.method(Math, 'random', () => 0.5); // roll(1,20) = 11, +2 perception = 13
   performSkillCheck(engine, 'perception', 12);
 
-  assert.equal(loggedParams.length, 2);
-  assert.equal(loggedParams[0], undefined);
-  assert.equal(loggedParams[1].roll, 13);
-  assert.equal(loggedParams[1].dc, 12);
-  assert.equal(loggedParams[1].skill, 'perception');
-  assert.equal(loggedParams[1].breakdown, '1d20: 11 + 2 Perception');
+  // Assert on the params-bearing call (skillLabel makes bare lookups too),
+  // not on t()'s internal call count/order.
+  const params = loggedParams.find(p => p !== undefined);
+  assert.equal(params.roll, 13);
+  assert.equal(params.dc, 12);
+  assert.equal(params.skill, 'perception');
+  assert.equal(params.breakdown, '1d20: 11 + 2 Perception');
 });
