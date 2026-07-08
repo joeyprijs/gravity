@@ -5,7 +5,7 @@ import { evaluateCondition } from "./condition.js";
 import { roll } from "./dice.js";
 import { resolveTimeCost } from "./time.js";
 import {
-  performSkillCheck, normalizeOutcomes, resolveRetryText,
+  performSkillCheck, normalizeOutcomes, formatMod, resolveRetryText,
   getAttempts, recordAttempt, isResolved, markResolved, resetAttempts,
   performLuckCheck, luckEnabled, luckOdds,
   skillBadge, retryGate, applyRetryGate
@@ -384,7 +384,8 @@ export class SceneRenderer {
   _resolveDiscovery(opt, i, state, skillKey, scene) {
     const items = opt.items;
     const mod = gameState.getPlayer().attributes[opt.skillCheck] ?? 0;
-    const hitRoll = roll(1, MAX_D20_ROLL) + mod;
+    const baseRoll = roll(1, MAX_D20_ROLL);
+    const hitRoll = baseRoll + mod;
 
     const newlyFound = [];
     items.forEach((l, idx) => {
@@ -397,7 +398,7 @@ export class SceneRenderer {
     const msgKey = anyFound
       ? (stillMore ? 'actions.lookAroundFoundMore' : 'actions.lookAroundFound')
       : 'actions.lookAroundFail';
-    this.engine.log(LOG.SYSTEM, this.engine.t(msgKey, { roll: hitRoll, mod }), anyFound ? 'loot' : 'system');
+    this.engine.log(LOG.SYSTEM, this.engine.t(msgKey, { roll: hitRoll, base: baseRoll, mod: formatMod(mod) }), anyFound ? 'loot' : 'system');
 
     this._awardDiscoveredLoot(newlyFound);
 

@@ -6,7 +6,6 @@
   "goblins_snuck_past":        false,
   "chamber_rested":            false,
   "stranger_reputation_known": false,
-  "cellar_search_exhausted":   false,
   "dungeon_alarm":             false,
   "chamber_noticed_shimmer":   false
 }

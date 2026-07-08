@@ -109,13 +109,14 @@ export function pickTier(margin, outcomes) {
 export function performSkillCheck(engine, skillId, dc, outcomes = null) {
   const tiers = outcomes ?? { success: { actions: [] }, failure: { actions: [] } };
   const mod = gameState.getPlayer().attributes[skillId] ?? 0;
-  const rolled = roll(1, MAX_D20_ROLL) + mod;
+  const base = roll(1, MAX_D20_ROLL);
+  const rolled = base + mod;
   const margin = rolled - dc;
   const tier = pickTier(margin, tiers);
   const success = tier === 'critical' || tier === 'success';
   engine.log(
     LOG.SYSTEM,
-    engine.t(TIER_LOG_KEYS[tier], { roll: rolled, mod, dc, skill: skillId }),
+    engine.t(TIER_LOG_KEYS[tier], { roll: rolled, base, mod: formatMod(mod), dc, skill: skillId }),
     success ? 'loot' : 'system'
   );
   const tierText = tiers[tier]?.text;

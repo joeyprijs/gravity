@@ -10,6 +10,7 @@ import { resolveLanguage } from "./i18n.js";
 import { normalizeCarriedItems, validateGameData } from "./validate.js";
 import { registerBuiltinActions } from "../systems/actions.js";
 import { parseDamage } from "../systems/dice.js";
+import { getDay, getSegment } from "../systems/time.js";
 import { CharCreationScreen } from "../screens/char-creation.js";
 import curatorPlugin from "../plugins/curator.js";
 
@@ -489,7 +490,11 @@ class RPGEngine {
    * @param {number} amount - Ticks to advance (non-positive is a no-op).
    */
   advanceTime(amount) {
+    const ticksBefore = gameState.getTicks();
     const fired = gameState.advanceTime(amount);
+    // Narrate the passage of time before any timer fires, so "It is now
+    // night." reads ahead of whatever the night set in motion.
+    this._logTimePassage(ticksBefore);
     for (const timer of fired) {
       const safe = (timer.actions || []).filter(a => {
         if (TIMER_SAFE_ACTIONS.has(a.type)) return true;
@@ -497,6 +502,26 @@ class RPGEngine {
         return false;
       });
       this.runActions(safe);
+    }
+  }
+
+  // Logs a line when advancing the clock crossed into a new day or day
+  // segment. Silent for games without rules.time (getDay returns null) and
+  // for advances that stay within the current segment.
+  _logTimePassage(ticksBefore) {
+    const timeRules = this.data.rules?.time;
+    const ticks = gameState.getTicks();
+    if (ticks === ticksBefore) return;
+    const day = getDay(ticks, timeRules);
+    const segment = getSegment(ticks, timeRules);
+    if (day === null) return;
+    const segmentName = segment ? this.t(`time.segments.${segment}`) : null;
+    if (day !== getDay(ticksBefore, timeRules)) {
+      this.log(LOG.SYSTEM, segmentName
+        ? this.t('time.dayBreaks', { day, segment: segmentName })
+        : this.t('time.dayBreaksPlain', { day }));
+    } else if (segment !== getSegment(ticksBefore, timeRules)) {
+      this.log(LOG.SYSTEM, this.t('time.segmentChanges', { segment: segmentName }));
     }
   }
 

@@ -150,7 +150,7 @@ export class CombatSystem {
       targetEnemy.attributes.healthPoints -= dmgResult.total;
 
       this.engine.log(LOG.PLAYER, this.engine.t('combat.attackHit', {
-        weapon: weapon.name, roll: hitRoll, mod: modStr,
+        weapon: weapon.name, roll: hitRoll, base: baseRoll, mod: modStr,
         ac: targetEnemy.attributes.armorClass, damage: dmgResult.total,
         dice: weapon.attributes.damageRoll, rollStr: dmgResult.string
       }), 'damage');
@@ -184,7 +184,7 @@ export class CombatSystem {
 
     // Missed attack logging
     this.engine.log(LOG.PLAYER, this.engine.t('combat.attackMiss', {
-      weapon: weapon.name, roll: hitRoll, mod: modStr, ac: targetEnemy.attributes.armorClass
+      weapon: weapon.name, roll: hitRoll, base: baseRoll, mod: modStr, ac: targetEnemy.attributes.armorClass
     }), 'damage');
 
     // Spend the weapon's AP cost, triggering interface updates or enemy phases
@@ -382,7 +382,7 @@ export class CombatSystem {
       // D&D AC Check: Attack roll must meet or exceed player Armor Class
       if (hitRoll >= player.attributes.ac) {
         hits++;
-        hitRolls.push(`${hitRoll} (1d20${modStr})`);
+        hitRolls.push(`${hitRoll} (1d20: ${baseRoll}${modStr})`);
         
         const dmgResult = parseDamage(eWeapon.attributes.damageRoll);
         totalDamage += dmgResult.total;
@@ -392,7 +392,7 @@ export class CombatSystem {
         gameState.modifyPlayerStat('hp', -dmgResult.total);
       } else {
         misses++;
-        missRolls.push(`${hitRoll} (1d20${modStr})`);
+        missRolls.push(`${hitRoll} (1d20: ${baseRoll}${modStr})`);
       }
       if (player.resources.hp.current <= 0) break;
     }

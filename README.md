@@ -352,7 +352,7 @@ A location the player can visit, supporting conditional text blocks, option grid
       "skillCheck": "perception",
       "maxAttempts": 4,
       "onExhausted": [
-        { "type": "set_flag", "flag": "cellar_search_exhausted", "value": true }
+        { "type": "set_flag", "flag": "search_exhausted", "value": true }
       ],
       "items": [
         { "item": "cellar_key", "amount": 1, "dc": 10 },

@@ -60,7 +60,7 @@ In dialogue, a resolved response stays gone across conversations.
   "skillCheck": "perception",
   "maxAttempts": 4,
   "onExhausted": [
-    { "type": "set_flag", "flag": "cellar_search_exhausted", "value": true },
+    { "type": "set_flag", "flag": "search_exhausted", "value": true },
     { "type": "log", "message": "Your eyes won't find anything more here." }
   ],
   "items": [ ... ]

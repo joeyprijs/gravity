@@ -56,39 +56,15 @@
       ]
     },
     {
-      "text": "Force the lock with the rusty sword",
+      "text": "Search your pockets",
       "condition": {
-        "and": [
-          { "flag": "door_unlocked", "value": false },
-          { "flag": "cellar_search_exhausted", "value": true }
-        ]
-      },
-      "requirements": {
-        "item": "rusty_sword"
+        "not": { "item": "cellar_key" }
       },
       "actions": [
         {
-          "type": "heal",
-          "amount": -1,
-          "log": "The blade slips and bites your palm as the lock finally gives. (-1 HP)"
-        },
-        {
-          "type": "set_flag",
-          "flag": "door_unlocked",
-          "value": true
-        },
-        {
-          "type": "set_timer",
-          "id": "dungeon_alarm",
-          "afterTicks": 12,
-          "actions": [
-            { "type": "set_flag", "flag": "dungeon_alarm", "value": true },
-            { "type": "log", "message": "Somewhere above, a horn sounds — long, low, and answered." }
-          ]
-        },
-        {
-          "type": "navigate",
-          "destination": "dungeon_corridor"
+          "type": "loot",
+          "item": "cellar_key",
+          "log": "Tucked deep in a coat pocket your fingers find a small iron key. You don't remember it — but someone clearly meant for you to have it."
         }
       ]
     },
@@ -114,15 +90,9 @@
       "timeCost": 1,
       "maxAttempts": 4,
       "onExhausted": [
-        { "type": "set_flag", "flag": "cellar_search_exhausted", "value": true },
-        { "type": "log", "message": "You've turned over every stone and barrel. Whatever else this cellar hides, your eyes won't find it — but that door might not survive a determined blade." }
+        { "type": "log", "message": "You've turned over every stone and barrel. Whatever else this cellar hides, your eyes won't find it." }
       ],
       "items": [
-        {
-          "item": "cellar_key",
-          "amount": 1,
-          "dc": 5
-        },
         {
           "table": "basic_loot",
           "dc": 14,
