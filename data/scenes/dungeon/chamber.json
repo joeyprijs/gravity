@@ -8,7 +8,23 @@
     "height": 100,
     "background": "rgba(30, 30, 50, 0.9)"
   },
-  "description": "You enter a grand chamber. Sunlight streams in from a crack in the ceiling. A mysterious stranger stands near the exit.",
+  "description": [
+    {
+      "text": "You enter a grand chamber. Sunlight streams in from a crack in the ceiling. A mysterious stranger stands near the exit — and now that you've noticed it, you can't unsee the faint shimmer of something lodged high in the ceiling crack.",
+      "condition": { "flag": "chamber_noticed_shimmer", "value": true }
+    },
+    {
+      "text": "You enter a grand chamber. Sunlight streams in from a crack in the ceiling. A mysterious stranger stands near the exit."
+    }
+  ],
+  "passiveChecks": [
+    {
+      "skillCheck": "perception",
+      "dc": 13,
+      "flag": "chamber_noticed_shimmer",
+      "text": "Something up in the ceiling crack catches the light — just for a heartbeat."
+    }
+  ],
   "questTrigger": { "mission": "escape_dungeon", "status": "complete" },
   "options": [
     {
@@ -37,9 +53,30 @@
       "text": "Look Around",
       "skillCheck": "perception",
       "items": [
-        { "table": "basic_loot", "dc": 14, "increment": 0, "itemDrops": 2 },
-        { "item": "sunstone_shard", "amount": 1, "dc": 12, "increment": 0 },
-        { "item": "eldritch_eye", "amount": 1, "dc": 18, "increment": 0 }
+        { "table": "basic_loot", "dc": 14, "itemDrops": 2 },
+        { "item": "sunstone_shard", "amount": 1, "dc": 12 }
+      ]
+    },
+    {
+      "text": "Climb toward the shimmer in the ceiling crack.",
+      "skillCheck": "perception",
+      "dc": 12,
+      "resolveOnce": true,
+      "condition": { "flag": "chamber_noticed_shimmer", "value": true },
+      "outcomes": {
+        "success": {
+          "text": "Fingers wedged in the crack, you work the thing loose: an orb that blinks against your palm."
+        },
+        "failure": {
+          "text": "You get a hand on it — then your grip goes. You land hard, but your fist stays closed around the prize.",
+          "actions": [
+            { "type": "heal", "amount": -3, "log": "The fall knocks the wind out of you. (-3 HP)" },
+            { "type": "loot", "item": "eldritch_eye", "amount": 1 }
+          ]
+        }
+      },
+      "actions": [
+        { "type": "loot", "item": "eldritch_eye", "amount": 1 }
       ]
     }
   ]

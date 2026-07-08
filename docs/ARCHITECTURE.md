@@ -44,7 +44,7 @@ engine.js (orchestrator, delegate API, event bus, registries)
 │   ├── narrative.js   scrollable narrative log
 │   ├── actions.js     built-in action handlers
 │   ├── condition.js   condition AST evaluator (pure)
-│   ├── skill-checks.js d20 checks + DC escalation helpers
+│   ├── skill-checks.js d20 checks, outcome tiers, attempt/resolution bookkeeping, luck
 │   └── dice.js        roll() and damage parsing (pure)
 ├── ui/                UIManager + tab panels (inventory, quests, chests)
 ├── world/map.js       minimap + full-screen world map
@@ -60,7 +60,7 @@ There are no circular imports. Stateful subsystems reach each other only through
 
 - **Inventory/chest entries** have the shape `{ item: string, amount: number }`.
 - **Mutations notify listeners** with an optional *hint* (`'stats'`, `'inventory'`, `'quests'`, `'map'`, `'displays'`) so the UI can re-render only the affected region. No hint means "update everything".
-- **Flags** are a flat key→value map. Static flags are declared in `data/flags/`; dynamic flags (DC escalation, merchant stock, etc.) use the key builders in `config.js` (`FLAG_KEYS`) so each format is defined exactly once.
+- **Flags** are a flat key→value map. Static flags are declared in `data/flags/`; dynamic flags (skill-check attempt state, merchant stock, etc.) use the key builders in `config.js` (`FLAG_KEYS`) so each format is defined exactly once.
 - **Saves** are the whole state object, JSON-serialised and Base64-encoded. `SAVE_VERSION` gates a chain of migration functions so old saves stay loadable; plugins add their own with `gameState.registerMigration(version, fn)` using versions above the core number.
 
 ## Conditions

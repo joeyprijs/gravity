@@ -1,6 +1,6 @@
 # Gravity — Time System (Design Proposal)
 
-*Status: **proposal, not committed.** Written after a gameplay evaluation of the tech demo (2026-07-06) so the reasoning isn't lost; nothing here is built. Companion to [`ROADMAP.md`](ROADMAP.md) Phase 2 → "A sense of time".*
+*Status: **implemented** (2026-07-07) — ticks, `timeCost` + `rules.time.defaultCosts`, `advance_time` (with `until`), the `time`/`day`/`segment` condition leaves, quiet-action timers, and the HUD chip all shipped as designed. See [`CHECKS.md`](../CHECKS.md) for the authoring guide. Kept for the design rationale.*
 
 ---
 

@@ -5,7 +5,7 @@ const MAX_LOG_ENTRIES = 200;
 // Increment when the save schema changes. loadFromObject() migrates older saves
 // forward so they remain compatible. Each migration function receives the raw
 // parsed data object and mutates it in-place.
-const SAVE_VERSION = 3;
+const SAVE_VERSION = 4;
 
 const MIGRATIONS = {
   // v0 → v1: player.name was added; give it an empty default on older saves.
@@ -24,6 +24,11 @@ const MIGRATIONS = {
     if (!('displays' in data)) {
       data.displays = {};
     }
+  },
+  // v3 → v4: world clock and timers added.
+  4: (data) => {
+    if (!('time' in data)) data.time = { ticks: 0 };
+    if (!('timers' in data)) data.timers = [];
   },
 };
 
@@ -56,6 +61,8 @@ function makeDefaultState(rules) {
     chests: {},
     displays: {},
     visitedScenes: [],
+    time: { ticks: 0 },
+    timers: [],
     log: []
   };
 }
@@ -78,6 +85,8 @@ class StateManager {
       chests: {},
       displays: {},
       visitedScenes: [],
+      time: { ticks: 0 },
+      timers: [],
       log: []
     };
     this.listeners = [];
@@ -209,6 +218,19 @@ class StateManager {
 
     // Run schema migrations so older saves stay compatible.
     migrate(parsedData, this._extraMigrations);
+
+    // Seed resources the rules declare but the save predates (e.g. a game
+    // that adds luck after players already have saves). Rules-driven rather
+    // than a numbered migration, since which resources exist is per-game data.
+    const ruleResources = this._rules?.playerDefaults?.resources;
+    if (ruleResources && parsedData.player.resources) {
+      for (const [key, value] of Object.entries(ruleResources)) {
+        if (!(key in parsedData.player.resources)) {
+          parsedData.player.resources[key] = structuredClone(value);
+        }
+      }
+    }
+
     this.state = parsedData;
     this.notifyListeners();
     this._emitMutation('loadFromObject');
@@ -255,6 +277,60 @@ class StateManager {
   getFlag(flagName) { return this.state.flags[flagName] ?? false; }
   setFlag(flagName, value) { this.state.flags[flagName] = value; }
 
+  /** @returns {object|null} The loaded rules object (null before init). */
+  getRules() { return this._rules; }
+
+  // ── World clock & timers ──────────────────────────────────────────────────
+  // The clock is a single monotonic tick counter; days and segments are
+  // derived presentation (see systems/time.js). Time only moves through
+  // advanceTime — never from wall-clock — so saves replay deterministically.
+
+  /** @returns {number} Absolute ticks elapsed since the game started. */
+  getTicks() { return this.state.time?.ticks ?? 0; }
+
+  /**
+   * Advances the world clock and collects the timers that came due, in
+   * deadline order. The engine's advanceTime delegate runs their pipelines —
+   * StateManager stays free of action handling.
+   *
+   * @param {number} amount - Ticks to advance (non-positive amounts are ignored).
+   * @returns {Array<{id: string, deadline: number, actions: object[]}>} Fired timers.
+   */
+  advanceTime(amount) {
+    if (!Number.isFinite(amount) || amount <= 0) return [];
+    if (!this.state.time) this.state.time = { ticks: 0 };
+    this.state.time.ticks += amount;
+    const now = this.state.time.ticks;
+
+    const timers = this.state.timers || [];
+    const due = timers.filter(t => t.deadline <= now).sort((a, b) => a.deadline - b.deadline);
+    if (due.length) this.state.timers = timers.filter(t => t.deadline > now);
+
+    this.notifyListeners('time');
+    this._emitMutation('advanceTime', { amount, ticks: now });
+    return due;
+  }
+
+  /**
+   * Arms (or re-arms) a timer. A timer with the same id replaces the old one.
+   * @param {{id: string, deadline: number, actions: object[]}} timer
+   */
+  setTimer(timer) {
+    if (!timer?.id) return;
+    if (!this.state.timers) this.state.timers = [];
+    this.state.timers = this.state.timers.filter(t => t.id !== timer.id);
+    this.state.timers.push(timer);
+  }
+
+  /**
+   * Disarms a timer by id. Unknown ids are a no-op.
+   * @param {string} id
+   */
+  cancelTimer(id) {
+    if (!this.state.timers) return;
+    this.state.timers = this.state.timers.filter(t => t.id !== id);
+  }
+
   getPlayer() { return this.state.player; }
 
   /**
@@ -287,6 +363,17 @@ class StateManager {
         break;
       case 'maxAp':
         p.resources.ap.max += amount;
+        break;
+      case 'luck':
+        // Luck is an opt-in resource (rules.playerDefaults.resources.luck);
+        // modifying it in a game that never declared it is a no-op.
+        if (!p.resources.luck) break;
+        p.resources.luck.current = Math.max(0, Math.min(p.resources.luck.current + amount, p.resources.luck.max));
+        break;
+      case 'maxLuck':
+        if (!p.resources.luck) break;
+        p.resources.luck.max += amount;
+        p.resources.luck.current = Math.max(0, Math.min(p.resources.luck.current, p.resources.luck.max));
         break;
       case 'gold':
         p.resources.gold += amount;

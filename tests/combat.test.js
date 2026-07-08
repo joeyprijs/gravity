@@ -427,3 +427,57 @@ test('endCombat: no re-render when onVictory opened a dialogue', () => {
 
   assert.equal(rendered, 0);
 });
+
+// ── Combat luck gating ────────────────────────────────────────────────────────
+
+const LUCK_COMBAT_RULES = {
+  ...TEST_RULES,
+  playerDefaults: {
+    ...TEST_RULES.playerDefaults,
+    resources: { ...TEST_RULES.playerDefaults.resources, luck: { current: 7, max: 9 } },
+  },
+};
+
+test('_canGambleLuck: needs combatLuck, the luck resource, luck left, and enough damage', () => {
+  gameState.init(LUCK_COMBAT_RULES);
+  const engine = makeMockEngine();
+  const cs = new CombatSystem(engine);
+
+  engine.data.rules = { combatLuck: true };
+  assert.equal(cs._canGambleLuck(1), true);   // default threshold is 1
+  assert.equal(cs._canGambleLuck(0), false);  // no damage, nothing to gamble on
+
+  engine.data.rules = { combatLuck: true, combatLuckMinDamage: 3 };
+  assert.equal(cs._canGambleLuck(2), false);  // gated: trivial hit
+  assert.equal(cs._canGambleLuck(3), true);
+
+  engine.data.rules = { combatLuckMinDamage: 3 };
+  assert.equal(cs._canGambleLuck(5), false);  // combatLuck off
+
+  engine.data.rules = { combatLuck: true };
+  gameState.modifyPlayerStat('luck', -7);
+  assert.equal(cs._canGambleLuck(5), false);  // no luck left to spend
+});
+
+test('_canGambleLuck: false in games without the luck resource', () => {
+  gameState.init(TEST_RULES);
+  const engine = makeMockEngine();
+  engine.data.rules = { combatLuck: true };
+  const cs = new CombatSystem(engine);
+  assert.equal(cs._canGambleLuck(5), false);
+});
+
+test('_maybeDefenseGamble: below-threshold damage flows straight through', () => {
+  gameState.init(LUCK_COMBAT_RULES);
+  const engine = makeMockEngine();
+  engine.data.rules = { combatLuck: true, combatLuckMinDamage: 3 };
+  const cs = new CombatSystem(engine);
+  let prompted = false;
+  let continued = false;
+  cs.renderer.renderLuckPrompt = () => { prompted = true; };
+  cs._maybeDefenseGamble(2, () => { continued = true; });
+  assert.equal(prompted, false);
+  assert.equal(continued, true);
+  cs._maybeDefenseGamble(4, () => {});
+  assert.equal(prompted, true);
+});

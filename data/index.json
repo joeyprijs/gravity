@@ -34,7 +34,8 @@
     "home_rune": "data/items/home_rune.json",
     "wayfinder_charm": "data/items/wayfinder_charm.json",
     "sunstone_shard": "data/items/sunstone_shard.json",
-    "eldritch_eye": "data/items/eldritch_eye.json"
+    "eldritch_eye": "data/items/eldritch_eye.json",
+    "lucky_clover": "data/items/lucky_clover.json"
   },
   "tables": {
     "basic_loot": "data/tables/basic_loot.json",

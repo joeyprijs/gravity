@@ -1,7 +1,8 @@
 import { store, markDirty } from '../store.js';
-import { el, formRow, select, makeCollapsible, dcIncrementInputs } from '../utils.js';
+import { el, formRow, select, makeCollapsible, dcInput } from '../utils.js';
 import { renderActionPipeline, renderEnemyList } from './actions.js';
 import { renderInlineCondition } from './condition-inline.js';
+import { renderCheckBehavior } from './check-fields.js';
 
 /** Normalize a scene description to array-of-objects (the engine accepts
  *  a plain string, an array of strings, or {text, condition?} entries). */
@@ -100,6 +101,11 @@ export function renderSceneForm(key, data) {
 
   form.appendChild(el('h3', { class: 'form-section-title' }, ['Skill Checks']));
   form.appendChild(renderSkills(data, onChange));
+
+  // ── Passive Checks ───────────────────────────────────────────────────────
+
+  form.appendChild(el('h3', { class: 'form-section-title' }, ['Passive Checks']));
+  form.appendChild(renderPassiveChecks(data, onChange));
 
   // ── Auto Attack ──────────────────────────────────────────────────────────
 
@@ -275,6 +281,16 @@ function renderOptions(data, onChange) {
       backParam.appendChild(backCheck);
       cardBody.appendChild(backParam);
 
+      const timeCostInput = el('input', { type: 'number', class: 'form-input sm', value: opt.timeCost ?? '', placeholder: 'default' });
+      timeCostInput.addEventListener('input', () => {
+        opt.timeCost = timeCostInput.value === '' ? undefined : Number(timeCostInput.value);
+        onChange();
+      });
+      const timeParam = el('div', { class: 'action-param' });
+      timeParam.appendChild(el('span', { class: 'action-param-label' }, ['Time Cost (ticks)']));
+      timeParam.appendChild(timeCostInput);
+      cardBody.appendChild(timeParam);
+
       const curLog = opt.log;
       let logMode = 'default';
       if (curLog === false) logMode = 'silent';
@@ -360,7 +376,9 @@ function renderSkills(data, onChange) {
       const textInput = el('input', { type: 'text', class: 'form-input flat-title-input', value: skill.text ?? '', placeholder: 'Button text…' });
       textInput.addEventListener('input', () => { skill.text = textInput.value; onChange(); });
       hdr.appendChild(textInput);
-      const skillSel = select(customAttrs, skill.skillCheck ?? '', v => { skill.skillCheck = v; onChange(); });
+      // Picking a skill turns a luck gamble back into a skill check — the
+      // mirror of the Luck gamble toggle deleting skillCheck/dc.
+      const skillSel = select(customAttrs, skill.skillCheck ?? '', v => { skill.skillCheck = v; delete skill.luckCheck; onChange(); });
       skillSel.className = 'form-select';
       hdr.appendChild(skillSel);
       const rm = el('button', { class: 'btn-hdr' }, ['✕']);
@@ -376,9 +394,31 @@ function renderSkills(data, onChange) {
 
       const dcWrap = el('div', { class: 'card-section' });
       const dcRow = el('div', { class: 'drop-rhs' });
-      dcRow.append(...dcIncrementInputs(skill, onChange));
+      dcRow.append(...dcInput(skill, onChange));
       dcWrap.appendChild(dcRow);
       cardBody.appendChild(dcWrap);
+
+      // Narrative checks (no DC, no drops): authored narration + repeatable.
+      const narrativeWrap = el('div', { class: 'card-section' });
+      const resultTa = el('textarea', {
+        class: 'form-textarea ta-sm',
+        placeholder: 'Narrative result (no-DC checks) — one line per use (optional)…',
+      }, [Array.isArray(skill.resultText) ? skill.resultText.join('\n') : (skill.resultText ?? '')]);
+      resultTa.addEventListener('input', () => {
+        const lines = resultTa.value.split('\n').map(s => s.trim()).filter(Boolean);
+        skill.resultText = lines.length === 0 ? undefined : (lines.length === 1 ? lines[0] : lines);
+        onChange();
+      });
+      narrativeWrap.appendChild(resultTa);
+      const repeatRow = el('div', { class: 'drop-rhs' });
+      const repeatCheck = el('input', { type: 'checkbox' });
+      if (skill.repeatable) repeatCheck.checked = true;
+      repeatCheck.addEventListener('change', () => { skill.repeatable = repeatCheck.checked || undefined; onChange(); });
+      repeatRow.append(el('span', { class: 'list-label' }, ['Repeatable (narrative checks)']), repeatCheck);
+      narrativeWrap.appendChild(repeatRow);
+      cardBody.appendChild(narrativeWrap);
+
+      cardBody.appendChild(renderCheckBehavior(skill, onChange));
 
       const skillCondWrap = el('div', { class: 'card-section' });
       skillCondWrap.appendChild(renderInlineCondition(
@@ -412,7 +452,7 @@ function renderSkills(data, onChange) {
 
     const add = el('button', { class: 'btn btn-secondary' }, ['+ Add Skill Check']);
     add.addEventListener('click', () => {
-      data.skills.push({ text: '', skillCheck: customAttrs[0]?.[0] ?? '', dc: 10, increment: 2, actions: [], onFailure: [] });
+      data.skills.push({ text: '', skillCheck: customAttrs[0]?.[0] ?? '', dc: 10, actions: [], onFailure: [] });
       onChange(); render();
     });
     container.appendChild(add);
@@ -458,7 +498,7 @@ function renderDropsList(skill, itemIds, tableIds, onChange) {
       row.appendChild(lhs);
 
       const rhs = el('div', { class: 'drop-rhs' });
-      rhs.append(...dcIncrementInputs(drop, onChange));
+      rhs.append(...dcInput(drop, onChange));
       const rmBtn = el('button', { class: 'btn-hdr' }, ['✕']);
       rmBtn.addEventListener('click', () => { skill.items.splice(i, 1); onChange(); render(); });
       rhs.appendChild(rmBtn);
@@ -469,7 +509,57 @@ function renderDropsList(skill, itemIds, tableIds, onChange) {
 
     const add = el('button', { class: 'btn btn-secondary btn-sm' }, ['+ Add Drop']);
     add.addEventListener('click', () => {
-      skill.items.push({ item: itemIds[0] ?? '', amount: 1, dc: 10, increment: 1 });
+      skill.items.push({ item: itemIds[0] ?? '', amount: 1, dc: 10 });
+      onChange(); render();
+    });
+    container.appendChild(add);
+  }
+
+  render();
+  return container;
+}
+
+// ── Passive Checks ─────────────────────────────────────────────────────────
+// Auto-rolled once on the player's first entry; the result lands in a flag.
+
+function renderPassiveChecks(data, onChange) {
+  const container = el('div', { class: 'flat-list' });
+  const customAttrs = (store.files['__rules']?.customAttributes ?? []).map(a => [a.id, a.id]);
+
+  function render() {
+    container.innerHTML = '';
+    if (!Array.isArray(data.passiveChecks)) data.passiveChecks = [];
+    if (!data.passiveChecks.length) delete data.passiveChecks;
+
+    (data.passiveChecks ?? []).forEach((check, i) => {
+      const row = el('div', { class: 'drop-row' });
+
+      const lhs = el('div', { class: 'drop-lhs' });
+      const skillSel = select(customAttrs, check.skillCheck ?? '', v => { check.skillCheck = v; onChange(); });
+      skillSel.className = 'form-select';
+      lhs.appendChild(skillSel);
+      const flagInput = el('input', { type: 'text', class: 'form-input', value: check.flag ?? '', placeholder: 'result flag (e.g. noticed_glint)' });
+      flagInput.addEventListener('input', () => { check.flag = flagInput.value.trim(); onChange(); });
+      lhs.appendChild(flagInput);
+      const textInput = el('input', { type: 'text', class: 'form-input', value: check.text ?? '', placeholder: 'narration on success (optional)' });
+      textInput.addEventListener('input', () => { check.text = textInput.value || undefined; onChange(); });
+      lhs.appendChild(textInput);
+      row.appendChild(lhs);
+
+      const rhs = el('div', { class: 'drop-rhs' });
+      rhs.append(...dcInput(check, onChange));
+      const rm = el('button', { class: 'btn-hdr' }, ['✕']);
+      rm.addEventListener('click', () => { data.passiveChecks.splice(i, 1); onChange(); render(); });
+      rhs.appendChild(rm);
+      row.appendChild(rhs);
+
+      container.appendChild(row);
+    });
+
+    const add = el('button', { class: 'btn btn-secondary btn-sm' }, ['+ Add Passive Check']);
+    add.addEventListener('click', () => {
+      if (!Array.isArray(data.passiveChecks)) data.passiveChecks = [];
+      data.passiveChecks.push({ skillCheck: customAttrs[0]?.[0] ?? '', dc: 10, flag: '' });
       onChange(); render();
     });
     container.appendChild(add);

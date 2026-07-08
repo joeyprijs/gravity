@@ -192,6 +192,56 @@ function renderParams(action, container, onChange) {
       break;
     }
 
+    case 'advance_time': {
+      const segments = (store.files['__rules']?.time?.segments ?? []).map(s => [s.id, s.id]);
+      const isUntil = action.until !== undefined;
+      container.appendChild(param('Mode',
+        select([['amount', 'Fixed ticks'], ['until', 'Until segment']], isUntil ? 'until' : 'amount', v => {
+          if (v === 'until') { delete action.amount; action.until = segments[0]?.[0] ?? ''; }
+          else               { delete action.until; action.amount = 1; }
+          onChange(); renderParams(action, container, onChange);
+        }, 'form-select sm')
+      ));
+      if (isUntil) {
+        container.appendChild(param('Segment',
+          select(segments.length ? segments : [['', '— configure rules.time —']], action.until ?? '', v => {
+            action.until = v; onChange();
+          }, 'form-select')
+        ));
+      } else {
+        // Write the displayed default into the action — the engine treats a
+        // missing amount as 0 (a silent no-op), not the 1 shown here.
+        if (action.amount === undefined) action.amount = 1;
+        container.appendChild(param('Ticks', numInput(action.amount, v => { action.amount = v; onChange(); }, 'sm')));
+      }
+      break;
+    }
+
+    case 'set_timer': {
+      const idInput = el('input', { type: 'text', class: 'form-input', value: action.id ?? '', placeholder: 'timer id' });
+      idInput.addEventListener('input', () => { action.id = idInput.value.trim(); onChange(); });
+      container.appendChild(param('Timer ID', idInput));
+      // Write the displayed default into the action — the engine treats a
+      // missing afterTicks as 0 (fires on the very next tick), not the 1
+      // shown here. Hand-authored atTick deadlines are left alone.
+      if (action.afterTicks === undefined && action.atTick === undefined) action.afterTicks = 1;
+      container.appendChild(param('After Ticks', numInput(action.afterTicks ?? '', v => { action.afterTicks = v; onChange(); }, 'sm')));
+      if (!Array.isArray(action.actions)) action.actions = [];
+      container.appendChild(param('On Fire (quiet actions only)', renderActionPipeline(action.actions, onChange)));
+      break;
+    }
+
+    case 'cancel_timer': {
+      const input = el('input', { type: 'text', class: 'form-input', value: action.id ?? '', placeholder: 'timer id' });
+      input.addEventListener('input', () => { action.id = input.value.trim(); onChange(); });
+      container.appendChild(param('Timer ID', input));
+      break;
+    }
+
+    case 'restore_luck':
+      container.appendChild(param('Amount', numInput(action.amount ?? 1, v => { action.amount = v; onChange(); }, 'sm')));
+      break;
+
     // full_rest, return, leave, makeFriendly — no params
     default: break;
   }

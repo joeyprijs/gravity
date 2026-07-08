@@ -13,7 +13,8 @@
       "ac":         { "label": "Armor Class (AC)",  "description": "+1 AC per point" },
       "perception": { "label": "Perception",        "description": "+1 Perception per point" },
       "charisma":   { "label": "Charisma",          "description": "+1 Charisma per point" },
-      "stealth":    { "label": "Stealth",           "description": "+1 Stealth per point" }
+      "stealth":    { "label": "Stealth",           "description": "+1 Stealth per point" },
+      "luck":       { "label": "Luck (max)",        "description": "+1 maximum Luck per point" }
     }
   },
   "system": {
@@ -58,7 +59,18 @@
     "locationDialogue":    "DIALOGUE: {name}",
     "locationMerchant":    "MERCHANT: {name}",
     "locationCombat":      "Combat",
-    "notEnoughGold":       "Not enough gold!"
+    "notEnoughGold":       "Not enough gold!",
+    "timeChipDay":         "Day {day}",
+    "timeChipSegment":     "Day {day} — {segment}",
+    "luckLabel":           "LUCK"
+  },
+  "time": {
+    "segments": {
+      "morning": "Morning",
+      "day":     "Daytime",
+      "evening": "Evening",
+      "night":   "Night"
+    }
   },
   "itemTypes": {
     "Weapon":     "Weapons",
@@ -96,12 +108,24 @@
     "lookAround":            "Look Around",
     "lookAroundBadge":       "Skill: Perception",
     "skillBadge": {
-      "perception": "DC {dc}, Skill: Perception",
-      "charisma":   "DC {dc}, Skill: Charisma",
-      "stealth":    "DC {dc}, Skill: Stealth"
+      "perception": "DC {dc}, Perception {mod}",
+      "charisma":   "DC {dc}, Charisma {mod}",
+      "stealth":    "DC {dc}, Stealth {mod}"
     },
-    "skillSuccess": "({roll}, 1d20 + {mod} {skill}) — success!",
-    "skillFail":    "({roll}, 1d20 + {mod} {skill}) — failure.",
+    "skillBadgeFree": {
+      "perception": "Perception",
+      "charisma":   "Charisma",
+      "stealth":    "Stealth"
+    },
+    "skillCritical": "({roll}, 1d20 + {mod} {skill}) — a triumph!",
+    "skillSuccess":  "({roll}, 1d20 + {mod} {skill}) — success!",
+    "skillPartial":  "({roll}, 1d20 + {mod} {skill}) — almost… but not quite.",
+    "skillFail":     "({roll}, 1d20 + {mod} {skill}) — failure.",
+    "luckBadge":         "Test your luck — {luck} ({odds}%)",
+    "luckSuccess":       "(2d6: {roll} vs Luck {luck}) — fortune favors you!",
+    "luckFail":          "(2d6: {roll} vs Luck {luck}) — luck abandons you.",
+    "luckRestored":      "You feel fortune's favor return (+{amount} Luck).",
+    "badgeWithLuckCost": "{badge} — retry: {cost} Luck",
     "lookAroundEmpty":       "You look around carefully. Nothing catches your eye.",
     "lookAroundFound":       "You search the area ({roll}, 1d20 + {mod} Perception) — your keen eye spots something!",
     "lookAroundFoundMore":   "You search the area ({roll}, 1d20 + {mod} Perception) — your keen eye spots something, though you sense the area still holds more.",
@@ -111,6 +135,7 @@
     "equipped":          "Equipped {name} to {slot}.",
     "unequipped":        "Unequipped {name} from {slot}.",
     "usedItem":          "You used {name} and recovered {amount} HP{rollSuffix}.",
+    "usedLuckItem":      "You used {name} and feel luckier already.",
     "rollSuffix":        " (Roll: {roll})",
     "teleported":        "You gripped the {name} and vanished into thin air...",
     "alreadyHere":       "You are already here.",
@@ -144,6 +169,17 @@
     "gameOverTitle":        "Game Over",
     "gameOverBody":         "Your adventure ends here.",
     "avoided":              "They regard you peacefully.",
+    "luckOffensePrompt":    "Press your advantage against {name}",
+    "luckOffenseBadge":     "Lucky: +2 damage · Unlucky: {name} shrugs one off · 2d6 vs Luck {luck} ({odds}%), costs 1 Luck",
+    "luckOffenseSkip":      "Let the hit stand (no gamble)",
+    "luckOffenseLose":      "You overreach — {name} shrugs off part of the blow.",
+    "luckOffenseWin":       "Your strike finds a gap — {name} staggers! (+2 damage)",
+    "luckDefensePrompt":    "Steel yourself against the pain",
+    "luckDefenseBadge":     "Lucky: recover {heal} HP · Unlucky: -1 HP · 2d6 vs Luck {luck} ({odds}%), costs 1 Luck",
+    "luckDefenseSkip":      "Grit your teeth (no gamble)",
+    "luckDefenseWin":       "You roll with the blow — it looks worse than it is. (+{heal} HP)",
+    "luckDefenseLose":      "The wound bites deeper than you thought. (-1 HP)",
+    "resolveGambleFirst":   "Decide the gamble first.",
     "loadLastSave":         "Load Last Save",
     "restartGame":          "Restart Game"
   },

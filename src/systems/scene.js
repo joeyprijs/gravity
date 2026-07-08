@@ -3,16 +3,13 @@ import { createElement, buildSceneDescription, buildOptionButton, getItemLabel, 
 import { CSS, FLAG_KEYS, GOLD_ITEM_ID, LOG, MAX_D20_ROLL } from "../core/config.js";
 import { evaluateCondition } from "./condition.js";
 import { roll } from "./dice.js";
-import { performSkillCheck, getEscalatedDc, escalateDc, getAttempts, recordAttempt } from "./skill-checks.js";
-
-// Resolves the display/log text for a skill option. Once the check has been
-// attempted, an optional `retryText` takes over: a string, or an array walked
-// per failed attempt (clamping to the last entry).
-function resolveRetryText(opt, attempts) {
-  if (!attempts || !opt.retryText) return opt.text;
-  const variants = Array.isArray(opt.retryText) ? opt.retryText : [opt.retryText];
-  return variants[Math.min(attempts - 1, variants.length - 1)];
-}
+import { resolveTimeCost } from "./time.js";
+import {
+  performSkillCheck, normalizeOutcomes, resolveRetryText,
+  getAttempts, recordAttempt, isResolved, markResolved, resetAttempts,
+  performLuckCheck, luckEnabled, luckOdds,
+  skillBadge, retryGate, applyRetryGate
+} from "./skill-checks.js";
 
 // SceneRenderer handles navigating to scenes, resolving their descriptions,
 // and rendering their option buttons. It is the main driver of scene-to-scene
@@ -64,6 +61,16 @@ export class SceneRenderer {
 
     this._registerInitialDisplays(scene, sceneId);
 
+    // Passive checks roll BEFORE the description resolves, so conditional
+    // description variants already see the flags they set. Their narration
+    // logs after the description block (see below).
+    const passiveTexts = this._rollPassiveChecks(scene, sceneId);
+
+    // Attempt counters reset on actual (re-)entry only — a same-scene
+    // re-render (e.g. after a successful check) must not rewind other checks'
+    // retry wording or refill their maxAttempts budgets mid-visit.
+    const isEntry = gameState.getCurrentSceneId() !== sceneId;
+
     // addVisitedScene must be called BEFORE setCurrentSceneId because
     // setCurrentSceneId triggers notifyListeners → ui.update() → renderMinimap(),
     // which checks visitedScenes. If the order is reversed, the current scene
@@ -72,7 +79,8 @@ export class SceneRenderer {
     gameState.setCurrentSceneId(sceneId);
 
     this._appendSceneDescription(scene, sceneId);
-    this._resetSkillDcs(scene, sceneId);
+    passiveTexts.forEach(text => this.engine.log(LOG.NARRATOR, text));
+    if (isEntry) this._resetSkillAttempts(scene, sceneId);
     this.renderOptions(scene);
 
     // Emit scene:entered once per actual entry so quest triggers and other
@@ -120,21 +128,33 @@ export class SceneRenderer {
     this.lastRenderedDesc = currentDesc;
   }
 
-  // Resets skill-check DCs on scene re-entry. Found items persist; escalated DCs reset.
-  _resetSkillDcs(scene, sceneId) {
+  // Passive checks: auto-rolled the first time the player enters the scene,
+  // writing pass/fail into an author-named flag that conditions, description
+  // variants, and option gates can read. Rolled exactly once per game — never
+  // re-rolled on re-entry — so the world stays consistent. Silent unless the
+  // check succeeds and carries authored `text` (returned for post-description
+  // logging).
+  _rollPassiveChecks(scene, sceneId) {
+    const texts = [];
+    (scene.passiveChecks || []).forEach((check, i) => {
+      if (!check.skillCheck || !check.flag) return;
+      const doneKey = FLAG_KEYS.passiveDone(sceneId, i);
+      if (gameState.getFlag(doneKey)) return;
+      gameState.setFlag(doneKey, true);
+      const mod = gameState.getPlayer().attributes[check.skillCheck] ?? 0;
+      const success = roll(1, MAX_D20_ROLL) + mod >= (check.dc ?? 10);
+      gameState.setFlag(check.flag, success);
+      if (success && check.text) texts.push(check.text);
+    });
+    return texts;
+  }
+
+  // Resets skill-check attempt counters on scene re-entry so retryText wording
+  // starts fresh. Discovery progress and resolved (retired) checks persist.
+  _resetSkillAttempts(scene, sceneId) {
     (scene.skills || []).forEach(opt => {
       if (!opt.skillCheck) return;
-      const key = FLAG_KEYS.skillDc(opt.skillCheck, sceneId);
-      if (opt.items?.length) {
-        // Item-discovery: reset escalated DCs but preserve which items were already found.
-        const state = gameState.getFlag(key);
-        if (state?.dcs) {
-          gameState.setFlag(key, { dcs: opt.items.map(item => item.dc ?? 10), found: state.found });
-        }
-      } else if (opt.dc) {
-        // Pass/fail: reset DC escalation so a re-entered scene starts fresh.
-        gameState.setFlag(key, {});
-      }
+      resetAttempts(FLAG_KEYS.skillDc(opt.skillCheck, sceneId));
     });
   }
 
@@ -196,16 +216,18 @@ export class SceneRenderer {
     const sceneId = gameState.getCurrentSceneId();
 
     (scene.skills || []).forEach((opt, i) => {
-      if (!opt.skillCheck) return;
+      if (!opt.skillCheck && !opt.luckCheck) return;
       const cond = opt.condition ?? null;
       if (!evaluateCondition(cond, gameState)) return;
 
       const items = opt.items || [];
       let btn;
-      if (items.length) {
-        btn = this._buildItemDiscoveryButton(opt, sceneId, scene);
+      if (opt.luckCheck) {
+        btn = this._buildLuckButton(opt, i, sceneId, scene);
+      } else if (items.length) {
+        btn = this._buildItemDiscoveryButton(opt, i, sceneId, scene);
       } else if (!opt.dc) {
-        btn = this._buildFlavorButton(opt, sceneId, scene);
+        btn = this._buildNarrativeButton(opt, i, sceneId, scene);
       } else {
         btn = this._buildPassFailButton(opt, i, sceneId, scene);
       }
@@ -249,45 +271,117 @@ export class SceneRenderer {
     this.engine.isGameStart = false;
     if (opt.log !== false) this.engine.log(LOG.PLAYER, opt.text, 'choice');
 
+    this._chargeTime(opt, this._optionCostKind(opt));
+
     const sceneIdBefore = gameState.getCurrentSceneId();
     this.engine.runActions(opt.actions || []);
 
     // Re-render options if nothing caused navigation, so flag changes take
-    // effect immediately. Checking sceneId and inCombat covers all action types
-    // including plugins, without maintaining a hardcoded list.
-    const navigated = gameState.getCurrentSceneId() !== sceneIdBefore || this.engine.inCombat || this.engine.inDialogue || this.engine.inCustomUI;
-    if (!navigated) {
+    // effect immediately.
+    if (!this._didNavigate(sceneIdBefore)) {
       const scene = this.engine.data.scenes[gameState.getCurrentSceneId()];
       if (scene) this.renderOptions(scene);
     }
   }
 
+  // Picks which rules.time.defaultCosts entry applies to a plain scene option,
+  // from what its pipeline does: moving somewhere defaults to the travel cost,
+  // a full rest to the rest cost. Anything else is free unless the option
+  // carries an explicit timeCost.
+  _optionCostKind(opt) {
+    const actions = opt.actions || [];
+    if (actions.some(a => a.type === 'navigate' || a.type === 'return')) return 'navigate';
+    if (actions.some(a => a.type === 'full_rest')) return 'fullRest';
+    return null;
+  }
+
+  // Advances the world clock for a chosen option/check. An explicit timeCost
+  // always wins; otherwise the kind's default from rules.time.defaultCosts
+  // applies. Charged BEFORE the pipeline runs, so a timer that fires can set
+  // flags the pipeline's destination scene already sees.
+  _chargeTime(opt, kind) {
+    const cost = resolveTimeCost(opt.timeCost, kind, this.engine.data.rules);
+    if (cost > 0) this.engine.advanceTime(cost);
+  }
+
+  // Returns true when the last pipeline run moved the player somewhere else —
+  // a scene change, combat, dialogue, or a custom UI. Callers skip re-rendering
+  // the current scene's options so they don't clobber the new panel.
+  _didNavigate(sceneIdBefore) {
+    return gameState.getCurrentSceneId() !== sceneIdBefore ||
+      this.engine.inCombat || this.engine.inDialogue || this.engine.inCustomUI;
+  }
+
+  // Reads one discovery entry's state from the shared per-skill flag map.
+  // The map is shared by every check in the scene that rolls the same skill
+  // (pass/fail attempt counters, narrative uses, resolution markers), so
+  // discovery state lives NAMESPACED under `disc_<index>` — it must never
+  // replace the whole map, or it wipes its siblings' state. Older saves
+  // stored discovery state at the map's top level; that shape is adopted by
+  // the first discovery entry that reads it.
+  _readDiscoveryState(skillKey, i, items) {
+    const map = gameState.getFlag(skillKey);
+    const state = typeof map === 'object' && map !== null ? map[`disc_${i}`] : null;
+    if (state?.found) return state;
+    if (i === 0 && map?.found) {
+      // Legacy top-level shape (pre-namespacing) — adopt it as the FIRST
+      // entry's only (later entries didn't exist when it was written), padding
+      // or truncating `found` to the current item list so no holes or stale
+      // trailing entries survive.
+      return {
+        found: items.map((_, idx) => map.found[idx] ?? false),
+        tries: map.tries,
+        resolved: map.resolved,
+      };
+    }
+    return { found: items.map(() => false) };
+  }
+
+  // Persists one discovery entry's state into the shared map, clearing any
+  // legacy top-level discovery fields it supersedes.
+  _saveDiscoveryState(skillKey, i, state) {
+    const existing = gameState.getFlag(skillKey);
+    const map = typeof existing === 'object' && existing !== null ? existing : {};
+    delete map.found;
+    delete map.tries;
+    delete map.resolved;
+    delete map.dcs;
+    map[`disc_${i}`] = state;
+    gameState.setFlag(skillKey, map);
+  }
+
   // Item-discovery skill check: roll against per-item DCs, track found items.
-  // Returns a button, or null if all items have already been found.
-  _buildItemDiscoveryButton(opt, sceneId, scene) {
+  // Returns a button, or null when everything has been found or the check has
+  // been retired (resolveOnce, or an exhausted maxAttempts budget).
+  _buildItemDiscoveryButton(opt, i, sceneId, scene) {
     const skillKey = FLAG_KEYS.skillDc(opt.skillCheck, sceneId);
     const items = opt.items;
-    let state = gameState.getFlag(skillKey);
-    if (!state || !state.dcs) {
-      state = { dcs: items.map(l => l.dc ?? 10), found: items.map(() => false) };
-    }
-    if (state.found.every(f => f)) return null;
+    const state = this._readDiscoveryState(skillKey, i, items);
+    if (state.resolved || state.found.every(f => f)) return null;
 
-    const lowestDc = Math.min(...state.dcs.filter((_, idx) => !state.found[idx]));
+    const lowestDc = Math.min(...items.map(l => l.dc ?? 10).filter((_, idx) => !state.found[idx]));
     const displayText = resolveRetryText(opt, state.tries || 0);
-    const btn = buildOptionButton(displayText, this.engine.t(`actions.skillBadge.${opt.skillCheck}`, { dc: lowestDc }));
+    const gate = retryGate(this.engine, state.tries || 0);
+    const btn = buildOptionButton(displayText, applyRetryGate(this.engine, gate, skillBadge(this.engine, opt.skillCheck, lowestDc)));
+    if (gate.blocked) {
+      btn.disabled = true;
+      return btn;
+    }
     btn.onclick = () => {
       this.engine.isGameStart = false;
       this.engine.log(LOG.PLAYER, displayText, 'choice');
-      this._resolveDiscovery(opt, state, skillKey, scene);
+      if (gate.cost > 0) gameState.modifyPlayerStat('luck', -gate.cost);
+      this._chargeTime(opt, 'skillAttempt');
+      this._resolveDiscovery(opt, i, state, skillKey, scene);
     };
     return btn;
   }
 
   // Resolves one discovery attempt: rolls once against every still-hidden
-  // item's DC, marks hits as found, escalates the DCs of misses, awards the
-  // found loot, persists the updated state, and re-renders the options.
-  _resolveDiscovery(opt, state, skillKey, scene) {
+  // item's DC, marks hits as found, awards the found loot, persists the
+  // updated state, and re-renders the options. A maxAttempts budget that runs
+  // out (or resolveOnce) retires the check; exhaustion runs onExhausted.
+  _resolveDiscovery(opt, i, state, skillKey, scene) {
     const items = opt.items;
     const mod = gameState.getPlayer().attributes[opt.skillCheck] ?? 0;
     const hitRoll = roll(1, MAX_D20_ROLL) + mod;
@@ -295,8 +389,7 @@ export class SceneRenderer {
     const newlyFound = [];
     items.forEach((l, idx) => {
       if (state.found[idx]) return;
-      if (hitRoll >= state.dcs[idx]) { state.found[idx] = true; newlyFound.push(l); }
-      else { state.dcs[idx] += l.increment ?? 1; }
+      if (hitRoll >= (l.dc ?? 10)) { state.found[idx] = true; newlyFound.push(l); }
     });
 
     const anyFound = newlyFound.length > 0;
@@ -309,7 +402,16 @@ export class SceneRenderer {
     this._awardDiscoveredLoot(newlyFound);
 
     state.tries = (state.tries || 0) + 1;
-    gameState.setFlag(skillKey, state);
+    const allFound = state.found.every(f => f);
+    const exhausted = !allFound && opt.maxAttempts && state.tries >= opt.maxAttempts;
+    if (opt.resolveOnce || exhausted) state.resolved = true;
+    this._saveDiscoveryState(skillKey, i, state);
+
+    if (exhausted && opt.onExhausted?.length) {
+      const sceneIdBefore = gameState.getCurrentSceneId();
+      this.engine.runActions(opt.onExhausted);
+      if (this._didNavigate(sceneIdBefore)) return;
+    }
     this.renderOptions(scene);
   }
 
@@ -362,53 +464,120 @@ export class SceneRenderer {
     this.engine.log(LOG.SYSTEM, fallbackMessage, 'loot');
   }
 
-  // Flavor-only skill check: no roll, shown once then hidden permanently.
-  // Returns a button, or null if it has already been triggered.
-  _buildFlavorButton(opt, sceneId, scene) {
-    const skillKey = FLAG_KEYS.skillDc(opt.skillCheck, sceneId);
-    if (gameState.getFlag(skillKey)) return null;
-    const btn = buildOptionButton(opt.text, this.engine.t('actions.lookAroundBadge'));
+  // Test Your Luck: an authored gamble against the player's own depleting luck
+  // (2d6 roll-under, then luck −1 regardless — see performLuckCheck). No DC to
+  // author: the player's luck IS the difficulty. One-shot by nature
+  // (resolveOnce defaults to true); the button shows the odds so the gamble is
+  // an informed decision. Returns a button, or null once resolved.
+  _buildLuckButton(opt, i, sceneId, scene) {
+    const skillKey = FLAG_KEYS.skillDc('luck', sceneId);
+    if (isResolved(skillKey, i)) return null;
+    if (!luckEnabled()) {
+      console.warn(`[Gravity] luckCheck "${opt.text}": no luck resource in rules.playerDefaults — option hidden`);
+      return null;
+    }
+
+    const luck = gameState.getPlayer().resources.luck.current;
+    const btn = buildOptionButton(opt.text, this.engine.t('actions.luckBadge', { luck, odds: luckOdds(luck) }));
     btn.onclick = () => {
       this.engine.isGameStart = false;
-      gameState.setFlag(skillKey, true);
       this.engine.log(LOG.PLAYER, opt.text, 'choice');
-      this.engine.log(LOG.SYSTEM, this.engine.t('actions.lookAroundEmpty'));
-      this.renderOptions(scene);
+      this._chargeTime(opt, 'skillAttempt');
+      const { lucky } = performLuckCheck(this.engine);
+      if (opt.resolveOnce !== false) markResolved(skillKey, i);
+      const sceneIdBefore = gameState.getCurrentSceneId();
+      if (lucky) {
+        this.engine.runActions(opt.actions || []);
+        if (!this._didNavigate(sceneIdBefore)) this.engine.renderScene(gameState.getCurrentSceneId());
+      } else {
+        this.engine.runActions(opt.onFailure || []);
+        if (!this._didNavigate(sceneIdBefore)) this.renderOptions(scene);
+      }
     };
     return btn;
   }
 
-  // Pass/fail skill check with an escalating DC on failure.
-  // Always returns a button (the check remains available until the player passes).
+  // Narrative (free) skill check: no roll, no DC — a story beat framed as a
+  // skill. Logs the authored resultText (a string, or an array walked per use)
+  // and runs an optional action pipeline. Retires after one use unless marked
+  // repeatable. Returns a button, or null once retired.
+  _buildNarrativeButton(opt, i, sceneId, scene) {
+    const skillKey = FLAG_KEYS.skillDc(opt.skillCheck, sceneId);
+    const state = gameState.getFlag(skillKey);
+    // Older saves stored a bare `true` at this key for a used flavor check.
+    const uses = state === true ? 1 : (state?.[`uses_${i}`] || 0);
+    if (uses > 0 && !opt.repeatable) return null;
+
+    const badgeKey = `actions.skillBadgeFree.${opt.skillCheck}`;
+    const badge = this.engine.t(badgeKey) !== badgeKey
+      ? this.engine.t(badgeKey)
+      : this.engine.t('actions.lookAroundBadge');
+
+    const btn = buildOptionButton(opt.text, badge);
+    btn.onclick = () => {
+      this.engine.isGameStart = false;
+      // Narrative beats are free by default — no skillAttempt default cost.
+      this._chargeTime(opt, null);
+      const map = typeof state === 'object' && state !== null ? state : {};
+      map[`uses_${i}`] = uses + 1;
+      gameState.setFlag(skillKey, map);
+      this.engine.log(LOG.PLAYER, opt.text, 'choice');
+
+      if (opt.resultText) {
+        const variants = Array.isArray(opt.resultText) ? opt.resultText : [opt.resultText];
+        this.engine.log(LOG.NARRATOR, variants[Math.min(uses, variants.length - 1)]);
+      } else {
+        this.engine.log(LOG.SYSTEM, this.engine.t('actions.lookAroundEmpty'));
+      }
+
+      const sceneIdBefore = gameState.getCurrentSceneId();
+      this.engine.runActions(opt.actions || []);
+      if (!this._didNavigate(sceneIdBefore)) this.renderOptions(scene);
+    };
+    return btn;
+  }
+
+  // Pass/fail skill check, resolved against the check's outcome tiers
+  // (critical/success/partial/failure — see normalizeOutcomes). Returns a
+  // button, or null when the check has been retired (resolveOnce, or an
+  // exhausted maxAttempts budget).
   _buildPassFailButton(opt, i, sceneId, scene) {
     const skillKey = FLAG_KEYS.skillDc(opt.skillCheck, sceneId);
-    const dc = getEscalatedDc(skillKey, i, opt.dc);
-    const displayText = resolveRetryText(opt, getAttempts(skillKey, i));
-    const btn = buildOptionButton(displayText, this.engine.t(`actions.skillBadge.${opt.skillCheck}`, { dc }));
+    if (isResolved(skillKey, i)) return null;
+    const attempts = getAttempts(skillKey, i);
+    const displayText = resolveRetryText(opt, attempts);
+    const gate = retryGate(this.engine, attempts);
+    const btn = buildOptionButton(displayText, applyRetryGate(this.engine, gate, skillBadge(this.engine, opt.skillCheck, opt.dc)));
+    if (gate.blocked) {
+      btn.disabled = true;
+      return btn;
+    }
     btn.onclick = () => {
       this.engine.isGameStart = false;
       this.engine.log(LOG.PLAYER, displayText, 'choice');
-      const { success } = performSkillCheck(this.engine, opt.skillCheck, dc);
-      // Like handleOption, a re-render must also be skipped when the actions
-      // opened a dialogue or custom UI — rendering the scene would clobber it.
-      const didNavigate = (sceneIdBefore) =>
-        gameState.getCurrentSceneId() !== sceneIdBefore ||
-        this.engine.inCombat || this.engine.inDialogue || this.engine.inCustomUI;
+      if (gate.cost > 0) gameState.modifyPlayerStat('luck', -gate.cost);
+      this._chargeTime(opt, 'skillAttempt');
+      const outcomes = normalizeOutcomes(opt);
+      const { tier, success } = performSkillCheck(this.engine, opt.skillCheck, opt.dc, outcomes);
+      if (opt.resolveOnce) markResolved(skillKey, i);
+      const sceneIdBefore = gameState.getCurrentSceneId();
       if (success) {
-        const sceneIdBefore = gameState.getCurrentSceneId();
-        this.engine.runActions(opt.actions || []);
-        if (!didNavigate(sceneIdBefore)) this.engine.renderScene(gameState.getCurrentSceneId());
-      } else {
-        escalateDc(skillKey, i, dc, opt.increment ?? 1);
-        recordAttempt(skillKey, i);
-        if (opt.onFailure?.length) {
-          const sceneIdBefore = gameState.getCurrentSceneId();
-          this.engine.runActions(opt.onFailure);
-          if (!didNavigate(sceneIdBefore)) this.renderOptions(scene);
-        } else {
-          this.renderOptions(scene);
-        }
+        this.engine.runActions(outcomes[tier].actions);
+        // Like handleOption, the re-render must be skipped when the actions
+        // opened a dialogue or custom UI — rendering would clobber it.
+        if (!this._didNavigate(sceneIdBefore)) this.engine.renderScene(gameState.getCurrentSceneId());
+        return;
       }
+      // Partial and failure tiers both count as an attempt: partial is
+      // fail-forward (its actions grant the something-with-a-catch), but the
+      // check itself has not been passed.
+      const attemptCount = recordAttempt(skillKey, i);
+      this.engine.runActions(outcomes[tier].actions);
+      if (!opt.resolveOnce && opt.maxAttempts && attemptCount >= opt.maxAttempts) {
+        markResolved(skillKey, i);
+        if (opt.onExhausted?.length) this.engine.runActions(opt.onExhausted);
+      }
+      if (!this._didNavigate(sceneIdBefore)) this.renderOptions(scene);
     };
     return btn;
   }

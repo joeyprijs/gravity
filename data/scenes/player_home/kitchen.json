@@ -8,7 +8,15 @@
     "height": 100,
     "background": "rgba(70, 50, 30, 0.9)"
   },
-  "description": "You walk into the kitchen, smelling the rich aroma of roasting meats. You find the servant cooking a stew over an open flame.",
+  "description": [
+    {
+      "text": "The kitchen is dark and quiet at this hour. The banked coals of the cooking fire glow faintly; a covered pot of stew waits for morning.",
+      "condition": { "segment": "night" }
+    },
+    {
+      "text": "You walk into the kitchen, smelling the rich aroma of roasting meats. You find the servant cooking a stew over an open flame."
+    }
+  ],
   "options": [
     {
       "text": "Eat a Snack",

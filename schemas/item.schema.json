@@ -57,6 +57,14 @@
           "type": ["integer", "string"],
           "description": "HP restored on consumption. Supports flat numbers or dice notation."
         },
+        "luckAmount": {
+          "type": "integer",
+          "description": "Luck restored on consumption (requires the luck resource in rules.playerDefaults)."
+        },
+        "luckMaxBonus": {
+          "type": "integer",
+          "description": "Permanent maximum-luck increase on consumption (requires the luck resource)."
+        },
         "teleportScene": {
           "type": "string",
           "description": "Scene ID to teleport to upon usage. Used for consumable items."

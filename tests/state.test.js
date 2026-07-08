@@ -252,7 +252,9 @@ test('loadFromObject: applies a valid save and migrates an old one forward', () 
   const ok = gameState.loadFromObject({ player: {}, log: [] }); // no saveVersion → migrates from 0
   assert.equal(ok, true);
   assert.equal(gameState.getPlayer().name, ''); // migration 1 added player.name
-  assert.equal(gameState.state.saveVersion, 3); // brought up to the current version
+  assert.equal(gameState.state.saveVersion, 4); // brought up to the current version
+  assert.deepEqual(gameState.state.time, { ticks: 0 }); // migration 4 seeded the clock
+  assert.deepEqual(gameState.state.timers, []);
 });
 
 test('migrate: leaves a future-versioned save untouched (no backward rewrite)', () => {

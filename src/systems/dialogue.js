@@ -2,7 +2,12 @@ import { gameState } from "../core/state.js";
 import { createElement, buildSceneDescription, buildOptionButton, resetOptionsPanel } from "../core/utils.js";
 import { ACTIONS, CSS, FLAG_KEYS, LOG } from "../core/config.js";
 import { evaluateCondition } from "./condition.js";
-import { performSkillCheck, getEscalatedDc, escalateDc } from "./skill-checks.js";
+import {
+  performSkillCheck, normalizeOutcomes, resolveRetryText,
+  getAttempts, recordAttempt, isResolved, markResolved,
+  performLuckCheck, luckEnabled, luckOdds,
+  skillBadge, retryGate, applyRetryGate
+} from "./skill-checks.js";
 
 // Actions that move the conversation to a new panel (node, store, or scene).
 // _runActions reports these as "navigated" so callers skip re-rendering the
@@ -108,8 +113,10 @@ export class DialogueSystem {
     this.engine.resetScene();
     this.currentNPC = npc;
     this.currentNPCId = npcId;
-    
-    // Clear dynamic DC escalation states for conversational rolls when starting fresh
+
+    // Clear per-conversation check state (attempt counts, in-conversation
+    // exhaustion) when starting fresh. Permanently resolved responses live in
+    // a separate flag (FLAG_KEYS.dialogueResolved) and survive this reset.
     gameState.setFlag(FLAG_KEYS.dialogueDc(npcId), {});
     
     if (npc.conversations) {
@@ -181,44 +188,94 @@ export class DialogueSystem {
     );
 
     // ── Conversational Skill Checks ─────────────────────────────────────────
-    // Reads escalated DCs from persistent flags to keep saves robust.
+    // Attempt counts live in a per-conversation flag map (reset by
+    // startDialogue); permanent resolution markers live in a separate flag
+    // that survives across conversations and saves.
     const dcStateKey = FLAG_KEYS.dialogueDc(this.currentNPCId);
+    const resolvedKey = FLAG_KEYS.dialogueResolved(this.currentNPCId);
     const skillResponses = [];
 
     (node.responses || []).forEach((res, i) => {
       // Hide options whose condition requirements are not met
       if (!evaluateCondition(res.condition ?? null, gameState)) return;
 
-      const needsCheck = !!res.skillCheck && res.dc > 0;
-      const resKey = `${res.skillCheck}_${nodeId}_${i}`;
-      const dc = needsCheck ? getEscalatedDc(dcStateKey, resKey, res.dc) : 0;
+      const isLuckCheck = !!res.luckCheck;
+      const needsCheck = !isLuckCheck && !!res.skillCheck && res.dc > 0;
+      const resKey = isLuckCheck ? `luck_${nodeId}_${i}` : `${res.skillCheck}_${nodeId}_${i}`;
 
-      const badge = needsCheck ? this.engine.t(`actions.skillBadge.${res.skillCheck}`, { dc }) : null;
-      const btn = buildOptionButton(res.text, badge);
+      // A resolveOnce response stays retired across conversations; an
+      // exhausted maxAttempts budget retires it for the rest of this
+      // conversation only (patience resets on re-talk). Luck gambles are
+      // resolveOnce by default.
+      if ((needsCheck || isLuckCheck) && (isResolved(resolvedKey, resKey) || isResolved(dcStateKey, resKey))) return;
+      if (isLuckCheck && !luckEnabled()) {
+        console.warn(`[Gravity] luckCheck response "${res.text}": no luck resource in rules.playerDefaults — hidden`);
+        return;
+      }
+
+      const attempts = needsCheck ? getAttempts(dcStateKey, resKey) : 0;
+      const gate = needsCheck ? retryGate(this.engine, attempts) : { cost: 0, blocked: false };
+      const displayText = needsCheck ? resolveRetryText(res, attempts) : res.text;
+      let badge = null;
+      if (needsCheck) badge = applyRetryGate(this.engine, gate, skillBadge(this.engine, res.skillCheck, res.dc));
+      if (isLuckCheck) {
+        const luck = gameState.getPlayer().resources.luck.current;
+        badge = this.engine.t('actions.luckBadge', { luck, odds: luckOdds(luck) });
+      }
+      const btn = buildOptionButton(displayText, badge);
+      if (gate.blocked) btn.disabled = true;
 
       btn.onclick = () => {
-        this.engine.log(LOG.PLAYER, res.text, 'choice');
+        this.engine.log(LOG.PLAYER, displayText, 'choice');
 
-        if (needsCheck) {
-          const { success } = performSkillCheck(this.engine, res.skillCheck, dc);
+        // Dialogue is free by default; an explicit timeCost on a response
+        // advances the clock (browsing a store never costs time).
+        if (res.timeCost > 0) this.engine.advanceTime(res.timeCost);
 
-          if (!success) {
-            // Conversational DC Escalation: Failed attempts raise the difficulty
-            // by a custom increment so that repeat trials are increasingly challenging.
-            escalateDc(dcStateKey, resKey, dc, res.increment ?? 1);
-
-            // Execute failure actions pipeline if registered
-            const failNavigated = res.onFailure?.length ? this._runActions(res.onFailure) : false;
-            if (!failNavigated) this.renderDialogue(nodeId, null, true);
-            return;
-          }
+        if (isLuckCheck) {
+          const { lucky } = performLuckCheck(this.engine);
+          if (res.resolveOnce !== false) markResolved(resolvedKey, resKey);
+          const pipeline = lucky ? (res.actions || []) : (res.onFailure || []);
+          const navigated = pipeline.length ? this._runActions(pipeline) : false;
+          if (!navigated) this.renderDialogue(nodeId, null, true);
+          return;
         }
 
-        // Action routing on success
+        if (needsCheck) {
+          if (gate.cost > 0) gameState.modifyPlayerStat('luck', -gate.cost);
+          const outcomes = normalizeOutcomes(res);
+          const { tier, success } = performSkillCheck(this.engine, res.skillCheck, res.dc, outcomes);
+          if (res.resolveOnce) markResolved(resolvedKey, resKey);
+
+          if (!success) {
+            // Partial and failure tiers both count as an attempt; partial is
+            // fail-forward, so its pipeline still runs.
+            const attemptCount = recordAttempt(dcStateKey, resKey);
+            const tierActions = outcomes[tier].actions;
+            const failNavigated = tierActions.length ? this._runActions(tierActions) : false;
+            let exhaustNavigated = false;
+            if (!res.resolveOnce && res.maxAttempts && attemptCount >= res.maxAttempts) {
+              markResolved(dcStateKey, resKey);
+              if (res.onExhausted?.length) exhaustNavigated = this._runActions(res.onExhausted);
+            }
+            if (!failNavigated && !exhaustNavigated) this.renderDialogue(nodeId, null, true);
+            return;
+          }
+
+          // Success / critical tier routing. Re-render when the pipeline
+          // didn't navigate (like the failure branch above), so a resolveOnce
+          // response retires from the panel instead of staying clickable.
+          const tierActions = outcomes[tier].actions;
+          const navigated = tierActions.length ? this._runActions(tierActions) : false;
+          if (!navigated) this.renderDialogue(nodeId, null, true);
+          return;
+        }
+
+        // Action routing for plain (check-free) responses
         this._runActions(res.actions || []);
       };
 
-      if (needsCheck) {
+      if (needsCheck || isLuckCheck) {
         skillResponses.push(btn);
       } else {
         container.appendChild(btn);
@@ -237,7 +294,7 @@ export class DialogueSystem {
 
   /**
    * Renders a basic, parameterless fallback greeting screen for simple NPCs.
-   * 
+   *
    * @param {string|null} [overrideText=null] - Narrative text override.
    */
   renderDialogueFallback(overrideText = null) {
@@ -359,8 +416,9 @@ export class DialogueSystem {
 
     buyItems.forEach(({ id: itemId, item, stock, npcAmount }) => {
       const displayName = stock !== null ? `${item.name} (x${stock})` : item.name;
-      // Compute custom discount: Math.floor(Value * (1 - Discount))
-      const price = this.activeDiscount > 0 ? Math.floor(item.value * (1 - this.activeDiscount)) : item.value;
+      // Compute custom discount: Math.floor(Value * (1 - Discount)).
+      // A negative discount is a markup — an annoyed merchant padding prices.
+      const price = this.activeDiscount !== 0 ? Math.floor(item.value * (1 - this.activeDiscount)) : item.value;
       const btn = buildOptionButton(
         this.engine.t('dialogue.buyButton', { name: displayName }),
         this.engine.t('dialogue.buyPrice', { amount: price })

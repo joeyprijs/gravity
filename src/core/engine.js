@@ -5,7 +5,7 @@ import { QuestSystem } from "../systems/quests.js";
 import { NarrativeLog } from "../systems/narrative.js";
 import { UIManager } from "../ui/ui.js";
 import { SceneRenderer } from "../systems/scene.js";
-import { DEFAULT_WORLD_MAP_SIZE, LOG } from "./config.js";
+import { DEFAULT_WORLD_MAP_SIZE, LOG, TIMER_SAFE_ACTIONS } from "./config.js";
 import { resolveLanguage } from "./i18n.js";
 import { normalizeCarriedItems, validateGameData } from "./validate.js";
 import { registerBuiltinActions } from "../systems/actions.js";
@@ -308,8 +308,17 @@ class RPGEngine {
   // These are called by UIManager buttons. They own the AP-cost check and
   // combat-refresh logic so the UI layer stays free of game logic.
 
+  // While a combat luck-gamble prompt is open, the pending attack only
+  // resolves through the prompt's buttons — sidebar actions would spend AP and
+  // re-render the combat controls over it, orphaning the attack. Blocks them.
+  _blockedByLuckPrompt() {
+    if (!this.inCombat || !this.combatSystem.luckPromptOpen) return false;
+    this.log(LOG.SYSTEM, this.t('combat.resolveGambleFirst'));
+    return true;
+  }
+
   useItem(itemId) {
-    if (this.isGameOver) return;
+    if (this.isGameOver || this._blockedByLuckPrompt()) return;
     const itemData = this.data.items[itemId];
     if (!itemData) return;
 
@@ -323,6 +332,23 @@ class RPGEngine {
 
     // Apply effect BEFORE spending AP so the log order is always:
     // "used potion" → (AP spent) → enemy turn fires.
+    // Luck and healing are independent effects (an item may carry both);
+    // the consumable is removed once, after every effect has applied.
+    const restoresLuck = itemData.attributes?.luckAmount || itemData.attributes?.luckMaxBonus;
+    if (restoresLuck) {
+      // Luck consumables (a four-leaf clover, a Potion of Fortune). A missing
+      // luck resource makes both stat calls no-ops, so guard to avoid
+      // consuming the item for nothing.
+      if (!gameState.getPlayer().resources?.luck) {
+        console.warn(`[Gravity] useItem: "${itemId}" restores luck but this game has no luck resource`);
+        return;
+      }
+      const maxBonus = itemData.attributes.luckMaxBonus ?? 0;
+      const amount = itemData.attributes.luckAmount ?? 0;
+      if (maxBonus) gameState.modifyPlayerStat('maxLuck', maxBonus);
+      if (amount) gameState.modifyPlayerStat('luck', amount);
+      this.log(LOG.SYSTEM, this.t('player.usedLuckItem', { name: itemData.name, amount, maxBonus }), 'loot');
+    }
     if (itemData.attributes?.healingAmount) {
       let amount = itemData.attributes.healingAmount;
       let rollSuffix = "";
@@ -333,6 +359,8 @@ class RPGEngine {
       }
       gameState.modifyPlayerStat('hp', amount);
       this.log(LOG.SYSTEM, this.t('player.usedItem', { name: itemData.name, amount, rollSuffix }), 'loot');
+    }
+    if (restoresLuck || itemData.attributes?.healingAmount) {
       gameState.removeFromInventory(itemId, 1);
     } else if (itemData.attributes?.teleportScene) {
       if (this.inCombat) {
@@ -353,7 +381,7 @@ class RPGEngine {
   }
 
   equipItem(slot, itemId) {
-    if (this.isGameOver) return;
+    if (this.isGameOver || this._blockedByLuckPrompt()) return;
     const itemData = this.data.items[itemId];
     const targetSlot = slot || itemData?.slot;
     if (!itemData || !targetSlot) return;
@@ -377,7 +405,7 @@ class RPGEngine {
   }
 
   unequipItem(slot) {
-    if (this.isGameOver) return;
+    if (this.isGameOver || this._blockedByLuckPrompt()) return;
     const itemId = gameState.getPlayer().equipment[slot];
     if (!itemId) return;
     const unequipCost = this.data.rules?.unequipApCost ?? 1;
@@ -447,6 +475,28 @@ class RPGEngine {
       const handler = this.getActionHandler(action.type);
       if (handler) handler(action, this);
       else console.warn(`[Gravity] runActions: no handler for action type "${action.type}"`);
+    }
+  }
+
+  /**
+   * Advances the world clock and runs the pipelines of any timers that came
+   * due. Timer pipelines are restricted to quiet actions (TIMER_SAFE_ACTIONS)
+   * — they change the world through flags and logs, never by navigating or
+   * starting combat, which sidesteps every mid-flow reentrancy question.
+   * Firing is synchronous and deterministic: no wall-clock is involved, so
+   * saves replay identically.
+   *
+   * @param {number} amount - Ticks to advance (non-positive is a no-op).
+   */
+  advanceTime(amount) {
+    const fired = gameState.advanceTime(amount);
+    for (const timer of fired) {
+      const safe = (timer.actions || []).filter(a => {
+        if (TIMER_SAFE_ACTIONS.has(a.type)) return true;
+        console.warn(`[Gravity] timer "${timer.id}": action type "${a.type}" is not allowed in timer pipelines — skipped`);
+        return false;
+      });
+      this.runActions(safe);
     }
   }
 

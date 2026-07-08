@@ -2,6 +2,7 @@ import { gameState } from "../core/state.js";
 import { createElement, buildSceneDescription, buildOptionButton, resetOptionsPanel } from "../core/utils.js";
 import { MAX_D20_ROLL, EL, CSS, LOG, WEAPON_SLOTS, ENEMY_CLAW_ID } from "../core/config.js";
 import { roll, parseDamage } from "./dice.js";
+import { performLuckCheck, luckOdds } from "./skill-checks.js";
 
 /**
  * CombatSystem manages the full lifecycle of a turn-based combat encounter.
@@ -25,6 +26,11 @@ export class CombatSystem {
     this.engine = engine;
     this.inCombat = false;
     this.isGameOver = false;
+    // True while a luck gamble prompt is awaiting the player's choice. The
+    // prompt's callbacks are the only path that finishes the suspended attack
+    // (AP spend, defeat handling), so sidebar actions that would re-render the
+    // combat controls are blocked until it resolves (see engine.useItem).
+    this.luckPromptOpen = false;
     this.enemies = [];
     
     // originOption captures the scene option action that triggered this encounter.
@@ -70,6 +76,7 @@ export class CombatSystem {
     this.engine.resetScene();
     this.inCombat = true;
     this.isGameOver = false;
+    this.luckPromptOpen = false;
     this.enemies = enemyDataList;
     this.originOption = originOption;
 
@@ -141,30 +148,71 @@ export class CombatSystem {
     if (hitRoll >= targetEnemy.attributes.armorClass) {
       const dmgResult = parseDamage(weapon.attributes.damageRoll);
       targetEnemy.attributes.healthPoints -= dmgResult.total;
-      
+
       this.engine.log(LOG.PLAYER, this.engine.t('combat.attackHit', {
         weapon: weapon.name, roll: hitRoll, mod: modStr,
-        ac: targetEnemy.attributes.armorClass, damage: dmgResult.total, 
+        ac: targetEnemy.attributes.armorClass, damage: dmgResult.total,
         dice: weapon.attributes.damageRoll, rollStr: dmgResult.string
       }), 'damage');
 
-      // Check if target is defeated
-      if (targetEnemy.attributes.healthPoints <= 0) {
-        if (this.enemies.every(e => e.attributes.healthPoints <= 0)) {
-          this.endCombat(true);
-          return; // Early return to prevent spending AP on a battle already won
-        }
-        this.engine.log(LOG.COMBAT, this.engine.t('combat.enemyDefeated', { name: targetEnemy.name }), 'loot');
+      // Combat luck (rules.combatLuck): after landing a hit that didn't drop
+      // the target, offer to press the advantage — lucky: +2 damage, unlucky:
+      // the target shrugs 1 off. The attack finishes after the choice. Small
+      // hits below rules.combatLuckMinDamage aren't worth interrupting for.
+      if (this._canGambleLuck(dmgResult.total) && targetEnemy.attributes.healthPoints > 0) {
+        this.renderer.renderLuckPrompt('offense', {
+          name: targetEnemy.name,
+          onGamble: () => {
+            const { lucky } = performLuckCheck(this.engine);
+            if (lucky) {
+              targetEnemy.attributes.healthPoints -= 2;
+              this.engine.log(LOG.COMBAT, this.engine.t('combat.luckOffenseWin', { name: targetEnemy.name }), 'damage');
+            } else {
+              targetEnemy.attributes.healthPoints += 1;
+              this.engine.log(LOG.COMBAT, this.engine.t('combat.luckOffenseLose', { name: targetEnemy.name }), 'damage');
+            }
+            this._finishPlayerAttack(weapon, targetEnemy);
+          },
+          onSkip: () => this._finishPlayerAttack(weapon, targetEnemy),
+        });
+        return;
       }
-    } else {
-      // Missed attack logging
-      this.engine.log(LOG.PLAYER, this.engine.t('combat.attackMiss', {
-        weapon: weapon.name, roll: hitRoll, mod: modStr, ac: targetEnemy.attributes.armorClass
-      }), 'damage');
+
+      this._finishPlayerAttack(weapon, targetEnemy);
+      return;
     }
+
+    // Missed attack logging
+    this.engine.log(LOG.PLAYER, this.engine.t('combat.attackMiss', {
+      weapon: weapon.name, roll: hitRoll, mod: modStr, ac: targetEnemy.attributes.armorClass
+    }), 'damage');
 
     // Spend the weapon's AP cost, triggering interface updates or enemy phases
     this.engine._spendAP(weapon.actionPoints);
+  }
+
+  // Completes a landed attack after any luck gamble: resolves defeat states
+  // and spends the weapon's AP (which hands the turn over when AP runs out).
+  _finishPlayerAttack(weapon, targetEnemy) {
+    if (targetEnemy.attributes.healthPoints <= 0) {
+      if (this.enemies.every(e => e.attributes.healthPoints <= 0)) {
+        this.endCombat(true);
+        return; // Early return to prevent spending AP on a battle already won
+      }
+      this.engine.log(LOG.COMBAT, this.engine.t('combat.enemyDefeated', { name: targetEnemy.name }), 'loot');
+    }
+    this.engine._spendAP(weapon.actionPoints);
+  }
+
+  // Combat luck gambles are available when the game opts in via
+  // rules.combatLuck AND has the luck resource AND the player has luck left
+  // AND the triggering damage clears rules.combatLuckMinDamage (default 1) —
+  // the anti-spam gate that keeps trivial hits from prompting every swing.
+  _canGambleLuck(damage) {
+    const rules = this.engine.data.rules;
+    const luck = gameState.getPlayer().resources?.luck;
+    return !!rules?.combatLuck && !!luck && luck.current > 0
+      && damage >= (rules.combatLuckMinDamage ?? 1);
   }
 
   /**
@@ -180,7 +228,8 @@ export class CombatSystem {
     if (!this.inCombat) return;
 
     const player = gameState.getPlayer();
-    
+    const hpBeforePhase = player.resources.hp.current;
+
     // Sort living enemies by initiative roll descending so fast enemies attack first
     const allLiving = this.enemies
       .filter(e => e.attributes.healthPoints > 0)
@@ -232,22 +281,56 @@ export class CombatSystem {
     }
 
     // ── Phase Hand-off Logic ────────────────────────────────────────────────
+    const damageTaken = hpBeforePhase - player.resources.hp.current;
     if (phase === 'before') {
       // High-initiative enemies have finished. The round now opens for the player.
-      this.renderer.render();
+      this._maybeDefenseGamble(damageTaken, () => this.renderer.render());
     } else {
       // Low-initiative enemies have finished, ending the round.
       // 1. Fully charge the player's AP pool for the new round.
       gameState.modifyPlayerStat('ap', player.resources.ap.max - player.resources.ap.current);
-      
+
       // 2. Check if high-initiative enemies act at the beginning of the next round.
       const hasBeforeEnemies = this.enemies.some(e => e.attributes.healthPoints > 0 && (e.initiativeRoll ?? 0) > this.playerInit);
-      if (hasBeforeEnemies) {
-        this.enemyTurn('before');
-      } else {
-        this.renderer.render(); // Transition directly back to player controls
-      }
+      this._maybeDefenseGamble(damageTaken, () => {
+        if (hasBeforeEnemies) {
+          this.enemyTurn('before');
+        } else {
+          this.renderer.render(); // Transition directly back to player controls
+        }
+      });
     }
+  }
+
+  // Combat luck, defensive side: after an enemy phase that hurt the player,
+  // offer to steel yourself — lucky: recover up to 2 of the damage just
+  // taken, unlucky: the wound bites 1 deeper (which can end the fight).
+  // Without a gamble (or with combatLuck off) control flows on unchanged.
+  _maybeDefenseGamble(damageTaken, continueFn) {
+    if (damageTaken <= 0 || !this._canGambleLuck(damageTaken)) {
+      continueFn();
+      return;
+    }
+    const heal = Math.min(2, damageTaken);
+    this.renderer.renderLuckPrompt('defense', {
+      heal,
+      onGamble: () => {
+        const { lucky } = performLuckCheck(this.engine);
+        if (lucky) {
+          gameState.modifyPlayerStat('hp', heal);
+          this.engine.log(LOG.COMBAT, this.engine.t('combat.luckDefenseWin', { heal }), 'loot');
+        } else {
+          gameState.modifyPlayerStat('hp', -1);
+          this.engine.log(LOG.COMBAT, this.engine.t('combat.luckDefenseLose'), 'damage');
+          if (gameState.getPlayer().resources.hp.current <= 0) {
+            this.endCombat(false);
+            return;
+          }
+        }
+        continueFn();
+      },
+      onSkip: continueFn,
+    });
   }
 
   /**
@@ -429,6 +512,51 @@ class CombatRenderer {
 
     // Disable sidebar actions to prevent post-death items activation
     document.querySelectorAll(`.${CSS.BTN_ITEM}`).forEach(btn => { btn.disabled = true; });
+  }
+
+  /**
+   * Renders a transient two-button luck gamble prompt in place of the combat
+   * controls. An informed gamble needs the full equation on the button: the
+   * badge spells out the lucky/unlucky stakes alongside the roll and odds,
+   * and the skip button says the hit/wound simply stands. The CombatSystem
+   * resumes the normal flow through the provided callbacks.
+   *
+   * @param {'offense'|'defense'} kind - Which prompt wording to use.
+   * @param {object} opts
+   * @param {string} [opts.name] - offense: the target the hit landed on.
+   * @param {number} [opts.heal] - defense: HP recovered on a lucky roll.
+   * @param {() => void} opts.onGamble
+   * @param {() => void} opts.onSkip
+   */
+  renderLuckPrompt(kind, { name, heal, onGamble, onSkip }) {
+    const t = this.cs.engine.t.bind(this.cs.engine);
+    const luck = gameState.getPlayer().resources.luck.current;
+    const odds = luckOdds(luck);
+    const { container } = resetOptionsPanel(t('ui.locationCombat'));
+
+    this.cs.luckPromptOpen = true;
+    const resolve = (fn) => () => {
+      this.cs.luckPromptOpen = false;
+      fn();
+    };
+
+    const gambleBtn = kind === 'offense'
+      ? buildOptionButton(
+          t('combat.luckOffensePrompt', { name }),
+          t('combat.luckOffenseBadge', { name, luck, odds })
+        )
+      : buildOptionButton(
+          t('combat.luckDefensePrompt'),
+          t('combat.luckDefenseBadge', { heal, luck, odds })
+        );
+    gambleBtn.onclick = resolve(onGamble);
+    container.appendChild(gambleBtn);
+
+    const skipBtn = buildOptionButton(t(kind === 'offense' ? 'combat.luckOffenseSkip' : 'combat.luckDefenseSkip'));
+    skipBtn.onclick = resolve(onSkip);
+    container.appendChild(skipBtn);
+
+    this.cs.engine.scrollNarrativeToBottom();
   }
 
   /**

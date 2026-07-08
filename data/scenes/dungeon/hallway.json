@@ -18,6 +18,10 @@
       "condition": { "flag": "goblins_pacified", "value": true }
     },
     {
+      "text": "The hallway is lined with flickering torches. A goblin guard and its scraggly grunt companion spot you and draw their weapons — and from somewhere above, you hear horns and hurried boots. The dungeon knows you're loose.",
+      "condition": { "flag": "dungeon_alarm", "value": true }
+    },
+    {
       "text": "The hallway is lined with flickering torches. A goblin guard and its scraggly grunt companion spot you and draw their weapons!"
     }
   ],
@@ -67,19 +71,37 @@
       "retryText": "Comb the hallway once more.",
       "skillCheck": "perception",
       "items": [
-        { "table": "basic_loot", "dc": 12, "increment": 0, "itemDrops": 2 }
+        { "table": "basic_loot", "dc": 12, "itemDrops": 2 }
       ]
     },
     {
       "text": "Slip past the goblins undetected.",
       "skillCheck": "stealth",
       "dc": 14,
-      "increment": 2,
       "condition": {
         "and": [
           { "flag": "defeated_goblin_guard", "value": false },
           { "flag": "goblins_pacified", "value": false }
         ]
+      },
+      "outcomes": {
+        "critical": {
+          "text": "You move like a rumor. Passing the guard's post you even lift a coin pouch from the sleeping grunt's belt.",
+          "actions": [
+            { "type": "set_flag", "flag": "goblins_snuck_past", "value": true },
+            { "type": "loot", "item": "home_rune", "amount": 1 },
+            { "type": "loot", "item": "gold", "amount": 8, "log": false },
+            { "type": "navigate", "destination": "dungeon_chamber" }
+          ]
+        },
+        "partial": {
+          "text": "You make it through — but a loose stone turns under your boot, and a thrown dagger grazes your shoulder as you sprint the last stretch.",
+          "actions": [
+            { "type": "set_flag", "flag": "goblins_snuck_past", "value": true },
+            { "type": "heal", "amount": -2, "log": "The graze burns. (-2 HP)" },
+            { "type": "navigate", "destination": "dungeon_chamber" }
+          ]
+        }
       },
       "actions": [
         { "type": "set_flag", "flag": "goblins_snuck_past", "value": true },
@@ -106,7 +128,19 @@
       ],
       "skillCheck": "charisma",
       "dc": 18,
-      "increment": 2,
+      "maxAttempts": 3,
+      "onExhausted": [
+        { "type": "log", "message": "The guard's patience snaps. \"Enough talk!\"" },
+        {
+          "type": "combat",
+          "enemies": ["goblin_guard", "goblin_grunt"],
+          "onVictory": [
+            { "type": "set_flag", "flag": "defeated_goblin_guard", "value": true },
+            { "type": "loot", "item": "gold", "amount": 13 },
+            { "type": "loot", "item": "home_rune", "amount": 1 }
+          ]
+        }
+      ],
       "condition": {
         "and": [
           { "flag": "defeated_goblin_guard", "value": false },

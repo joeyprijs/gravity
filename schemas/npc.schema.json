@@ -82,10 +82,20 @@
               "type": "object",
               "properties": {
                 "text": { "type": "string" },
+                "retryText": {
+                  "description": "Replacement response text once the check has been attempted this conversation: a string, or an array walked per failed attempt (clamped to the last entry).",
+                  "oneOf": [
+                    { "type": "string" },
+                    { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+                  ]
+                },
                 "condition": { "$ref": "scene.schema.json#/definitions/condition" },
                 "skillCheck": { "type": "string", "description": "Dynamic attribute ID (e.g. stealth, persuasion) to roll." },
+                "luckCheck": {
+                  "type": "boolean",
+                  "description": "Test Your Luck gamble instead of a skill roll (2d6 roll-under, luck -1 regardless). resolveOnce defaults to true."
+                },
                 "dc": { "type": "integer", "minimum": 1 },
-                "increment": { "type": "integer", "description": "Conversational DC escalation point added per failure." },
                 "actions": {
                   "type": "array",
                   "items": { "$ref": "scene.schema.json#/definitions/action" },
@@ -95,6 +105,26 @@
                   "type": "array",
                   "items": { "$ref": "scene.schema.json#/definitions/action" },
                   "description": "Action pipeline executed on failed conversational skill rolls."
+                },
+                "outcomes": { "$ref": "scene.schema.json#/definitions/outcomes" },
+                "resolveOnce": {
+                  "type": "boolean",
+                  "description": "The check rolls exactly once, then this response retires permanently — across conversations and saves."
+                },
+                "maxAttempts": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Attempt budget per conversation. When it runs out the response retires until the conversation restarts; onExhausted runs once."
+                },
+                "onExhausted": {
+                  "type": "array",
+                  "items": { "$ref": "scene.schema.json#/definitions/action" },
+                  "description": "Pipeline run once when maxAttempts is exhausted this conversation."
+                },
+                "timeCost": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Ticks this response advances the world clock. Dialogue is free unless set."
                 }
               },
               "required": ["text"],

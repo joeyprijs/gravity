@@ -9,8 +9,10 @@ export const GOLD_ITEM_ID = 'gold';
 // plugins. Centralised so each key format is defined exactly once — an inline
 // typo'd key would silently create a brand-new flag.
 export const FLAG_KEYS = {
-  skillDc:       (skillId, sceneId) => `skill_dc_${skillId}_${sceneId}`,
-  dialogueDc:    (npcId)            => `dialogue_dc_${npcId}`,
+  skillDc:           (skillId, sceneId) => `skill_dc_${skillId}_${sceneId}`,
+  dialogueDc:        (npcId)            => `dialogue_dc_${npcId}`,
+  dialogueResolved:  (npcId)            => `dialogue_resolved_${npcId}`,
+  passiveDone:       (sceneId, index)   => `passive_done_${sceneId}_${index}`,
   merchantStock: (npcId, itemId)    => `merchant_stock_${npcId}_${itemId}`,
   tradeDiscount: (npcId)            => `trade_discount_${npcId}`,
   friendly:      (npcId)            => `friendly_${npcId}`,
@@ -32,6 +34,10 @@ export const ACTIONS = {
   MANAGE_CHEST:    'manage_chest',
   MANAGE_EXHIBITS: 'manage_exhibits',
   ADD_DISPLAY:     'add_display',
+  ADVANCE_TIME:    'advance_time',
+  SET_TIMER:       'set_timer',
+  CANCEL_TIMER:    'cancel_timer',
+  RESTORE_LUCK:    'restore_luck',
 
   // Dialogue actions — registered by DialogueSystem (see dialogue.js). They
   // live in the same registry as the actions above; the camelCase names match
@@ -134,6 +140,9 @@ export const EL = {
   // Character creation overlay
   CHAR_CREATION:           'char-creation',
 
+  // Header
+  PLAYER_BASIC_STATS:      'player-basic-stats',
+
   // Sidebar tabs
   PLAYER_PANEL:            'player-panel',
   TAB_INVENTORY:           'inventory-tab',
@@ -147,6 +156,13 @@ export const EL = {
   FULLMAP_TITLE:           'fullmap-title',
   FULLMAP_CLOSE:           'fullmap-close',
 };
+
+// Action types a timer pipeline may contain. Timers fire from inside
+// advanceTime — potentially mid-option, mid-rest, or right before a combat
+// starts — so they are restricted to "quiet" actions that only change state
+// and log. The world reacts through flags, which already flow into scene
+// re-renders, option visibility, and dialogue gating naturally.
+export const TIMER_SAFE_ACTIONS = new Set(['set_flag', 'log', 'questTrigger', 'cancel_timer', 'set_timer']);
 
 // Canonical mission status values — used by QuestSystem, StateManager, QuestUI, and conditions.
 export const MISSION_STATUS = {

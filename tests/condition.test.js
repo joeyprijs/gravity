@@ -137,3 +137,76 @@ test('item leaf: item both in inventory and equipped aggregates count', () => {
   // Total 2 swords, does not satisfy count: 3
   assert.equal(evaluateCondition({ item: 'sword', count: 3 }, state), false);
 });
+
+// ── time / day / segment leaves ───────────────────────────────────────────────
+
+const TIME_RULES = {
+  ticksPerDay: 24,
+  startTick: 8,
+  segments: [
+    { id: 'morning', from: 6 },
+    { id: 'day',     from: 10 },
+    { id: 'night',   from: 22 },
+  ],
+};
+
+function makeTimeState(ticks, rules = { time: TIME_RULES }) {
+  const state = makeState();
+  state.getTicks = () => ticks;
+  state.getRules = () => rules;
+  return state;
+}
+
+test('time leaf: compares absolute elapsed ticks', () => {
+  assert.equal(evaluateCondition({ time: { at_least: 10 } }, makeTimeState(12)), true);
+  assert.equal(evaluateCondition({ time: { at_least: 10 } }, makeTimeState(9)), false);
+  assert.equal(evaluateCondition({ time: 5 }, makeTimeState(5)), true); // bare number = at_least
+});
+
+test('time leaf: a state without a clock evaluates against 0', () => {
+  assert.equal(evaluateCondition({ time: { at_least: 1 } }, makeState()), false);
+  assert.equal(evaluateCondition({ time: { at_most: 0 } }, makeState()), true);
+});
+
+test('day leaf: derives the 1-based day from rules.time', () => {
+  assert.equal(evaluateCondition({ day: { is: 1 } }, makeTimeState(0)), true);
+  assert.equal(evaluateCondition({ day: { at_least: 2 } }, makeTimeState(16)), true); // 16+8 = 24 → day 2
+});
+
+test('day leaf: false without rules.time', () => {
+  assert.equal(evaluateCondition({ day: { at_least: 1 } }, makeTimeState(0, null)), false);
+});
+
+test('segment leaf: matches the current day segment, including the pre-dawn wrap', () => {
+  assert.equal(evaluateCondition({ segment: 'morning' }, makeTimeState(0)), true);   // tick-of-day 8
+  assert.equal(evaluateCondition({ segment: 'day' }, makeTimeState(2)), true);        // 10
+  assert.equal(evaluateCondition({ segment: 'night' }, makeTimeState(18)), true);     // 2 → wraps to night
+  assert.equal(evaluateCondition({ segment: 'day' }, makeTimeState(0)), false);
+  assert.equal(evaluateCondition({ segment: 'day' }, makeTimeState(0, null)), false); // no config
+});
+
+// ── luck leaf ─────────────────────────────────────────────────────────────────
+
+test('luck leaf: compares the current luck resource', () => {
+  const state = makeState();
+  state.getPlayer = () => ({ resources: { gold: 0, luck: { current: 3, max: 9 } }, attributes: {}, inventory: [], equipment: {}, level: 1 });
+  assert.equal(evaluateCondition({ luck: { at_most: 3 } }, state), true);
+  assert.equal(evaluateCondition({ luck: { at_least: 4 } }, state), false);
+});
+
+test('luck leaf: games without the resource evaluate against 0', () => {
+  assert.equal(evaluateCondition({ luck: { at_most: 0 } }, makeState()), true);
+  assert.equal(evaluateCondition({ luck: { at_least: 1 } }, makeState()), false);
+});
+
+// ── custom attributes shadowing built-in leaves ───────────────────────────────
+
+test('a custom attribute named like a time/luck leaf keeps its attribute semantics', () => {
+  // Pre-existing games may define attributes named "luck" or "time"; their
+  // conditions must keep comparing the attribute, not the new systems.
+  const state = makeState({ attrs: { luck: 3, time: 5 } });
+  state.getPlayer = () => ({ resources: { gold: 0, luck: { current: 0, max: 9 } }, attributes: { luck: 3, time: 5 }, inventory: [], equipment: {}, level: 1 });
+  assert.equal(evaluateCondition({ luck: { at_least: 3 } }, state), true);  // attribute 3, resource 0
+  assert.equal(evaluateCondition({ time: { at_least: 5 } }, state), true);  // attribute 5, ticks 0
+  assert.equal(evaluateCondition({ time: { at_least: 6 } }, state), false);
+});

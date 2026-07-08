@@ -46,6 +46,9 @@ A browser-native, zero-dependency data-driven text RPG engine and creator suite.
 *   **Data-Driven Engine** — 100% of game assets (scenes, items, enemies, dialogues, quests, rules) are defined in static JSON; no JS coding is required to author a game.
 *   **D&D-Style Turn-Based Combat** — Round-robin combat utilizing d20 checks, initiatives, HP, Armor Class (AC), and Action Point (AP) budgets. Supports multi-enemy encounters and auto-combat scene entries.
 *   **Branching Screenplay Dialogues** — Branching conversation nodes with skill checks, item rewards, quest triggers, and stateful merchants supporting custom discounts.
+*   **Outcome-Tiered Skill Checks** — d20 checks with margin-based tiers (critical / success / partial / failure), one-shot fail-forward gambles, attempt budgets with authored exhaustion routes, passive checks, and free narrative beats. See [`docs/CHECKS.md`](docs/CHECKS.md).
+*   **A World Clock (opt-in)** — Player actions advance a deterministic tick counter; days and segments derive from rules, timers fire quiet pipelines, and conditions can read `time` / `day` / `segment`. No wall-clock, fully save-safe.
+*   **Luck (opt-in)** — A depleting Fighting-Fantasy-style resource: Test-Your-Luck gambles at 2d6-roll-under with odds shown, retry-costs-luck for skill checks, luck-restoring items, and optional combat gambles.
 *   **Interactive Maps HUD** — A dynamic scaled minimap projection in the sidebar and a full-screen scrollable coordinate map centered on the player.
 *   **Dynamic Sidebar Tab Panels** — Layout-driven tab generation compiled dynamically from rules definitions, supporting custom widgets (attributes, maps).
 *   **Character Creation Point-Buy** — Custom pre-game stat budgeting mapping dot-paths to player properties.
@@ -110,7 +113,7 @@ gravity/
 │   │   ├── dice.js          # roll() and NdF[+/-M] damage roll parsers
 │   │   ├── narrative.js     # Chronological log & scroll manager
 │   │   ├── quests.js        # Mission lifecycle and reward processor
-│   │   └── scene.js         # Room renderer, skill drops, and DC escalators
+│   │   └── scene.js         # Room renderer, skill checks, and outcome tiers
 │   ├── ui/
 │   │   ├── ui.js            # Reactive view controller & tab nav constructor
 │   │   ├── inventory-ui.js  # Inventory item lists & equipped slots
@@ -300,6 +303,9 @@ Boolean nodes evaluated inside option, dialogue, description, or skill blocks:
     *   `{ "level": 3 }` — Evaluates player level.
     *   `{ "mission": "escape", "status": "active" }` — Matches quest lifecycle.
     *   `{ "stealth": 2 }` — Matches player skill attribute thresholds.
+    *   `{ "time": { "at_least": 120 } }` — Absolute elapsed world-clock ticks.
+    *   `{ "day": { "at_least": 3 } }` / `{ "segment": "night" }` — Derived day and day-segment (requires `rules.time`).
+    *   `{ "luck": { "at_most": 2 } }` — Current luck resource (requires the opt-in luck resource).
 
 ---
 
@@ -342,15 +348,37 @@ A location the player can visit, supporting conditional text blocks, option grid
   "skills": [
     {
       "text": "Look Around",
+      "retryText": "Search the cellar again.",
       "skillCheck": "perception",
+      "maxAttempts": 4,
+      "onExhausted": [
+        { "type": "set_flag", "flag": "cellar_search_exhausted", "value": true }
+      ],
       "items": [
-        { "item": "cellar_key", "amount": 1, "dc": 10, "increment": 1 },
-        { "table": "basic_loot", "dc": 14, "increment": 2, "itemDrops": 2 }
+        { "item": "cellar_key", "amount": 1, "dc": 10 },
+        { "table": "basic_loot", "dc": 14, "itemDrops": 2 }
       ]
+    },
+    {
+      "text": "Climb the crumbling wall",
+      "skillCheck": "stealth",
+      "dc": 14,
+      "resolveOnce": true,
+      "outcomes": {
+        "critical": { "margin": 5, "text": "You scale it without a sound.", "actions": [] },
+        "partial":  { "margin": 3, "text": "You make it — barely.", "actions": [ { "type": "heal", "amount": -2 } ] }
+      },
+      "actions":   [ { "type": "navigate", "destination": "dungeon_corridor" } ],
+      "onFailure": [ { "type": "combat", "enemies": ["goblin_guard"] } ]
     }
+  ],
+  "passiveChecks": [
+    { "skillCheck": "perception", "dc": 13, "flag": "noticed_glint", "text": "Something catches the light." }
   ]
 }
 ```
+
+Skill checks resolve through margin-based **outcome tiers** — `critical`, `success`, `partial` (fail-forward), `failure` — plus `resolveOnce` one-shots, `maxAttempts` budgets with an authored `onExhausted` way out, optional `timeCost`, and `luckCheck` gambles. The full authoring guide is [`docs/CHECKS.md`](docs/CHECKS.md).
 
 ---
 
@@ -380,7 +408,7 @@ NPCs define aggressive monsters to fight, branching conversations, or shop merch
       "responses": [
         { 
           "text": "[Persuade] I mean no harm.",
-          "skillCheck": "charisma", "dc": 12, "increment": 2,
+          "skillCheck": "charisma", "dc": 12, "resolveOnce": true,
           "actions": [ { "type": "goToConversation", "node": "friendly" } ],
           "onFailure": [ { "type": "goToConversation", "node": "hostile" } ]
         },

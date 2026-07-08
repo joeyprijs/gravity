@@ -9,13 +9,19 @@
  * - gold: Resource metrics (e.g. `{ "gold": { "less_than": 50 } }`)
  * - level: Character status (e.g. `{ "level": 3 }`)
  * - mission: Quest states (e.g. `{ "mission": "escape", "status": "active" }`)
+ * - time: Absolute elapsed ticks (e.g. `{ "time": { "at_least": 120 } }`)
+ * - day: 1-based day number (e.g. `{ "day": { "at_least": 3 } }`) — needs rules.time
+ * - segment: Current day segment (e.g. `{ "segment": "night" }`) — needs rules.time
+ * - luck: Current luck resource (e.g. `{ "luck": { "at_most": 2 } }`) — needs a luck resource
  * - customAttributes: Dynamic skill values (e.g. `{ "stealth": { "more_than": 2 } }`)
- * 
+ *
  * Supported Tree Combinators:
  * - and: Returns true if every child evaluation passes.
  * - or: Returns true if at least one child evaluation passes.
  * - not: Inverts the evaluation of its child.
  */
+
+import { getDay, getSegment } from "./time.js";
 
 /**
  * Compares an actual numeric state value against a defined comparison rule.
@@ -86,6 +92,26 @@ export function evaluateCondition(condition, gameState) {
     return gameState.getMissionStatus(condition.mission) === condition.status;
   }
 
+  const player = gameState.getPlayer();
+  const attrs = player.attributes ?? {};
+
+  // TIME Leaves: absolute elapsed ticks; derived day number and day segment.
+  // Day and segment need rules.time (ticksPerDay / segments) — without that
+  // config the leaf evaluates false (validateGameData warns at load).
+  // A custom attribute sharing one of these names (or "luck") predates the
+  // leaf — the attribute keeps its original semantics via the attributes
+  // fallthrough below (validateGameData flags the collision).
+  if ('time' in condition && !('time' in attrs)) {
+    return compare(gameState.getTicks?.() ?? 0, condition.time);
+  }
+  if ('day' in condition && !('day' in attrs)) {
+    const day = getDay(gameState.getTicks?.() ?? 0, gameState.getRules?.()?.time);
+    return day === null ? false : compare(day, condition.day);
+  }
+  if ('segment' in condition && !('segment' in attrs)) {
+    return getSegment(gameState.getTicks?.() ?? 0, gameState.getRules?.()?.time) === condition.segment;
+  }
+
   // ITEM Leaf: Evaluates if the player possesses the item, checking quantities if "count" is specified.
   // Checks both the unequipped inventory and equipped slots.
   if ('item' in condition) {
@@ -94,8 +120,6 @@ export function evaluateCondition(condition, gameState) {
   }
 
   // Core character resources: evaluated via the general compare helper
-  const player = gameState.getPlayer();
-  
   if ('level' in condition) {
     return compare(player.level, condition.level);
   }
@@ -104,9 +128,14 @@ export function evaluateCondition(condition, gameState) {
     return compare(player.resources.gold, condition.gold);
   }
 
+  // LUCK Leaf: current luck resource — lets the world notice desperation or
+  // fortune. Games without the luck resource evaluate against 0.
+  if ('luck' in condition && !('luck' in attrs)) {
+    return compare(player.resources?.luck?.current ?? 0, condition.luck);
+  }
+
   // Custom attributes (e.g., perception, stealth, charisma) loaded dynamically
   // from rules.json. This lets the author create custom checks without writing code.
-  const attrs = player.attributes ?? {};
   for (const key of Object.keys(attrs)) {
     if (key in condition) {
       return compare(attrs[key], condition[key]);

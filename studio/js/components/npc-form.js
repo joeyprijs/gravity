@@ -1,9 +1,10 @@
 import { store, markDirty } from '../store.js';
-import { el, formRow, select, makeCollapsible, dcIncrementInputs, renderItemAmountList } from '../utils.js';
+import { el, formRow, select, makeCollapsible, dcInput, renderItemAmountList } from '../utils.js';
 import { EQUIPMENT_SLOTS } from '../contracts.js';
 import { showConfirm, toast } from '../ui.js';
 import { renderActionPipeline } from './actions.js';
 import { renderInlineCondition } from './condition-inline.js';
+import { renderCheckBehavior } from './check-fields.js';
 import { openDialogueGraph } from '../complex/nodes.js';
 
 export function renderNpcForm(key, data) {
@@ -285,6 +286,7 @@ function makeResponseCard(resp, i, node, onChange, rerender) {
 
   const body = el('div', { class: 'card-body' });
   body.appendChild(renderSkillCheckRow(resp, onChange));
+  body.appendChild(renderCheckBehavior(resp, onChange));
   const respCondWrap = el('div', { class: 'card-section' });
   respCondWrap.appendChild(renderInlineCondition(
     () => resp.condition,
@@ -319,12 +321,11 @@ function renderSkillCheckRow(resp, onChange) {
       v => {
         if (v) {
           resp.skillCheck = v;
+          delete resp.luckCheck;
           if (resp.dc == null) resp.dc = 10;
-          if (resp.increment == null) resp.increment = 1;
         } else {
           delete resp.skillCheck;
           delete resp.dc;
-          delete resp.increment;
         }
         onChange(); render();
       }
@@ -333,7 +334,7 @@ function renderSkillCheckRow(resp, onChange) {
     ctrl.appendChild(sel);
 
     if (resp.skillCheck) {
-      ctrl.append(...dcIncrementInputs(resp, onChange));
+      ctrl.append(...dcInput(resp, onChange));
     }
   }
 

@@ -183,3 +183,179 @@ test('flags a missing or non-positive xpPerLevel', () => {
   const issues = validate(data);
   assert.ok(issues.some(i => /xpPerLevel must be a positive number/.test(i.message)));
 });
+
+// ── Engagement-toolkit validations (outcomes, luck, time, timers, passive) ────
+
+const TOOLKIT_ACTIONS = new Set([...KNOWN_ACTIONS, 'advance_time', 'set_timer', 'cancel_timer', 'restore_luck', 'log']);
+
+// Extends the clean fixture with luck + time configuration so the new checks
+// have their backing config; tests then break specific pieces.
+function makeToolkitData() {
+  const data = makeCleanData();
+  data.rules.playerDefaults.resources = { luck: { current: 7, max: 9 } };
+  data.rules.time = {
+    ticksPerDay: 24,
+    startTick: 8,
+    segments: [{ id: 'morning', from: 6 }, { id: 'night', from: 22 }],
+    defaultCosts: { navigate: 1 },
+  };
+  data.locale.time = { segments: { morning: 'Morning', night: 'Night' } };
+  return data;
+}
+
+function issuesFor(data) {
+  normalizeCarriedItems(data.npcs);
+  return validateGameData(data, TOOLKIT_ACTIONS).map(i => i.message);
+}
+
+test('toolkit fixture validates cleanly', () => {
+  assert.deepEqual(issuesFor(makeToolkitData()), []);
+});
+
+test('flags the removed increment field on checks and discovery items', () => {
+  const data = makeToolkitData();
+  data.scenes.cave.skills[0].items[0].increment = 2;
+  data.npcs.elder.conversations.start.responses[0].skillCheck = 'perception';
+  data.npcs.elder.conversations.start.responses[0].dc = 10;
+  data.npcs.elder.conversations.start.responses[0].increment = 1;
+  const messages = issuesFor(data);
+  assert.equal(messages.filter(m => m.includes('"increment" (DC escalation) was removed')).length, 2);
+});
+
+test('flags luckCheck conflicts and luckCheck without the luck resource', () => {
+  const data = makeToolkitData();
+  data.scenes.cave.skills.push({ text: 'Gamble', luckCheck: true, skillCheck: 'perception', dc: 5 });
+  let messages = issuesFor(data);
+  assert.ok(messages.some(m => m.includes('both luckCheck and skillCheck')));
+  assert.ok(messages.some(m => m.includes('luckCheck takes no DC')));
+
+  const noLuck = makeToolkitData();
+  delete noLuck.rules.playerDefaults.resources;
+  noLuck.scenes.cave.skills.push({ text: 'Gamble', luckCheck: true });
+  messages = issuesFor(noLuck);
+  assert.ok(messages.some(m => m.includes('luckCheck requires a luck resource')));
+});
+
+test('flags luckCheck with item drops — the discovery flow never runs', () => {
+  const data = makeToolkitData();
+  data.scenes.cave.skills.push({ text: 'Gamble', luckCheck: true, items: [{ item: 'sword', dc: 10 }] });
+  const messages = issuesFor(data);
+  assert.ok(messages.some(m => m.includes('luckCheck with item drops')));
+
+  // An empty leftover items array (Studio initializes one) is fine.
+  const clean = makeToolkitData();
+  clean.scenes.cave.skills.push({ text: 'Gamble', luckCheck: true, items: [] });
+  assert.ok(!issuesFor(clean).some(m => m.includes('luckCheck with item drops')));
+});
+
+test('flags a startTick outside [0, ticksPerDay)', () => {
+  for (const bad of [-1, 24, 'noon']) {
+    const data = makeToolkitData();
+    data.rules.time.startTick = bad;
+    assert.ok(issuesFor(data).some(m => m.includes('time.startTick')), `startTick ${bad} should be flagged`);
+  }
+  const edge = makeToolkitData();
+  edge.rules.time.startTick = 23;
+  assert.ok(!issuesFor(edge).some(m => m.includes('time.startTick')));
+});
+
+test('flags unknown outcome tiers and double-defined tier pipelines', () => {
+  const data = makeToolkitData();
+  data.scenes.cave.skills.push({
+    text: 'Climb', skillCheck: 'perception', dc: 10,
+    actions: [{ type: 'set_flag', flag: 'x', value: true }],
+    outcomes: { fumble: {}, success: { actions: [{ type: 'set_flag', flag: 'y', value: true }] } },
+  });
+  const messages = issuesFor(data);
+  assert.ok(messages.some(m => m.includes('unknown outcomes tier "fumble"')));
+  assert.ok(messages.some(m => m.includes('both "actions" and outcomes.success.actions')));
+});
+
+test('flags redundant or inert attempt-budget combinations', () => {
+  const data = makeToolkitData();
+  data.scenes.cave.skills.push(
+    { text: 'A', skillCheck: 'perception', dc: 10, resolveOnce: true, maxAttempts: 3 },
+    { text: 'B', skillCheck: 'perception', dc: 10, onExhausted: [{ type: 'set_flag', flag: 'x', value: true }] },
+    { text: 'C', skillCheck: 'perception', dc: 10, maxAttempts: 2 },
+  );
+  const messages = issuesFor(data);
+  assert.ok(messages.some(m => m.includes('resolveOnce makes maxAttempts redundant')));
+  assert.ok(messages.some(m => m.includes('onExhausted never runs without maxAttempts')));
+  assert.ok(messages.some(m => m.includes('maxAttempts without onExhausted')));
+});
+
+test('flags unsafe actions inside timer pipelines and missing timer ids', () => {
+  const data = makeToolkitData();
+  data.scenes.cave.options.push({
+    text: 'Arm',
+    actions: [
+      { type: 'set_timer', id: 'alarm', afterTicks: 5, actions: [{ type: 'combat', enemies: ['goblin'] }] },
+      { type: 'set_timer', afterTicks: 5, actions: [] },
+    ],
+  });
+  const messages = issuesFor(data);
+  assert.ok(messages.some(m => m.includes('not allowed in timer pipelines')));
+  assert.ok(messages.some(m => m.includes('set_timer needs an "id"')));
+});
+
+test('flags advance_time to an unknown segment', () => {
+  const data = makeToolkitData();
+  data.scenes.cave.options.push({ text: 'Nap', actions: [{ type: 'advance_time', until: 'dusk' }] });
+  assert.ok(issuesFor(data).some(m => m.includes('unknown segment "dusk"')));
+});
+
+test('flags day/segment conditions without time config and unknown segments', () => {
+  const data = makeToolkitData();
+  data.scenes.cave.options.push({ text: 'X', condition: { segment: 'dusk' }, actions: [] });
+  assert.ok(issuesFor(data).some(m => m.includes('unknown segment "dusk"')));
+
+  const noTime = makeToolkitData();
+  delete noTime.rules.time;
+  noTime.scenes.cave.options.push({ text: 'X', condition: { day: { at_least: 2 } }, actions: [] });
+  noTime.scenes.cave.options.push({ text: 'Y', condition: { segment: 'morning' }, actions: [] });
+  const messages = issuesFor(noTime);
+  assert.ok(messages.some(m => m.includes('uses "day" but rules.time.ticksPerDay')));
+  assert.ok(messages.some(m => m.includes('uses "segment" but rules.time.segments')));
+});
+
+test('flags luck knobs and restore_luck in games without the luck resource', () => {
+  const data = makeToolkitData();
+  delete data.rules.playerDefaults.resources;
+  data.rules.skillRetryLuckCost = 1;
+  data.rules.combatLuck = true;
+  data.scenes.cave.options.push({ text: 'Pray', actions: [{ type: 'restore_luck', amount: 1 }] });
+  const messages = issuesFor(data);
+  assert.ok(messages.some(m => m.includes('skillRetryLuckCost is set but')));
+  assert.ok(messages.some(m => m.includes('combatLuck is set but')));
+  assert.ok(messages.some(m => m.includes('restore_luck without a luck resource')));
+});
+
+test('flags malformed time config: bad segments, ranges, costs, locale entries', () => {
+  const data = makeToolkitData();
+  data.rules.time.segments.push({ id: 'ghost', from: 99 });
+  data.rules.time.defaultCosts.teleport = 1;
+  data.rules.time.defaultCosts.navigate = -1;
+  const messages = issuesFor(data);
+  assert.ok(messages.some(m => m.includes('"from" (99) must be within')));
+  assert.ok(messages.some(m => m.includes('missing locale entry at time.segments.ghost')));
+  assert.ok(messages.some(m => m.includes('unknown kind "teleport"')));
+  assert.ok(messages.some(m => m.includes('defaultCosts.navigate: must be a non-negative number')));
+});
+
+test('flags passive checks without a flag or skillCheck', () => {
+  const data = makeToolkitData();
+  data.scenes.cave.passiveChecks = [
+    { skillCheck: 'perception', dc: 10 },
+    { dc: 10, flag: 'noticed' },
+  ];
+  const messages = issuesFor(data);
+  assert.ok(messages.some(m => m.includes('missing "flag"')));
+  assert.ok(messages.some(m => m.includes('missing "skillCheck"')));
+});
+
+test('reserved condition keys now include the time and luck leaves', () => {
+  const data = makeToolkitData();
+  data.rules.customAttributes.push({ id: 'segment', default: 0 });
+  data.locale.actions.skillBadge.segment = 'SEG {dc}';
+  assert.ok(issuesFor(data).some(m => m.includes('"segment": name is reserved')));
+});

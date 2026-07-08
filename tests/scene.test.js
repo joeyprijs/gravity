@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { gameState } from '../src/core/state.js';
 import { SceneRenderer } from '../src/systems/scene.js';
 import { FLAG_KEYS } from '../src/core/config.js';
+import { getAttempts, recordAttempt } from '../src/systems/skill-checks.js';
 
 // Minimal DOM stand-in — just enough for createElement/buildOptionButton to run
 // headless. Elements are only built by the code under test, never queried back.
@@ -184,21 +185,58 @@ test('_awardDiscoveredLoot: nothing found logs nothing', () => {
 
 // ── _resolveDiscovery ─────────────────────────────────────────────────────────
 
-test('_resolveDiscovery: hits mark items found, misses escalate their DC', () => {
+test('_resolveDiscovery: hits mark items found, misses stay at their base DC', () => {
   const { sr } = makeSR();
   gameState.setCurrentSceneId('cell');
-  const opt = { skillCheck: 'perception', items: [{ item: 'healing_potion', dc: 5 }, { item: 'rusty_sword', dc: 15, increment: 2 }] };
-  const state = { dcs: [5, 15], found: [false, false] };
+  const opt = { skillCheck: 'perception', items: [{ item: 'healing_potion', dc: 5 }, { item: 'rusty_sword', dc: 15 }] };
+  const state = { found: [false, false] };
   const skillKey = FLAG_KEYS.skillDc('perception', 'cell');
 
   mock.method(Math, 'random', () => 0.45); // roll(1,20) = 10: ≥5 hits, <15 misses
-  sr._resolveDiscovery(opt, state, skillKey, {});
+  sr._resolveDiscovery(opt, 0, state, skillKey, {});
 
-  const saved = gameState.getFlag(skillKey);
+  const saved = gameState.getFlag(skillKey).disc_0;
   assert.deepEqual(saved.found, [true, false]);
-  assert.deepEqual(saved.dcs, [5, 17]);
+  assert.equal(saved.tries, 1);
+  assert.ok(!saved.resolved);
   assert.ok(gameState.getPlayer().inventory.find(i => i.item === 'healing_potion'));
   assert.equal(sr.renderOptions.mock.callCount(), 1);
+});
+
+test('_resolveDiscovery: maxAttempts exhaustion retires the check and runs onExhausted', () => {
+  const { sr, engine } = makeSR();
+  gameState.setCurrentSceneId('cell');
+  const ranPipelines = [];
+  engine.runActions = (actions) => ranPipelines.push(actions);
+  const opt = {
+    skillCheck: 'perception',
+    maxAttempts: 2,
+    onExhausted: [{ type: 'set_flag', flag: 'gave_up', value: true }],
+    items: [{ item: 'rusty_sword', dc: 25 }],
+  };
+  const skillKey = FLAG_KEYS.skillDc('perception', 'cell');
+
+  mock.method(Math, 'random', () => 0); // roll 1: never finds anything
+  sr._resolveDiscovery(opt, 0, { found: [false] }, skillKey, {});
+  assert.ok(!gameState.getFlag(skillKey).disc_0.resolved);
+  assert.equal(ranPipelines.length, 0);
+
+  sr._resolveDiscovery(opt, 0, gameState.getFlag(skillKey).disc_0, skillKey, {});
+  assert.ok(gameState.getFlag(skillKey).disc_0.resolved);
+  assert.deepEqual(ranPipelines, [opt.onExhausted]);
+});
+
+test('_resolveDiscovery: resolveOnce retires the check after a single roll', () => {
+  const { sr } = makeSR();
+  gameState.setCurrentSceneId('cell');
+  const opt = { skillCheck: 'perception', resolveOnce: true, items: [{ item: 'rusty_sword', dc: 25 }] };
+  const skillKey = FLAG_KEYS.skillDc('perception', 'cell');
+
+  mock.method(Math, 'random', () => 0); // roll 1: nothing found
+  sr._resolveDiscovery(opt, 0, { found: [false] }, skillKey, {});
+  assert.ok(gameState.getFlag(skillKey).disc_0.resolved);
+  // A retired check no longer renders a button.
+  assert.equal(sr._buildItemDiscoveryButton(opt, 0, 'cell', {}), null);
 });
 
 test('_resolveDiscovery: log key reflects found / found-more / fail', () => {
@@ -208,15 +246,15 @@ test('_resolveDiscovery: log key reflects found / found-more / fail', () => {
 
   // Each discovery logs the roll outcome first, then the found-loot summary.
   mock.method(Math, 'random', () => 0.45); // roll 10: one hit, one miss → more to find
-  sr._resolveDiscovery(opt, { dcs: [5, 15], found: [false, false] }, skillKey, {});
+  sr._resolveDiscovery(opt, 0, { found: [false, false] }, skillKey, {});
   assert.equal(calls.logs[0].message, 'actions.lookAroundFoundMore');
 
   mock.method(Math, 'random', () => 0.95); // roll 20: last item found
-  sr._resolveDiscovery(opt, { dcs: [5, 16], found: [true, false] }, skillKey, {});
+  sr._resolveDiscovery(opt, 0, { found: [true, false] }, skillKey, {});
   assert.equal(calls.logs[2].message, 'actions.lookAroundFound');
 
   mock.method(Math, 'random', () => 0); // roll 1: nothing found
-  sr._resolveDiscovery(opt, { dcs: [5, 15], found: [false, false] }, skillKey, {});
+  sr._resolveDiscovery(opt, 0, { found: [false, false] }, skillKey, {});
   assert.equal(calls.logs.at(-1).message, 'actions.lookAroundFail');
 });
 
@@ -241,26 +279,26 @@ test('_registerInitialDisplays: leaves save-restored displays untouched', () => 
   assert.equal(displays[0].id, 'from_save');
 });
 
-test('_resetSkillDcs: pass/fail checks reset their escalation map on re-entry', () => {
+test('_resetSkillAttempts: clears attempt counters but keeps resolution markers', () => {
   const { sr } = makeSR();
   const key = FLAG_KEYS.skillDc('lockpick', 'cell');
-  gameState.setFlag(key, { 0: 16 });
-  sr._resetSkillDcs({ skills: [{ skillCheck: 'lockpick', dc: 10 }] }, 'cell');
-  assert.deepEqual(gameState.getFlag(key), {});
+  gameState.setFlag(key, { tries_0: 2, resolved_1: true });
+  sr._resetSkillAttempts({ skills: [{ skillCheck: 'lockpick', dc: 10 }] }, 'cell');
+  assert.deepEqual(gameState.getFlag(key), { resolved_1: true });
 });
 
-test('_resetSkillDcs: item discovery resets DCs but keeps found items', () => {
+test('_resetSkillAttempts: discovery keeps found items and resolution, drops tries', () => {
   const { sr } = makeSR();
   const key = FLAG_KEYS.skillDc('perception', 'cell');
-  gameState.setFlag(key, { dcs: [9, 19], found: [true, false] });
-  sr._resetSkillDcs({ skills: [{ skillCheck: 'perception', items: [{ dc: 5 }, { dc: 15 }] }] }, 'cell');
-  assert.deepEqual(gameState.getFlag(key), { dcs: [5, 15], found: [true, false] });
+  gameState.setFlag(key, { found: [true, false], tries: 3, resolved: true });
+  sr._resetSkillAttempts({ skills: [{ skillCheck: 'perception', items: [{ dc: 5 }, { dc: 15 }] }] }, 'cell');
+  assert.deepEqual(gameState.getFlag(key), { found: [true, false], resolved: true });
 });
 
-test('_resetSkillDcs: discovery checks never attempted are left alone', () => {
+test('_resetSkillAttempts: checks never attempted are left alone', () => {
   const { sr } = makeSR();
   const key = FLAG_KEYS.skillDc('perception', 'cell');
-  sr._resetSkillDcs({ skills: [{ skillCheck: 'perception', items: [{ dc: 5 }] }] }, 'cell');
+  sr._resetSkillAttempts({ skills: [{ skillCheck: 'perception', items: [{ dc: 5 }] }] }, 'cell');
   assert.equal(gameState.getFlag(key), false);
 });
 
@@ -377,4 +415,250 @@ test('_buildPassFailButton: failure whose onFailure opens a custom UI skips the 
   );
   btn.onclick();
   assert.equal(sr.renderOptions.mock.callCount(), 0);
+});
+
+// ── Outcome tiers, resolveOnce, maxAttempts ──────────────────────────────────
+
+const LUCK_SCENE_RULES = {
+  ...TEST_RULES,
+  playerDefaults: {
+    ...TEST_RULES.playerDefaults,
+    resources: { ...TEST_RULES.playerDefaults.resources, luck: { current: 7, max: 9 } },
+  },
+};
+
+test('_buildPassFailButton: partial tier runs its pipeline and still counts an attempt', () => {
+  const { sr, engine } = makeSR();
+  gameState.setCurrentSceneId('cell');
+  const ran = [];
+  engine.runActions = (a) => ran.push(a);
+  const partialActions = [{ type: 'set_flag', flag: 'grazed', value: true }];
+  const opt = { text: 'Sneak', skillCheck: 'perception', dc: 12, outcomes: { partial: { margin: 3, actions: partialActions } } };
+  const btn = sr._buildPassFailButton(opt, 0, 'cell', {});
+  mock.method(Math, 'random', () => 0.5); // roll 11 vs DC 12 → margin -1 → partial
+  btn.onclick();
+  assert.deepEqual(ran, [partialActions]);
+  assert.equal(getAttempts(FLAG_KEYS.skillDc('perception', 'cell'), 0), 1);
+});
+
+test('_buildPassFailButton: resolveOnce retires the check after a single roll', () => {
+  const { sr } = makeSR();
+  gameState.setCurrentSceneId('cell');
+  const opt = { text: 'Leap', skillCheck: 'perception', dc: 15, resolveOnce: true };
+  const btn = sr._buildPassFailButton(opt, 0, 'cell', {});
+  mock.method(Math, 'random', () => 0); // roll 1 — failure
+  btn.onclick();
+  assert.equal(sr._buildPassFailButton(opt, 0, 'cell', {}), null);
+});
+
+test('_buildPassFailButton: exhausting maxAttempts runs onExhausted and retires the check', () => {
+  const { sr, engine } = makeSR();
+  gameState.setCurrentSceneId('cell');
+  const ran = [];
+  engine.runActions = (a) => ran.push(a);
+  const onExhausted = [{ type: 'set_flag', flag: 'gave_up', value: true }];
+  const opt = { text: 'Plead', skillCheck: 'perception', dc: 18, maxAttempts: 2, onExhausted };
+  mock.method(Math, 'random', () => 0); // always roll 1 — failure
+
+  sr._buildPassFailButton(opt, 0, 'cell', {}).onclick();
+  assert.ok(!ran.includes(onExhausted));
+
+  sr._buildPassFailButton(opt, 0, 'cell', {}).onclick();
+  assert.ok(ran.includes(onExhausted));
+  assert.equal(sr._buildPassFailButton(opt, 0, 'cell', {}), null);
+});
+
+test('_buildPassFailButton: retries cost luck when configured, and block at zero luck', () => {
+  gameState.init(LUCK_SCENE_RULES);
+  const { sr, engine } = makeSR();
+  engine.data.rules = { skillRetryLuckCost: 2 };
+  gameState.setCurrentSceneId('cell');
+  const key = FLAG_KEYS.skillDc('perception', 'cell');
+  const opt = { text: 'Pick the lock', skillCheck: 'perception', dc: 15 };
+
+  // First attempt is free — no luck spent.
+  mock.method(Math, 'random', () => 0);
+  sr._buildPassFailButton(opt, 0, 'cell', {}).onclick();
+  assert.equal(gameState.getPlayer().resources.luck.current, 7);
+  assert.equal(getAttempts(key, 0), 1);
+
+  // Retry spends the configured luck cost before rolling.
+  sr._buildPassFailButton(opt, 0, 'cell', {}).onclick();
+  assert.equal(gameState.getPlayer().resources.luck.current, 5);
+
+  // At insufficient luck the retry renders disabled.
+  gameState.modifyPlayerStat('luck', -5);
+  const blocked = sr._buildPassFailButton(opt, 0, 'cell', {});
+  assert.equal(blocked.disabled, true);
+});
+
+// ── Narrative (free) checks ───────────────────────────────────────────────────
+
+test('_buildNarrativeButton: logs resultText, runs actions, and retires after one use', () => {
+  const { sr, engine, calls } = makeSR();
+  gameState.setCurrentSceneId('cell');
+  const ran = [];
+  engine.runActions = (a) => ran.push(a);
+  const actions = [{ type: 'set_flag', flag: 'read_tracks', value: true }];
+  const opt = { text: 'Study the tracks', skillCheck: 'perception', resultText: 'Old footprints.', actions };
+
+  const btn = sr._buildNarrativeButton(opt, 0, 'cell', {});
+  btn.onclick();
+  assert.ok(calls.logs.some(l => l.message === 'Old footprints.'));
+  assert.deepEqual(ran, [actions]);
+  assert.equal(sr._buildNarrativeButton(opt, 0, 'cell', {}), null);
+});
+
+test('_buildNarrativeButton: repeatable checks walk resultText variants per use', () => {
+  const { sr, calls } = makeSR();
+  gameState.setCurrentSceneId('cell');
+  const opt = { text: 'Listen', skillCheck: 'perception', repeatable: true, resultText: ['Dripping water.', 'Still dripping.'] };
+
+  sr._buildNarrativeButton(opt, 0, 'cell', {}).onclick();
+  assert.ok(calls.logs.some(l => l.message === 'Dripping water.'));
+  const again = sr._buildNarrativeButton(opt, 0, 'cell', {});
+  assert.notEqual(again, null);
+  again.onclick();
+  assert.ok(calls.logs.some(l => l.message === 'Still dripping.'));
+});
+
+test('_buildNarrativeButton: without resultText falls back to the locale line', () => {
+  const { sr, calls } = makeSR();
+  gameState.setCurrentSceneId('cell');
+  sr._buildNarrativeButton({ text: 'Look', skillCheck: 'perception' }, 0, 'cell', {}).onclick();
+  assert.ok(calls.logs.some(l => l.message === 'actions.lookAroundEmpty'));
+});
+
+// ── Test Your Luck ────────────────────────────────────────────────────────────
+
+test('_buildLuckButton: lucky runs actions and the gamble retires by default', () => {
+  gameState.init(LUCK_SCENE_RULES);
+  const { sr, engine } = makeSR();
+  gameState.setCurrentSceneId('cell');
+  const ran = [];
+  engine.runActions = (a) => ran.push(a);
+  const actions = [{ type: 'loot', item: 'healing_potion' }];
+  const opt = { text: 'Wrench the rubble', luckCheck: true, actions, onFailure: [{ type: 'heal', amount: -2 }] };
+
+  mock.method(Math, 'random', () => 0); // 2d6 = 2 ≤ 7 → lucky
+  sr._buildLuckButton(opt, 0, 'cell', {}).onclick();
+  assert.deepEqual(ran, [actions]);
+  assert.equal(gameState.getPlayer().resources.luck.current, 6); // spent regardless
+  assert.equal(sr._buildLuckButton(opt, 0, 'cell', {}), null);   // resolved
+});
+
+test('_buildLuckButton: unlucky runs onFailure; resolveOnce false keeps the gamble', () => {
+  gameState.init(LUCK_SCENE_RULES);
+  const { sr, engine } = makeSR();
+  gameState.setCurrentSceneId('cell');
+  const ran = [];
+  engine.runActions = (a) => ran.push(a);
+  const onFailure = [{ type: 'heal', amount: -2 }];
+  const opt = { text: 'Wrench', luckCheck: true, resolveOnce: false, actions: [], onFailure };
+
+  mock.method(Math, 'random', () => 0.99); // 2d6 = 12 > 7 → unlucky
+  sr._buildLuckButton(opt, 0, 'cell', {}).onclick();
+  assert.deepEqual(ran, [onFailure]);
+  assert.notEqual(sr._buildLuckButton(opt, 0, 'cell', {}), null);
+});
+
+test('_buildLuckButton: hidden in games without the luck resource', () => {
+  const { sr } = makeSR();
+  gameState.setCurrentSceneId('cell');
+  assert.equal(sr._buildLuckButton({ text: 'Gamble', luckCheck: true }, 0, 'cell', {}), null);
+});
+
+// ── Passive checks ────────────────────────────────────────────────────────────
+
+test('_rollPassiveChecks: writes the flag once, returns success texts, never re-rolls', () => {
+  const { sr } = makeSR();
+  const scene = { passiveChecks: [{ skillCheck: 'perception', dc: 10, flag: 'noticed', text: 'A glint.' }] };
+
+  mock.method(Math, 'random', () => 0.99); // roll 20 — success
+  assert.deepEqual(sr._rollPassiveChecks(scene, 'cell'), ['A glint.']);
+  assert.equal(gameState.getFlag('noticed'), true);
+
+  // Re-entry: already rolled — nothing changes even with a losing roll queued.
+  mock.method(Math, 'random', () => 0);
+  assert.deepEqual(sr._rollPassiveChecks(scene, 'cell'), []);
+  assert.equal(gameState.getFlag('noticed'), true);
+});
+
+test('_rollPassiveChecks: failure writes false and stays silent', () => {
+  const { sr } = makeSR();
+  const scene = { passiveChecks: [{ skillCheck: 'perception', dc: 15, flag: 'noticed', text: 'A glint.' }] };
+  mock.method(Math, 'random', () => 0); // roll 1 — failure
+  assert.deepEqual(sr._rollPassiveChecks(scene, 'cell'), []);
+  assert.equal(gameState.getFlag('noticed'), false);
+});
+
+// ── Time costs ────────────────────────────────────────────────────────────────
+
+test('handleOption: navigate options charge the default travel cost before the pipeline', () => {
+  const { sr, engine } = makeSR({ scenes: { cell: {} } });
+  engine.data.rules = { time: { defaultCosts: { navigate: 2 } } };
+  const charged = [];
+  engine.advanceTime = (n) => charged.push(n);
+  gameState.setCurrentSceneId('cell');
+  sr.handleOption({ text: 'Go', actions: [{ type: 'navigate', destination: 'exit' }] });
+  assert.deepEqual(charged, [2]);
+});
+
+test('handleOption: an explicit timeCost of 0 opts out of the default', () => {
+  const { sr, engine } = makeSR({ scenes: { cell: {} } });
+  engine.data.rules = { time: { defaultCosts: { navigate: 2 } } };
+  const charged = [];
+  engine.advanceTime = (n) => charged.push(n);
+  gameState.setCurrentSceneId('cell');
+  sr.handleOption({ text: 'Go', timeCost: 0, actions: [{ type: 'navigate', destination: 'exit' }] });
+  assert.deepEqual(charged, []);
+});
+
+test('skill attempts charge the skillAttempt default (or their explicit timeCost)', () => {
+  const { sr, engine } = makeSR();
+  engine.data.rules = { time: { defaultCosts: { skillAttempt: 1 } } };
+  const charged = [];
+  engine.advanceTime = (n) => charged.push(n);
+  gameState.setCurrentSceneId('cell');
+  mock.method(Math, 'random', () => 0);
+  sr._buildPassFailButton({ text: 'Try', skillCheck: 'perception', dc: 10 }, 0, 'cell', {}).onclick();
+  sr._buildPassFailButton({ text: 'Try', skillCheck: 'perception', dc: 10, timeCost: 5 }, 1, 'cell', {}).onclick();
+  assert.deepEqual(charged, [1, 5]);
+});
+
+// ── Shared-skill flag map: discovery must not clobber sibling check state ────
+
+test('discovery state is namespaced: a search never revives a resolved sibling check', () => {
+  // Regression: a scene with "Look Around" (discovery) and a resolveOnce
+  // pass/fail check on the SAME skill. Discovery used to overwrite the whole
+  // shared flag map, wiping the sibling's resolution marker — letting a
+  // one-shot check (and its reward) repeat forever.
+  const { sr } = makeSR();
+  gameState.setCurrentSceneId('chamber');
+  const skillKey = FLAG_KEYS.skillDc('perception', 'chamber');
+  const climb = { text: 'Climb', skillCheck: 'perception', dc: 12, resolveOnce: true };
+  const search = { text: 'Look Around', skillCheck: 'perception', items: [{ item: 'rusty_sword', dc: 25 }] };
+
+  // Climb once (failure) — resolveOnce retires it.
+  mock.method(Math, 'random', () => 0);
+  sr._buildPassFailButton(climb, 1, 'chamber', {}).onclick();
+  assert.equal(sr._buildPassFailButton(climb, 1, 'chamber', {}), null);
+
+  // Search the same scene with the same skill.
+  sr._buildItemDiscoveryButton(search, 0, 'chamber', {}).onclick();
+
+  // The climb must STAY resolved, and the discovery state lives alongside it.
+  assert.equal(sr._buildPassFailButton(climb, 1, 'chamber', {}), null);
+  assert.deepEqual(gameState.getFlag(skillKey).disc_0.found, [false]);
+});
+
+test('discovery adopts legacy top-level state from older saves', () => {
+  const { sr } = makeSR();
+  gameState.setCurrentSceneId('cell');
+  const skillKey = FLAG_KEYS.skillDc('perception', 'cell');
+  gameState.setFlag(skillKey, { dcs: [5], found: [true], tries: 2 });
+  const opt = { text: 'Look', skillCheck: 'perception', items: [{ item: 'rusty_sword', dc: 5 }] };
+
+  // Everything already found in the legacy state → no button.
+  assert.equal(sr._buildItemDiscoveryButton(opt, 0, 'cell', {}), null);
 });

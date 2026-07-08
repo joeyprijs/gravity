@@ -103,6 +103,11 @@
           "actions": {
             "type": "array",
             "items": { "$ref": "#/definitions/action" }
+          },
+          "timeCost": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Ticks this option advances the world clock. Overrides rules.time.defaultCosts; 0 opts out explicitly."
           }
         },
         "required": ["text"],
@@ -116,25 +121,59 @@
         "properties": {
           "text": { "type": "string" },
           "retryText": {
-            "description": "Replacement option/log text once the check has been attempted: a string, or an array walked per failed attempt (clamped to the last entry). Attempt counts reset on scene re-entry, like escalated DCs.",
+            "description": "Replacement option/log text once the check has been attempted: a string, or an array walked per failed attempt (clamped to the last entry). Attempt counts reset on scene re-entry.",
             "oneOf": [
               { "type": "string" },
               { "type": "array", "items": { "type": "string" }, "minItems": 1 }
             ]
           },
           "skillCheck": { "type": "string", "description": "Attribute ID to roll d20 check against." },
+          "luckCheck": {
+            "type": "boolean",
+            "description": "Test Your Luck gamble instead of a skill roll: 2d6 at or under current luck, then luck -1 regardless. No DC — the player's own luck is the difficulty. resolveOnce defaults to true."
+          },
           "dc": { "type": "integer", "minimum": 1 },
-          "increment": { "type": "integer", "description": "Difficulty escalation points added per failure." },
           "condition": { "$ref": "#/definitions/condition" },
           "actions": {
             "type": "array",
             "items": { "$ref": "#/definitions/action" },
-            "description": "Action pipeline executed on successful checks."
+            "description": "Action pipeline executed on successful checks (shorthand for outcomes.success.actions)."
           },
           "onFailure": {
             "type": "array",
             "items": { "$ref": "#/definitions/action" },
-            "description": "Action pipeline executed on failed checks."
+            "description": "Action pipeline executed on failed checks (shorthand for outcomes.failure.actions)."
+          },
+          "outcomes": { "$ref": "#/definitions/outcomes" },
+          "resolveOnce": {
+            "type": "boolean",
+            "description": "Fail-forward: the check rolls exactly once and then retires permanently, whatever the tier. Route the failure/partial tiers somewhere real."
+          },
+          "maxAttempts": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Attempt budget. When it runs out without a success the check retires and onExhausted runs."
+          },
+          "onExhausted": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/action" },
+            "description": "Pipeline run once when maxAttempts is exhausted — the authored way out (fail-forward alternative route)."
+          },
+          "resultText": {
+            "description": "Narrative checks (no dc, no items): the narration logged on use. A string, or an array walked per use (clamped to the last entry).",
+            "oneOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+            ]
+          },
+          "repeatable": {
+            "type": "boolean",
+            "description": "Narrative checks: keep the option available after use instead of retiring it."
+          },
+          "timeCost": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Ticks one attempt advances the world clock. Overrides rules.time.defaultCosts.skillAttempt; 0 opts out explicitly."
           },
           "items": {
             "type": "array",
@@ -146,14 +185,32 @@
                 "table": { "type": "string", "description": "Loot table ID to draw random drop." },
                 "amount": { "type": "integer", "minimum": 1 },
                 "itemDrops": { "type": "integer", "minimum": 1 },
-                "dc": { "type": "integer", "minimum": 1 },
-                "increment": { "type": "integer" }
+                "dc": { "type": "integer", "minimum": 1 }
               },
               "additionalProperties": false
             }
           }
         },
-        "required": ["text", "skillCheck"],
+        "required": ["text"],
+        "anyOf": [
+          { "required": ["skillCheck"] },
+          { "required": ["luckCheck"] }
+        ],
+        "additionalProperties": false
+      }
+    },
+    "passiveChecks": {
+      "type": "array",
+      "description": "Checks auto-rolled silently on the player's first entry, writing pass/fail into an author-named flag that conditions and description variants read. Rolled once per game.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "skillCheck": { "type": "string", "description": "Attribute ID to roll d20 check against." },
+          "dc": { "type": "integer", "minimum": 1 },
+          "flag": { "type": "string", "description": "Flag the pass/fail result is written to." },
+          "text": { "type": "string", "description": "Narration logged when the passive check succeeds. Silent otherwise." }
+        },
+        "required": ["skillCheck", "flag"],
         "additionalProperties": false
       }
     },
@@ -201,11 +258,41 @@
         "gold": { "type": ["integer", "object"] },
         "level": { "type": ["integer", "object"] },
         "mission": { "type": "string" },
-        "status": { "type": "string", "enum": ["active", "complete", "not_started"] }
+        "status": { "type": "string", "enum": ["active", "complete", "not_started"] },
+        "time": { "type": ["integer", "object"], "description": "Absolute elapsed world-clock ticks." },
+        "day": { "type": ["integer", "object"], "description": "1-based day number (requires rules.time)." },
+        "segment": { "type": "string", "description": "Current day segment id (requires rules.time.segments)." },
+        "luck": { "type": ["integer", "object"], "description": "Current luck resource value." }
       },
       "additionalProperties": {
         "type": ["integer", "object"]
       }
+    },
+
+    "outcomeTier": {
+      "type": "object",
+      "properties": {
+        "margin": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "critical: beat the DC by at least this much (default 5). partial: miss the DC by at most this much (default 3). Ignored on success/failure."
+        },
+        "text": { "type": "string", "description": "Narration logged when this tier lands." },
+        "actions": { "type": "array", "items": { "$ref": "#/definitions/action" } }
+      },
+      "additionalProperties": false
+    },
+
+    "outcomes": {
+      "type": "object",
+      "description": "Margin-based outcome tiers. critical and partial only exist when authored; success/failure default to the legacy actions/onFailure pipelines. partial is the fail-forward tier: you get the thing, with a catch.",
+      "properties": {
+        "critical": { "$ref": "#/definitions/outcomeTier" },
+        "success":  { "$ref": "#/definitions/outcomeTier" },
+        "partial":  { "$ref": "#/definitions/outcomeTier" },
+        "failure":  { "$ref": "#/definitions/outcomeTier" }
+      },
+      "additionalProperties": false
     },
     
     "action": {
@@ -227,7 +314,12 @@
         "status": { "type": "string", "enum": ["active", "complete"] },
         "node": { "type": "string" },
         "tradeDiscount": { "type": ["number", "string"] },
-        "persistDiscount": { "type": "boolean" }
+        "persistDiscount": { "type": "boolean" },
+        "id": { "type": "string", "description": "set_timer / cancel_timer: the timer id." },
+        "afterTicks": { "type": "integer", "minimum": 0, "description": "set_timer: deadline relative to the current tick." },
+        "atTick": { "type": "integer", "minimum": 0, "description": "set_timer: absolute deadline tick." },
+        "until": { "type": "string", "description": "advance_time: advance to the next start of this day segment." },
+        "actions": { "type": "array", "items": { "$ref": "#/definitions/action" }, "description": "set_timer: the (quiet-only) pipeline run when the timer fires." }
       },
       "required": ["type"]
     }

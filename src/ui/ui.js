@@ -1,6 +1,7 @@
 import { gameState } from "../core/state.js";
-import { clearElement, getByPath } from "../core/utils.js";
+import { clearElement, createElement, getByPath } from "../core/utils.js";
 import { EL, CSS, LOG } from "../core/config.js";
+import { getDay, getSegment } from "../systems/time.js";
 import { MapManager } from "../world/map.js";
 import { ChestUI } from "./chest-ui.js";
 import { QuestUI } from "./quest-ui.js";
@@ -16,6 +17,8 @@ export class UIManager {
 
   setup() {
     this._buildTabs();
+    this._buildTimeChip();
+    this._buildLuckChip();
     this.map.setup();
 
     // Save
@@ -128,8 +131,60 @@ export class UIManager {
     });
   }
 
+  // Injects the world-clock chip into the header stats bar. Only present when
+  // the game opts into a readable clock via rules.time.ticksPerDay — a game
+  // without time config keeps today's HUD untouched.
+  _buildTimeChip() {
+    if (!this.engine.data.rules?.time?.ticksPerDay) return;
+    const statsBar = document.getElementById(EL.PLAYER_BASIC_STATS);
+    if (!statsBar) return;
+    const group = createElement('div', 'stat-group');
+    const item = createElement('div', 'stat-item stat-item--time');
+    this._timeChipValue = createElement('span', 'stat-item__value');
+    item.appendChild(this._timeChipValue);
+    group.appendChild(item);
+    statsBar.appendChild(group);
+    this._updateTimeChip();
+  }
+
+  _updateTimeChip() {
+    if (!this._timeChipValue) return;
+    const timeRules = this.engine.data.rules?.time;
+    const ticks = gameState.getTicks();
+    const day = getDay(ticks, timeRules);
+    const segment = getSegment(ticks, timeRules);
+    this._timeChipValue.textContent = segment
+      ? this.engine.t('ui.timeChipSegment', { day, segment: this.engine.t(`time.segments.${segment}`) })
+      : this.engine.t('ui.timeChipDay', { day });
+  }
+
+  // Injects the luck chip into the header stats bar when the game opts into
+  // the luck resource (rules.playerDefaults.resources.luck). The data-stat-bind
+  // spans ride the existing stats update loop — no bespoke refresh needed.
+  _buildLuckChip() {
+    if (!this.engine.data.rules?.playerDefaults?.resources?.luck) return;
+    const statsBar = document.getElementById(EL.PLAYER_BASIC_STATS);
+    if (!statsBar) return;
+    const group = createElement('div', 'stat-group');
+    const item = createElement('div', 'stat-item stat-item--luck');
+    item.appendChild(createElement('span', 'stat-item__label', this.engine.t('ui.luckLabel')));
+    const value = createElement('span', 'stat-item__value');
+    const current = createElement('span');
+    current.dataset.statBind = 'resources.luck.current';
+    const max = createElement('span');
+    max.dataset.statBind = 'resources.luck.max';
+    value.append(current, '/', max);
+    item.appendChild(value);
+    group.appendChild(item);
+    statsBar.appendChild(group);
+  }
+
   update(hint) {
     const player = gameState.getPlayer();
+
+    if (!hint || hint === 'stats' || hint === 'time') {
+      this._updateTimeChip();
+    }
 
     if (!hint || hint === 'stats') {
       document.querySelectorAll('[data-stat-bind]').forEach(el => {

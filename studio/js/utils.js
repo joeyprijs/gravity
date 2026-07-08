@@ -68,18 +68,11 @@ export function numInput(val, onChange, sizeCls = '') {
   return input;
 }
 
-/** Labeled DC + increment input pair bound to obj.dc / obj.increment.
- *  Returns nodes to spread into a row container. */
-export function dcIncrementInputs(obj, onChange) {
-  const bind = (field, placeholder) => {
-    const input = el('input', { type: 'number', class: 'form-input sm', value: obj[field] ?? '', placeholder });
-    input.addEventListener('input', () => { obj[field] = input.value === '' ? undefined : Number(input.value); onChange(); });
-    return input;
-  };
-  return [
-    el('span', { class: 'list-label' }, ['DC']), bind('dc', 'DC'),
-    el('span', { class: 'list-label' }, ['+ Increment']), bind('increment', 'Increment'),
-  ];
+/** Labeled DC input bound to obj.dc. Returns nodes to spread into a row container. */
+export function dcInput(obj, onChange) {
+  const input = el('input', { type: 'number', class: 'form-input sm', value: obj.dc ?? '', placeholder: 'DC' });
+  input.addEventListener('input', () => { obj.dc = input.value === '' ? undefined : Number(input.value); onChange(); });
+  return [el('span', { class: 'list-label' }, ['DC']), input];
 }
 
 /** List editor for {item, amount} entries: item select × amount + ✕ rows. */

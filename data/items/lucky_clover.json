@@ -1,0 +1,10 @@
+{
+  "name": "Four-Leaf Clover",
+  "type": "Consumable",
+  "description": "A pressed clover with four perfect leaves. Fortune clings to it — for a while.",
+  "value": 25,
+  "actionPoints": 0,
+  "attributes": {
+    "luckAmount": 2
+  }
+}

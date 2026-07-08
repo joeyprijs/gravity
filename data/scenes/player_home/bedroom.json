@@ -17,6 +17,15 @@
       ]
     },
     {
+      "text": "Sleep until morning",
+      "timeCost": 0,
+      "condition": { "not": { "segment": "morning" } },
+      "actions": [
+        { "type": "advance_time", "until": "morning" },
+        { "type": "full_rest", "log": "You sleep deeply and wake with the morning light. Health and Actions fully restored." }
+      ]
+    },
+    {
       "text": "Open Personal Chest",
       "log": false,
       "actions": [

@@ -1,6 +1,6 @@
 # Gravity — Luck System (Design Proposal)
 
-*Status: **proposal, not committed.** Grew out of the same gameplay evaluation as [`time.md`](time.md) and a comparison with Fighting Fantasy gamebooks (2026-07-06). Nothing here is built. Companion candidate for [`ROADMAP.md`](ROADMAP.md) Phase 2.*
+*Status: **implemented** (2026-07-07) — the opt-in luck resource, retry-costs-luck, Test Your Luck checks (scenes + dialogue), `restore_luck` / luck item attributes, the `luck` condition leaf, and combat luck (behind `rules.combatLuck`) all shipped as designed. See [`CHECKS.md`](../CHECKS.md) for the authoring guide. Kept for the design rationale.*
 
 ---
 

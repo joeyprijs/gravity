@@ -40,5 +40,24 @@
         { "type": "navigate", "destination": "dungeon_start" }
       ]
     }
+  ],
+  "skills": [
+    {
+      "text": "Study the wanderer's tracks.",
+      "skillCheck": "perception",
+      "condition": { "flag": "wanderer_defeated", "value": true },
+      "resultText": "Bare footprints, pacing circles worn into the grit. Whoever they were, they'd been trapped down here a long time — long enough to stop scratching tally marks into the wall halfway through."
+    },
+    {
+      "text": "Wrench at the glinting thing wedged under the rubble.",
+      "luckCheck": true,
+      "condition": { "flag": "wanderer_defeated", "value": true },
+      "actions": [
+        { "type": "loot", "item": "sunstone_shard", "amount": 1 }
+      ],
+      "onFailure": [
+        { "type": "heal", "amount": -2, "log": "The rubble shifts and slams down on your fingers. Whatever glinted is gone for good. (-2 HP)" }
+      ]
+    }
   ]
 }
