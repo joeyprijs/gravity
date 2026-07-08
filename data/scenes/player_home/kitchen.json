@@ -31,5 +31,18 @@
         { "type": "navigate", "destination": "home_living_room" }
       ]
     }
+  ],
+  "skills": [
+    {
+      "text": "Sneak a taste of the stew",
+      "skillCheck": "stealth",
+      "repeatable": true,
+      "condition": { "not": { "segment": "night" } },
+      "resultText": [
+        "You dip a finger in while the servant tends the fire. Needs thyme. You say nothing, because officially you were never here.",
+        "Another taste. The servant's shoulders stiffen — they know the stew level is dropping, they just can't prove anything.",
+        "The servant hands you a spoon without turning around. \"If you're going to keep auditing my stew, at least use this.\""
+      ]
+    }
   ]
 }
