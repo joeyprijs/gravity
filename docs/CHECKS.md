@@ -111,14 +111,14 @@ A depleting meta-currency (Fighting Fantasy's Test Your Luck): 2d6 at-or-under c
 The tuning knobs live together in one rules block (legacy top-level names — `skillRetryLuckCost`, `fullRestLuckRestore`, `combatLuck`, `combatLuckMinDamage` — are still read, but deprecated):
 
 ```json
-"luck": { "retryCost": 1, "restRestore": 1, "combat": true, "combatMinDamage": 3 }
+"luck": { "retryCost": 1, "restRestore": 1, "combat": true, "combatMinDamage": 3, "combatApCost": 1 }
 ```
 
 - **Test Your Luck checks** — `"luckCheck": true` on scene skills or dialogue responses; `outcomes.success` on lucky, `outcomes.failure` on unlucky; one-shot by default.
 - **Retry currency** — `"retryCost": 1`: first attempt at any pass/fail or discovery check is free, each retry spends luck. Unaffordable retries render disabled (like unmet item requirements). This is the direct anti-spam replacement for DC escalation.
 - **Restoration (authored and scarce)** — the `restore_luck` action; item attributes `luckAmount` (consumable restore) and `luckMaxBonus` (permanent max increase); `"restRestore": 1` lets sleep trickle a point back.
 - **Conditions** — `{ "luck": { "at_most": 2 } }` lets the world notice desperation or fortune.
-- **Combat luck** — `"combat": true` (default off): attacks and enemy phases always resolve fully; qualifying moments leave optional follow-up gambles among the combat options. A landed hit opens a **twist the blade** window (+2 damage / target shrugs 1 off) that lasts until your next swing or the turn ends; damage taken during the enemies' phases accumulates into one **steel yourself** gamble (recover up to 2 of it / the wound bites 1 deeper — which can kill) available for your whole next turn. Skipping is simply not clicking. The buttons spell out the full stakes plus the odds (`combat.luckOffenseBadge` / `luckDefenseBadge` locale keys). `"combatMinDamage": 3` (default 1) keeps trivial scratches from offering the gamble.
+- **Combat luck** — `"combat": true` (default off): attacks and enemy phases always resolve fully; qualifying moments leave optional follow-up gambles among the combat options. A landed hit opens a **twist the blade** window (+2 damage / target shrugs 1 off) that lasts until your next swing or the turn ends; damage taken during the enemies' phases accumulates into one **steel yourself** gamble (recover up to 2 of it / the wound bites 1 deeper — which can kill) available for your whole next turn. Skipping is simply not clicking. The buttons spell out the full stakes plus the odds (`combat.luckOffenseBadge` / `luckDefenseBadge` locale keys). `"combatMinDamage": 3` (default 1) keeps trivial scratches from offering the gamble, and `"combatApCost": 1` (default 0 — free) prices gambles in AP so they compete with attacks for the turn's budget; unaffordable gambles render disabled and never spend luck.
 - **Character creation** — add `{ "id": "resources.luck.max", "localeKey": "luck", "bonusPerPoint": 1 }` to `charCreation.stats` and "lucky" becomes a build identity.
 - Old saves are safe: rules-declared resources missing from a save are seeded on load.
 

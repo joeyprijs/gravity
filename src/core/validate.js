@@ -387,6 +387,8 @@ function validateRules(ctx) {
   }
   if (rules?.luck?.combatMinDamage && !rules.luck.combat)
     ctx.add(group, 'luck.combatMinDamage is set but luck.combat is off — it will do nothing');
+  if (rules?.luck?.combatApCost && !rules.luck.combat)
+    ctx.add(group, 'luck.combatApCost is set but luck.combat is off — it will do nothing');
   for (const [legacy, key] of Object.entries(LEGACY_LUCK_KEYS)) {
     if (rules?.[legacy] !== undefined)
       ctx.add(group, `"${legacy}" moved to rules.luck.${key} — the old key still works but is deprecated`);

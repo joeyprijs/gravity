@@ -45,11 +45,14 @@ export class CombatSystem {
 
     // Event listener: triggers whenever the player spends AP inside combat.
     // If the player exhausts their Action Points, the turn automatically hands
-    // off to enemies — unless a fresh offense gamble is on the table, in which
-    // case the controls render once more (twist the blade, or End Turn).
+    // off to enemies — unless a fresh offense gamble is on the table AND still
+    // affordable, in which case the controls render once more (twist the
+    // blade, or End Turn). A gamble priced beyond the remaining AP is no
+    // reason to hold the turn open.
     this.engine.on('player:apSpent', ({ remaining }) => {
       if (!this.inCombat) return;
-      if (remaining <= 0 && !this.pendingOffense) {
+      const gambleOpen = this.pendingOffense && remaining >= this._gambleApCost();
+      if (remaining <= 0 && !gambleOpen) {
         this.enemyTurn('after');
       } else {
         this.renderer.render(); // Update interface to reflect depleted AP
@@ -207,11 +210,20 @@ export class CombatSystem {
     return false;
   }
 
+  // AP price of a combat luck gamble (rules.luck.combatApCost, default 0).
+  // Charging AP makes gambles compete with attacks for the turn's budget.
+  _gambleApCost() {
+    return this.engine.data.rules?.luck?.combatApCost ?? 0;
+  }
+
   // Twist the blade: gamble on the wound just dealt — lucky: +2 damage,
-  // unlucky: the target shrugs 1 off. Costs no AP; the roll itself spends
-  // 1 luck (performLuckCheck). Hands the turn over if AP is already spent.
+  // unlucky: the target shrugs 1 off. The roll itself spends 1 luck
+  // (performLuckCheck); rules.luck.combatApCost may add an AP price.
   resolveOffenseGamble() {
     if (!this.pendingOffense) return;
+    // Guard BEFORE the roll — an unaffordable gamble must not spend luck.
+    // (The button renders disabled; this covers stale clicks.)
+    if (gameState.getPlayer().resources.ap.current < this._gambleApCost()) return;
     const { enemy } = this.pendingOffense;
     this.pendingOffense = null;
 
@@ -225,15 +237,15 @@ export class CombatSystem {
       this.engine.log(LOG.COMBAT, this.engine.t('combat.luckOffenseLose', { name: enemy.name }), 'damage');
     }
 
-    if (gameState.getPlayer().resources.ap.current <= 0) this.enemyTurn('after');
-    else this.renderer.render();
+    this._finishGamble();
   }
 
   // Steel yourself: gamble on the damage taken since the player last held the
   // turn — lucky: recover up to 2 of it, unlucky: the wound bites 1 deeper
-  // (which can end the fight). Costs no AP.
+  // (which can end the fight). Same luck and optional AP price as offense.
   resolveDefenseGamble() {
     if (!this.pendingDefense) return;
+    if (gameState.getPlayer().resources.ap.current < this._gambleApCost()) return;
     const heal = Math.min(2, this.pendingDefense.damage);
     this.pendingDefense = null;
 
@@ -249,7 +261,20 @@ export class CombatSystem {
         return;
       }
     }
-    this.renderer.render();
+    this._finishGamble();
+  }
+
+  // Closes out a resolved gamble: a priced one spends its AP (the apSpent
+  // listener then re-renders or hands the turn over), a free one drives the
+  // same transition manually.
+  _finishGamble() {
+    const apCost = this._gambleApCost();
+    if (apCost > 0) {
+      this.engine._spendAP(apCost);
+      return;
+    }
+    if (gameState.getPlayer().resources.ap.current <= 0 && !this.pendingOffense) this.enemyTurn('after');
+    else this.renderer.render();
   }
 
   // Combat luck gambles are available when the game opts in via
@@ -555,14 +580,20 @@ class CombatRenderer {
   _appendLuckGambles(container) {
     const t = this.cs.engine.t.bind(this.cs.engine);
     const { pendingOffense, pendingDefense } = this.cs;
+    const apCost = this.cs._gambleApCost();
+    // A priced gamble lists its AP line with the stakes and greys out when
+    // the player can't afford it — same treatment as attack buttons.
+    const priceBadge = (badge) => apCost > 0 ? `${badge}\n${t('combat.apCost', { cost: apCost })}` : badge;
+    const unaffordable = gameState.getPlayer().resources.ap.current < apCost;
 
     if (pendingOffense && this.cs._canGambleLuck(pendingOffense.damage)) {
       const luck = gameState.getPlayer().resources.luck.current;
       const name = pendingOffense.enemy.name;
       const btn = buildOptionButton(
         t('combat.luckOffensePrompt', { name }),
-        t('combat.luckOffenseBadge', { name, luck, odds: luckOdds(luck) })
+        priceBadge(t('combat.luckOffenseBadge', { name, luck, odds: luckOdds(luck) }))
       );
+      if (unaffordable) btn.disabled = true;
       btn.onclick = () => this.cs.resolveOffenseGamble();
       container.appendChild(btn);
     }
@@ -572,8 +603,9 @@ class CombatRenderer {
       const heal = Math.min(2, pendingDefense.damage);
       const btn = buildOptionButton(
         t('combat.luckDefensePrompt'),
-        t('combat.luckDefenseBadge', { heal, luck, odds: luckOdds(luck) })
+        priceBadge(t('combat.luckDefenseBadge', { heal, luck, odds: luckOdds(luck) }))
       );
+      if (unaffordable) btn.disabled = true;
       btn.onclick = () => this.cs.resolveDefenseGamble();
       container.appendChild(btn);
     }

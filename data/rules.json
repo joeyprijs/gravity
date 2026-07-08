@@ -11,7 +11,8 @@
     "retryCost": 1,
     "restRestore": 1,
     "combat": true,
-    "combatMinDamage": 3
+    "combatMinDamage": 3,
+    "combatApCost": 1
   },
   "time": {
     "ticksPerDay": 24,

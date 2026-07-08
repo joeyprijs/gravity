@@ -571,6 +571,40 @@ test('resolveDefenseGamble: an unlucky bite at 1 HP ends the fight', () => {
   assert.equal(ended, false);
 });
 
+test('resolveOffenseGamble: a priced gamble spends its AP cost', () => {
+  gameState.init(LUCK_COMBAT_RULES);
+  const engine = makeMockEngine();
+  engine.data.rules = { luck: { combat: true, combatApCost: 1 } };
+  const cs = new CombatSystem(engine);
+  cs.inCombat = true;
+  cs.renderer.render = mock.fn();
+  const enemy = makeEnemy({ hp: 50, ac: 5 });
+  cs.enemies = [enemy];
+  cs.pendingOffense = { enemy, damage: 3 };
+  const apBefore = ap();
+
+  mock.method(Math, 'random', () => 0.99); // unlucky — combat continues
+  cs.resolveOffenseGamble();
+
+  assert.equal(ap(), apBefore - 1);
+  assert.equal(gameState.getPlayer().resources.luck.current, 6);
+});
+
+test('resolveDefenseGamble: an unaffordable gamble is a no-op and spends no luck', () => {
+  gameState.init(LUCK_COMBAT_RULES);
+  const engine = makeMockEngine();
+  engine.data.rules = { luck: { combat: true, combatApCost: 2 } };
+  const cs = new CombatSystem(engine);
+  cs.inCombat = true;
+  gameState.modifyPlayerStat('ap', -(ap() - 1)); // down to 1 AP, cost is 2
+  cs.pendingDefense = { damage: 4 };
+
+  cs.resolveDefenseGamble();
+
+  assert.deepEqual(cs.pendingDefense, { damage: 4 }); // window untouched
+  assert.equal(gameState.getPlayer().resources.luck.current, 7); // no roll happened
+});
+
 test('enemyTurn("after") expires both gamble windows', () => {
   gameState.init(LUCK_COMBAT_RULES);
   const engine = makeMockEngine();
