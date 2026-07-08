@@ -188,6 +188,8 @@
     "greeting":           "Greetings, traveler. I am {name}.",
     "comeAgain":          "Come again.",
     "merchantWaresTitle": "{name}'s Wares",
+    "pricesMarkedUp":     "(Prices for you run {pct}% higher.)",
+    "pricesDiscounted":   "(Prices for you run {pct}% in your favor.)",
     "merchantGreeting":   "[{name}] Take a look!",
     "yourGold":           "Your Gold: {amount}",
     "buyButton":          "Buy {name}",

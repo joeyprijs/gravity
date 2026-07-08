@@ -71,7 +71,8 @@
                 },
                 {
                   "type": "trade",
-                  "tradeDiscount": -10
+                  "tradeDiscount": -10,
+                  "persistDiscount": true
                 }
               ]
             },

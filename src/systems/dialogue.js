@@ -75,8 +75,10 @@ export class DialogueSystem {
       const pct = Number.isFinite(rawPct) ? rawPct : 0;
       this.activeDiscount = pct / 100;
 
-      // Optionally save this discount permanently in the session state
-      if (action.persistDiscount && pct > 0) {
+      // Optionally save this discount permanently in the session state.
+      // Markups (negative values) persist too — an offended merchant's
+      // grudge should outlast the conversation, same as earned goodwill.
+      if (action.persistDiscount && pct !== 0) {
         gameState.setFlag(FLAG_KEYS.tradeDiscount(this.currentNPCId), pct);
       }
       this.renderStore();
@@ -361,10 +363,20 @@ export class DialogueSystem {
       }
       this.storeOpen = true;
       this.engine.openScene(CSS.SCENE_MERCHANT);
+      // An active discount or markup is stated with the greeting — repriced
+      // wares the player can't recognize as repriced aren't a consequence.
+      let greeting = this.engine.t('dialogue.merchantGreeting', { name: this.currentNPC.name });
+      if (this.activeDiscount !== 0) {
+        const pct = Math.round(Math.abs(this.activeDiscount * 100));
+        greeting += ' ' + this.engine.t(
+          this.activeDiscount < 0 ? 'dialogue.pricesMarkedUp' : 'dialogue.pricesDiscounted',
+          { pct }
+        );
+      }
       this.engine.currentSceneEl.appendChild(
         buildSceneDescription(
           this.engine.t('dialogue.merchantWaresTitle', { name: this.currentNPC.name }),
-          this.engine.t('dialogue.merchantGreeting', { name: this.currentNPC.name }),
+          greeting,
           this.engine.t.bind(this.engine)
         )
       );
