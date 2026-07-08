@@ -56,7 +56,7 @@
     "armorSlot":           "Slot: {slot}",
     "worldMapTitle":       "World Map",
     "itemRequires":        "Requires: {name}",
-    "locationDialogue":    "DIALOGUE: {name}",
+    "locationDialogue":    "{name}",
     "locationMerchant":    "MERCHANT: {name}",
     "locationCombat":      "Combat",
     "notEnoughGold":       "Not enough gold!",
