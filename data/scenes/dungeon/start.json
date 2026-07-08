@@ -56,7 +56,7 @@
       ]
     },
     {
-      "text": "Search your pockets",
+      "text": "Take a closer look at the door",
       "condition": {
         "not": { "item": "cellar_key" }
       },
@@ -64,7 +64,7 @@
         {
           "type": "loot",
           "item": "cellar_key",
-          "log": "Tucked deep in a coat pocket your fingers find a small iron key. You don't remember it — but someone clearly meant for you to have it."
+          "log": "You run your hands over the rough planks, feeling for weakness — and freeze. A small iron key sits in the lock. On your side of the door. Whoever shut you in here never meant for you to stay. You work it free."
         }
       ]
     },
