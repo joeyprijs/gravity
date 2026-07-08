@@ -10,7 +10,16 @@
   },
   "description": [
     {
-      "text": "The corridor is quiet now, lit by a single guttering torch. The path north leads to the stone hallway.",
+      "text": "The corridor is quiet now, lit by a single guttering torch. The rubble along the wall lies torn open where you dug at it. The path north leads to the stone hallway.",
+      "condition": {
+        "and": [
+          { "flag": "wanderer_defeated", "value": true },
+          { "flag": "corridor_rubble_settled", "value": true }
+        ]
+      }
+    },
+    {
+      "text": "The corridor is quiet now, lit by a single guttering torch. The scuffle brought a spill of rubble down along the wall — and wedged beneath it, something catches the torchlight with a faint glint. The path north leads to the stone hallway.",
       "condition": {
         "flag": "wanderer_defeated",
         "value": true
@@ -89,7 +98,13 @@
       },
       "outcomes": {
         "success": {
+          "text": "You brace a boot against the pile and wrench it free: a shard of sunstone, still warm to the touch.",
           "actions": [
+            {
+              "type": "set_flag",
+              "flag": "corridor_rubble_settled",
+              "value": true
+            },
             {
               "type": "loot",
               "item": "sunstone_shard",
@@ -100,6 +115,11 @@
         "failure": {
           "text": "The rubble shifts and slams down on your fingers. Whatever glinted is gone for good. (-2 HP)",
           "actions": [
+            {
+              "type": "set_flag",
+              "flag": "corridor_rubble_settled",
+              "value": true
+            },
             {
               "type": "heal",
               "amount": -2,
