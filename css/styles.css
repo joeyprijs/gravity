@@ -364,6 +364,7 @@ body {
   color: var(--text-primary);
 }
 
+/* The name doubles as the character-sheet toggle (a <button>). */
 .stat-item--name {
   display: block;
   background: none;
@@ -372,6 +373,32 @@ body {
   color: var(--accent-color);
   font-weight: 700;
   font-size: var(--font-md);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.stat-item--name__caret {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  transition: transform 0.15s ease;
+}
+
+.stat-item--name.is-open .stat-item--name__caret {
+  transform: rotate(180deg);
+}
+
+/* Character sheet: the slow-moving stats row under the vitals, toggled by
+   the player name. flex-basis pushes it onto its own header line; the
+   explicit [hidden] rule wins over the header's display:flex on .game__stats. */
+.game__stats--sheet {
+  flex-basis: 100%;
+  padding-top: calc(var(--spacing) * 1.5);
+}
+
+.game__stats--sheet[hidden] {
+  display: none;
 }
 
 

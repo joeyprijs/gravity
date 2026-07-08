@@ -21,6 +21,17 @@ export class UIManager {
     this._buildLuckChip();
     this.map.setup();
 
+    // The player name toggles the character-sheet row (LVL/AC/INIT plus
+    // plugin stats) — slow-moving stats stay out of the always-visible
+    // vitals so the header survives narrow screens.
+    const sheetBtn = document.getElementById(EL.BTN_TOGGLE_SHEET);
+    const sheetRow = document.getElementById(EL.PLAYER_SHEET_STATS);
+    sheetBtn.addEventListener('click', () => {
+      sheetRow.hidden = !sheetRow.hidden;
+      sheetBtn.classList.toggle('is-open', !sheetRow.hidden);
+      sheetBtn.setAttribute('aria-expanded', String(!sheetRow.hidden));
+    });
+
     // Save
     document.getElementById(EL.BTN_SAVE).addEventListener('click', () => {
       if (this.engine.inCombat) {

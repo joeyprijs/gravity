@@ -128,15 +128,19 @@ function buildExhibitsTable(engine, sceneId) {
 
 function injectReputationHeader() {
   if (document.querySelector('.stat-item--reputation')) return;
-  const goldItem = document.querySelector('.stat-item--gold');
-  if (goldItem) {
+  // Reputation moves slowly — it belongs in the collapsible character-sheet
+  // row with LVL/AC/INIT, not the always-visible vitals. Fall back to the
+  // gold group for shells without a sheet row.
+  const target = document.querySelector('#player-sheet-stats .stat-group')
+    ?? document.querySelector('.stat-item--gold')?.parentNode;
+  if (target) {
     const repItem = document.createElement('div');
     repItem.className = 'stat-item stat-item--reputation';
     repItem.innerHTML = `
       <span class="stat-item__label">REP</span>
       <span class="stat-item__value" data-stat-bind="attributes.reputation"></span>
     `;
-    goldItem.parentNode.appendChild(repItem);
+    target.appendChild(repItem);
   }
 }
 
