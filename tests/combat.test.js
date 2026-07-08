@@ -1,4 +1,4 @@
-import { test, beforeEach } from 'node:test';
+import { test, beforeEach, afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { CombatSystem } from '../src/systems/combat.js';
 import { gameState } from '../src/core/state.js';
@@ -81,6 +81,7 @@ function makeCS(items = {}) {
 beforeEach(() => {
   gameState.init(TEST_RULES);
 });
+afterEach(() => mock.restoreAll());
 
 // ─── _resolveEnemyWeapon ─────────────────────────────────────────────────────
 
@@ -467,17 +468,122 @@ test('_canGambleLuck: false in games without the luck resource', () => {
   assert.equal(cs._canGambleLuck(5), false);
 });
 
-test('_maybeDefenseGamble: below-threshold damage flows straight through', () => {
+test('playerAttack: a qualifying hit opens the twist window and still resolves fully', () => {
+  const orig = Math.random;
+  Math.random = () => 0.9999; // always hit, max damage
+
   gameState.init(LUCK_COMBAT_RULES);
   const engine = makeMockEngine();
-  engine.data.rules = { luck: { combat: true, combatMinDamage: 3 } };
+  engine.data.rules = { luck: { combat: true } };
   const cs = new CombatSystem(engine);
-  let prompted = false;
-  let continued = false;
-  cs.renderer.renderLuckPrompt = () => { prompted = true; };
-  cs._maybeDefenseGamble(2, () => { continued = true; });
-  assert.equal(prompted, false);
-  assert.equal(continued, true);
-  cs._maybeDefenseGamble(4, () => {});
-  assert.equal(prompted, true);
+  cs.inCombat = true;
+  const enemy = makeEnemy({ hp: 100, ac: 5 });
+  cs.enemies = [enemy];
+  const apBefore = ap();
+
+  cs.playerAttack(makeWeapon({ actionPoints: 1, damageRoll: '1d6' }), enemy);
+
+  assert.equal(ap(), apBefore - 1, 'attack resolves fully — AP spent, nothing suspended');
+  assert.equal(cs.pendingOffense?.enemy, enemy);
+  assert.equal(cs.pendingOffense?.damage, 6);
+
+  // The next swing supersedes the window (here: a miss against high AC).
+  Math.random = () => 0;
+  cs.playerAttack(makeWeapon({ actionPoints: 1 }), makeEnemy({ hp: 50, ac: 100 }));
+  assert.equal(cs.pendingOffense, null);
+
+  Math.random = orig;
+});
+
+test('resolveOffenseGamble: lucky deepens the wound and can finish the enemy', () => {
+  gameState.init(LUCK_COMBAT_RULES);
+  const engine = makeMockEngine();
+  engine.data.rules = { luck: { combat: true } };
+  const cs = new CombatSystem(engine);
+  cs.inCombat = true;
+  const enemy = makeEnemy({ hp: 2, ac: 5 });
+  cs.enemies = [enemy];
+  let ended = null;
+  cs.endCombat = (isVictory) => { ended = isVictory; };
+  cs.pendingOffense = { enemy, damage: 3 };
+
+  mock.method(Math, 'random', () => 0); // 2d6 = 2 ≤ 7 → lucky
+  cs.resolveOffenseGamble();
+
+  assert.equal(enemy.attributes.healthPoints, 0);
+  assert.equal(cs.pendingOffense, null);
+  assert.equal(ended, true);
+  assert.equal(gameState.getPlayer().resources.luck.current, 6); // the roll spent 1 luck
+});
+
+test('resolveOffenseGamble: unlucky lets the target shrug one off', () => {
+  gameState.init(LUCK_COMBAT_RULES);
+  const engine = makeMockEngine();
+  engine.data.rules = { luck: { combat: true } };
+  const cs = new CombatSystem(engine);
+  cs.inCombat = true;
+  cs.renderer.render = mock.fn();
+  const enemy = makeEnemy({ hp: 5, ac: 5 });
+  cs.enemies = [enemy];
+  cs.pendingOffense = { enemy, damage: 3 };
+
+  mock.method(Math, 'random', () => 0.99); // 2d6 = 12 > 7 → unlucky
+  cs.resolveOffenseGamble();
+
+  assert.equal(enemy.attributes.healthPoints, 6);
+  assert.equal(cs.pendingOffense, null);
+  assert.equal(cs.renderer.render.mock.callCount(), 1);
+});
+
+test('resolveDefenseGamble: lucky recovers up to 2 of the round damage', () => {
+  gameState.init(LUCK_COMBAT_RULES);
+  const engine = makeMockEngine();
+  engine.data.rules = { luck: { combat: true } };
+  const cs = new CombatSystem(engine);
+  cs.inCombat = true;
+  cs.renderer.render = mock.fn();
+  gameState.modifyPlayerStat('hp', -5);
+  const hpBefore = gameState.getPlayer().resources.hp.current;
+  cs.pendingDefense = { damage: 5 };
+
+  mock.method(Math, 'random', () => 0); // lucky
+  cs.resolveDefenseGamble();
+
+  assert.equal(gameState.getPlayer().resources.hp.current, hpBefore + 2); // capped at 2
+  assert.equal(cs.pendingDefense, null);
+});
+
+test('resolveDefenseGamble: an unlucky bite at 1 HP ends the fight', () => {
+  gameState.init(LUCK_COMBAT_RULES);
+  const engine = makeMockEngine();
+  engine.data.rules = { luck: { combat: true } };
+  const cs = new CombatSystem(engine);
+  cs.inCombat = true;
+  const player = gameState.getPlayer();
+  gameState.modifyPlayerStat('hp', -(player.resources.hp.current - 1)); // down to 1 HP
+  let ended = null;
+  cs.endCombat = (isVictory) => { ended = isVictory; };
+  cs.pendingDefense = { damage: 4 };
+
+  mock.method(Math, 'random', () => 0.99); // unlucky → -1 HP → 0
+  cs.resolveDefenseGamble();
+
+  assert.equal(ended, false);
+});
+
+test('enemyTurn("after") expires both gamble windows', () => {
+  gameState.init(LUCK_COMBAT_RULES);
+  const engine = makeMockEngine();
+  engine.data.rules = { luck: { combat: true } };
+  const cs = new CombatSystem(engine);
+  cs.inCombat = true;
+  cs.renderer.render = mock.fn();
+  cs.enemies = []; // no living enemies — the phase is a pure hand-off
+  cs.pendingOffense = { enemy: makeEnemy({ hp: 5, ac: 5 }), damage: 3 };
+  cs.pendingDefense = { damage: 2 };
+
+  cs.enemyTurn('after');
+
+  assert.equal(cs.pendingOffense, null);
+  assert.equal(cs.pendingDefense, null);
 });

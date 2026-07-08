@@ -26,13 +26,17 @@ export class CombatSystem {
     this.engine = engine;
     this.inCombat = false;
     this.isGameOver = false;
-    // True while a luck gamble prompt is awaiting the player's choice. The
-    // prompt's callbacks are the only path that finishes the suspended attack
-    // (AP spend, defeat handling), so sidebar actions that would re-render the
-    // combat controls are blocked until it resolves (see engine.useItem).
-    this.luckPromptOpen = false;
+    // Luck follow-up windows (rules.luck.combat). Attacks and enemy phases
+    // always resolve fully; these only record that a gamble is AVAILABLE, and
+    // the renderer offers it as a regular combat option — no suspended state.
+    // pendingOffense: { enemy, damage } — set by a qualifying hit, expires on
+    // the player's next swing or when the turn ends.
+    // pendingDefense: { damage } — accumulated over the enemy phases since the
+    // player last held the turn, expires when the turn ends.
+    this.pendingOffense = null;
+    this.pendingDefense = null;
     this.enemies = [];
-    
+
     // originOption captures the scene option action that triggered this encounter.
     // On victory, the option's onVictory actions array is executed as a pipeline.
     this.originOption = null;
@@ -40,10 +44,12 @@ export class CombatSystem {
     this.renderer = new CombatRenderer(this);
 
     // Event listener: triggers whenever the player spends AP inside combat.
-    // If the player exhausts their Action Points, the turn automatically hands off to enemies.
+    // If the player exhausts their Action Points, the turn automatically hands
+    // off to enemies — unless a fresh offense gamble is on the table, in which
+    // case the controls render once more (twist the blade, or End Turn).
     this.engine.on('player:apSpent', ({ remaining }) => {
       if (!this.inCombat) return;
-      if (remaining <= 0) {
+      if (remaining <= 0 && !this.pendingOffense) {
         this.enemyTurn('after');
       } else {
         this.renderer.render(); // Update interface to reflect depleted AP
@@ -76,7 +82,8 @@ export class CombatSystem {
     this.engine.resetScene();
     this.inCombat = true;
     this.isGameOver = false;
-    this.luckPromptOpen = false;
+    this.pendingOffense = null;
+    this.pendingDefense = null;
     this.enemies = enemyDataList;
     this.originOption = originOption;
 
@@ -139,6 +146,9 @@ export class CombatSystem {
    * @param {object} targetEnemy - The cloned NPC object being attacked.
    */
   playerAttack(weapon, targetEnemy) {
+    // A new swing supersedes any twist-the-blade window from the last one.
+    this.pendingOffense = null;
+
     const hitModifier = weapon.bonusHitChance ?? 0;
     const baseRoll = roll(1, MAX_D20_ROLL);
     const hitRoll = baseRoll + hitModifier;
@@ -155,30 +165,16 @@ export class CombatSystem {
         dice: weapon.attributes.damageRoll, rollStr: dmgResult.string
       }), 'damage');
 
-      // Combat luck (rules.luck.combat): after landing a hit that didn't drop
-      // the target, offer to twist the blade — lucky: +2 damage, unlucky:
-      // the target shrugs 1 off. The attack finishes after the choice. Small
-      // hits below rules.luck.combatMinDamage aren't worth interrupting for.
+      // Combat luck (rules.luck.combat): a landed hit that didn't drop the
+      // target opens a twist-the-blade window — the renderer offers it as a
+      // regular option until the player's next swing or the turn ends. Small
+      // hits below rules.luck.combatMinDamage aren't worth the button.
       if (this._canGambleLuck(dmgResult.total) && targetEnemy.attributes.healthPoints > 0) {
-        this.renderer.renderLuckPrompt('offense', {
-          name: targetEnemy.name,
-          onGamble: () => {
-            const { lucky } = performLuckCheck(this.engine);
-            if (lucky) {
-              targetEnemy.attributes.healthPoints -= 2;
-              this.engine.log(LOG.COMBAT, this.engine.t('combat.luckOffenseWin', { name: targetEnemy.name }), 'damage');
-            } else {
-              targetEnemy.attributes.healthPoints += 1;
-              this.engine.log(LOG.COMBAT, this.engine.t('combat.luckOffenseLose', { name: targetEnemy.name }), 'damage');
-            }
-            this._finishPlayerAttack(weapon, targetEnemy);
-          },
-          onSkip: () => this._finishPlayerAttack(weapon, targetEnemy),
-        });
-        return;
+        this.pendingOffense = { enemy: targetEnemy, damage: dmgResult.total };
       }
 
-      this._finishPlayerAttack(weapon, targetEnemy);
+      if (this._handleEnemyDefeat(targetEnemy)) return;
+      this.engine._spendAP(weapon.actionPoints);
       return;
     }
 
@@ -191,17 +187,61 @@ export class CombatSystem {
     this.engine._spendAP(weapon.actionPoints);
   }
 
-  // Completes a landed attack after any luck gamble: resolves defeat states
-  // and spends the weapon's AP (which hands the turn over when AP runs out).
-  _finishPlayerAttack(weapon, targetEnemy) {
-    if (targetEnemy.attributes.healthPoints <= 0) {
-      if (this.enemies.every(e => e.attributes.healthPoints <= 0)) {
-        this.endCombat(true);
-        return; // Early return to prevent spending AP on a battle already won
-      }
-      this.engine.log(LOG.COMBAT, this.engine.t('combat.enemyDefeated', { name: targetEnemy.name }), 'loot');
+  // Resolves an enemy's (possible) defeat after damage lands. Returns true
+  // when the whole battle ended — callers stop processing.
+  _handleEnemyDefeat(targetEnemy) {
+    if (targetEnemy.attributes.healthPoints > 0) return false;
+    if (this.enemies.every(e => e.attributes.healthPoints <= 0)) {
+      this.endCombat(true);
+      return true;
     }
-    this.engine._spendAP(weapon.actionPoints);
+    this.engine.log(LOG.COMBAT, this.engine.t('combat.enemyDefeated', { name: targetEnemy.name }), 'loot');
+    return false;
+  }
+
+  // Twist the blade: gamble on the wound just dealt — lucky: +2 damage,
+  // unlucky: the target shrugs 1 off. Costs no AP; the roll itself spends
+  // 1 luck (performLuckCheck). Hands the turn over if AP is already spent.
+  resolveOffenseGamble() {
+    if (!this.pendingOffense) return;
+    const { enemy } = this.pendingOffense;
+    this.pendingOffense = null;
+
+    const { lucky } = performLuckCheck(this.engine);
+    if (lucky) {
+      enemy.attributes.healthPoints -= 2;
+      this.engine.log(LOG.COMBAT, this.engine.t('combat.luckOffenseWin', { name: enemy.name }), 'damage');
+      if (this._handleEnemyDefeat(enemy)) return;
+    } else {
+      enemy.attributes.healthPoints += 1;
+      this.engine.log(LOG.COMBAT, this.engine.t('combat.luckOffenseLose', { name: enemy.name }), 'damage');
+    }
+
+    if (gameState.getPlayer().resources.ap.current <= 0) this.enemyTurn('after');
+    else this.renderer.render();
+  }
+
+  // Steel yourself: gamble on the damage taken since the player last held the
+  // turn — lucky: recover up to 2 of it, unlucky: the wound bites 1 deeper
+  // (which can end the fight). Costs no AP.
+  resolveDefenseGamble() {
+    if (!this.pendingDefense) return;
+    const heal = Math.min(2, this.pendingDefense.damage);
+    this.pendingDefense = null;
+
+    const { lucky } = performLuckCheck(this.engine);
+    if (lucky) {
+      gameState.modifyPlayerStat('hp', heal);
+      this.engine.log(LOG.COMBAT, this.engine.t('combat.luckDefenseWin', { heal }), 'loot');
+    } else {
+      gameState.modifyPlayerStat('hp', -1);
+      this.engine.log(LOG.COMBAT, this.engine.t('combat.luckDefenseLose'), 'damage');
+      if (gameState.getPlayer().resources.hp.current <= 0) {
+        this.endCombat(false);
+        return;
+      }
+    }
+    this.renderer.render();
   }
 
   // Combat luck gambles are available when the game opts in via
@@ -226,6 +266,14 @@ export class CombatSystem {
    */
   enemyTurn(phase = 'after') {
     if (!this.inCombat) return;
+
+    // The 'after' phase is the player handing the turn over — both luck
+    // follow-up windows expire with it. ('before' runs mid-round, while the
+    // defense window is still accumulating.)
+    if (phase === 'after') {
+      this.pendingOffense = null;
+      this.pendingDefense = null;
+    }
 
     const player = gameState.getPlayer();
     const hpBeforePhase = player.resources.hp.current;
@@ -281,10 +329,16 @@ export class CombatSystem {
     }
 
     // ── Phase Hand-off Logic ────────────────────────────────────────────────
+    // Damage taken this phase feeds the steel-yourself window, accumulating
+    // across the after→before chain so one gamble covers the whole round.
     const damageTaken = hpBeforePhase - player.resources.hp.current;
+    if (damageTaken > 0) {
+      this.pendingDefense = { damage: (this.pendingDefense?.damage ?? 0) + damageTaken };
+    }
+
     if (phase === 'before') {
       // High-initiative enemies have finished. The round now opens for the player.
-      this._maybeDefenseGamble(damageTaken, () => this.renderer.render());
+      this.renderer.render();
     } else {
       // Low-initiative enemies have finished, ending the round.
       // 1. Fully charge the player's AP pool for the new round.
@@ -292,45 +346,12 @@ export class CombatSystem {
 
       // 2. Check if high-initiative enemies act at the beginning of the next round.
       const hasBeforeEnemies = this.enemies.some(e => e.attributes.healthPoints > 0 && (e.initiativeRoll ?? 0) > this.playerInit);
-      this._maybeDefenseGamble(damageTaken, () => {
-        if (hasBeforeEnemies) {
-          this.enemyTurn('before');
-        } else {
-          this.renderer.render(); // Transition directly back to player controls
-        }
-      });
+      if (hasBeforeEnemies) {
+        this.enemyTurn('before');
+      } else {
+        this.renderer.render(); // Transition directly back to player controls
+      }
     }
-  }
-
-  // Combat luck, defensive side: after an enemy phase that hurt the player,
-  // offer to steel yourself — lucky: recover up to 2 of the damage just
-  // taken, unlucky: the wound bites 1 deeper (which can end the fight).
-  // Without a gamble (or with luck.combat off) control flows on unchanged.
-  _maybeDefenseGamble(damageTaken, continueFn) {
-    if (damageTaken <= 0 || !this._canGambleLuck(damageTaken)) {
-      continueFn();
-      return;
-    }
-    const heal = Math.min(2, damageTaken);
-    this.renderer.renderLuckPrompt('defense', {
-      heal,
-      onGamble: () => {
-        const { lucky } = performLuckCheck(this.engine);
-        if (lucky) {
-          gameState.modifyPlayerStat('hp', heal);
-          this.engine.log(LOG.COMBAT, this.engine.t('combat.luckDefenseWin', { heal }), 'loot');
-        } else {
-          gameState.modifyPlayerStat('hp', -1);
-          this.engine.log(LOG.COMBAT, this.engine.t('combat.luckDefenseLose'), 'damage');
-          if (gameState.getPlayer().resources.hp.current <= 0) {
-            this.endCombat(false);
-            return;
-          }
-        }
-        continueFn();
-      },
-      onSkip: continueFn,
-    });
   }
 
   /**
@@ -515,48 +536,39 @@ class CombatRenderer {
   }
 
   /**
-   * Renders a transient two-button luck gamble prompt in place of the combat
-   * controls. An informed gamble needs the full equation on the button: the
-   * badge spells out the lucky/unlucky stakes alongside the roll and odds,
-   * and the skip button says the hit/wound simply stands. The CombatSystem
-   * resumes the normal flow through the provided callbacks.
+   * Appends the available luck follow-up gambles (twist the blade / steel
+   * yourself) as regular combat options. The badge spells out the full
+   * equation — lucky/unlucky stakes, roll target, odds, and the 1-luck cost —
+   * so the gamble is an informed decision. Skipping is simply not clicking.
    *
-   * @param {'offense'|'defense'} kind - Which prompt wording to use.
-   * @param {object} opts
-   * @param {string} [opts.name] - offense: the target the hit landed on.
-   * @param {number} [opts.heal] - defense: HP recovered on a lucky roll.
-   * @param {() => void} opts.onGamble
-   * @param {() => void} opts.onSkip
+   * @private
+   * @param {HTMLElement} container - The options container to append to.
    */
-  renderLuckPrompt(kind, { name, heal, onGamble, onSkip }) {
+  _appendLuckGambles(container) {
     const t = this.cs.engine.t.bind(this.cs.engine);
-    const luck = gameState.getPlayer().resources.luck.current;
-    const odds = luckOdds(luck);
-    const { container } = resetOptionsPanel(t('ui.locationCombat'));
+    const { pendingOffense, pendingDefense } = this.cs;
 
-    this.cs.luckPromptOpen = true;
-    const resolve = (fn) => () => {
-      this.cs.luckPromptOpen = false;
-      fn();
-    };
+    if (pendingOffense && this.cs._canGambleLuck(pendingOffense.damage)) {
+      const luck = gameState.getPlayer().resources.luck.current;
+      const name = pendingOffense.enemy.name;
+      const btn = buildOptionButton(
+        t('combat.luckOffensePrompt', { name }),
+        t('combat.luckOffenseBadge', { name, luck, odds: luckOdds(luck) })
+      );
+      btn.onclick = () => this.cs.resolveOffenseGamble();
+      container.appendChild(btn);
+    }
 
-    const gambleBtn = kind === 'offense'
-      ? buildOptionButton(
-          t('combat.luckOffensePrompt', { name }),
-          t('combat.luckOffenseBadge', { name, luck, odds })
-        )
-      : buildOptionButton(
-          t('combat.luckDefensePrompt'),
-          t('combat.luckDefenseBadge', { heal, luck, odds })
-        );
-    gambleBtn.onclick = resolve(onGamble);
-    container.appendChild(gambleBtn);
-
-    const skipBtn = buildOptionButton(t(kind === 'offense' ? 'combat.luckOffenseSkip' : 'combat.luckDefenseSkip'));
-    skipBtn.onclick = resolve(onSkip);
-    container.appendChild(skipBtn);
-
-    this.cs.engine.scrollNarrativeToBottom();
+    if (pendingDefense && this.cs._canGambleLuck(pendingDefense.damage)) {
+      const luck = gameState.getPlayer().resources.luck.current;
+      const heal = Math.min(2, pendingDefense.damage);
+      const btn = buildOptionButton(
+        t('combat.luckDefensePrompt'),
+        t('combat.luckDefenseBadge', { heal, luck, odds: luckOdds(luck) })
+      );
+      btn.onclick = () => this.cs.resolveDefenseGamble();
+      container.appendChild(btn);
+    }
   }
 
   /**
@@ -573,6 +585,8 @@ class CombatRenderer {
     const endBtn = buildOptionButton(this.cs.engine.t('combat.endTurn'));
     endBtn.onclick = () => this.cs.enemyTurn('after');
     container.appendChild(endBtn);
+
+    this._appendLuckGambles(container);
 
     // Render individual combat sections for each active opponent
     livingEnemies.forEach(target => {

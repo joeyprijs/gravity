@@ -312,17 +312,8 @@ class RPGEngine {
   // These are called by UIManager buttons. They own the AP-cost check and
   // combat-refresh logic so the UI layer stays free of game logic.
 
-  // While a combat luck-gamble prompt is open, the pending attack only
-  // resolves through the prompt's buttons — sidebar actions would spend AP and
-  // re-render the combat controls over it, orphaning the attack. Blocks them.
-  _blockedByLuckPrompt() {
-    if (!this.inCombat || !this.combatSystem.luckPromptOpen) return false;
-    this.log(LOG.SYSTEM, this.t('combat.resolveGambleFirst'));
-    return true;
-  }
-
   useItem(itemId) {
-    if (this.isGameOver || this._blockedByLuckPrompt()) return;
+    if (this.isGameOver) return;
     const itemData = this.data.items[itemId];
     if (!itemData) return;
 
@@ -385,7 +376,7 @@ class RPGEngine {
   }
 
   equipItem(slot, itemId) {
-    if (this.isGameOver || this._blockedByLuckPrompt()) return;
+    if (this.isGameOver) return;
     const itemData = this.data.items[itemId];
     const targetSlot = slot || itemData?.slot;
     if (!itemData || !targetSlot) return;
@@ -409,7 +400,7 @@ class RPGEngine {
   }
 
   unequipItem(slot) {
-    if (this.isGameOver || this._blockedByLuckPrompt()) return;
+    if (this.isGameOver) return;
     const itemId = gameState.getPlayer().equipment[slot];
     if (!itemId) return;
     const unequipCost = this.data.rules?.unequipApCost ?? 1;
