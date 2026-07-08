@@ -305,6 +305,9 @@ body {
   font-size: var(--font-sm);
   font-weight: 400;
   margin-top: var(--spacing);
+  /* Badges may stack facts (stakes, odds, costs) as lines: locale strings
+     use \n and each fact renders on its own row. */
+  white-space: pre-line;
 }
 
 /* .btn--item — inventory action buttons (Use, Equip, Unequip, Deposit) */
