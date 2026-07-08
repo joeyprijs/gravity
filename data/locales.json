@@ -57,7 +57,7 @@
     "worldMapTitle":       "World Map",
     "itemRequires":        "Requires: {name}",
     "locationDialogue":    "{name}",
-    "locationMerchant":    "MERCHANT: {name}",
+    "locationMerchant":    "{name}",
     "locationCombat":      "Combat",
     "notEnoughGold":       "Not enough gold!",
     "timeChipDay":         "Day {day}",
