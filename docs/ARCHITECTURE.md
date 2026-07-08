@@ -61,7 +61,7 @@ There are no circular imports. Stateful subsystems reach each other only through
 - **Inventory/chest entries** have the shape `{ item: string, amount: number }`.
 - **Mutations notify listeners** with an optional *hint* (`'stats'`, `'inventory'`, `'quests'`, `'map'`, `'displays'`) so the UI can re-render only the affected region. No hint means "update everything".
 - **Flags** are a flat key→value map. Static flags are declared in `data/flags/`; dynamic flags (skill-check attempt state, merchant stock, etc.) use the key builders in `config.js` (`FLAG_KEYS`) so each format is defined exactly once.
-- **Saves** are the whole state object, JSON-serialised and Base64-encoded. `SAVE_VERSION` gates a chain of migration functions so old saves stay loadable; plugins add their own with `gameState.registerMigration(version, fn)` using versions above the core number.
+- **Saves** are the whole state object, JSON-serialised and Base64-encoded, delivered as a file download (no storage quota applies). Compression is a known deferral: Base64 adds ~33% to a file measured in tens of KB, which isn't worth making the save/load path async (`CompressionStream`) today — revisit if saves ever move into `localStorage` or real campaigns produce multi-MB states. `SAVE_VERSION` gates a chain of migration functions so old saves stay loadable; plugins add their own with `gameState.registerMigration(version, fn)` using versions above the core number.
 
 ## Conditions
 
@@ -143,11 +143,13 @@ The default export receives the engine instance at boot (before state init). Ava
 
 Do **not** replace or wrap StateManager/engine methods on the live singletons — two plugins doing that will trample each other. Plugin-owned save fields (e.g. the curator's `museumReputation`/`obtainedItems`) are introduced via `registerMigration` and live at the top level of the save object.
 
+**Trust boundary:** plugins are trusted code. They load via dynamic `import()` and run with full access to the page — the DOM, storage, the whole engine and game state. That is deliberate: the plugin API's value is direct, synchronous engine access, and the author of a game is the author of its plugins. The corollary: never load a campaign (manifest + plugins) from a source you don't trust, and don't host third-party campaigns on an origin whose storage or cookies matter. Sandboxing plugins (iframe/worker + `postMessage`) is intentionally out of scope until untrusted user-generated campaigns become a real use case — it would turn every hook into async RPC.
+
 `src/plugins/curator.js` (museum curation + reputation) is the reference implementation.
 
 ## Localisation
 
-Every player-facing string resolves through `engine.t(key, params)` against the active locale tree; missing keys fall back to the key itself so they are visible without crashing.
+Every player-facing string resolves through `engine.t(key, params)` against the active locale tree; missing keys fall back to the key itself so they are visible without crashing. A per-key fallback chain (missing key in the active language → default language's string) is a known deferral: no game ships a second locale yet, and the change interacts with the `t(key) !== key` missing-key probe some renderers use — build and test it against real partial translations when the first non-English locale lands.
 
 The manifest may declare the locale files a game ships, plus the language used when the player's browser matches none of them:
 
