@@ -74,6 +74,20 @@ test('modifyPlayerStat ap: clamps to 0 on underflow', () => {
   assert.equal(ap(), 0);
 });
 
+test('modifyPlayerStat: a declared custom resource is modifiable by name and clamped', () => {
+  gameState.init({ ...TEST_RULES, playerDefaults: {
+    ...TEST_RULES.playerDefaults,
+    resources: { ...TEST_RULES.playerDefaults.resources, luckPoints: { current: 3, max: 3 } },
+  }});
+  const luck = () => gameState.getPlayer().resources.luckPoints.current;
+  gameState.modifyPlayerStat('luckPoints', -1);
+  assert.equal(luck(), 2);
+  gameState.modifyPlayerStat('luckPoints', -10);
+  assert.equal(luck(), 0);            // clamps to 0
+  gameState.modifyPlayerStat('luckPoints', 99);
+  assert.equal(luck(), 3);            // clamps to max
+});
+
 test('addToInventory: stacks existing item', () => {
   // rusty_sword starts at 1
   gameState.addToInventory('rusty_sword', 2);

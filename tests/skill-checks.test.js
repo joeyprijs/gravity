@@ -4,7 +4,7 @@ import { gameState } from '../src/core/state.js';
 import {
   normalizeOutcomes, pickTier, performSkillCheck, formatMod, resolveRetryText,
   getAttempts, recordAttempt, isResolved, markResolved, resetAttempts,
-  rollBreakdown, skillLabel,
+  rollBreakdown, skillLabel, resolveTierText, retryCost, retryGate, applyRetryGate,
 } from '../src/systems/skill-checks.js';
 
 const TEST_RULES = {
@@ -185,6 +185,71 @@ test('resolveRetryText: walks the variants per attempt and clamps to the last', 
   assert.equal(resolveRetryText(opt, 9), 'Once more');
   assert.equal(resolveRetryText({ text: 'Try', retryText: 'Retry' }, 3), 'Retry');
   assert.equal(resolveRetryText({ text: 'Try' }, 3), 'Try');
+});
+
+test('resolveTierText: plain string shows every time; array walks per attempt and clamps', () => {
+  assert.equal(resolveTierText('Nothing.', 0), 'Nothing.');
+  assert.equal(resolveTierText('Nothing.', 4), 'Nothing.');
+  const arr = ['first', 'second', 'third'];
+  assert.equal(resolveTierText(arr, 0), 'first');
+  assert.equal(resolveTierText(arr, 1), 'second');
+  assert.equal(resolveTierText(arr, 5), 'third'); // clamps to last
+  assert.equal(resolveTierText(undefined, 0), undefined);
+});
+
+test('performSkillCheck: failure narration walks per attempt', () => {
+  const { engine, logs } = makeEngine();
+  const tiers = normalizeOutcomes({ outcomes: { failure: { text: ['miss A', 'miss B'] } } });
+  mock.method(Math, 'random', () => 0); // roll 1 + 2 = 3 vs DC 20 → failure
+  performSkillCheck(engine, 'perception', 20, tiers, 0);
+  assert.equal(logs.at(-1).message, 'miss A');
+  performSkillCheck(engine, 'perception', 20, tiers, 1);
+  assert.equal(logs.at(-1).message, 'miss B');
+});
+
+// ── Retry currency (rules.skillRetry) ─────────────────────────────────────────
+
+const RETRY_RULES = {
+  ...TEST_RULES,
+  playerDefaults: {
+    ...TEST_RULES.playerDefaults,
+    resources: { ...TEST_RULES.playerDefaults.resources, luckPoints: { current: 3, max: 3 } },
+  },
+  skillRetry: { resource: 'luckPoints', cost: 1 },
+};
+
+function retryEngine(rules) {
+  return { t: (k, p) => p ? `${k}:${JSON.stringify(p)}` : k, data: { rules } };
+}
+
+test('retryCost: reads rules.skillRetry; absent or zero cost is free', () => {
+  assert.equal(retryCost(null), null);
+  assert.equal(retryCost({}), null);
+  assert.deepEqual(retryCost({ skillRetry: { resource: 'luckPoints', cost: 1 } }), { resource: 'luckPoints', amount: 1 });
+  assert.equal(retryCost({ skillRetry: { resource: 'luckPoints', cost: 0 } }), null);
+});
+
+test('retryGate: first attempt free; retries cost the resource; blocks when unaffordable', () => {
+  gameState.init(RETRY_RULES);
+  const engine = retryEngine(RETRY_RULES.skillRetry ? { skillRetry: RETRY_RULES.skillRetry } : {});
+
+  assert.deepEqual(retryGate(engine, 0), { cost: 0, blocked: false });      // first try free
+
+  const gate = retryGate(engine, 1);
+  assert.equal(gate.cost, 1);
+  assert.equal(gate.resource, 'luckPoints');
+  assert.equal(gate.blocked, false);                                        // has 3
+
+  gameState.modifyPlayerStat('luckPoints', -3);                             // drain to 0
+  assert.equal(retryGate(engine, 1).blocked, true);                         // can't afford
+});
+
+test('applyRetryGate: appends the cost with the resource label; free gate is unchanged', () => {
+  const engine = retryEngine({});
+  assert.equal(applyRetryGate(engine, { cost: 0 }, 'DC 12'), 'DC 12');
+  const out = applyRetryGate(engine, { cost: 1, resource: 'luckPoints' }, 'DC 12');
+  assert.match(out, /badgeWithRetryCost/);
+  assert.match(out, /ui\.resources\.luckPoints/); // label resolved through locale
 });
 
 test('rollBreakdown: formats breakdown strings correctly', () => {

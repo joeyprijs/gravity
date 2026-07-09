@@ -348,11 +348,40 @@ function validateRules(ctx) {
   }
 
   // The 2d6 luck subsystem was removed — its rules knobs and resource are
-  // inert. Point authors at the replacement (a luck custom attribute).
+  // inert. Point authors at the replacements (a luck custom attribute for
+  // rolls; rules.skillRetry for a spend-to-retry currency).
   for (const key of REMOVED_LUCK_RULE_KEYS) {
     if (rules?.[key] !== undefined)
-      ctx.add(group, `rules.${key} belongs to the removed 2d6 luck subsystem — model luck as a custom attribute (d20 vs DC) instead`);
+      ctx.add(group, `rules.${key} belongs to the removed 2d6 luck subsystem — model luck as a custom attribute (d20 vs DC), or a retry currency via rules.skillRetry`);
   }
   if (rules?.playerDefaults?.resources?.luck !== undefined)
-    ctx.add(group, 'playerDefaults.resources.luck belongs to the removed 2d6 luck subsystem — declare luck in customAttributes instead');
+    ctx.add(group, 'playerDefaults.resources.luck belongs to the removed 2d6 luck subsystem — declare luck in customAttributes, or a retry-currency resource named something else');
+
+  const declaredResources = rules?.playerDefaults?.resources ?? {};
+  const isResource = (id) => {
+    const r = declaredResources[id];
+    return r && typeof r === 'object' && 'current' in r;
+  };
+
+  // Retry currency: rules.skillRetry.resource must be a declared { current, max }
+  // resource, cost positive, restRestore non-negative.
+  const retry = rules?.skillRetry;
+  if (retry) {
+    if (!retry.resource)
+      ctx.add(group, 'skillRetry needs a "resource" — the currency a retry spends');
+    else if (!isResource(retry.resource))
+      ctx.add(group, `skillRetry.resource "${retry.resource}" is not a declared { current, max } resource in playerDefaults.resources`);
+    if (!(retry.cost > 0))
+      ctx.add(group, 'skillRetry.cost must be a positive number');
+    if (retry.restRestore !== undefined && !(retry.restRestore >= 0))
+      ctx.add(group, 'skillRetry.restRestore must be a non-negative number');
+  }
+
+  // Header chips: every id must be a declared resource with a display label.
+  for (const id of (rules?.headerResources ?? [])) {
+    if (!isResource(id))
+      ctx.add(group, `headerResources "${id}" is not a declared { current, max } resource in playerDefaults.resources`);
+    if (!locale?.ui?.resources?.[id])
+      ctx.add(group, `headerResources "${id}": missing locale entry at ui.resources.${id}`);
+  }
 }

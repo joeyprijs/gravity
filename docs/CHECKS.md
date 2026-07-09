@@ -69,7 +69,24 @@ In dialogue, a resolved response stays gone across conversations.
 
 When the budget runs out without success, the check retires and `onExhausted` runs once — the authored way out. Never hard-lock: if the check gates progress, make `onExhausted` (or an option it reveals) an alternative route. The validator warns when `maxAttempts` has no `onExhausted`. In dialogue, budgets are per conversation — walking away and re-talking resets patience.
 
-`retryText` (a string or array walked per attempt) changes the button/log wording as attempts mount; attempt counts reset on scene re-entry.
+`retryText` (a string or array walked per attempt) changes the button/log wording as attempts mount; attempt counts reset on scene re-entry. A tier's narration `text` may also be an array — walked per failed attempt so repeated failures escalate ("The rubble holds." → "Your fingers come away raw." → "It settles for good."), clamping to the last line.
+
+## Retry currency (`rules.skillRetry`)
+
+Failing a check is free the first time; *retrying* it can cost a scarce resource — a spend-to-try-again economy that makes "search again?" a real decision instead of free spam. Declare a resource and point the retry policy at it:
+
+```json
+"playerDefaults": { "resources": { "hp": {...}, "ap": {...}, "gold": 0, "luckPoints": { "current": 3, "max": 3 } } },
+"skillRetry": { "resource": "luckPoints", "cost": 1, "restRestore": 3 },
+"headerResources": ["luckPoints"]
+```
+
+- **First attempt always free**; each retry of a failed pass/fail or discovery check (and dialogue checks) spends `cost` of the resource. The badge shows it (`— retry: 1 Luck`); when the player can't afford it the button renders disabled, like an unmet item requirement.
+- **`restRestore`** refills the resource on `full_rest` (clamped to max) — the cozy counterweight: spend do-overs while out, recover them sleeping at home.
+- **`headerResources`** lists resources to surface as header chips (label from `ui.resources.<id>`); it's general — any declared `{ current, max }` resource can appear, and any can be spent/restored by name through actions.
+- The resource is tone-neutral: name it "Luck", "Grit", "Focus", whatever fits. It doesn't touch how checks *resolve* (still d20 + modifier vs DC) — it only gates retries.
+
+*(A depleting resource is opt-in. Omit `skillRetry` and retries are unlimited and free.)*
 
 ## The world clock (`rules.time`)
 
@@ -97,21 +114,16 @@ Without `rules.time` the system is dormant: no HUD chip, no default costs (expli
 
 Combat does not advance the clock by default; author an `advance_time` in `onVictory` if a fight should cost time.
 
-## Luck as a skill
+## There is no luck subsystem
 
-Luck is a plain custom attribute — there is no separate luck subsystem. Declare it and roll it like anything else:
+"Luck" is not a built-in mechanic — model it however your game wants, from the pieces above:
 
-```json
-"customAttributes": [ { "id": "luck", "default": 0 } ]
-```
+- **As a retry currency** (what the demo does): a `luckPoints` resource + `rules.skillRetry` — see *Retry currency*. Luck is the do-over budget.
+- **As a d20 skill**: a plain custom attribute (`{ "id": "luck", "default": 0 }`) rolled with `"skillCheck": "luck"` against a DC, exactly like perception. Read in conditions (`{ "luck": { "at_least": 2 } }`), offered in character creation.
 
-```json
-{ "text": "Wrench at the glinting thing.", "skillCheck": "luck", "dc": 12, "resolveOnce": true, "outcomes": { ... } }
-```
+Either way it's one resolution mechanic everywhere — d20 + modifier vs DC — with luck as flavor on top, never a parallel dice system.
 
-One resolution mechanic everywhere: d20 + modifier vs DC, with the same tiers, budgets, retry wording, and roll breakdowns as every other check. Conditions read it like any attribute (`{ "luck": { "at_least": 2 } }`), and character creation can offer it (`{ "id": "attributes.luck", "localeKey": "luck", "bonusPerPoint": 1 }`).
-
-*History: a Fighting-Fantasy-style 2d6 roll-under luck subsystem (depleting resource, Test Your Luck gambles, combat gambles, retry costs) shipped briefly and was removed — a second resolution mechanic cost more in player legibility than it earned in flavor. The validator flags its leftover authoring surface (`luckCheck`, `restore_luck`, `rules.luck`, the luck resource) with pointers to this convention.*
+*History: a Fighting-Fantasy-style 2d6 roll-under luck subsystem (depleting resource, Test Your Luck gambles, combat gambles) shipped briefly and was removed — a second resolution mechanic cost more in player legibility than it earned. The validator flags its leftover authoring surface (`luckCheck`, `restore_luck`, `rules.luck`, a `luck` resource) with pointers to these conventions.*
 
 
 ## Passive checks

@@ -28,10 +28,6 @@
       "stealth": {
         "label": "Stealth",
         "description": "+1 Stealth per point"
-      },
-      "luck": {
-        "label": "Luck",
-        "description": "+1 Luck per point"
       }
     }
   },
@@ -50,8 +46,7 @@
     "initiative": "{value}",
     "perception": "{value}",
     "stealth": "{value}",
-    "gold": "{value}",
-    "luck": "{value}"
+    "gold": "{value}"
   },
   "ui": {
     "inventoryEmpty": "Inventory is empty.",
@@ -80,7 +75,10 @@
     "locationMerchant": "{name}",
     "locationCombat": "Combat",
     "notEnoughGold": "Not enough gold!",
-    "timeChipDay": "Day {day}"
+    "timeChipDay": "Day {day}",
+    "resources": {
+      "luckPoints": "Luck"
+    }
   },
   "time": {
     "segments": {
@@ -131,14 +129,12 @@
     "skillBadge": {
       "perception": "DC {dc}, Perception {mod}",
       "charisma": "DC {dc}, Charisma {mod}",
-      "stealth": "DC {dc}, Stealth {mod}",
-      "luck": "DC {dc}, Luck {mod}"
+      "stealth": "DC {dc}, Stealth {mod}"
     },
     "skillBadgeFree": {
       "perception": "Perception",
       "charisma": "Charisma",
-      "stealth": "Stealth",
-      "luck": "Luck"
+      "stealth": "Stealth"
     },
     "skillCritical": "({breakdown} = {roll} vs DC {dc}) — a triumph!",
     "skillSuccess": "({breakdown} = {roll} vs DC {dc}) — success!",
@@ -147,7 +143,8 @@
     "lookAroundEmpty": "You look around carefully. Nothing catches your eye.",
     "lookAroundFound": "You search the area ({breakdown} = {roll}) — your keen eye spots something!",
     "lookAroundFoundMore": "You search the area ({breakdown} = {roll}) — your keen eye spots something, though you sense the area still holds more.",
-    "lookAroundFail": "You search the area ({breakdown} = {roll}) — nothing reveals itself, yet you sense there's something you're missing."
+    "lookAroundFail": "You search the area ({breakdown} = {roll}) — nothing reveals itself, yet you sense there's something you're missing.",
+    "badgeWithRetryCost": "{badge} — retry: {cost} {resource}"
   },
   "player": {
     "equipped": "Equipped {name} to {slot}.",

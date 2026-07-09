@@ -367,11 +367,18 @@ class StateManager {
       case 'gold':
         p.resources.gold += amount;
         break;
-      default:
-        if (p.attributes && stat in p.attributes) {
+      default: {
+        // Any declared { current, max } resource is modifiable by name and
+        // clamped to [0, max] — this is how games add their own resources
+        // (e.g. a "luckPoints" retry currency) without engine changes.
+        const res = p.resources?.[stat];
+        if (res && typeof res === 'object' && 'current' in res) {
+          res.current = Math.max(0, Math.min(res.current + amount, res.max));
+        } else if (p.attributes && stat in p.attributes) {
           p.attributes[stat] += amount;
         }
         break;
+      }
     }
     this.notifyListeners('stats');
     this._emitMutation('modifyPlayerStat', { stat, amount });

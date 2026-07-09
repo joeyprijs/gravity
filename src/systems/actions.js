@@ -64,6 +64,12 @@ function handleFullRest(action, engine) {
   const p = gameState.getPlayer();
   gameState.modifyPlayerStat('hp', p.resources.hp.max - p.resources.hp.current);
   gameState.modifyPlayerStat('ap', p.resources.ap.max - p.resources.ap.current);
+  // A night's rest also refills the retry currency (rules.skillRetry.restRestore,
+  // clamped to max) — the cozy counterweight to spending do-overs while out.
+  const retry = engine.data.rules?.skillRetry;
+  if (retry?.resource && retry.restRestore > 0) {
+    gameState.modifyPlayerStat(retry.resource, retry.restRestore);
+  }
   if (action.log !== false) {
     const msg = typeof action.log === 'string' ? action.log : engine.t('actions.fullRest');
     engine.log(LOG.SYSTEM, msg);

@@ -5,7 +5,7 @@ import { evaluateCondition } from "./condition.js";
 import {
   performSkillCheck, normalizeOutcomes, resolveRetryText,
   getAttempts, recordAttempt, isResolved, markResolved,
-  skillBadge
+  skillBadge, retryGate, applyRetryGate
 } from "./skill-checks.js";
 
 // Actions that move the conversation to a new panel (node, store, or scene).
@@ -209,9 +209,11 @@ export class DialogueSystem {
       if (needsCheck && (isResolved(resolvedKey, resKey) || isResolved(dcStateKey, resKey))) return;
 
       const attempts = needsCheck ? getAttempts(dcStateKey, resKey) : 0;
+      const gate = needsCheck ? retryGate(this.engine, attempts) : { cost: 0, blocked: false };
       const displayText = needsCheck ? resolveRetryText(res, attempts) : res.text;
-      const badge = needsCheck ? skillBadge(this.engine, res.skillCheck, res.dc) : null;
+      const badge = needsCheck ? applyRetryGate(this.engine, gate, skillBadge(this.engine, res.skillCheck, res.dc)) : null;
       const btn = buildOptionButton(displayText, badge);
+      if (gate.blocked) btn.disabled = true;
 
       btn.onclick = () => {
         this.engine.log(LOG.PLAYER, displayText, 'choice');
@@ -221,8 +223,9 @@ export class DialogueSystem {
         if (res.timeCost > 0) this.engine.advanceTime(res.timeCost);
 
         if (needsCheck) {
+          if (gate.cost > 0) gameState.modifyPlayerStat(gate.resource, -gate.cost);
           const outcomes = normalizeOutcomes(res);
-          const { tier, success } = performSkillCheck(this.engine, res.skillCheck, res.dc, outcomes);
+          const { tier, success } = performSkillCheck(this.engine, res.skillCheck, res.dc, outcomes, attempts);
           if (res.resolveOnce) markResolved(resolvedKey, resKey);
 
           if (!success) {

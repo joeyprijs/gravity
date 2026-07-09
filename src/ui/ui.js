@@ -18,6 +18,7 @@ export class UIManager {
   setup() {
     this._buildTabs();
     this._buildTimeChip();
+    this._buildResourceChips();
     this.map.setup();
 
     // Save
@@ -151,6 +152,33 @@ export class UIManager {
     group.appendChild(item);
     statsBar.appendChild(group);
     this._updateTimeChip();
+  }
+
+  // Injects a header chip per resource listed in rules.headerResources — the
+  // general way a game surfaces a custom resource (e.g. luckPoints) beside the
+  // built-in HP/AP/Gold. Labels come from ui.resources.<id>; the current/max
+  // data-stat-bind spans ride the existing stats update loop.
+  _buildResourceChips() {
+    const ids = this.engine.data.rules?.headerResources || [];
+    if (!ids.length) return;
+    const statsBar = document.getElementById(EL.PLAYER_BASIC_STATS);
+    if (!statsBar) return;
+    const group = createElement('div', 'stat-group');
+    ids.forEach(id => {
+      const res = gameState.getPlayer().resources?.[id];
+      if (!res || typeof res !== 'object' || !('current' in res)) return;
+      const item = createElement('div', 'stat-item');
+      item.appendChild(createElement('span', 'stat-item__label', this.engine.t(`ui.resources.${id}`)));
+      const value = createElement('span', 'stat-item__value');
+      const current = createElement('span');
+      current.dataset.statBind = `resources.${id}.current`;
+      const max = createElement('span');
+      max.dataset.statBind = `resources.${id}.max`;
+      value.append(current, '/', max);
+      item.appendChild(value);
+      group.appendChild(item);
+    });
+    if (group.children.length) statsBar.appendChild(group);
   }
 
   _updateTimeChip() {

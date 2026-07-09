@@ -312,6 +312,34 @@ test('flags the removed luck subsystem rules keys and the restore_luck action', 
 });
 
 
+test('skillRetry: flags an undeclared resource, bad cost, and negative restRestore', () => {
+  const data = makeToolkitData();
+  data.rules.skillRetry = { resource: 'luckPoints', cost: 0, restRestore: -1 };
+  const messages = issuesFor(data);
+  assert.ok(messages.some(m => m.includes('skillRetry.resource "luckPoints" is not a declared')));
+  assert.ok(messages.some(m => m.includes('skillRetry.cost must be a positive number')));
+  assert.ok(messages.some(m => m.includes('skillRetry.restRestore must be a non-negative number')));
+});
+
+test('skillRetry + headerResources: clean when the resource is declared with a label', () => {
+  const data = makeToolkitData();
+  data.rules.playerDefaults.resources = { luckPoints: { current: 3, max: 3 } };
+  data.rules.skillRetry = { resource: 'luckPoints', cost: 1, restRestore: 3 };
+  data.rules.headerResources = ['luckPoints'];
+  data.locale.ui = { resources: { luckPoints: 'Luck' } };
+  const messages = issuesFor(data);
+  assert.ok(!messages.some(m => m.includes('skillRetry')));
+  assert.ok(!messages.some(m => m.includes('headerResources')));
+});
+
+test('headerResources: flags an undeclared resource and a missing label', () => {
+  const data = makeToolkitData();
+  data.rules.headerResources = ['luckPoints'];
+  const messages = issuesFor(data);
+  assert.ok(messages.some(m => m.includes('headerResources "luckPoints" is not a declared')));
+  assert.ok(messages.some(m => m.includes('missing locale entry at ui.resources.luckPoints')));
+});
+
 test('flags malformed time config: bad segments, ranges, costs, locale entries', () => {
   const data = makeToolkitData();
   data.rules.time.segments.push({ id: 'ghost', from: 99 });

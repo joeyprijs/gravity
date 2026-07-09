@@ -58,7 +58,11 @@
         "current": 3,
         "max": 3
       },
-      "gold": 0
+      "gold": 0,
+      "luckPoints": {
+        "current": 3,
+        "max": 3
+      }
     },
     "attributes": {
       "ac": 10,
@@ -99,10 +103,6 @@
     {
       "id": "stealth",
       "default": 0
-    },
-    {
-      "id": "luck",
-      "default": 0
     }
   ],
   "charCreation": {
@@ -137,12 +137,6 @@
         "localeKey": "stealth",
         "bonusPerPoint": 1,
         "min": 0
-      },
-      {
-        "id": "attributes.luck",
-        "localeKey": "luck",
-        "bonusPerPoint": 1,
-        "min": 0
       }
     ]
   },
@@ -169,5 +163,13 @@
       "localeKey": "ui.tabMap",
       "widget": "map"
     }
+  ],
+  "skillRetry": {
+    "resource": "luckPoints",
+    "cost": 1,
+    "restRestore": 3
+  },
+  "headerResources": [
+    "luckPoints"
   ]
 }

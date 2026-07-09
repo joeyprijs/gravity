@@ -67,6 +67,20 @@ export function resolveRetryText(opt, attempts) {
 }
 
 /**
+ * Resolves a tier's narration for the current attempt. A tier `text` may be a
+ * single string (shown every time) or an array walked per failed attempt so
+ * repeated failures escalate ("Nothing." → "Still nothing." → …), clamping to
+ * the last entry.
+ * @param {string|string[]|undefined} text - The tier's `text` field.
+ * @param {number} attempts - Failed attempts before this one (0 on first try).
+ * @returns {string|undefined}
+ */
+export function resolveTierText(text, attempts) {
+  if (!Array.isArray(text)) return text;
+  return text[Math.min(attempts, text.length - 1)];
+}
+
+/**
  * Builds the canonical outcome-tier table for a check from either authoring
  * shape. Legacy fields (`actions` = success pipeline, `onFailure` = failure
  * pipeline) and the newer `outcomes` object may be mixed freely; when both
@@ -133,7 +147,7 @@ export function pickTier(margin, outcomes) {
  * @returns {{rolled: number, mod: number, margin: number, tier: string, success: boolean}}
  *   `success` is true for the critical and success tiers.
  */
-export function performSkillCheck(engine, skillId, dc, outcomes = null) {
+export function performSkillCheck(engine, skillId, dc, outcomes = null, attempts = 0) {
   const tiers = outcomes ?? { success: { actions: [] }, failure: { actions: [] } };
   const mod = gameState.getPlayer().attributes[skillId] ?? 0;
   const base = roll(1, MAX_D20_ROLL);
@@ -149,7 +163,9 @@ export function performSkillCheck(engine, skillId, dc, outcomes = null) {
     }),
     success ? 'loot' : 'system'
   );
-  const tierText = tiers[tier]?.text;
+  // Tier narration may be an array walked per attempt so repeated failures
+  // escalate; a plain string shows every time.
+  const tierText = resolveTierText(tiers[tier]?.text, attempts);
   if (tierText) engine.log(LOG.NARRATOR, tierText);
   return { rolled, mod, margin, tier, success };
 }
@@ -166,6 +182,50 @@ export function performSkillCheck(engine, skillId, dc, outcomes = null) {
 export function skillBadge(engine, skillId, dc) {
   const mod = gameState.getPlayer().attributes[skillId] ?? 0;
   return engine.t(`actions.skillBadge.${skillId}`, { dc, mod: formatMod(mod) });
+}
+
+/**
+ * The retry policy: retrying a FAILED check spends `cost` of a named resource
+ * (rules.skillRetry = { resource, cost }). First attempts are always free.
+ * Absent config or cost 0 makes retries free. Games that never fail-forward
+ * on a scarce currency simply omit it.
+ * @param {object|null} rules - The loaded rules object.
+ * @returns {{resource: string, amount: number}|null}
+ */
+export function retryCost(rules) {
+  const r = rules?.skillRetry;
+  return r?.resource && r.cost > 0 ? { resource: r.resource, amount: r.cost } : null;
+}
+
+/**
+ * The retry gate for a check that has been attempted before: what a retry
+ * costs and whether the player can afford it. `blocked` means callers render
+ * the button disabled (like an unmet item requirement). The first attempt
+ * (attempts === 0) is always free.
+ * @param {object} engine - The RPGEngine instance (reads data.rules and state).
+ * @param {number} attempts - Attempts made so far.
+ * @returns {{cost: number, resource?: string, blocked: boolean}}
+ */
+export function retryGate(engine, attempts) {
+  const policy = retryCost(engine.data.rules);
+  if (!attempts || !policy) return { cost: 0, blocked: false };
+  const have = gameState.getPlayer().resources?.[policy.resource]?.current ?? 0;
+  return { cost: policy.amount, resource: policy.resource, blocked: have < policy.amount };
+}
+
+/**
+ * Appends the retry cost to a check badge when a retry charges one. The
+ * currency's display name comes from ui.resources.<resource>. Returns the
+ * (possibly rewritten) badge text.
+ * @param {object} engine - The RPGEngine instance (used for locale).
+ * @param {{cost: number, resource?: string}} gate - Result of retryGate().
+ * @param {string} badge - The base badge text.
+ * @returns {string}
+ */
+export function applyRetryGate(engine, gate, badge) {
+  if (gate.cost <= 0) return badge;
+  const label = engine.t(`ui.resources.${gate.resource}`);
+  return engine.t('actions.badgeWithRetryCost', { badge, cost: gate.cost, resource: label });
 }
 
 /**

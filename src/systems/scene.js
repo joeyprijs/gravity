@@ -7,7 +7,7 @@ import { resolveTimeCost } from "./time.js";
 import {
   performSkillCheck, normalizeOutcomes, resolveRetryText,
   getAttempts, recordAttempt, isResolved, markResolved, resetAttempts,
-  skillBadge, rollBreakdown, skillLabel
+  skillBadge, retryGate, applyRetryGate, rollBreakdown, skillLabel
 } from "./skill-checks.js";
 
 // SceneRenderer handles navigating to scenes, resolving their descriptions,
@@ -358,10 +358,16 @@ export class SceneRenderer {
 
     const lowestDc = Math.min(...items.map(l => l.dc ?? 10).filter((_, idx) => !state.found[idx]));
     const displayText = resolveRetryText(opt, state.tries || 0);
-    const btn = buildOptionButton(displayText, skillBadge(this.engine, opt.skillCheck, lowestDc));
+    const gate = retryGate(this.engine, state.tries || 0);
+    const btn = buildOptionButton(displayText, applyRetryGate(this.engine, gate, skillBadge(this.engine, opt.skillCheck, lowestDc)));
+    if (gate.blocked) {
+      btn.disabled = true;
+      return btn;
+    }
     btn.onclick = () => {
       this.engine.isGameStart = false;
       this.engine.log(LOG.PLAYER, displayText, 'choice');
+      if (gate.cost > 0) gameState.modifyPlayerStat(gate.resource, -gate.cost);
       this._chargeTime(opt, 'skillAttempt');
       this._resolveDiscovery(opt, i, state, skillKey, scene);
     };
@@ -508,13 +514,19 @@ export class SceneRenderer {
     if (isResolved(skillKey, i)) return null;
     const attempts = getAttempts(skillKey, i);
     const displayText = resolveRetryText(opt, attempts);
-    const btn = buildOptionButton(displayText, skillBadge(this.engine, opt.skillCheck, opt.dc));
+    const gate = retryGate(this.engine, attempts);
+    const btn = buildOptionButton(displayText, applyRetryGate(this.engine, gate, skillBadge(this.engine, opt.skillCheck, opt.dc)));
+    if (gate.blocked) {
+      btn.disabled = true;
+      return btn;
+    }
     btn.onclick = () => {
       this.engine.isGameStart = false;
       this.engine.log(LOG.PLAYER, displayText, 'choice');
+      if (gate.cost > 0) gameState.modifyPlayerStat(gate.resource, -gate.cost);
       this._chargeTime(opt, 'skillAttempt');
       const outcomes = normalizeOutcomes(opt);
-      const { tier, success } = performSkillCheck(this.engine, opt.skillCheck, opt.dc, outcomes);
+      const { tier, success } = performSkillCheck(this.engine, opt.skillCheck, opt.dc, outcomes, attempts);
       if (opt.resolveOnce) markResolved(skillKey, i);
       const sceneIdBefore = gameState.getCurrentSceneId();
       if (success) {
