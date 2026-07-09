@@ -1,0 +1,17 @@
+{
+  "prompt": "Choose your adventure",
+  "games": [
+    {
+      "id": "demo",
+      "name": "The Awakening — Tech Demo",
+      "description": "The kitchen-sink demo: escape a dungeon while every engine system shows off.",
+      "manifest": "data/index.json"
+    },
+    {
+      "id": "heirloom",
+      "name": "Heirloom (working title)",
+      "description": "Your family's museum has kept the world's stories for centuries. Today you turn eighteen.",
+      "manifest": "games/heirloom/index.json"
+    }
+  ]
+}

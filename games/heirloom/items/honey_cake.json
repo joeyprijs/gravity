@@ -1,0 +1,9 @@
+{
+  "name": "Mother's Honey Cake",
+  "type": "Consumable",
+  "description": "Still warm. She pretends it's an old family recipe; it is actually four old family recipes, argued into one.",
+  "value": 5,
+  "attributes": {
+    "healingAmount": 4
+  }
+}

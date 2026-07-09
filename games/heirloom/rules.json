@@ -1,0 +1,137 @@
+{
+  "startingScene": "heirloom_bedroom",
+  "merchantSellRatio": 0.5,
+  "unequipApCost": 1,
+  "restHealAmount": 10,
+  "snackHealAmount": 2,
+  "levelUpHpBonus": 5,
+  "xpPerLevel": 100,
+  "levelingCurve": "linear",
+  "time": {
+    "ticksPerDay": 24,
+    "startTick": 7,
+    "segments": [
+      {
+        "id": "morning",
+        "from": 6
+      },
+      {
+        "id": "day",
+        "from": 10
+      },
+      {
+        "id": "evening",
+        "from": 18
+      },
+      {
+        "id": "night",
+        "from": 22
+      }
+    ],
+    "defaultCosts": {
+      "navigate": 1,
+      "skillAttempt": 0,
+      "fullRest": 8
+    }
+  },
+  "itemTypeOrder": {
+    "Weapon": 1,
+    "Spell": 2,
+    "Armor": 3,
+    "Consumable": 4,
+    "Flavour": 5
+  },
+  "playerDefaults": {
+    "name": "",
+    "level": 1,
+    "xp": 0,
+    "resources": {
+      "hp": {
+        "current": 10,
+        "max": 10
+      },
+      "ap": {
+        "current": 3,
+        "max": 3
+      },
+      "gold": 12
+    },
+    "attributes": {
+      "ac": 10,
+      "initiative": 0
+    },
+    "inventory": [],
+    "equipment": {
+      "Head": null,
+      "Amulet": null,
+      "Torso": null,
+      "Left Hand": null,
+      "Right Hand": null,
+      "Legs": null
+    }
+  },
+  "customAttributes": [
+    {
+      "id": "perception",
+      "default": 0
+    },
+    {
+      "id": "charisma",
+      "default": 0
+    },
+    {
+      "id": "stealth",
+      "default": 0
+    }
+  ],
+  "charCreation": {
+    "pointBudget": 3,
+    "stats": [
+      {
+        "id": "resources.hp.max",
+        "localeKey": "maxHp",
+        "bonusPerPoint": 2,
+        "min": 0
+      },
+      {
+        "id": "attributes.perception",
+        "localeKey": "perception",
+        "bonusPerPoint": 1,
+        "min": 0
+      },
+      {
+        "id": "attributes.charisma",
+        "localeKey": "charisma",
+        "bonusPerPoint": 1,
+        "min": 0
+      },
+      {
+        "id": "attributes.stealth",
+        "localeKey": "stealth",
+        "bonusPerPoint": 1,
+        "min": 0
+      }
+    ]
+  },
+  "tabs": [
+    {
+      "id": "inventory-tab",
+      "localeKey": "ui.tabInventory",
+      "default": true
+    },
+    {
+      "id": "quests-tab",
+      "localeKey": "ui.tabQuests"
+    },
+    {
+      "id": "attributes-tab",
+      "localeKey": "ui.tabAttributes",
+      "widget": "attributes"
+    },
+    {
+      "id": "map-tab",
+      "localeKey": "ui.tabMap",
+      "widget": "map"
+    }
+  ]
+}

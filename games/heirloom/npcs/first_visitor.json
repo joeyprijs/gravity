@@ -1,0 +1,34 @@
+{
+  "name": "Elsbeth",
+  "conversations": {
+    "start": {
+      "npcText": "\"I heard — well, my scry-feed heard — that the old museum had something new.\" She nods at the riverglass, hat still in her hands. \"My gran talked about this place. I didn't think it was still... anyway. What's the story with the locket?\"",
+      "responses": [
+        {
+          "text": "Tell her where you found it, and what moves inside the glass",
+          "outcomes": {
+            "success": {
+              "actions": [
+                {
+                  "type": "loot",
+                  "item": "gold",
+                  "amount": 5,
+                  "received": true,
+                  "log": "Elsbeth insists on paying admission — five gold, pressed into your hand like a secret. The first admission in years."
+                },
+                {
+                  "type": "set_flag",
+                  "flag": "first_visitor_paid",
+                  "value": true
+                },
+                {
+                  "type": "leave"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "title": "The Family Room",
+  "region": "forest_home",
+  "mapDefinitions": {
+    "top": 990,
+    "left": 1430,
+    "width": 170,
+    "height": 100,
+    "background": "rgba(70, 50, 30, 0.9)"
+  },
+  "description": [
+    {
+      "text": "The family room is quiet now, breakfast cleared away. The museum door stands open to the east; through the west door, the forest path is waiting.",
+      "condition": {
+        "flag": "sent_off",
+        "value": true
+      }
+    },
+    {
+      "text": "Your parents are both at the breakfast table, which never happens, sitting very straight, which happens even less. There is a wrapped bundle beside the teapot and a look on your mother's face that means a Speech has been prepared."
+    }
+  ],
+  "options": [
+    {
+      "text": "Join your parents at the table",
+      "condition": {
+        "flag": "sent_off",
+        "value": false
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "parents"
+        }
+      ]
+    },
+    {
+      "text": "Enter the museum hall",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "heirloom_museum_hall"
+        }
+      ]
+    },
+    {
+      "text": "Step out onto the forest path",
+      "condition": {
+        "flag": "sent_off",
+        "value": true
+      },
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "heirloom_forest_path"
+        }
+      ]
+    },
+    {
+      "text": "Go back up to your room",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "heirloom_bedroom"
+        }
+      ]
+    }
+  ]
+}

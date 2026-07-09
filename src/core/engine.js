@@ -12,6 +12,7 @@ import { registerBuiltinActions } from "../systems/actions.js";
 import { parseDamage } from "../systems/dice.js";
 import { getDay, getSegment } from "../systems/time.js";
 import { CharCreationScreen } from "../screens/char-creation.js";
+import { renderGameSelect } from "../screens/game-select.js";
 import curatorPlugin from "../plugins/curator.js";
 
 // The locale file loaded before anything else, and the fallback when the
@@ -22,10 +23,14 @@ const DEFAULT_LOCALE_PATH = 'data/locales.json';
 // data from JSON, and exposes a thin delegate API so subsystems can call each
 // other without importing each other directly (avoiding circular deps).
 class RPGEngine {
-  constructor(previewBundle = null) {
+  constructor(previewBundle = null, manifestPath = 'data/index.json') {
     // When running inside Studio's live-preview iframe, game data is injected
     // as an in-memory bundle instead of being fetched from disk. null in normal play.
     this._previewBundle = previewBundle;
+
+    // Which game to load. games.json may register several game manifests;
+    // the boot flow resolves the chosen one (see bootGame below).
+    this._manifestPath = manifestPath;
 
     // Populated by loadData(). Kept as an empty shell here so subsystems
     // constructed below can safely reference this.engine.data without null checks.
@@ -152,7 +157,7 @@ class RPGEngine {
     this.data.locale = await fetch(DEFAULT_LOCALE_PATH, { cache: 'no-cache' }).then(r => r.json()).catch(() => ({}));
 
     try {
-      const manifestRes = await fetch('data/index.json', { cache: 'no-cache' });
+      const manifestRes = await fetch(this._manifestPath, { cache: 'no-cache' });
       const manifest = await manifestRes.json();
 
       // Resolve the active language from the manifest's declared locale files
@@ -654,5 +659,32 @@ window.addEventListener('DOMContentLoaded', () => {
     window.parent.postMessage({ type: 'gravity:preview-ready' }, location.origin);
     return;
   }
-  window.gameEngine = new RPGEngine();
+  bootGame();
 });
+
+// Boots the engine against the selected game. An optional games.json at the
+// web root registers multiple game manifests; ?game=<id> picks one, and when
+// several are registered without a valid pick, the chooser overlay renders
+// instead of booting. A missing or single-entry registry boots straight into
+// the only (or default demo) manifest — single-game deployments never see
+// any of this.
+async function bootGame() {
+  const registry = await fetch('games.json', { cache: 'no-cache' })
+    .then(r => (r.ok ? r.json() : null))
+    .catch(() => null);
+  const games = (registry?.games ?? []).filter(g => g?.id && g?.manifest);
+
+  if (games.length <= 1) {
+    window.gameEngine = new RPGEngine(null, games[0]?.manifest ?? undefined);
+    return;
+  }
+
+  const requested = new URLSearchParams(location.search).get('game');
+  const picked = games.find(g => g.id === requested);
+  if (picked) {
+    window.gameEngine = new RPGEngine(null, picked.manifest);
+    return;
+  }
+
+  renderGameSelect(registry, games);
+}

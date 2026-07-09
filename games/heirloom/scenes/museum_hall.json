@@ -1,0 +1,81 @@
+{
+  "title": "The Museum Hall",
+  "region": "forest_home",
+  "mapDefinitions": {
+    "top": 990,
+    "left": 1620,
+    "width": 170,
+    "height": 100,
+    "background": "rgba(60, 30, 70, 0.9)"
+  },
+  "supportsExhibits": true,
+  "description": [
+    {
+      "text": "The hall feels different with something new in it. Dust sheets folded away, the riverglass catching the light — and a visitor, actually a visitor, lingering by the case with her hat in her hands.",
+      "condition": {
+        "and": [
+          {
+            "reputation": {
+              "at_least": 15
+            }
+          },
+          {
+            "flag": "first_visitor_paid",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "text": "Five generations of your family kept this hall famous, and it still stands beautifully — polished cases, careful labels, not a speck of dust. It is also completely empty of people, and has been for years. The cases wait like held breath."
+    }
+  ],
+  "displays": [
+    {
+      "id": "heirloom_grandmothers_case",
+      "name": "Grandmother's Glass Case"
+    },
+    {
+      "id": "heirloom_oak_pedestal",
+      "name": "Oak Pedestal"
+    },
+    {
+      "id": "heirloom_story_alcove",
+      "name": "Story Alcove"
+    }
+  ],
+  "options": [
+    {
+      "text": "Greet the visitor",
+      "condition": {
+        "and": [
+          {
+            "reputation": {
+              "at_least": 15
+            }
+          },
+          {
+            "flag": "first_visitor_paid",
+            "value": false
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "first_visitor"
+        }
+      ]
+    },
+    {
+      "text": "Return to the family room",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "heirloom_family_room"
+        }
+      ]
+    }
+  ]
+}

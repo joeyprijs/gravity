@@ -1,0 +1,46 @@
+{
+  "worldMapSize": {
+    "width": 3000,
+    "height": 2000
+  },
+  "defaultLanguage": "en",
+  "locales": {
+    "en": "games/heirloom/locales.json"
+  },
+  "rules": "games/heirloom/rules.json",
+  "plugins": [
+    {
+      "id": "curator",
+      "src": "./src/plugins/curator.js",
+      "locales": {
+        "en": "./src/plugins/curator/locales/en.json"
+      }
+    }
+  ],
+  "flags": {
+    "forest_home": "games/heirloom/flags.json"
+  },
+  "regions": {
+    "forest_home": {
+      "name": "The Forest Home"
+    }
+  },
+  "items": {
+    "riverglass_locket": "games/heirloom/items/riverglass_locket.json",
+    "honey_cake": "games/heirloom/items/honey_cake.json"
+  },
+  "tables": {},
+  "npcs": {
+    "parents": "games/heirloom/npcs/parents.json",
+    "first_visitor": "games/heirloom/npcs/first_visitor.json"
+  },
+  "scenes": {
+    "heirloom_bedroom": "games/heirloom/scenes/bedroom.json",
+    "heirloom_family_room": "games/heirloom/scenes/family_room.json",
+    "heirloom_museum_hall": "games/heirloom/scenes/museum_hall.json",
+    "heirloom_forest_path": "games/heirloom/scenes/forest_path.json"
+  },
+  "missions": {
+    "make_a_name": "games/heirloom/missions/make_a_name.json"
+  }
+}

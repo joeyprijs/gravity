@@ -1,0 +1,30 @@
+{
+  "title": "Your Room Under the Eaves",
+  "region": "forest_home",
+  "mapDefinitions": {
+    "top": 880,
+    "left": 1460,
+    "width": 130,
+    "height": 80,
+    "background": "rgba(60, 45, 30, 0.9)"
+  },
+  "description": "Morning light through leaded glass, birdsong, the smell of something baking. You are eighteen years old today, and the house knows it — you can hear your parents not-whispering about it downstairs.",
+  "skills": [
+    {
+      "text": "Linger at the window a moment",
+      "skillCheck": "perception",
+      "resultText": "The forest goes on forever from up here, green over green. Somewhere past the far ridge is everything you've only read about on museum placards — and this morning, for the first time, the thought feels less like a daydream and more like a door."
+    }
+  ],
+  "options": [
+    {
+      "text": "Head downstairs",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "heirloom_family_room"
+        }
+      ]
+    }
+  ]
+}
