@@ -1,13 +1,12 @@
 {
-  "door_unlocked": false,
-  "wanderer_defeated": false,
-  "corridor_rubble_settled": false,
-  "defeated_goblin_guard": false,
-  "goblins_pacified": false,
-  "goblins_snuck_past": false,
-  "chamber_rested": false,
+  "door_unlocked":             false,
+  "wanderer_defeated":         false,
+  "corridor_rubble_settled":   false,
+  "defeated_goblin_guard":     false,
+  "goblins_pacified":          false,
+  "goblins_snuck_past":        false,
+  "chamber_rested":            false,
   "stranger_reputation_known": false,
-  "dungeon_alarm": false,
-  "chamber_noticed_shimmer": false,
-  "dungeon_hunted": false
+  "dungeon_alarm":             false,
+  "chamber_noticed_shimmer":   false
 }

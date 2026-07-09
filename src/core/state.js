@@ -5,7 +5,7 @@ const MAX_LOG_ENTRIES = 200;
 // Increment when the save schema changes. loadFromObject() migrates older saves
 // forward so they remain compatible. Each migration function receives the raw
 // parsed data object and mutates it in-place.
-const SAVE_VERSION = 5;
+const SAVE_VERSION = 4;
 
 const MIGRATIONS = {
   // v0 → v1: player.name was added; give it an empty default on older saves.
@@ -29,10 +29,6 @@ const MIGRATIONS = {
   4: (data) => {
     if (!('time' in data)) data.time = { ticks: 0 };
     if (!('timers' in data)) data.timers = [];
-  },
-  // v4 → v5: progress clocks added.
-  5: (data) => {
-    if (!('clocks' in data)) data.clocks = {};
   },
 };
 
@@ -67,7 +63,6 @@ function makeDefaultState(rules) {
     visitedScenes: [],
     time: { ticks: 0 },
     timers: [],
-    clocks: {},
     log: []
   };
 }
@@ -92,7 +87,6 @@ class StateManager {
       visitedScenes: [],
       time: { ticks: 0 },
       timers: [],
-      clocks: {},
       log: []
     };
     this.listeners = [];
@@ -326,8 +320,6 @@ class StateManager {
     if (!this.state.timers) this.state.timers = [];
     this.state.timers = this.state.timers.filter(t => t.id !== timer.id);
     this.state.timers.push(timer);
-    // Labeled timers display as countdowns in the quest panel.
-    this.notifyListeners('quests');
   }
 
   /**
@@ -337,73 +329,6 @@ class StateManager {
   cancelTimer(id) {
     if (!this.state.timers) return;
     this.state.timers = this.state.timers.filter(t => t.id !== id);
-    this.notifyListeners('quests');
-  }
-
-  /** @returns {Array<{id: string, deadline: number, label?: string, actions: object[]}>} Armed timers. */
-  getTimers() { return this.state.timers ?? []; }
-
-  // ── Progress clocks ────────────────────────────────────────────────────────
-  // Named, segmented progress tracks (Blades-in-the-Dark style): events fill
-  // them through advanceClock, and the quest UI renders them as pips. When the
-  // last segment fills, the clock retires and its onFilled pipeline is
-  // returned for the engine to run — StateManager stays free of action
-  // handling, mirroring advanceTime and timers.
-
-  /** @returns {Object<string, {label: string, segments: number, filled: number, onFilled: object[]}>} */
-  getClocks() { return this.state.clocks ?? {}; }
-
-  /**
-   * Starts (or restarts) a progress clock at zero. A clock with the same id
-   * replaces the old one — the re-arm semantics timers already have.
-   * @param {{id: string, label?: string, segments: number, onFilled?: object[]}} clock
-   */
-  startClock({ id, label, segments, onFilled }) {
-    if (!id || !(segments > 0)) return;
-    if (!this.state.clocks) this.state.clocks = {};
-    this.state.clocks[id] = { label: label ?? id, segments, filled: 0, onFilled: onFilled ?? [] };
-    this.notifyListeners('quests');
-    this._emitMutation('startClock', { id, segments });
-  }
-
-  /**
-   * Advances a running clock by `amount` segments (clamped to the total).
-   * Returns the clock's onFilled pipeline when this advance filled the last
-   * segment — the clock retires in the same move — or null otherwise.
-   * Advancing a clock that isn't running warns and no-ops: clocks must be
-   * started explicitly so the player has seen the threat.
-   * @param {string} id
-   * @param {number} [amount=1]
-   * @returns {object[]|null}
-   */
-  advanceClock(id, amount = 1) {
-    const clock = this.state.clocks?.[id];
-    if (!clock) {
-      console.warn(`[Gravity] advanceClock: no clock "${id}" running — start_clock it first`);
-      return null;
-    }
-    if (!(amount > 0)) return null;
-    clock.filled = Math.min(clock.segments, clock.filled + amount);
-    let onFilled = null;
-    if (clock.filled >= clock.segments) {
-      onFilled = clock.onFilled ?? [];
-      delete this.state.clocks[id];
-    }
-    this.notifyListeners('quests');
-    this._emitMutation('advanceClock', { id, filled: clock.filled });
-    return onFilled;
-  }
-
-  /**
-   * Removes a running clock without firing onFilled (the threat passed).
-   * Unknown ids are a no-op.
-   * @param {string} id
-   */
-  cancelClock(id) {
-    if (!this.state.clocks?.[id]) return;
-    delete this.state.clocks[id];
-    this.notifyListeners('quests');
-    this._emitMutation('cancelClock', { id });
   }
 
   getPlayer() { return this.state.player; }

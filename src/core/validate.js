@@ -16,7 +16,7 @@ const COMBAT_NPC_ATTRIBUTES = ['healthPoints', 'armorClass', 'actionPoints'];
 // would mis-resolve it. Reserved to prevent that ambiguity.
 const RESERVED_CONDITION_KEYS = new Set([
   'and', 'or', 'not', 'flag', 'value', 'item', 'count', 'gold', 'level', 'mission', 'status',
-  'time', 'day', 'segment', 'luck', 'clock', 'progress',
+  'time', 'day', 'segment', 'luck',
 ]);
 
 // The outcome tier names a check's `outcomes` object may define.
@@ -89,10 +89,6 @@ export function validateGameData(data, knownActionTypes) {
     ...data,
     knownActionTypes,
     knownSkills: collectKnownSkills(data.rules),
-    // Clock cross-referencing: ids started anywhere vs ids advanced/checked
-    // anywhere — compared after the full walk, so authoring order is free.
-    startedClocks: new Set(),
-    referencedClocks: new Map(),
     add: (group, message) => issues.push({ group, message }),
   };
 
@@ -100,11 +96,6 @@ export function validateGameData(data, knownActionTypes) {
   validateScenes(ctx);
   validateNpcs(ctx);
   validateRules(ctx);
-
-  for (const [id, where] of ctx.referencedClocks) {
-    if (!ctx.startedClocks.has(id))
-      ctx.add('Clocks', `clock "${id}" is advanced or checked (${where}) but no start_clock anywhere starts it`);
-  }
 
   return issues;
 }
@@ -144,8 +135,6 @@ function validateCondition(ctx, group, condition, where) {
   }
   if ('luck' in condition && !hasLuck(ctx.rules))
     ctx.add(group, `${where}: condition uses "luck" but rules.playerDefaults.resources has no luck — it evaluates against 0`);
-  if ('clock' in condition && !ctx.referencedClocks.has(condition.clock))
-    ctx.referencedClocks.set(condition.clock, `${group}, ${where}`);
 }
 
 function validateSkillCheck(ctx, group, skillCheck, where) {
@@ -194,25 +183,6 @@ function validateActions(ctx, group, actions, where) {
           ctx.add(group, `${where}: set_timer "${action.id}" → "${inner.type}" is not allowed in timer pipelines (quiet actions only: ${[...TIMER_SAFE_ACTIONS].join(', ')})`);
       }
       validateActions(ctx, group, action.actions, `${where}: set_timer "${action.id}"`);
-    }
-    if (action.type === 'start_clock') {
-      if (!action.id)
-        ctx.add(group, `${where}: start_clock needs an "id"`);
-      else
-        ctx.startedClocks.add(action.id);
-      if (!(action.segments > 0))
-        ctx.add(group, `${where}: start_clock "${action.id}" needs a positive "segments" count`);
-      for (const inner of (action.onFilled || [])) {
-        if (!TIMER_SAFE_ACTIONS.has(inner.type))
-          ctx.add(group, `${where}: start_clock "${action.id}" → "${inner.type}" is not allowed in onFilled pipelines (quiet actions only: ${[...TIMER_SAFE_ACTIONS].join(', ')})`);
-      }
-      validateActions(ctx, group, action.onFilled, `${where}: start_clock "${action.id}"`);
-    }
-    if (action.type === 'advance_clock' || action.type === 'cancel_clock') {
-      if (!action.id)
-        ctx.add(group, `${where}: ${action.type} needs an "id"`);
-      else if (action.type === 'advance_clock' && !ctx.referencedClocks.has(action.id))
-        ctx.referencedClocks.set(action.id, `${group}, ${where}`);
     }
     if (action.type === 'restore_luck' && !hasLuck(ctx.rules))
       ctx.add(group, `${where}: restore_luck without a luck resource in rules.playerDefaults.resources is a no-op`);

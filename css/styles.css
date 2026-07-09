@@ -215,49 +215,6 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  /* Anchors the floating clock strip. */
-  position: relative;
-}
-
-/* Ambient clock overlay: pills floating over the log's bottom edge. The
-   narrative's own 20vh bottom padding keeps the newest lines clear of it. */
-.clock-strip {
-  position: absolute;
-  bottom: calc(var(--spacing) * 2);
-  right: calc(var(--spacing) * 2);
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--spacing);
-  pointer-events: none;
-}
-
-.clock-strip__item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: calc(var(--spacing) * 1.25) calc(var(--spacing) * 1.75);
-  background: var(--list-item-bg);
-  border: 1px solid var(--panel-border);
-  line-height: 1;
-}
-
-.clock-strip__label {
-  font-size: var(--font-xs);
-  font-weight: 600;
-  color: var(--text-secondary);
-  letter-spacing: 0.05em;
-}
-
-.clock-strip__value {
-  font-size: var(--font-sm);
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.clock-strip__value--pips {
-  letter-spacing: 3px;
-  color: var(--accent-color);
 }
 
 .game__main {
@@ -444,12 +401,6 @@ body {
   font-size: var(--font-sm);
   font-weight: 700;
   color: var(--text-primary);
-}
-
-/* Clock pips (●●○○) in the quest panel's Clocks section. */
-.attr-list__value--pips {
-  letter-spacing: 3px;
-  color: var(--accent-color);
 }
 
 

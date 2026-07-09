@@ -252,45 +252,9 @@ test('loadFromObject: applies a valid save and migrates an old one forward', () 
   const ok = gameState.loadFromObject({ player: {}, log: [] }); // no saveVersion → migrates from 0
   assert.equal(ok, true);
   assert.equal(gameState.getPlayer().name, ''); // migration 1 added player.name
-  assert.equal(gameState.state.saveVersion, 5); // brought up to the current version
+  assert.equal(gameState.state.saveVersion, 4); // brought up to the current version
   assert.deepEqual(gameState.state.time, { ticks: 0 }); // migration 4 seeded the clock
   assert.deepEqual(gameState.state.timers, []);
-  assert.deepEqual(gameState.state.clocks, {}); // migration 5 seeded progress clocks
-});
-
-// ── Progress clocks ───────────────────────────────────────────────────────────
-
-test('clocks: start, advance, and retire on fill (returning onFilled)', () => {
-  const onFilled = [{ type: 'set_flag', flag: 'done', value: true }];
-  gameState.startClock({ id: 'hunt', label: 'The Hunt', segments: 3, onFilled });
-
-  assert.deepEqual(gameState.getClocks().hunt, { label: 'The Hunt', segments: 3, filled: 0, onFilled });
-  assert.equal(gameState.advanceClock('hunt'), null);
-  assert.equal(gameState.advanceClock('hunt'), null);
-  assert.equal(gameState.getClocks().hunt.filled, 2);
-
-  const fired = gameState.advanceClock('hunt');
-  assert.deepEqual(fired, onFilled);                 // fill returns the pipeline…
-  assert.equal(gameState.getClocks().hunt, undefined); // …and the clock retires
-});
-
-test('clocks: over-advance clamps to segments and fires once', () => {
-  gameState.startClock({ id: 'c', segments: 2 });
-  const fired = gameState.advanceClock('c', 5);
-  assert.deepEqual(fired, []); // filled in one jump; empty onFilled pipeline
-  assert.equal(gameState.getClocks().c, undefined);
-});
-
-test('clocks: advancing an unknown clock is a no-op; restart resets; cancel removes silently', () => {
-  assert.equal(gameState.advanceClock('nope'), null);
-
-  gameState.startClock({ id: 'c', segments: 4 });
-  gameState.advanceClock('c', 3);
-  gameState.startClock({ id: 'c', segments: 4 }); // restart replaces
-  assert.equal(gameState.getClocks().c.filled, 0);
-
-  gameState.cancelClock('c');
-  assert.equal(gameState.getClocks().c, undefined);
 });
 
 test('migrate: leaves a future-versioned save untouched (no backward rewrite)', () => {

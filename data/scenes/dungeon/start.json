@@ -41,42 +41,13 @@
           "value": true
         },
         {
-          "type": "start_clock",
-          "id": "the_hunt",
-          "label": "The Hunt",
-          "segments": 3,
-          "onFilled": [
-            {
-              "type": "set_flag",
-              "flag": "dungeon_hunted",
-              "value": true
-            },
-            {
-              "type": "log",
-              "message": "The baying is close now. They have your scent."
-            }
-          ]
-        },
-        {
           "type": "set_timer",
           "id": "dungeon_alarm",
           "afterTicks": 12,
           "actions": [
-            {
-              "type": "set_flag",
-              "flag": "dungeon_alarm",
-              "value": true
-            },
-            {
-              "type": "log",
-              "message": "Somewhere above, a horn sounds — long, low, and answered."
-            },
-            {
-              "type": "advance_clock",
-              "id": "the_hunt"
-            }
-          ],
-          "label": "Something stirs above"
+            { "type": "set_flag", "flag": "dungeon_alarm", "value": true },
+            { "type": "log", "message": "Somewhere above, a horn sounds — long, low, and answered." }
+          ]
         },
         {
           "type": "navigate",
@@ -87,9 +58,7 @@
     {
       "text": "Take a closer look at the door",
       "condition": {
-        "not": {
-          "item": "cellar_key"
-        }
+        "not": { "item": "cellar_key" }
       },
       "actions": [
         {
@@ -121,10 +90,7 @@
       "timeCost": 1,
       "maxAttempts": 4,
       "onExhausted": [
-        {
-          "type": "log",
-          "message": "You've turned over every stone and barrel. Whatever else this cellar hides, your eyes won't find it."
-        }
+        { "type": "log", "message": "You've turned over every stone and barrel. Whatever else this cellar hides, your eyes won't find it." }
       ],
       "items": [
         {

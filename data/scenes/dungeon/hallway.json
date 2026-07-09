@@ -222,14 +222,6 @@
                   "type": "loot",
                   "item": "home_rune",
                   "amount": 1
-                },
-                {
-                  "type": "advance_clock",
-                  "id": "the_hunt"
-                },
-                {
-                  "type": "log",
-                  "message": "The clash rang loud in the stone halls."
                 }
               ]
             }
@@ -272,14 +264,6 @@
               "type": "loot",
               "item": "home_rune",
               "amount": 1
-            },
-            {
-              "type": "advance_clock",
-              "id": "the_hunt"
-            },
-            {
-              "type": "log",
-              "message": "The clash rang loud in the stone halls."
             }
           ]
         }

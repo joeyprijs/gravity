@@ -4,7 +4,7 @@ import { EL, CSS, LOG } from "../core/config.js";
 import { getDay, getSegment } from "../systems/time.js";
 import { MapManager } from "../world/map.js";
 import { ChestUI } from "./chest-ui.js";
-import { QuestUI, buildClockEntries } from "./quest-ui.js";
+import { QuestUI } from "./quest-ui.js";
 import { InventoryUI } from "./inventory-ui.js";
 
 export class UIManager {
@@ -167,25 +167,6 @@ export class UIManager {
   // Injects the luck chip into the header stats bar when the game opts into
   // the luck resource (rules.playerDefaults.resources.luck). The data-stat-bind
   // spans ride the existing stats update loop — no bespoke refresh needed.
-  // The ambient clock strip: active clocks and labeled countdowns float as
-  // small pills over the bottom of the narrative log, so a ticking threat is
-  // visible without opening the Quests tab. Hidden when nothing is running.
-  _updateClockStrip() {
-    const strip = document.getElementById(EL.CLOCK_STRIP);
-    if (!strip) return;
-    clearElement(strip);
-    const entries = buildClockEntries(this.engine);
-    strip.hidden = entries.length === 0;
-    entries.forEach(entry => {
-      const item = createElement('span', 'clock-strip__item');
-      item.appendChild(createElement('span', 'clock-strip__label', entry.label));
-      item.appendChild(createElement('span',
-        entry.pips ? 'clock-strip__value clock-strip__value--pips' : 'clock-strip__value',
-        entry.value));
-      strip.appendChild(item);
-    });
-  }
-
   _buildLuckChip() {
     if (!this.engine.data.rules?.playerDefaults?.resources?.luck) return;
     const statsBar = document.getElementById(EL.PLAYER_BASIC_STATS);
@@ -222,11 +203,7 @@ export class UIManager {
       this.bindItemActions();
     }
 
-    // Clocks live in the quest panel and countdowns move with the world
-    // clock, so time changes re-render it too — plus the ambient strip
-    // floating over the narrative log.
-    if (!hint || hint === 'quests' || hint === 'time') {
-      this._updateClockStrip();
+    if (!hint || hint === 'quests') {
       this.questUI.render();
     }
 

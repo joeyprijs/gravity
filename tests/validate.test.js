@@ -186,7 +186,7 @@ test('flags a missing or non-positive xpPerLevel', () => {
 
 // ── Engagement-toolkit validations (outcomes, luck, time, timers, passive) ────
 
-const TOOLKIT_ACTIONS = new Set([...KNOWN_ACTIONS, 'advance_time', 'set_timer', 'cancel_timer', 'start_clock', 'advance_clock', 'cancel_clock', 'restore_luck', 'log']);
+const TOOLKIT_ACTIONS = new Set([...KNOWN_ACTIONS, 'advance_time', 'set_timer', 'cancel_timer', 'restore_luck', 'log']);
 
 // Extends the clean fixture with luck + time configuration so the new checks
 // have their backing config; tests then break specific pieces.
@@ -282,26 +282,6 @@ test('flags redundant or inert attempt-budget combinations', () => {
   assert.ok(messages.some(m => m.includes('resolveOnce makes maxAttempts redundant')));
   assert.ok(messages.some(m => m.includes('onExhausted never runs without maxAttempts')));
   assert.ok(messages.some(m => m.includes('maxAttempts without onExhausted')));
-});
-
-test('clocks: flags unsafe onFilled actions, missing fields, and never-started references', () => {
-  const data = makeToolkitData();
-  data.scenes.cave.options.push({
-    text: 'Start',
-    actions: [{
-      type: 'start_clock', id: 'hunt', segments: 3,
-      onFilled: [{ type: 'combat', enemies: ['goblin'] }],
-    }],
-  });
-  data.scenes.cave.options.push({ text: 'Tick', actions: [{ type: 'advance_clock', id: 'hunt' }] });
-  data.scenes.cave.options.push({ text: 'Ghost', actions: [{ type: 'advance_clock', id: 'never_started' }] });
-  data.scenes.cave.options.push({ text: 'Bad', actions: [{ type: 'start_clock', segments: 0 }] });
-  const messages = issuesFor(data);
-  assert.ok(messages.some(m => m.includes('"combat" is not allowed in onFilled')));
-  assert.ok(messages.some(m => m.includes('start_clock needs an "id"')));
-  assert.ok(messages.some(m => m.includes('needs a positive "segments"')));
-  assert.ok(messages.some(m => m.includes('clock "never_started" is advanced or checked')));
-  assert.ok(!messages.some(m => m.includes('clock "hunt" is advanced or checked')), 'started clock should not be flagged');
 });
 
 test('flags unsafe actions inside timer pipelines and missing timer ids', () => {

@@ -13,7 +13,6 @@
  * - day: 1-based day number (e.g. `{ "day": { "at_least": 3 } }`) — needs rules.time
  * - segment: Current day segment (e.g. `{ "segment": "night" }`) — needs rules.time
  * - luck: Current luck resource (e.g. `{ "luck": { "at_most": 2 } }`) — needs a luck resource
- * - clock: Progress-clock fill (e.g. `{ "clock": "the_hunt", "progress": { "at_least": 2 } }`)
  * - customAttributes: Dynamic skill values (e.g. `{ "stealth": { "more_than": 2 } }`)
  *
  * Supported Tree Combinators:
@@ -111,16 +110,6 @@ export function evaluateCondition(condition, gameState) {
   }
   if ('segment' in condition && !('segment' in attrs)) {
     return getSegment(gameState.getTicks?.() ?? 0, gameState.getRules?.()?.time) === condition.segment;
-  }
-
-  // CLOCK Leaf: partial progress on a running progress clock
-  // (e.g. { "clock": "the_hunt", "progress": { "at_least": 2 } }; progress
-  // defaults to 1 — "has it advanced at all"). A clock that isn't running —
-  // never started, or filled and retired — evaluates as progress 0; gate
-  // aftermath on a flag set by the clock's onFilled pipeline instead.
-  if ('clock' in condition && !('clock' in attrs)) {
-    const clock = gameState.getClocks?.()?.[condition.clock];
-    return compare(clock?.filled ?? 0, condition.progress ?? 1);
   }
 
   // ITEM Leaf: Evaluates if the player possesses the item, checking quantities if "count" is specified.

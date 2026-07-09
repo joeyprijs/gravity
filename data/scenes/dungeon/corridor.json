@@ -13,14 +13,8 @@
       "text": "The corridor is quiet now, lit by a single guttering torch. The rubble along the wall lies torn open where you dug at it. The path north leads to the stone hallway.",
       "condition": {
         "and": [
-          {
-            "flag": "wanderer_defeated",
-            "value": true
-          },
-          {
-            "flag": "corridor_rubble_settled",
-            "value": true
-          }
+          { "flag": "wanderer_defeated", "value": true },
+          { "flag": "corridor_rubble_settled", "value": true }
         ]
       }
     },
@@ -54,14 +48,6 @@
         "type": "loot",
         "item": "healing_potion",
         "amount": 1
-      },
-      {
-        "type": "advance_clock",
-        "id": "the_hunt"
-      },
-      {
-        "type": "log",
-        "message": "The sounds of the fight carry up the stairwells."
       }
     ],
     "condition": {
