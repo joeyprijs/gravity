@@ -16,8 +16,15 @@ const COMBAT_NPC_ATTRIBUTES = ['healthPoints', 'armorClass', 'actionPoints'];
 // would mis-resolve it. Reserved to prevent that ambiguity.
 const RESERVED_CONDITION_KEYS = new Set([
   'and', 'or', 'not', 'flag', 'value', 'item', 'count', 'gold', 'level', 'mission', 'status',
-  'time', 'day', 'segment', 'luck',
+  'time', 'day', 'segment',
 ]);
+
+// The removed 2d6 Test-Your-Luck subsystem's authoring surface. Luck is a
+// plain custom attribute now (d20 + luck vs DC, like every other check);
+// these fields are flagged so old data gets a pointer instead of silence.
+const REMOVED_LUCK_RULE_KEYS = [
+  'luck', 'combatLuck', 'combatLuckMinDamage', 'skillRetryLuckCost', 'fullRestLuckRestore',
+];
 
 // The outcome tier names a check's `outcomes` object may define.
 const OUTCOME_TIERS = new Set(['critical', 'success', 'partial', 'failure']);
@@ -25,35 +32,6 @@ const OUTCOME_TIERS = new Set(['critical', 'success', 'partial', 'failure']);
 // The defaultCosts kinds the engine charges (see systems/time.js).
 const TIME_COST_KINDS = new Set(['navigate', 'skillAttempt', 'fullRest']);
 
-// Whether the game opted into the luck resource.
-function hasLuck(rules) {
-  return !!rules?.playerDefaults?.resources?.luck;
-}
-
-// The luck tuning knobs live together under rules.luck; these top-level names
-// are their deprecated originals (still read via normalizeRules).
-const LEGACY_LUCK_KEYS = {
-  combatLuck:          'combat',
-  combatLuckMinDamage: 'combatMinDamage',
-  skillRetryLuckCost:  'retryCost',
-  fullRestLuckRestore: 'restRestore',
-};
-
-/**
- * Normalizes the rules object in place: legacy top-level luck knobs are
- * folded into the rules.luck block (existing rules.luck values win). Runs at
- * load, before validateGameData, so engine consumers only read rules.luck.
- *
- * @param {object|null} rules - The loaded rules object.
- */
-export function normalizeRules(rules) {
-  if (!rules) return;
-  for (const [legacy, key] of Object.entries(LEGACY_LUCK_KEYS)) {
-    if (rules[legacy] === undefined) continue;
-    rules.luck ??= {};
-    rules.luck[key] ??= rules[legacy];
-  }
-}
 
 /**
  * Normalizes every NPC's carriedItems to the object form
@@ -114,7 +92,7 @@ function isKnownItem(ctx, itemId) {
 }
 
 // Recursively checks a condition tree for unknown item and mission references
-// and for time/luck leaves used without their backing configuration.
+// and for time leaves used without their backing configuration.
 function validateCondition(ctx, group, condition, where) {
   if (!condition) return;
   if (condition.and) { condition.and.forEach(c => validateCondition(ctx, group, c, where)); return; }
@@ -133,8 +111,6 @@ function validateCondition(ctx, group, condition, where) {
     else if (!segments.some(s => s.id === condition.segment))
       ctx.add(group, `${where}: condition references unknown segment "${condition.segment}"`);
   }
-  if ('luck' in condition && !hasLuck(ctx.rules))
-    ctx.add(group, `${where}: condition uses "luck" but rules.playerDefaults.resources has no luck — it evaluates against 0`);
 }
 
 function validateSkillCheck(ctx, group, skillCheck, where) {
@@ -184,24 +160,18 @@ function validateActions(ctx, group, actions, where) {
       }
       validateActions(ctx, group, action.actions, `${where}: set_timer "${action.id}"`);
     }
-    if (action.type === 'restore_luck' && !hasLuck(ctx.rules))
-      ctx.add(group, `${where}: restore_luck without a luck resource in rules.playerDefaults.resources is a no-op`);
+    if (action.type === 'restore_luck')
+      ctx.add(group, `${where}: "restore_luck" was removed with the 2d6 luck subsystem — model luck as a custom attribute instead`);
   }
 }
 
 // Validates the check-flavor fields shared by scene skill options and dialogue
-// responses: luck gambles, outcome tiers, one-shot markers, attempt budgets.
+// responses: outcome tiers, one-shot markers, attempt budgets.
 function validateCheck(ctx, group, check, where) {
-  if (check.luckCheck && check.skillCheck)
-    ctx.add(group, `${where}: has both luckCheck and skillCheck — pick one`);
-  if (check.luckCheck && check.dc)
-    ctx.add(group, `${where}: luckCheck takes no DC — the player's own luck is the difficulty`);
-  if (check.luckCheck && (check.items || []).length)
-    ctx.add(group, `${where}: luckCheck with item drops — the discovery flow never runs on a luck gamble, so the items are unreachable`);
-  if (check.luckCheck && !hasLuck(ctx.rules))
-    ctx.add(group, `${where}: luckCheck requires a luck resource in rules.playerDefaults.resources`);
+  if (check.luckCheck)
+    ctx.add(group, `${where}: "luckCheck" (the 2d6 Test-Your-Luck gamble) was removed — use a d20 check against a luck custom attribute ("skillCheck": "luck" with a dc) instead`);
   if ('increment' in check || (check.items || []).some(l => 'increment' in l))
-    ctx.add(group, `${where}: "increment" (DC escalation) was removed — use maxAttempts, resolveOnce, retry luck costs, or time pressure instead`);
+    ctx.add(group, `${where}: "increment" (DC escalation) was removed — use maxAttempts, resolveOnce, or time pressure instead`);
   if (check.resolveOnce && check.maxAttempts)
     ctx.add(group, `${where}: resolveOnce makes maxAttempts redundant (one roll IS the budget)`);
   if (check.onExhausted && !check.maxAttempts)
@@ -377,20 +347,12 @@ function validateRules(ctx) {
     }
   }
 
-  // Luck knobs configured without the luck resource silently do nothing —
-  // that mismatch is always an authoring mistake.
-  if (rules && !hasLuck(rules)) {
-    for (const [knob, value] of Object.entries(rules.luck ?? {})) {
-      if (value)
-        ctx.add(group, `luck.${knob} is set but rules.playerDefaults.resources has no luck resource — it will do nothing`);
-    }
+  // The 2d6 luck subsystem was removed — its rules knobs and resource are
+  // inert. Point authors at the replacement (a luck custom attribute).
+  for (const key of REMOVED_LUCK_RULE_KEYS) {
+    if (rules?.[key] !== undefined)
+      ctx.add(group, `rules.${key} belongs to the removed 2d6 luck subsystem — model luck as a custom attribute (d20 vs DC) instead`);
   }
-  if (rules?.luck?.combatMinDamage && !rules.luck.combat)
-    ctx.add(group, 'luck.combatMinDamage is set but luck.combat is off — it will do nothing');
-  if (rules?.luck?.combatApCost && !rules.luck.combat)
-    ctx.add(group, 'luck.combatApCost is set but luck.combat is off — it will do nothing');
-  for (const [legacy, key] of Object.entries(LEGACY_LUCK_KEYS)) {
-    if (rules?.[legacy] !== undefined)
-      ctx.add(group, `"${legacy}" moved to rules.luck.${key} — the old key still works but is deprecated`);
-  }
+  if (rules?.playerDefaults?.resources?.luck !== undefined)
+    ctx.add(group, 'playerDefaults.resources.luck belongs to the removed 2d6 luck subsystem — declare luck in customAttributes instead');
 }

@@ -376,9 +376,7 @@ function renderSkills(data, onChange) {
       const textInput = el('input', { type: 'text', class: 'form-input flat-title-input', value: skill.text ?? '', placeholder: 'Button text…' });
       textInput.addEventListener('input', () => { skill.text = textInput.value; onChange(); });
       hdr.appendChild(textInput);
-      // Picking a skill turns a luck gamble back into a skill check — the
-      // mirror of the Luck gamble toggle deleting skillCheck/dc.
-      const skillSel = select(customAttrs, skill.skillCheck ?? '', v => { skill.skillCheck = v; delete skill.luckCheck; onChange(); });
+      const skillSel = select(customAttrs, skill.skillCheck ?? '', v => { skill.skillCheck = v; onChange(); });
       skillSel.className = 'form-select';
       hdr.appendChild(skillSel);
       const rm = el('button', { class: 'btn-hdr' }, ['✕']);

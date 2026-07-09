@@ -45,11 +45,6 @@
                   "received": true
                 },
                 {
-                  "type": "loot",
-                  "item": "lucky_clover",
-                  "received": true
-                },
-                {
                   "type": "set_flag",
                   "flag": "stranger_reputation_known",
                   "value": true

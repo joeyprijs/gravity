@@ -9,7 +9,13 @@
     },
     "type": {
       "type": "string",
-      "enum": ["Weapon", "Spell", "Armor", "Consumable", "Flavour"],
+      "enum": [
+        "Weapon",
+        "Spell",
+        "Armor",
+        "Consumable",
+        "Flavour"
+      ],
       "description": "The dynamic item classification."
     },
     "description": {
@@ -28,7 +34,14 @@
     },
     "slot": {
       "type": "string",
-      "enum": ["Head", "Amulet", "Torso", "Left Hand", "Right Hand", "Legs"],
+      "enum": [
+        "Head",
+        "Amulet",
+        "Torso",
+        "Left Hand",
+        "Right Hand",
+        "Legs"
+      ],
       "description": "The equipment slot target. Required for weapons, spells, and armor."
     },
     "actionPoints": {
@@ -54,16 +67,11 @@
           "description": "Flat AC protection added when equipped. Used for Armor."
         },
         "healingAmount": {
-          "type": ["integer", "string"],
+          "type": [
+            "integer",
+            "string"
+          ],
           "description": "HP restored on consumption. Supports flat numbers or dice notation."
-        },
-        "luckAmount": {
-          "type": "integer",
-          "description": "Luck restored on consumption (requires the luck resource in rules.playerDefaults)."
-        },
-        "luckMaxBonus": {
-          "type": "integer",
-          "description": "Permanent maximum-luck increase on consumption (requires the luck resource)."
         },
         "teleportScene": {
           "type": "string",
@@ -73,6 +81,9 @@
       "additionalProperties": false
     }
   },
-  "required": ["name", "type"],
+  "required": [
+    "name",
+    "type"
+  ],
   "additionalProperties": false
 }

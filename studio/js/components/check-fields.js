@@ -1,7 +1,7 @@
 // Shared editor for the check-behavior fields that scene skill options and
-// dialogue responses have in common: luck gambles, one-shot resolution,
-// attempt budgets (with onExhausted), time costs, retry wording, and the
-// margin-based outcome tiers. The `outcomes` object is the one authoring
+// dialogue responses have in common: one-shot resolution, attempt budgets
+// (with onExhausted), time costs, retry wording, and the margin-based
+// outcome tiers. The `outcomes` object is the one authoring
 // shape: every tier (critical/success/partial/failure) carries its own
 // narration and action pipeline. The engine still reads the legacy fields
 // (`actions` = success pipeline, `onFailure` = failure pipeline), but Studio
@@ -111,48 +111,20 @@ function renderTier(check, tierName, onChange, { hasMargin, hasActions, hint }) 
  * Renders the shared check-behavior controls, mutating `check` in place.
  * @param {object} check - The scene skill option or dialogue response.
  * @param {() => void} onChange - Dirty-marking callback.
- * @param {{ luck?: boolean, retry?: boolean }} [opts] - luck: offer the
- *   Test-Your-Luck toggle; retry: offer the retryText editor.
+ * @param {{ retry?: boolean }} [opts] - retry: offer the retryText editor.
  */
-export function renderCheckBehavior(check, onChange, { luck = true, retry = true } = {}) {
+export function renderCheckBehavior(check, onChange, { retry = true } = {}) {
   migrateLegacyPipelines(check);
   const wrap = el('div', { class: 'card-section' });
   wrap.appendChild(el('div', { class: 'card-section-label' }, ['Check Behavior']));
 
   const knobs = el('div', { class: 'drop-rhs' });
-  function renderKnobs() {
-    knobs.innerHTML = '';
-    // Mirror the engine's defaults: a luck gamble is one-shot unless
-    // resolveOnce is explicitly false; a skill check repeats unless it's
-    // explicitly true. The checkbox shows and writes accordingly.
-    const isLuck = !!check.luckCheck;
-    const resolveOnceShown = isLuck ? check.resolveOnce !== false : !!check.resolveOnce;
-    knobs.append(...labeledCheck('Resolve once (fail forward)', resolveOnceShown, v => {
-      if (isLuck) check.resolveOnce = v ? undefined : false;
-      else check.resolveOnce = v || undefined;
-      onChange();
-    }));
-    knobs.append(...labeledNum('Max attempts', check.maxAttempts, v => { check.maxAttempts = v; onChange(); }));
-    knobs.append(...labeledNum('Time cost', check.timeCost, v => { check.timeCost = v; onChange(); }));
-    if (luck) {
-      knobs.append(...labeledCheck('Luck gamble (2d6)', check.luckCheck, v => {
-        check.luckCheck = v || undefined;
-        if (v) {
-          delete check.skillCheck;
-          delete check.dc;
-          // Item drops never trigger on a gamble (the engine routes luckCheck
-          // first) — clear them in place so the saved data can't contradict.
-          if (check.items?.length) check.items.length = 0;
-        }
-        // resolveOnce's meaning flips with the check type; drop a value that
-        // now just restates the default (true for gambles, false for checks).
-        if (check.resolveOnce === v) delete check.resolveOnce;
-        onChange();
-        renderKnobs();
-      }));
-    }
-  }
-  renderKnobs();
+  knobs.append(...labeledCheck('Resolve once (fail forward)', check.resolveOnce, v => {
+    check.resolveOnce = v || undefined;
+    onChange();
+  }));
+  knobs.append(...labeledNum('Max attempts', check.maxAttempts, v => { check.maxAttempts = v; onChange(); }));
+  knobs.append(...labeledNum('Time cost', check.timeCost, v => { check.timeCost = v; onChange(); }));
   wrap.appendChild(knobs);
 
   if (retry) {

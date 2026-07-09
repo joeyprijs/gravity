@@ -1,5 +1,8 @@
 {
-  "worldMapSize": { "width": 3000, "height": 2000 },
+  "worldMapSize": {
+    "width": 3000,
+    "height": 2000
+  },
   "defaultLanguage": "en",
   "locales": {
     "en": "data/locales.json"
@@ -15,12 +18,16 @@
     }
   ],
   "flags": {
-    "dungeon":     "data/flags/dungeon.json",
+    "dungeon": "data/flags/dungeon.json",
     "player_home": "data/flags/player_home.json"
   },
   "regions": {
-    "dungeon": { "name": "The Dungeon" },
-    "player_home": { "name": "Player Home" }
+    "dungeon": {
+      "name": "The Dungeon"
+    },
+    "player_home": {
+      "name": "Player Home"
+    }
   },
   "items": {
     "unarmed_strike": "data/items/unarmed_strike.json",
@@ -34,8 +41,7 @@
     "home_rune": "data/items/home_rune.json",
     "wayfinder_charm": "data/items/wayfinder_charm.json",
     "sunstone_shard": "data/items/sunstone_shard.json",
-    "eldritch_eye": "data/items/eldritch_eye.json",
-    "lucky_clover": "data/items/lucky_clover.json"
+    "eldritch_eye": "data/items/eldritch_eye.json"
   },
   "tables": {
     "basic_loot": "data/tables/basic_loot.json",

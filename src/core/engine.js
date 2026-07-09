@@ -7,7 +7,7 @@ import { UIManager } from "../ui/ui.js";
 import { SceneRenderer } from "../systems/scene.js";
 import { DEFAULT_WORLD_MAP_SIZE, LOG, TIMER_SAFE_ACTIONS } from "./config.js";
 import { resolveLanguage } from "./i18n.js";
-import { normalizeCarriedItems, normalizeRules, validateGameData } from "./validate.js";
+import { normalizeCarriedItems, validateGameData } from "./validate.js";
 import { registerBuiltinActions } from "../systems/actions.js";
 import { parseDamage } from "../systems/dice.js";
 import { getDay, getSegment } from "../systems/time.js";
@@ -205,10 +205,8 @@ class RPGEngine {
       ]);
 
       // Normalize once at load so consumers (merchant store, validation) only
-      // ever see carriedItems in its { item, amount } object form — and luck
-      // knobs under rules.luck.
+      // ever see carriedItems in its { item, amount } object form.
       normalizeCarriedItems(npcs);
-      normalizeRules(rules);
 
       this.data = { items, npcs, scenes, missions, tables, regions: manifest.regions || {}, worldMapSize: manifest.worldMapSize || DEFAULT_WORLD_MAP_SIZE, locale: this.data.locale, rules, flags };
 
@@ -248,7 +246,6 @@ class RPGEngine {
     // validation only ever see carriedItems in { item, amount } form.
     normalizeCarriedItems(npcs);
     const rules = bundle.rules || null;
-    normalizeRules(rules);
     // Skip character creation in preview so authors land straight on their
     // content: give the player a placeholder name when the rules leave it blank,
     // which satisfies init()'s new-game gate. The bundle is a postMessage copy,
@@ -327,23 +324,6 @@ class RPGEngine {
 
     // Apply effect BEFORE spending AP so the log order is always:
     // "used potion" → (AP spent) → enemy turn fires.
-    // Luck and healing are independent effects (an item may carry both);
-    // the consumable is removed once, after every effect has applied.
-    const restoresLuck = itemData.attributes?.luckAmount || itemData.attributes?.luckMaxBonus;
-    if (restoresLuck) {
-      // Luck consumables (a four-leaf clover, a Potion of Fortune). A missing
-      // luck resource makes both stat calls no-ops, so guard to avoid
-      // consuming the item for nothing.
-      if (!gameState.getPlayer().resources?.luck) {
-        console.warn(`[Gravity] useItem: "${itemId}" restores luck but this game has no luck resource`);
-        return;
-      }
-      const maxBonus = itemData.attributes.luckMaxBonus ?? 0;
-      const amount = itemData.attributes.luckAmount ?? 0;
-      if (maxBonus) gameState.modifyPlayerStat('maxLuck', maxBonus);
-      if (amount) gameState.modifyPlayerStat('luck', amount);
-      this.log(LOG.SYSTEM, this.t('player.usedLuckItem', { name: itemData.name, amount, maxBonus }), 'loot');
-    }
     if (itemData.attributes?.healingAmount) {
       let amount = itemData.attributes.healingAmount;
       let rollSuffix = "";
@@ -354,8 +334,6 @@ class RPGEngine {
       }
       gameState.modifyPlayerStat('hp', amount);
       this.log(LOG.SYSTEM, this.t('player.usedItem', { name: itemData.name, amount, rollSuffix }), 'loot');
-    }
-    if (restoresLuck || itemData.attributes?.healingAmount) {
       gameState.removeFromInventory(itemId, 1);
     } else if (itemData.attributes?.teleportScene) {
       if (this.inCombat) {

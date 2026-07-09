@@ -238,10 +238,6 @@ function renderParams(action, container, onChange) {
       break;
     }
 
-    case 'restore_luck':
-      container.appendChild(param('Amount', numInput(action.amount ?? 1, v => { action.amount = v; onChange(); }, 'sm')));
-      break;
-
     // full_rest, return, leave, makeFriendly — no params
     default: break;
   }

@@ -419,13 +419,6 @@ test('_buildPassFailButton: failure whose onFailure opens a custom UI skips the 
 
 // ── Outcome tiers, resolveOnce, maxAttempts ──────────────────────────────────
 
-const LUCK_SCENE_RULES = {
-  ...TEST_RULES,
-  playerDefaults: {
-    ...TEST_RULES.playerDefaults,
-    resources: { ...TEST_RULES.playerDefaults.resources, luck: { current: 7, max: 9 } },
-  },
-};
 
 test('_buildPassFailButton: partial tier runs its pipeline and still counts an attempt', () => {
   const { sr, engine } = makeSR();
@@ -468,29 +461,6 @@ test('_buildPassFailButton: exhausting maxAttempts runs onExhausted and retires 
   assert.equal(sr._buildPassFailButton(opt, 0, 'cell', {}), null);
 });
 
-test('_buildPassFailButton: retries cost luck when configured, and block at zero luck', () => {
-  gameState.init(LUCK_SCENE_RULES);
-  const { sr, engine } = makeSR();
-  engine.data.rules = { luck: { retryCost: 2 } };
-  gameState.setCurrentSceneId('cell');
-  const key = FLAG_KEYS.skillDc('perception', 'cell');
-  const opt = { text: 'Pick the lock', skillCheck: 'perception', dc: 15 };
-
-  // First attempt is free — no luck spent.
-  mock.method(Math, 'random', () => 0);
-  sr._buildPassFailButton(opt, 0, 'cell', {}).onclick();
-  assert.equal(gameState.getPlayer().resources.luck.current, 7);
-  assert.equal(getAttempts(key, 0), 1);
-
-  // Retry spends the configured luck cost before rolling.
-  sr._buildPassFailButton(opt, 0, 'cell', {}).onclick();
-  assert.equal(gameState.getPlayer().resources.luck.current, 5);
-
-  // At insufficient luck the retry renders disabled.
-  gameState.modifyPlayerStat('luck', -5);
-  const blocked = sr._buildPassFailButton(opt, 0, 'cell', {});
-  assert.equal(blocked.disabled, true);
-});
 
 // ── Narrative (free) checks ───────────────────────────────────────────────────
 
@@ -529,62 +499,6 @@ test('_buildNarrativeButton: without resultText falls back to the locale line', 
   assert.ok(calls.logs.some(l => l.message === 'actions.lookAroundEmpty'));
 });
 
-// ── Test Your Luck ────────────────────────────────────────────────────────────
-
-test('_buildLuckButton: lucky runs actions and the gamble retires by default', () => {
-  gameState.init(LUCK_SCENE_RULES);
-  const { sr, engine } = makeSR();
-  gameState.setCurrentSceneId('cell');
-  const ran = [];
-  engine.runActions = (a) => ran.push(a);
-  const actions = [{ type: 'loot', item: 'healing_potion' }];
-  const opt = { text: 'Wrench the rubble', luckCheck: true, actions, onFailure: [{ type: 'heal', amount: -2 }] };
-
-  mock.method(Math, 'random', () => 0); // 2d6 = 2 ≤ 7 → lucky
-  sr._buildLuckButton(opt, 0, 'cell', {}).onclick();
-  assert.deepEqual(ran, [actions]);
-  assert.equal(gameState.getPlayer().resources.luck.current, 6); // spent regardless
-  assert.equal(sr._buildLuckButton(opt, 0, 'cell', {}), null);   // resolved
-});
-
-test('_buildLuckButton: unlucky runs onFailure; resolveOnce false keeps the gamble', () => {
-  gameState.init(LUCK_SCENE_RULES);
-  const { sr, engine } = makeSR();
-  gameState.setCurrentSceneId('cell');
-  const ran = [];
-  engine.runActions = (a) => ran.push(a);
-  const onFailure = [{ type: 'heal', amount: -2 }];
-  const opt = { text: 'Wrench', luckCheck: true, resolveOnce: false, actions: [], onFailure };
-
-  mock.method(Math, 'random', () => 0.99); // 2d6 = 12 > 7 → unlucky
-  sr._buildLuckButton(opt, 0, 'cell', {}).onclick();
-  assert.deepEqual(ran, [onFailure]);
-  assert.notEqual(sr._buildLuckButton(opt, 0, 'cell', {}), null);
-});
-
-test('_buildLuckButton: reads the outcomes shape and logs tier narration', () => {
-  gameState.init(LUCK_SCENE_RULES);
-  const { sr, engine, calls } = makeSR();
-  gameState.setCurrentSceneId('cell');
-  const ran = [];
-  engine.runActions = (a) => ran.push(a);
-  const failureActions = [{ type: 'heal', amount: -2 }];
-  const opt = {
-    text: 'Wrench', luckCheck: true,
-    outcomes: { failure: { text: 'The rubble slams down.', actions: failureActions } },
-  };
-
-  mock.method(Math, 'random', () => 0.99); // 2d6 = 12 > 7 → unlucky
-  sr._buildLuckButton(opt, 0, 'cell', {}).onclick();
-  assert.deepEqual(ran, [failureActions]);
-  assert.ok(calls.logs.some(l => l.message === 'The rubble slams down.'));
-});
-
-test('_buildLuckButton: hidden in games without the luck resource', () => {
-  const { sr } = makeSR();
-  gameState.setCurrentSceneId('cell');
-  assert.equal(sr._buildLuckButton({ text: 'Gamble', luckCheck: true }, 0, 'cell', {}), null);
-});
 
 // ── Passive checks ────────────────────────────────────────────────────────────
 

@@ -154,68 +154,6 @@ export function performSkillCheck(engine, skillId, dc, outcomes = null) {
   return { rolled, mod, margin, tier, success };
 }
 
-// ── Luck ─────────────────────────────────────────────────────────────────────
-// Fighting-Fantasy-style "Test Your Luck": roll 2d6 at or under your current
-// luck to be lucky, then lose 1 luck REGARDLESS of the outcome. Luck is a
-// depleting, rarely-restored resource — every test is a real spend.
-
-// P(2d6 <= n) as a whole percentage, indexed by n (clamped to [0, 12]).
-const TWO_D6_AT_MOST = [0, 0, 3, 8, 17, 28, 42, 58, 72, 83, 92, 97, 100];
-
-/**
- * Whether the game has opted into the luck resource
- * (rules.playerDefaults.resources.luck).
- * @returns {boolean}
- */
-export function luckEnabled() {
-  return !!gameState.getPlayer()?.resources?.luck;
-}
-
-/**
- * The player's odds of being lucky on a 2d6-roll-under test, as a whole
- * percentage. Shown on gamble buttons so testing your luck is an informed
- * decision, not a slot machine.
- * @param {number} luck - Current luck value.
- * @returns {number} 0–100.
- */
-export function luckOdds(luck) {
-  return TWO_D6_AT_MOST[Math.max(0, Math.min(12, luck))];
-}
-
-/**
- * Performs a Test Your Luck: rolls 2d6 against the player's current luck,
- * logs the outcome, then reduces luck by 1 regardless. In a game without the
- * luck resource this warns and resolves as unlucky.
- * @param {object} engine - The RPGEngine instance (used for logging/locale).
- * @returns {{rolled: number, luck: number, lucky: boolean}}
- */
-export function performLuckCheck(engine) {
-  if (!luckEnabled()) {
-    console.warn('[Gravity] performLuckCheck: no luck resource in rules.playerDefaults — resolving as unlucky');
-    return { rolled: 0, luck: 0, lucky: false };
-  }
-  const luck = gameState.getPlayer().resources.luck.current;
-  const rolled = roll(1, 6) + roll(1, 6);
-  const lucky = rolled <= luck;
-  engine.log(
-    LOG.SYSTEM,
-    engine.t(lucky ? 'actions.luckSuccess' : 'actions.luckFail', { roll: rolled, luck }),
-    lucky ? 'loot' : 'system'
-  );
-  gameState.modifyPlayerStat('luck', -1);
-  return { rolled, luck, lucky };
-}
-
-/**
- * The luck cost of RETRYING a failed skill check (first attempts are always
- * free). 0 — the default — disables the mechanic entirely.
- * @param {object|null} rules - The loaded rules object (reads rules.luck.retryCost).
- * @returns {number}
- */
-export function retryLuckCost(rules) {
-  return luckEnabled() ? (rules?.luck?.retryCost ?? 0) : 0;
-}
-
 /**
  * Builds the badge for a skill-check button/response: the DC plus the
  * player's current modifier, resolved through the locale (a badge string
@@ -228,34 +166,6 @@ export function retryLuckCost(rules) {
 export function skillBadge(engine, skillId, dc) {
   const mod = gameState.getPlayer().attributes[skillId] ?? 0;
   return engine.t(`actions.skillBadge.${skillId}`, { dc, mod: formatMod(mod) });
-}
-
-/**
- * Retry-costs-luck gate (rules.luck.retryCost): the first attempt at a
- * check is free; each retry spends luck. `blocked` means the player can't
- * afford the retry — callers render the button disabled, like unmet item
- * requirements. cost 0 (the default) disables the mechanic.
- * @param {object} engine - The RPGEngine instance (reads data.rules).
- * @param {number} attempts - Attempts made so far.
- * @returns {{cost: number, blocked: boolean}}
- */
-export function retryGate(engine, attempts) {
-  const cost = retryLuckCost(engine.data.rules);
-  if (!attempts || cost <= 0) return { cost: 0, blocked: false };
-  return { cost, blocked: gameState.getPlayer().resources.luck.current < cost };
-}
-
-/**
- * Applies a retry gate to a check badge: appends the luck cost when the retry
- * charges one. Returns the (possibly rewritten) badge text.
- * @param {object} engine - The RPGEngine instance (used for locale).
- * @param {{cost: number}} gate - Result of retryGate().
- * @param {string} badge - The base badge text.
- * @returns {string}
- */
-export function applyRetryGate(engine, gate, badge) {
-  if (gate.cost <= 0) return badge;
-  return engine.t('actions.badgeWithLuckCost', { badge, cost: gate.cost });
 }
 
 /**

@@ -313,7 +313,6 @@ function renderSkillCheckRow(resp, onChange) {
       v => {
         if (v) {
           resp.skillCheck = v;
-          delete resp.luckCheck;
           if (resp.dc == null) resp.dc = 10;
         } else {
           delete resp.skillCheck;

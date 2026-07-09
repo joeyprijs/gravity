@@ -12,7 +12,6 @@
  * - time: Absolute elapsed ticks (e.g. `{ "time": { "at_least": 120 } }`)
  * - day: 1-based day number (e.g. `{ "day": { "at_least": 3 } }`) — needs rules.time
  * - segment: Current day segment (e.g. `{ "segment": "night" }`) — needs rules.time
- * - luck: Current luck resource (e.g. `{ "luck": { "at_most": 2 } }`) — needs a luck resource
  * - customAttributes: Dynamic skill values (e.g. `{ "stealth": { "more_than": 2 } }`)
  *
  * Supported Tree Combinators:
@@ -98,9 +97,9 @@ export function evaluateCondition(condition, gameState) {
   // TIME Leaves: absolute elapsed ticks; derived day number and day segment.
   // Day and segment need rules.time (ticksPerDay / segments) — without that
   // config the leaf evaluates false (validateGameData warns at load).
-  // A custom attribute sharing one of these names (or "luck") predates the
-  // leaf — the attribute keeps its original semantics via the attributes
-  // fallthrough below (validateGameData flags the collision).
+  // A custom attribute sharing one of these names predates the leaf — the
+  // attribute keeps its original semantics via the attributes fallthrough
+  // below (validateGameData flags the collision).
   if ('time' in condition && !('time' in attrs)) {
     return compare(gameState.getTicks?.() ?? 0, condition.time);
   }
@@ -126,12 +125,6 @@ export function evaluateCondition(condition, gameState) {
   
   if ('gold' in condition) {
     return compare(player.resources.gold, condition.gold);
-  }
-
-  // LUCK Leaf: current luck resource — lets the world notice desperation or
-  // fortune. Games without the luck resource evaluate against 0.
-  if ('luck' in condition && !('luck' in attrs)) {
-    return compare(player.resources?.luck?.current ?? 0, condition.luck);
   }
 
   // Custom attributes (e.g., perception, stealth, charisma) loaded dynamically

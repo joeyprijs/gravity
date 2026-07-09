@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeCarriedItems, normalizeRules, validateGameData } from '../src/core/validate.js';
+import { normalizeCarriedItems, validateGameData } from '../src/core/validate.js';
 
 const KNOWN_ACTIONS = new Set(['loot', 'combat', 'navigate', 'set_flag', 'dialogue', 'goToConversation', 'leave']);
 
@@ -184,15 +184,14 @@ test('flags a missing or non-positive xpPerLevel', () => {
   assert.ok(issues.some(i => /xpPerLevel must be a positive number/.test(i.message)));
 });
 
-// ── Engagement-toolkit validations (outcomes, luck, time, timers, passive) ────
+// ── Engagement-toolkit validations (outcomes, time, timers, passive) ──────────
 
-const TOOLKIT_ACTIONS = new Set([...KNOWN_ACTIONS, 'advance_time', 'set_timer', 'cancel_timer', 'restore_luck', 'log']);
+const TOOLKIT_ACTIONS = new Set([...KNOWN_ACTIONS, 'advance_time', 'set_timer', 'cancel_timer', 'log']);
 
-// Extends the clean fixture with luck + time configuration so the new checks
+// Extends the clean fixture with time configuration so the toolkit checks
 // have their backing config; tests then break specific pieces.
 function makeToolkitData() {
   const data = makeCleanData();
-  data.rules.playerDefaults.resources = { luck: { current: 7, max: 9 } };
   data.rules.time = {
     ticksPerDay: 24,
     startTick: 8,
@@ -222,30 +221,11 @@ test('flags the removed increment field on checks and discovery items', () => {
   assert.equal(messages.filter(m => m.includes('"increment" (DC escalation) was removed')).length, 2);
 });
 
-test('flags luckCheck conflicts and luckCheck without the luck resource', () => {
+test('flags luckCheck as a removed mechanic', () => {
   const data = makeToolkitData();
-  data.scenes.cave.skills.push({ text: 'Gamble', luckCheck: true, skillCheck: 'perception', dc: 5 });
-  let messages = issuesFor(data);
-  assert.ok(messages.some(m => m.includes('both luckCheck and skillCheck')));
-  assert.ok(messages.some(m => m.includes('luckCheck takes no DC')));
-
-  const noLuck = makeToolkitData();
-  delete noLuck.rules.playerDefaults.resources;
-  noLuck.scenes.cave.skills.push({ text: 'Gamble', luckCheck: true });
-  messages = issuesFor(noLuck);
-  assert.ok(messages.some(m => m.includes('luckCheck requires a luck resource')));
-});
-
-test('flags luckCheck with item drops — the discovery flow never runs', () => {
-  const data = makeToolkitData();
-  data.scenes.cave.skills.push({ text: 'Gamble', luckCheck: true, items: [{ item: 'sword', dc: 10 }] });
+  data.scenes.cave.skills.push({ text: 'Gamble', luckCheck: true });
   const messages = issuesFor(data);
-  assert.ok(messages.some(m => m.includes('luckCheck with item drops')));
-
-  // An empty leftover items array (Studio initializes one) is fine.
-  const clean = makeToolkitData();
-  clean.scenes.cave.skills.push({ text: 'Gamble', luckCheck: true, items: [] });
-  assert.ok(!issuesFor(clean).some(m => m.includes('luckCheck with item drops')));
+  assert.ok(messages.some(m => m.includes('"luckCheck" (the 2d6 Test-Your-Luck gamble) was removed')));
 });
 
 test('flags a startTick outside [0, ticksPerDay)', () => {
@@ -318,28 +298,19 @@ test('flags day/segment conditions without time config and unknown segments', ()
   assert.ok(messages.some(m => m.includes('uses "segment" but rules.time.segments')));
 });
 
-test('flags luck knobs and restore_luck in games without the luck resource', () => {
+test('flags the removed luck subsystem rules keys and the restore_luck action', () => {
   const data = makeToolkitData();
-  delete data.rules.playerDefaults.resources;
-  data.rules.luck = { retryCost: 1, combat: true };
+  data.rules.luck = { retryCost: 1 };
+  data.rules.combatLuck = true;
+  data.rules.playerDefaults.resources = { luck: { current: 7, max: 9 } };
   data.scenes.cave.options.push({ text: 'Pray', actions: [{ type: 'restore_luck', amount: 1 }] });
   const messages = issuesFor(data);
-  assert.ok(messages.some(m => m.includes('luck.retryCost is set but')));
-  assert.ok(messages.some(m => m.includes('luck.combat is set but')));
-  assert.ok(messages.some(m => m.includes('restore_luck without a luck resource')));
+  assert.ok(messages.some(m => m.includes('rules.luck belongs to the removed 2d6 luck subsystem')));
+  assert.ok(messages.some(m => m.includes('rules.combatLuck belongs to the removed 2d6 luck subsystem')));
+  assert.ok(messages.some(m => m.includes('playerDefaults.resources.luck belongs to the removed 2d6 luck subsystem')));
+  assert.ok(messages.some(m => m.includes('"restore_luck" was removed')));
 });
 
-test('normalizeRules folds legacy luck knobs under rules.luck; validator flags the old keys', () => {
-  const rules = { skillRetryLuckCost: 2, combatLuck: true, luck: { retryCost: 5 } };
-  normalizeRules(rules);
-  assert.equal(rules.luck.retryCost, 5);   // existing nested value wins
-  assert.equal(rules.luck.combat, true);   // legacy value adopted
-
-  const data = makeToolkitData();
-  data.rules.combatLuck = true;
-  const messages = issuesFor(data);
-  assert.ok(messages.some(m => m.includes('"combatLuck" moved to rules.luck.combat')));
-});
 
 test('flags malformed time config: bad segments, ranges, costs, locale entries', () => {
   const data = makeToolkitData();

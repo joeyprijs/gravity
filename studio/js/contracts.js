@@ -24,7 +24,6 @@ export const ACTION_TYPES = [
   ['advance_time',      'Advance Time'],
   ['set_timer',         'Set Timer'],
   ['cancel_timer',      'Cancel Timer'],
-  ['restore_luck',      'Restore Luck'],
   ['goToConversation',  'Go To Conversation'],
   ['trade',             'Open Trade'],
   ['leave',             'Leave Dialogue'],

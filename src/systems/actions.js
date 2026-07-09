@@ -64,12 +64,6 @@ function handleFullRest(action, engine) {
   const p = gameState.getPlayer();
   gameState.modifyPlayerStat('hp', p.resources.hp.max - p.resources.hp.current);
   gameState.modifyPlayerStat('ap', p.resources.ap.max - p.resources.ap.current);
-  // A good night's sleep can trickle luck back (rules.luck.restRestore,
-  // default 0) — the natural counterweight when retries spend luck.
-  const luckRestore = engine.data.rules?.luck?.restRestore ?? 0;
-  if (luckRestore > 0 && p.resources.luck) {
-    gameState.modifyPlayerStat('luck', luckRestore);
-  }
   if (action.log !== false) {
     const msg = typeof action.log === 'string' ? action.log : engine.t('actions.fullRest');
     engine.log(LOG.SYSTEM, msg);
@@ -139,22 +133,6 @@ function handleCancelTimer(action) {
   gameState.cancelTimer(action.id);
 }
 
-// --- Luck actions ---
-
-// { type: "restore_luck", amount: 2 } — the mirror of heal for the luck
-// resource. Clamped to max; a no-op in games without a luck resource.
-function handleRestoreLuck(action, engine) {
-  const before = gameState.getPlayer().resources?.luck?.current;
-  gameState.modifyPlayerStat('luck', action.amount ?? 1);
-  // Log the actual gain, not the requested amount — clamping at max (or a
-  // missing luck resource) means nothing was restored, so nothing is said.
-  const gained = (gameState.getPlayer().resources?.luck?.current ?? 0) - (before ?? 0);
-  if (action.log !== false && gained > 0) {
-    const msg = typeof action.log === 'string' ? action.log : engine.t('actions.luckRestored', { amount: gained });
-    engine.log(LOG.SYSTEM, msg, 'loot');
-  }
-}
-
 export function registerBuiltinActions(engine) {
   engine.registerAction(ACTIONS.LOOT,            handleLoot);
   engine.registerAction(ACTIONS.COMBAT,          handleCombat);
@@ -169,5 +147,4 @@ export function registerBuiltinActions(engine) {
   engine.registerAction(ACTIONS.ADVANCE_TIME,    handleAdvanceTime);
   engine.registerAction(ACTIONS.SET_TIMER,       handleSetTimer);
   engine.registerAction(ACTIONS.CANCEL_TIMER,    handleCancelTimer);
-  engine.registerAction(ACTIONS.RESTORE_LUCK,    handleRestoreLuck);
 }

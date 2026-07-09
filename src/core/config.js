@@ -37,7 +37,6 @@ export const ACTIONS = {
   ADVANCE_TIME:    'advance_time',
   SET_TIMER:       'set_timer',
   CANCEL_TIMER:    'cancel_timer',
-  RESTORE_LUCK:    'restore_luck',
 
   // Dialogue actions — registered by DialogueSystem (see dialogue.js). They
   // live in the same registry as the actions above; the camelCase names match

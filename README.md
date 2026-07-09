@@ -48,7 +48,6 @@ A browser-native, zero-dependency data-driven text RPG engine and creator suite.
 *   **Branching Screenplay Dialogues** — Branching conversation nodes with skill checks, item rewards, quest triggers, and stateful merchants supporting custom discounts.
 *   **Outcome-Tiered Skill Checks** — d20 checks with margin-based tiers (critical / success / partial / failure), one-shot fail-forward gambles, attempt budgets with authored exhaustion routes, passive checks, and free narrative beats. See [`docs/CHECKS.md`](docs/CHECKS.md).
 *   **A World Clock (opt-in)** — Player actions advance a deterministic tick counter; days and segments derive from rules, timers fire quiet pipelines, and conditions can read `time` / `day` / `segment`. No wall-clock, fully save-safe.
-*   **Luck (opt-in)** — A depleting Fighting-Fantasy-style resource: Test-Your-Luck gambles at 2d6-roll-under with odds shown, retry-costs-luck for skill checks, luck-restoring items, and optional combat gambles.
 *   **Interactive Maps HUD** — A dynamic scaled minimap projection in the sidebar and a full-screen scrollable coordinate map centered on the player.
 *   **Dynamic Sidebar Tab Panels** — Layout-driven tab generation compiled dynamically from rules definitions, supporting custom widgets (attributes, maps).
 *   **Character Creation Point-Buy** — Custom pre-game stat budgeting mapping dot-paths to player properties.
@@ -305,7 +304,6 @@ Boolean nodes evaluated inside option, dialogue, description, or skill blocks:
     *   `{ "stealth": 2 }` — Matches player skill attribute thresholds.
     *   `{ "time": { "at_least": 120 } }` — Absolute elapsed world-clock ticks.
     *   `{ "day": { "at_least": 3 } }` / `{ "segment": "night" }` — Derived day and day-segment (requires `rules.time`).
-    *   `{ "luck": { "at_most": 2 } }` — Current luck resource (requires the opt-in luck resource).
 
 ---
 
@@ -378,7 +376,7 @@ A location the player can visit, supporting conditional text blocks, option grid
 }
 ```
 
-Skill checks resolve through margin-based **outcome tiers** — `critical`, `success`, `partial` (fail-forward), `failure` — plus `resolveOnce` one-shots, `maxAttempts` budgets with an authored `onExhausted` way out, optional `timeCost`, and `luckCheck` gambles. The full authoring guide is [`docs/CHECKS.md`](docs/CHECKS.md).
+Skill checks resolve through margin-based **outcome tiers** — `critical`, `success`, `partial` (fail-forward), `failure` — plus `resolveOnce` one-shots, `maxAttempts` budgets with an authored `onExhausted` way out, and optional `timeCost`. The full authoring guide is [`docs/CHECKS.md`](docs/CHECKS.md).
 
 ---
 

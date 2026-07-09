@@ -220,8 +220,8 @@ class StateManager {
     migrate(parsedData, this._extraMigrations);
 
     // Seed resources the rules declare but the save predates (e.g. a game
-    // that adds luck after players already have saves). Rules-driven rather
-    // than a numbered migration, since which resources exist is per-game data.
+    // that adds a resource after players already have saves). Rules-driven
+    // rather than a numbered migration, since which resources exist is per-game data.
     const ruleResources = this._rules?.playerDefaults?.resources;
     if (ruleResources && parsedData.player.resources) {
       for (const [key, value] of Object.entries(ruleResources)) {
@@ -363,17 +363,6 @@ class StateManager {
         break;
       case 'maxAp':
         p.resources.ap.max += amount;
-        break;
-      case 'luck':
-        // Luck is an opt-in resource (rules.playerDefaults.resources.luck);
-        // modifying it in a game that never declared it is a no-op.
-        if (!p.resources.luck) break;
-        p.resources.luck.current = Math.max(0, Math.min(p.resources.luck.current + amount, p.resources.luck.max));
-        break;
-      case 'maxLuck':
-        if (!p.resources.luck) break;
-        p.resources.luck.max += amount;
-        p.resources.luck.current = Math.max(0, Math.min(p.resources.luck.current, p.resources.luck.max));
         break;
       case 'gold':
         p.resources.gold += amount;

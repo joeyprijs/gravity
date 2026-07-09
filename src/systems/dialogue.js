@@ -5,8 +5,7 @@ import { evaluateCondition } from "./condition.js";
 import {
   performSkillCheck, normalizeOutcomes, resolveRetryText,
   getAttempts, recordAttempt, isResolved, markResolved,
-  performLuckCheck, luckEnabled, luckOdds,
-  skillBadge, retryGate, applyRetryGate
+  skillBadge
 } from "./skill-checks.js";
 
 // Actions that move the conversation to a new panel (node, store, or scene).
@@ -201,31 +200,18 @@ export class DialogueSystem {
       // Hide options whose condition requirements are not met
       if (!evaluateCondition(res.condition ?? null, gameState)) return;
 
-      const isLuckCheck = !!res.luckCheck;
-      const needsCheck = !isLuckCheck && !!res.skillCheck && res.dc > 0;
-      const resKey = isLuckCheck ? `luck_${nodeId}_${i}` : `${res.skillCheck}_${nodeId}_${i}`;
+      const needsCheck = !!res.skillCheck && res.dc > 0;
+      const resKey = `${res.skillCheck}_${nodeId}_${i}`;
 
       // A resolveOnce response stays retired across conversations; an
       // exhausted maxAttempts budget retires it for the rest of this
-      // conversation only (patience resets on re-talk). Luck gambles are
-      // resolveOnce by default.
-      if ((needsCheck || isLuckCheck) && (isResolved(resolvedKey, resKey) || isResolved(dcStateKey, resKey))) return;
-      if (isLuckCheck && !luckEnabled()) {
-        console.warn(`[Gravity] luckCheck response "${res.text}": no luck resource in rules.playerDefaults — hidden`);
-        return;
-      }
+      // conversation only (patience resets on re-talk).
+      if (needsCheck && (isResolved(resolvedKey, resKey) || isResolved(dcStateKey, resKey))) return;
 
       const attempts = needsCheck ? getAttempts(dcStateKey, resKey) : 0;
-      const gate = needsCheck ? retryGate(this.engine, attempts) : { cost: 0, blocked: false };
       const displayText = needsCheck ? resolveRetryText(res, attempts) : res.text;
-      let badge = null;
-      if (needsCheck) badge = applyRetryGate(this.engine, gate, skillBadge(this.engine, res.skillCheck, res.dc));
-      if (isLuckCheck) {
-        const luck = gameState.getPlayer().resources.luck.current;
-        badge = this.engine.t('actions.luckBadge', { luck, odds: luckOdds(luck) });
-      }
+      const badge = needsCheck ? skillBadge(this.engine, res.skillCheck, res.dc) : null;
       const btn = buildOptionButton(displayText, badge);
-      if (gate.blocked) btn.disabled = true;
 
       btn.onclick = () => {
         this.engine.log(LOG.PLAYER, displayText, 'choice');
@@ -234,20 +220,7 @@ export class DialogueSystem {
         // advances the clock (browsing a store never costs time).
         if (res.timeCost > 0) this.engine.advanceTime(res.timeCost);
 
-        if (isLuckCheck) {
-          const { lucky } = performLuckCheck(this.engine);
-          if (res.resolveOnce !== false) markResolved(resolvedKey, resKey);
-          // Same outcome table as skill checks: lucky → success tier,
-          // unlucky → failure, including authored tier narration.
-          const tierOutcome = normalizeOutcomes(res)[lucky ? 'success' : 'failure'];
-          if (tierOutcome.text) this.engine.log(LOG.NARRATOR, tierOutcome.text);
-          const navigated = tierOutcome.actions.length ? this._runActions(tierOutcome.actions) : false;
-          if (!navigated) this.renderDialogue(nodeId, null, true);
-          return;
-        }
-
         if (needsCheck) {
-          if (gate.cost > 0) gameState.modifyPlayerStat('luck', -gate.cost);
           const outcomes = normalizeOutcomes(res);
           const { tier, success } = performSkillCheck(this.engine, res.skillCheck, res.dc, outcomes);
           if (res.resolveOnce) markResolved(resolvedKey, resKey);
@@ -282,7 +255,7 @@ export class DialogueSystem {
         this._runActions(normalizeOutcomes(res).success.actions);
       };
 
-      if (needsCheck || isLuckCheck) {
+      if (needsCheck) {
         skillResponses.push(btn);
       } else {
         container.appendChild(btn);

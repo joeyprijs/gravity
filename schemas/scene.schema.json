@@ -27,37 +27,73 @@
     "mapDefinitions": {
       "type": "object",
       "properties": {
-        "top": { "type": "integer" },
-        "left": { "type": "integer" },
-        "width": { "type": "integer", "minimum": 1 },
-        "height": { "type": "integer", "minimum": 1 },
+        "top": {
+          "type": "integer"
+        },
+        "left": {
+          "type": "integer"
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1
+        },
         "background": {
           "type": "string",
           "description": "CSS color expression used to draw room nodes on the map canvas."
         }
       },
-      "required": ["top", "left", "width", "height"],
+      "required": [
+        "top",
+        "left",
+        "width",
+        "height"
+      ],
       "additionalProperties": false
     },
     "questTrigger": {
       "type": "object",
       "properties": {
-        "mission": { "type": "string", "description": "Mission identifier from data/index.json." },
-        "status": { "type": "string", "enum": ["active", "complete"] }
+        "mission": {
+          "type": "string",
+          "description": "Mission identifier from data/index.json."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "complete"
+          ]
+        }
       },
-      "required": ["mission", "status"],
+      "required": [
+        "mission",
+        "status"
+      ],
       "additionalProperties": false
     },
     "description": {
-      "type": ["string", "array"],
+      "type": [
+        "string",
+        "array"
+      ],
       "description": "Body text of the room. Can be a flat string or conditional variant array.",
       "items": {
         "type": "object",
         "properties": {
-          "text": { "type": "string" },
-          "condition": { "$ref": "#/definitions/condition" }
+          "text": {
+            "type": "string"
+          },
+          "condition": {
+            "$ref": "#/definitions/condition"
+          }
         },
-        "required": ["text"],
+        "required": [
+          "text"
+        ],
         "additionalProperties": false
       }
     },
@@ -66,15 +102,23 @@
       "properties": {
         "enemies": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
-        "condition": { "$ref": "#/definitions/condition" },
+        "condition": {
+          "$ref": "#/definitions/condition"
+        },
         "onVictory": {
           "type": "array",
-          "items": { "$ref": "#/definitions/action" }
+          "items": {
+            "$ref": "#/definitions/action"
+          }
         }
       },
-      "required": ["enemies"],
+      "required": [
+        "enemies"
+      ],
       "additionalProperties": false
     },
     "options": {
@@ -82,27 +126,41 @@
       "items": {
         "type": "object",
         "properties": {
-          "text": { "type": "string" },
+          "text": {
+            "type": "string"
+          },
           "isBack": {
             "type": "boolean",
             "description": "If true, sorts this option to the bottom as a 'back'/exit choice (locale-independent alternative to a 'return' action)."
           },
           "log": {
-            "type": ["boolean", "string"],
+            "type": [
+              "boolean",
+              "string"
+            ],
             "description": "False silences logging; a string prints a custom narrative description."
           },
-          "condition": { "$ref": "#/definitions/condition" },
+          "condition": {
+            "$ref": "#/definitions/condition"
+          },
           "requirements": {
             "type": "object",
             "properties": {
-              "item": { "type": "string", "description": "Item ID required in inventory to enable choice." }
+              "item": {
+                "type": "string",
+                "description": "Item ID required in inventory to enable choice."
+              }
             },
-            "required": ["item"],
+            "required": [
+              "item"
+            ],
             "additionalProperties": false
           },
           "actions": {
             "type": "array",
-            "items": { "$ref": "#/definitions/action" }
+            "items": {
+              "$ref": "#/definitions/action"
+            }
           },
           "timeCost": {
             "type": "integer",
@@ -110,7 +168,9 @@
             "description": "Ticks this option advances the world clock. Overrides rules.time.defaultCosts; 0 opts out explicitly."
           }
         },
-        "required": ["text"],
+        "required": [
+          "text"
+        ],
         "additionalProperties": false
       }
     },
@@ -119,32 +179,52 @@
       "items": {
         "type": "object",
         "properties": {
-          "text": { "type": "string" },
+          "text": {
+            "type": "string"
+          },
           "retryText": {
             "description": "Replacement option/log text once the check has been attempted: a string, or an array walked per failed attempt (clamped to the last entry). Attempt counts reset on scene re-entry.",
             "oneOf": [
-              { "type": "string" },
-              { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1
+              }
             ]
           },
-          "skillCheck": { "type": "string", "description": "Attribute ID to roll d20 check against." },
-          "luckCheck": {
-            "type": "boolean",
-            "description": "Test Your Luck gamble instead of a skill roll: 2d6 at or under current luck, then luck -1 regardless. No DC — the player's own luck is the difficulty. resolveOnce defaults to true."
+          "skillCheck": {
+            "type": "string",
+            "description": "Attribute ID to roll d20 check against."
           },
-          "dc": { "type": "integer", "minimum": 1 },
-          "condition": { "$ref": "#/definitions/condition" },
+          "dc": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "condition": {
+            "$ref": "#/definitions/condition"
+          },
           "actions": {
             "type": "array",
-            "items": { "$ref": "#/definitions/action" },
+            "items": {
+              "$ref": "#/definitions/action"
+            },
             "description": "Action pipeline executed on successful checks (shorthand for outcomes.success.actions)."
           },
           "onFailure": {
             "type": "array",
-            "items": { "$ref": "#/definitions/action" },
+            "items": {
+              "$ref": "#/definitions/action"
+            },
             "description": "Action pipeline executed on failed checks (shorthand for outcomes.failure.actions)."
           },
-          "outcomes": { "$ref": "#/definitions/outcomes" },
+          "outcomes": {
+            "$ref": "#/definitions/outcomes"
+          },
           "resolveOnce": {
             "type": "boolean",
             "description": "Fail-forward: the check rolls exactly once and then retires permanently, whatever the tier. Route the failure/partial tiers somewhere real."
@@ -156,14 +236,24 @@
           },
           "onExhausted": {
             "type": "array",
-            "items": { "$ref": "#/definitions/action" },
+            "items": {
+              "$ref": "#/definitions/action"
+            },
             "description": "Pipeline run once when maxAttempts is exhausted — the authored way out (fail-forward alternative route)."
           },
           "resultText": {
             "description": "Narrative checks (no dc, no items): the narration logged on use. A string, or an array walked per use (clamped to the last entry).",
             "oneOf": [
-              { "type": "string" },
-              { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1
+              }
             ]
           },
           "repeatable": {
@@ -181,20 +271,39 @@
             "items": {
               "type": "object",
               "properties": {
-                "item": { "type": "string" },
-                "table": { "type": "string", "description": "Loot table ID to draw random drop." },
-                "amount": { "type": "integer", "minimum": 1 },
-                "itemDrops": { "type": "integer", "minimum": 1 },
-                "dc": { "type": "integer", "minimum": 1 }
+                "item": {
+                  "type": "string"
+                },
+                "table": {
+                  "type": "string",
+                  "description": "Loot table ID to draw random drop."
+                },
+                "amount": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "itemDrops": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "dc": {
+                  "type": "integer",
+                  "minimum": 1
+                }
               },
               "additionalProperties": false
             }
           }
         },
-        "required": ["text"],
+        "required": [
+          "text"
+        ],
         "anyOf": [
-          { "required": ["skillCheck"] },
-          { "required": ["luckCheck"] }
+          {
+            "required": [
+              "skillCheck"
+            ]
+          }
         ],
         "additionalProperties": false
       }
@@ -205,12 +314,27 @@
       "items": {
         "type": "object",
         "properties": {
-          "skillCheck": { "type": "string", "description": "Attribute ID to roll d20 check against." },
-          "dc": { "type": "integer", "minimum": 1 },
-          "flag": { "type": "string", "description": "Flag the pass/fail result is written to." },
-          "text": { "type": "string", "description": "Narration logged when the passive check succeeds. Silent otherwise." }
+          "skillCheck": {
+            "type": "string",
+            "description": "Attribute ID to roll d20 check against."
+          },
+          "dc": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "flag": {
+            "type": "string",
+            "description": "Flag the pass/fail result is written to."
+          },
+          "text": {
+            "type": "string",
+            "description": "Narration logged when the passive check succeeds. Silent otherwise."
+          }
         },
-        "required": ["skillCheck", "flag"],
+        "required": [
+          "skillCheck",
+          "flag"
+        ],
         "additionalProperties": false
       }
     },
@@ -224,51 +348,130 @@
       "items": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" },
-          "item": { "type": ["string", "null"] },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "item": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "allowedTypes": {
             "type": "array",
-            "items": { "type": "string" }
+            "items": {
+              "type": "string"
+            }
           }
         },
-        "required": ["id", "name"],
+        "required": [
+          "id",
+          "name"
+        ],
         "additionalProperties": false
       }
     }
   },
-  "required": ["region"],
+  "required": [
+    "region"
+  ],
   "anyOf": [
-    { "required": ["title"] },
-    { "required": ["name"] }
+    {
+      "required": [
+        "title"
+      ]
+    },
+    {
+      "required": [
+        "name"
+      ]
+    }
   ],
   "additionalProperties": false,
-
   "definitions": {
     "condition": {
       "type": "object",
       "properties": {
-        "and": { "type": "array", "items": { "$ref": "#/definitions/condition" } },
-        "or": { "type": "array", "items": { "$ref": "#/definitions/condition" } },
-        "not": { "$ref": "#/definitions/condition" },
-        "flag": { "type": "string" },
-        "value": { "type": "boolean" },
-        "item": { "type": "string" },
-        "count": { "type": "integer", "minimum": 1 },
-        "gold": { "type": ["integer", "object"] },
-        "level": { "type": ["integer", "object"] },
-        "mission": { "type": "string" },
-        "status": { "type": "string", "enum": ["active", "complete", "not_started"] },
-        "time": { "type": ["integer", "object"], "description": "Absolute elapsed world-clock ticks." },
-        "day": { "type": ["integer", "object"], "description": "1-based day number (requires rules.time)." },
-        "segment": { "type": "string", "description": "Current day segment id (requires rules.time.segments)." },
-        "luck": { "type": ["integer", "object"], "description": "Current luck resource value." }
+        "and": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/condition"
+          }
+        },
+        "or": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/condition"
+          }
+        },
+        "not": {
+          "$ref": "#/definitions/condition"
+        },
+        "flag": {
+          "type": "string"
+        },
+        "value": {
+          "type": "boolean"
+        },
+        "item": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "gold": {
+          "type": [
+            "integer",
+            "object"
+          ]
+        },
+        "level": {
+          "type": [
+            "integer",
+            "object"
+          ]
+        },
+        "mission": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "complete",
+            "not_started"
+          ]
+        },
+        "time": {
+          "type": [
+            "integer",
+            "object"
+          ],
+          "description": "Absolute elapsed world-clock ticks."
+        },
+        "day": {
+          "type": [
+            "integer",
+            "object"
+          ],
+          "description": "1-based day number (requires rules.time)."
+        },
+        "segment": {
+          "type": "string",
+          "description": "Current day segment id (requires rules.time.segments)."
+        }
       },
       "additionalProperties": {
-        "type": ["integer", "object"]
+        "type": [
+          "integer",
+          "object"
+        ]
       }
     },
-
     "outcomeTier": {
       "type": "object",
       "properties": {
@@ -277,51 +480,134 @@
           "minimum": 1,
           "description": "critical: beat the DC by at least this much (default 5). partial: miss the DC by at most this much (default 3). Ignored on success/failure."
         },
-        "text": { "type": "string", "description": "Narration logged when this tier lands." },
-        "actions": { "type": "array", "items": { "$ref": "#/definitions/action" } }
+        "text": {
+          "type": "string",
+          "description": "Narration logged when this tier lands."
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/action"
+          }
+        }
       },
       "additionalProperties": false
     },
-
     "outcomes": {
       "type": "object",
       "description": "Margin-based outcome tiers. critical and partial only exist when authored; success/failure default to the legacy actions/onFailure pipelines. partial is the fail-forward tier: you get the thing, with a catch.",
       "properties": {
-        "critical": { "$ref": "#/definitions/outcomeTier" },
-        "success":  { "$ref": "#/definitions/outcomeTier" },
-        "partial":  { "$ref": "#/definitions/outcomeTier" },
-        "failure":  { "$ref": "#/definitions/outcomeTier" }
+        "critical": {
+          "$ref": "#/definitions/outcomeTier"
+        },
+        "success": {
+          "$ref": "#/definitions/outcomeTier"
+        },
+        "partial": {
+          "$ref": "#/definitions/outcomeTier"
+        },
+        "failure": {
+          "$ref": "#/definitions/outcomeTier"
+        }
       },
       "additionalProperties": false
     },
-    
     "action": {
       "type": "object",
       "properties": {
-        "type": { "type": "string" },
-        "destination": { "type": "string" },
-        "flag": { "type": "string" },
-        "value": { "type": "boolean" },
-        "item": { "type": "string" },
-        "amount": { "type": "integer" },
-        "xpReward": { "type": "integer" },
-        "enemies": { "type": "array", "items": { "type": "string" } },
-        "onVictory": { "type": "array", "items": { "$ref": "#/definitions/action" } },
-        "npc": { "type": "string" },
-        "message": { "type": "string" },
-        "chest": { "type": "string" },
-        "mission": { "type": "string" },
-        "status": { "type": "string", "enum": ["active", "complete"] },
-        "node": { "type": "string" },
-        "tradeDiscount": { "type": ["number", "string"] },
-        "persistDiscount": { "type": "boolean" },
-        "id": { "type": "string", "description": "set_timer / cancel_timer: the timer id." },
-        "afterTicks": { "type": "integer", "minimum": 0, "description": "set_timer: deadline relative to the current tick." },
-        "atTick": { "type": "integer", "minimum": 0, "description": "set_timer: absolute deadline tick." },
-        "until": { "type": "string", "description": "advance_time: advance to the next start of this day segment." },
-        "actions": { "type": "array", "items": { "$ref": "#/definitions/action" }, "description": "set_timer: the (quiet-only) pipeline run when the timer fires." }
+        "type": {
+          "type": "string"
+        },
+        "destination": {
+          "type": "string"
+        },
+        "flag": {
+          "type": "string"
+        },
+        "value": {
+          "type": "boolean"
+        },
+        "item": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "integer"
+        },
+        "xpReward": {
+          "type": "integer"
+        },
+        "enemies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "onVictory": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/action"
+          }
+        },
+        "npc": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "chest": {
+          "type": "string"
+        },
+        "mission": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "complete"
+          ]
+        },
+        "node": {
+          "type": "string"
+        },
+        "tradeDiscount": {
+          "type": [
+            "number",
+            "string"
+          ]
+        },
+        "persistDiscount": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string",
+          "description": "set_timer / cancel_timer: the timer id."
+        },
+        "afterTicks": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "set_timer: deadline relative to the current tick."
+        },
+        "atTick": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "set_timer: absolute deadline tick."
+        },
+        "until": {
+          "type": "string",
+          "description": "advance_time: advance to the next start of this day segment."
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/action"
+          },
+          "description": "set_timer: the (quiet-only) pipeline run when the timer fires."
+        }
       },
-      "required": ["type"]
+      "required": [
+        "type"
+      ]
     }
   }
 }

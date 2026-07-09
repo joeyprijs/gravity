@@ -7,8 +7,7 @@ import { resolveTimeCost } from "./time.js";
 import {
   performSkillCheck, normalizeOutcomes, resolveRetryText,
   getAttempts, recordAttempt, isResolved, markResolved, resetAttempts,
-  performLuckCheck, luckEnabled, luckOdds,
-  skillBadge, retryGate, applyRetryGate, rollBreakdown, skillLabel
+  skillBadge, rollBreakdown, skillLabel
 } from "./skill-checks.js";
 
 // SceneRenderer handles navigating to scenes, resolving their descriptions,
@@ -216,15 +215,13 @@ export class SceneRenderer {
     const sceneId = gameState.getCurrentSceneId();
 
     (scene.skills || []).forEach((opt, i) => {
-      if (!opt.skillCheck && !opt.luckCheck) return;
+      if (!opt.skillCheck) return;
       const cond = opt.condition ?? null;
       if (!evaluateCondition(cond, gameState)) return;
 
       const items = opt.items || [];
       let btn;
-      if (opt.luckCheck) {
-        btn = this._buildLuckButton(opt, i, sceneId, scene);
-      } else if (items.length) {
+      if (items.length) {
         btn = this._buildItemDiscoveryButton(opt, i, sceneId, scene);
       } else if (!opt.dc) {
         btn = this._buildNarrativeButton(opt, i, sceneId, scene);
@@ -361,16 +358,10 @@ export class SceneRenderer {
 
     const lowestDc = Math.min(...items.map(l => l.dc ?? 10).filter((_, idx) => !state.found[idx]));
     const displayText = resolveRetryText(opt, state.tries || 0);
-    const gate = retryGate(this.engine, state.tries || 0);
-    const btn = buildOptionButton(displayText, applyRetryGate(this.engine, gate, skillBadge(this.engine, opt.skillCheck, lowestDc)));
-    if (gate.blocked) {
-      btn.disabled = true;
-      return btn;
-    }
+    const btn = buildOptionButton(displayText, skillBadge(this.engine, opt.skillCheck, lowestDc));
     btn.onclick = () => {
       this.engine.isGameStart = false;
       this.engine.log(LOG.PLAYER, displayText, 'choice');
-      if (gate.cost > 0) gameState.modifyPlayerStat('luck', -gate.cost);
       this._chargeTime(opt, 'skillAttempt');
       this._resolveDiscovery(opt, i, state, skillKey, scene);
     };
@@ -468,42 +459,6 @@ export class SceneRenderer {
     this.engine.log(LOG.SYSTEM, fallbackMessage, 'loot');
   }
 
-  // Test Your Luck: an authored gamble against the player's own depleting luck
-  // (2d6 roll-under, then luck −1 regardless — see performLuckCheck). No DC to
-  // author: the player's luck IS the difficulty. One-shot by nature
-  // (resolveOnce defaults to true); the button shows the odds so the gamble is
-  // an informed decision. Returns a button, or null once resolved.
-  _buildLuckButton(opt, i, sceneId, scene) {
-    const skillKey = FLAG_KEYS.skillDc('luck', sceneId);
-    if (isResolved(skillKey, i)) return null;
-    if (!luckEnabled()) {
-      console.warn(`[Gravity] luckCheck "${opt.text}": no luck resource in rules.playerDefaults — option hidden`);
-      return null;
-    }
-
-    const luck = gameState.getPlayer().resources.luck.current;
-    const btn = buildOptionButton(opt.text, this.engine.t('actions.luckBadge', { luck, odds: luckOdds(luck) }));
-    btn.onclick = () => {
-      this.engine.isGameStart = false;
-      this.engine.log(LOG.PLAYER, opt.text, 'choice');
-      this._chargeTime(opt, 'skillAttempt');
-      const { lucky } = performLuckCheck(this.engine);
-      if (opt.resolveOnce !== false) markResolved(skillKey, i);
-      // Lucky lands on the success tier, unlucky on failure — same outcome
-      // table as skill checks, including authored tier narration.
-      const outcomes = normalizeOutcomes(opt);
-      const tier = outcomes[lucky ? 'success' : 'failure'];
-      if (tier.text) this.engine.log(LOG.NARRATOR, tier.text);
-      const sceneIdBefore = gameState.getCurrentSceneId();
-      this.engine.runActions(tier.actions);
-      if (!this._didNavigate(sceneIdBefore)) {
-        if (lucky) this.engine.renderScene(gameState.getCurrentSceneId());
-        else this.renderOptions(scene);
-      }
-    };
-    return btn;
-  }
-
   // Narrative (free) skill check: no roll, no DC — a story beat framed as a
   // skill. Logs the authored resultText (a string, or an array walked per use)
   // and runs an optional action pipeline. Retires after one use unless marked
@@ -553,16 +508,10 @@ export class SceneRenderer {
     if (isResolved(skillKey, i)) return null;
     const attempts = getAttempts(skillKey, i);
     const displayText = resolveRetryText(opt, attempts);
-    const gate = retryGate(this.engine, attempts);
-    const btn = buildOptionButton(displayText, applyRetryGate(this.engine, gate, skillBadge(this.engine, opt.skillCheck, opt.dc)));
-    if (gate.blocked) {
-      btn.disabled = true;
-      return btn;
-    }
+    const btn = buildOptionButton(displayText, skillBadge(this.engine, opt.skillCheck, opt.dc));
     btn.onclick = () => {
       this.engine.isGameStart = false;
       this.engine.log(LOG.PLAYER, displayText, 'choice');
-      if (gate.cost > 0) gameState.modifyPlayerStat('luck', -gate.cost);
       this._chargeTime(opt, 'skillAttempt');
       const outcomes = normalizeOutcomes(opt);
       const { tier, success } = performSkillCheck(this.engine, opt.skillCheck, opt.dc, outcomes);

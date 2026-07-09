@@ -18,7 +18,6 @@ export class UIManager {
   setup() {
     this._buildTabs();
     this._buildTimeChip();
-    this._buildLuckChip();
     this.map.setup();
 
     // Save
@@ -162,27 +161,6 @@ export class UIManager {
     const segment = getSegment(ticks, timeRules);
     this._timeChipLabel.textContent = this.engine.t('ui.timeChipDay', { day });
     this._timeChipValue.textContent = segment ? this.engine.t(`time.segments.${segment}`) : '';
-  }
-
-  // Injects the luck chip into the header stats bar when the game opts into
-  // the luck resource (rules.playerDefaults.resources.luck). The data-stat-bind
-  // spans ride the existing stats update loop — no bespoke refresh needed.
-  _buildLuckChip() {
-    if (!this.engine.data.rules?.playerDefaults?.resources?.luck) return;
-    const statsBar = document.getElementById(EL.PLAYER_BASIC_STATS);
-    if (!statsBar) return;
-    const group = createElement('div', 'stat-group');
-    const item = createElement('div', 'stat-item stat-item--luck');
-    item.appendChild(createElement('span', 'stat-item__label', this.engine.t('ui.luckLabel')));
-    const value = createElement('span', 'stat-item__value');
-    const current = createElement('span');
-    current.dataset.statBind = 'resources.luck.current';
-    const max = createElement('span');
-    max.dataset.statBind = 'resources.luck.max';
-    value.append(current, '/', max);
-    item.appendChild(value);
-    group.appendChild(item);
-    statsBar.appendChild(group);
   }
 
   update(hint) {

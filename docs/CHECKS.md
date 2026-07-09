@@ -1,6 +1,6 @@
-# Gravity — Checks, Time, and Luck (the engagement toolkit)
+# Gravity — Checks and Time (the engagement toolkit)
 
-*The authoring guide for skill checks and the systems that give them stakes. Implements the designs in [`archive/time.md`](archive/time.md) and [`archive/luck.md`](archive/luck.md); this document is the current reference.*
+*The authoring guide for skill checks and the systems that give them stakes. This document is the current reference (the archived time/luck proposals are historical).*
 
 **Everything here is optional.** A game that configures none of it plays like classic Gravity: d20 vs DC, retry at will. Each tool below is an independent knob an author turns per game (in `rules.json`) or per check (in scene/NPC data).
 
@@ -17,10 +17,9 @@ A scene's `skills` array (and an NPC's dialogue `responses`) supports five check
 | **Narrative** | `skillCheck`, no `dc`, no `items` | No roll. Logs `resultText`, runs `actions`, retires unless `repeatable`. A story beat framed as a skill. |
 | **Pass/fail** | `skillCheck` + `dc` | 1d20 + modifier vs DC, resolved through outcome tiers (below). |
 | **Item discovery** | `skillCheck` + `items` | One roll vs every still-hidden item's own DC; found items persist. |
-| **Test Your Luck** | `luckCheck: true` | 2d6 at-or-under current luck, then luck −1 *regardless*. No DC — the player's own luck is the difficulty. One-shot by default. |
 | **Passive** | scene-level `passiveChecks` | Auto-rolled silently on first entry, once per game, into an author-named flag. |
 
-Check buttons always show the player what they're weighing: the DC **and their modifier** (`actions.skillBadge.*` locale strings take a `{mod}` param), or the gamble's **odds** for luck checks. Informed decisions are the point — hidden math is a slot machine.
+Check buttons always show the player what they're weighing: the DC **and their modifier** (`actions.skillBadge.*` locale strings take a `{mod}` param). Informed decisions are the point — hidden math is a slot machine.
 
 ## Outcome tiers
 
@@ -49,7 +48,7 @@ Pass/fail checks (scene and dialogue) resolve against margin-based tiers:
 
 ## One-shot checks: `resolveOnce`
 
-`"resolveOnce": true` — the check rolls exactly once, then retires permanently (it survives scene re-entry and save/load). This is the fail-forward commitment: whatever tier lands, the situation *resolves*. Route failure/partial somewhere real; the moment never repeats. Test Your Luck checks are `resolveOnce` by default (set `"resolveOnce": false` to allow repeat gambles).
+`"resolveOnce": true` — the check rolls exactly once, then retires permanently (it survives scene re-entry and save/load). This is the fail-forward commitment: whatever tier lands, the situation *resolves*. Route failure/partial somewhere real; the moment never repeats.
 
 In dialogue, a resolved response stays gone across conversations.
 
@@ -98,31 +97,22 @@ Without `rules.time` the system is dormant: no HUD chip, no default costs (expli
 
 Combat does not advance the clock by default; author an `advance_time` in `onVictory` if a fight should cost time.
 
-## Luck (`rules.playerDefaults.resources.luck`)
+## Luck as a skill
 
-Opt in by declaring the resource:
-
-```json
-"resources": { "hp": {...}, "ap": {...}, "luck": { "current": 7, "max": 9 } }
-```
-
-A depleting meta-currency (Fighting Fantasy's Test Your Luck): 2d6 at-or-under current luck = lucky, then **luck −1 regardless of outcome**. Odds decay as you spend; every invocation is a real decision. The button always shows the odds.
-
-The tuning knobs live together in one rules block (legacy top-level names — `skillRetryLuckCost`, `fullRestLuckRestore`, `combatLuck`, `combatLuckMinDamage` — are still read, but deprecated):
+Luck is a plain custom attribute — there is no separate luck subsystem. Declare it and roll it like anything else:
 
 ```json
-"luck": { "retryCost": 1, "restRestore": 1, "combat": true, "combatMinDamage": 3, "combatApCost": 1 }
+"customAttributes": [ { "id": "luck", "default": 0 } ]
 ```
 
-- **Test Your Luck checks** — `"luckCheck": true` on scene skills or dialogue responses; `outcomes.success` on lucky, `outcomes.failure` on unlucky; one-shot by default.
-- **Retry currency** — `"retryCost": 1`: first attempt at any pass/fail or discovery check is free, each retry spends luck. Unaffordable retries render disabled (like unmet item requirements). This is the direct anti-spam replacement for DC escalation.
-- **Restoration (authored and scarce)** — the `restore_luck` action; item attributes `luckAmount` (consumable restore) and `luckMaxBonus` (permanent max increase); `"restRestore": 1` lets sleep trickle a point back.
-- **Conditions** — `{ "luck": { "at_most": 2 } }` lets the world notice desperation or fortune.
-- **Combat luck** — `"combat": true` (default off): attacks and enemy phases always resolve fully; qualifying moments leave optional follow-up gambles among the combat options. A landed hit opens a **twist the blade** window (+2 damage / target shrugs 1 off) that lasts until your next swing or the turn ends; damage taken during the enemies' phases accumulates into one **steel yourself** gamble (recover up to 2 of it / the wound bites 1 deeper — which can kill) available for your whole next turn. Skipping is simply not clicking. The buttons spell out the full stakes plus the odds (`combat.luckOffenseBadge` / `luckDefenseBadge` locale keys). `"combatMinDamage": 3` (default 1) keeps trivial scratches from offering the gamble, and `"combatApCost": 1` (default 0 — free) prices gambles in AP so they compete with attacks for the turn's budget; unaffordable gambles render disabled and never spend luck.
-- **Character creation** — add `{ "id": "resources.luck.max", "localeKey": "luck", "bonusPerPoint": 1 }` to `charCreation.stats` and "lucky" becomes a build identity.
-- Old saves are safe: rules-declared resources missing from a save are seeded on load.
+```json
+{ "text": "Wrench at the glinting thing.", "skillCheck": "luck", "dc": 12, "resolveOnce": true, "outcomes": { ... } }
+```
 
-**Tuning guideline:** time and luck both tax repetition — pick one per surface, don't stack. The demo's economy: retries cost luck, travel and sleep cost time, sleep restores a point of luck.
+One resolution mechanic everywhere: d20 + modifier vs DC, with the same tiers, budgets, retry wording, and roll breakdowns as every other check. Conditions read it like any attribute (`{ "luck": { "at_least": 2 } }`), and character creation can offer it (`{ "id": "attributes.luck", "localeKey": "luck", "bonusPerPoint": 1 }`).
+
+*History: a Fighting-Fantasy-style 2d6 roll-under luck subsystem (depleting resource, Test Your Luck gambles, combat gambles, retry costs) shipped briefly and was removed — a second resolution mechanic cost more in player legibility than it earned in flavor. The validator flags its leftover authoring surface (`luckCheck`, `restore_luck`, `rules.luck`, the luck resource) with pointers to this convention.*
+
 
 ## Passive checks
 
@@ -144,12 +134,11 @@ Rolled silently on the player's **first** entry, once per game, writing pass/fai
 | Partial / critical tiers | Hallway stealth check (graze through / pickpocket on a critical) |
 | Budgeted persuasion → consequence | Hallway goblin charm (3 tries, then they attack) |
 | Narrative check | Corridor "Study the wanderer's tracks" |
-| Test Your Luck | Corridor rubble gamble (sunstone shard or crushed fingers) |
+| Luck as a skill | Corridor rubble check (sunstone shard or crushed fingers) |
 | Passive check | Grand Chamber ceiling shimmer → one-shot fail-forward climb |
 | One-shot dialogue check with tiers | Stranger's discount haggle (critical: 20% + a clover; failure: marked-up prices) |
-| Time + sleep + luck restore | Bedroom "Sleep until morning"; kitchen changes at night |
-| Luck items | Four-Leaf Clover (in the loot table and the stranger's stock) |
+| Time + sleep | Bedroom "Sleep until morning"; kitchen changes at night |
 
 ## Validation
 
-`validateGameData` (and Studio's Validate button) checks all of it: leftover `increment`, `luckCheck`/`skillCheck` conflicts, unknown outcome tiers, doubly-defined tier pipelines, `resolveOnce`+`maxAttempts` redundancy, inert `onExhausted`, unsafe timer actions, unknown segments, day/segment/luck conditions without their backing config, malformed `defaultCosts`, missing segment locale keys, luck knobs without the luck resource, and passive checks missing `flag` or `skillCheck`.
+`validateGameData` (and Studio's Validate button) checks all of it: leftover `increment` and removed luck-subsystem fields, unknown outcome tiers, doubly-defined tier pipelines, `resolveOnce`+`maxAttempts` redundancy, inert `onExhausted`, unsafe timer actions, unknown segments, day/segment conditions without their backing config, malformed `defaultCosts`, missing segment locale keys, and passive checks missing `flag` or `skillCheck`.

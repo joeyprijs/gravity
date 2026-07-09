@@ -1,9 +1,22 @@
 {
   "entries": [
-    { "item": "gold", "amount": 3, "dropWeight": 5 },
-    { "item": "gold", "amount": 50, "dropWeight": 1 },
-    { "item": "healing_potion", "dropWeight": 3 },
-    { "item": "simple_dagger", "dropWeight": 2 },
-    { "item": "lucky_clover", "dropWeight": 1 }
+    {
+      "item": "gold",
+      "amount": 3,
+      "dropWeight": 5
+    },
+    {
+      "item": "gold",
+      "amount": 50,
+      "dropWeight": 1
+    },
+    {
+      "item": "healing_potion",
+      "dropWeight": 3
+    },
+    {
+      "item": "simple_dagger",
+      "dropWeight": 2
+    }
   ]
 }

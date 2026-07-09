@@ -185,28 +185,19 @@ test('segment leaf: matches the current day segment, including the pre-dawn wrap
   assert.equal(evaluateCondition({ segment: 'day' }, makeTimeState(0, null)), false); // no config
 });
 
-// ── luck leaf ─────────────────────────────────────────────────────────────────
-
-test('luck leaf: compares the current luck resource', () => {
-  const state = makeState();
-  state.getPlayer = () => ({ resources: { gold: 0, luck: { current: 3, max: 9 } }, attributes: {}, inventory: [], equipment: {}, level: 1 });
-  assert.equal(evaluateCondition({ luck: { at_most: 3 } }, state), true);
-  assert.equal(evaluateCondition({ luck: { at_least: 4 } }, state), false);
-});
-
-test('luck leaf: games without the resource evaluate against 0', () => {
-  assert.equal(evaluateCondition({ luck: { at_most: 0 } }, makeState()), true);
-  assert.equal(evaluateCondition({ luck: { at_least: 1 } }, makeState()), false);
-});
 
 // ── custom attributes shadowing built-in leaves ───────────────────────────────
 
-test('a custom attribute named like a time/luck leaf keeps its attribute semantics', () => {
-  // Pre-existing games may define attributes named "luck" or "time"; their
-  // conditions must keep comparing the attribute, not the new systems.
-  const state = makeState({ attrs: { luck: 3, time: 5 } });
-  state.getPlayer = () => ({ resources: { gold: 0, luck: { current: 0, max: 9 } }, attributes: { luck: 3, time: 5 }, inventory: [], equipment: {}, level: 1 });
-  assert.equal(evaluateCondition({ luck: { at_least: 3 } }, state), true);  // attribute 3, resource 0
+test('a custom attribute named like a time leaf keeps its attribute semantics', () => {
+  // Pre-existing games may define an attribute named "time"; its conditions
+  // must keep comparing the attribute, not the world clock.
+  const state = makeState({ attrs: { time: 5 } });
   assert.equal(evaluateCondition({ time: { at_least: 5 } }, state), true);  // attribute 5, ticks 0
   assert.equal(evaluateCondition({ time: { at_least: 6 } }, state), false);
+});
+
+test('a "luck" custom attribute is a plain attribute leaf', () => {
+  const state = makeState({ attrs: { luck: 2 } });
+  assert.equal(evaluateCondition({ luck: { at_least: 2 } }, state), true);
+  assert.equal(evaluateCondition({ luck: { at_least: 3 } }, state), false);
 });

@@ -44,7 +44,7 @@ engine.js (orchestrator, delegate API, event bus, registries)
 │   ├── narrative.js   scrollable narrative log
 │   ├── actions.js     built-in action handlers
 │   ├── condition.js   condition AST evaluator (pure)
-│   ├── skill-checks.js d20 checks, outcome tiers, attempt/resolution bookkeeping, luck
+│   ├── skill-checks.js d20 checks, outcome tiers, attempt/resolution bookkeeping
 │   └── dice.js        roll() and damage parsing (pure)
 ├── ui/                UIManager + tab panels (inventory, quests, chests)
 ├── world/map.js       minimap + full-screen world map
