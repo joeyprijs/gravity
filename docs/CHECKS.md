@@ -93,10 +93,27 @@ Without `rules.time` the system is dormant: no HUD chip, no default costs (expli
 - **Spending time.** `timeCost` on any option, skill, or dialogue response (explicit always wins; `0` opts out of a default). Defaults from `defaultCosts`: options that navigate charge `navigate`, options that full-rest charge `fullRest`, check attempts charge `skillAttempt`. Dialogue and narrative checks are free unless authored otherwise.
 - **Actions.** `{ "type": "advance_time", "amount": 8 }`, or `{ "type": "advance_time", "until": "morning" }` for sleep-until-morning (never 0 ticks — in the morning it sleeps to tomorrow's).
 - **Reading time.** Condition leaves work everywhere conditions do: `{ "time": { "at_least": 120 } }`, `{ "day": { "at_least": 3 } }`, `{ "segment": "night" }`.
-- **Timers.** `{ "type": "set_timer", "id": "alarm", "afterTicks": 12, "actions": [ ... ] }` (or `atTick`); `cancel_timer` disarms. Timer pipelines are restricted to **quiet actions** (`set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`) — the world changes through flags, which scene re-renders and conditions already read, so a timer firing mid-anything is always safe. Re-arming an id replaces the old deadline.
-- **HUD.** With `ticksPerDay` set, a "Day 2 — Evening" chip appears in the header (`ui.timeChipDay` / `ui.timeChipSegment` + `time.segments.*` locale keys).
+- **Timers.** `{ "type": "set_timer", "id": "alarm", "afterTicks": 12, "actions": [ ... ] }` (or `atTick`); `cancel_timer` disarms. Timer pipelines are restricted to **quiet actions** (`set_flag`, `log`, `questTrigger`, timer and clock actions) — the world changes through flags, which scene re-renders and conditions already read, so a timer firing mid-anything is always safe. Re-arming an id replaces the old deadline. A timer with a `label` shows as a visible countdown ("7 ticks left") in the quest panel's Clocks section; unlabeled timers stay the world's secret machinery.
+- **HUD.** With `ticksPerDay` set, a "Day 2 / Evening" chip appears in the header (`ui.timeChipDay` + `time.segments.*` locale keys).
 
 Combat does not advance the clock by default; author an `advance_time` in `onVictory` if a fight should cost time.
+
+## Clocks (visible progress tracks)
+
+Blades-in-the-Dark-style segmented tracks, rendered as pips (●●○) in the quest panel — a threat approaching or an opportunity ripening, visible from the moment it starts:
+
+```json
+{ "type": "start_clock", "id": "the_hunt", "label": "The Hunt", "segments": 3,
+  "onFilled": [ { "type": "set_flag", "flag": "dungeon_hunted", "value": true } ] },
+{ "type": "advance_clock", "id": "the_hunt" }
+```
+
+- **Events fill them.** `advance_clock` works from any pipeline — including timer pipelines, so passing time can tick a threat. Filling the last segment runs `onFilled` (quiet actions only, same rule and reasoning as timers) and the clock retires from display: the consequence takes over the storytelling.
+- **Conditions read partial progress:** `{ "clock": "the_hunt", "progress": { "at_least": 2 } }` — descriptions, options, and dialogue can escalate as a clock fills. A clock that isn't running (never started, or filled and retired) evaluates as progress 0, so gate the aftermath on a flag set by `onFilled`, not on the clock itself.
+- `cancel_clock` removes one without firing `onFilled` (the threat passed); restarting an id resets it to zero.
+- The validator cross-references ids: advancing or checking a clock that no `start_clock` anywhere starts is flagged.
+
+Demo: unlocking the cellar door starts **The Hunt** (3 segments) alongside the labeled alarm countdown. The horn sounding, the wanderer fight, and a goblin clash each fill a segment; the chamber's description darkens at 2 filled, and the full clock sets `dungeon_hunted`.
 
 ## Luck (`rules.playerDefaults.resources.luck`)
 

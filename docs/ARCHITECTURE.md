@@ -78,6 +78,11 @@ Conditions gate scene options, dialogue responses, description variants, and aut
 | `{ "mission": "id", "status": "active" }` | Quest status (`not_started`/`active`/`complete`) |
 | `{ "level": 3 }` | Player level comparison |
 | `{ "gold": { "less_than": 10 } }` | Gold comparison |
+| `{ "time": { "at_least": 120 } }` | Absolute elapsed ticks |
+| `{ "day": { "at_least": 3 } }` | Day number (needs `rules.time.ticksPerDay`) |
+| `{ "segment": "night" }` | Current day segment (needs `rules.time.segments`) |
+| `{ "luck": { "at_most": 2 } }` | Current luck resource |
+| `{ "clock": "id", "progress": { "at_least": 2 } }` | Progress-clock fill (not running = 0) |
 | `{ "<attribute>": 2 }` | Any custom attribute from `rules.customAttributes` |
 
 Numeric leaves accept a bare number (meaning *at least*) or an operator object: `at_least`, `more_than`, `at_most`, `less_than`, `is`.
@@ -86,7 +91,7 @@ Numeric leaves accept a bare number (meaning *at least*) or an operator object: 
 
 Actions are the mutation pipeline: an array of `{ "type": ..., ...params }` objects executed in order by `engine.runActions()`. Handlers live in a registry; built-ins are registered from `systems/actions.js` under the names in `config.js` `ACTIONS`:
 
-`loot`, `combat`, `dialogue`, `navigate`, `return`, `full_rest`, `heal`, `set_flag`, `log`, `manage_chest` — plus plugin-registered actions (the curator plugin adds `manage_exhibits` and `add_display`).
+`loot`, `combat`, `dialogue`, `navigate`, `return`, `full_rest`, `heal`, `set_flag`, `log`, `manage_chest`, `advance_time`, `set_timer`, `cancel_timer`, `start_clock`, `advance_clock`, `cancel_clock`, `restore_luck` — plus plugin-registered actions (the curator plugin adds `manage_exhibits` and `add_display`).
 
 The dialogue actions (`goToConversation`, `trade`, `leave`, `makeFriendly`, `questTrigger`) live in the same registry; `DialogueSystem` registers them in its constructor. The conversation-bound ones (`goToConversation`, `trade`, `makeFriendly`) warn and no-op when no dialogue is active.
 

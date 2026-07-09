@@ -203,7 +203,9 @@ export class UIManager {
       this.bindItemActions();
     }
 
-    if (!hint || hint === 'quests') {
+    // Clocks live in the quest panel and countdowns move with the world
+    // clock, so time changes re-render it too.
+    if (!hint || hint === 'quests' || hint === 'time') {
       this.questUI.render();
     }
 

@@ -10,6 +10,22 @@
   },
   "description": [
     {
+      "text": "You enter a grand chamber. Sunlight streams in from a crack in the ceiling — and beneath it, the mysterious stranger stands very still, listening. Voices echo down the stairwells. They are not far behind you now.",
+      "condition": {
+        "flag": "dungeon_hunted",
+        "value": true
+      }
+    },
+    {
+      "text": "You enter a grand chamber. Sunlight streams in from a crack in the ceiling. The mysterious stranger near the exit glances past you, toward the way you came — somewhere back there, something is moving.",
+      "condition": {
+        "clock": "the_hunt",
+        "progress": {
+          "at_least": 2
+        }
+      }
+    },
+    {
       "text": "You enter a grand chamber. Sunlight streams in from a crack in the ceiling. A mysterious stranger stands near the exit — and now that you've noticed it, you can't unsee the faint shimmer of something lodged high in the ceiling crack.",
       "condition": {
         "flag": "chamber_noticed_shimmer",

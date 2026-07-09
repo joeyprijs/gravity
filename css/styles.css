@@ -403,6 +403,12 @@ body {
   color: var(--text-primary);
 }
 
+/* Clock pips (●●○○) in the quest panel's Clocks section. */
+.attr-list__value--pips {
+  letter-spacing: 3px;
+  color: var(--accent-color);
+}
+
 
 /* ==========================================================================
  HEADER: GAME CONTROLS

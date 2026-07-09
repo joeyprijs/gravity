@@ -125,7 +125,7 @@ test('migration v3 to v4: initializes stats and populates obtainedItems from exi
 
   gameState.loadFromObject(legacySave);
 
-  assert.equal(gameState.state.saveVersion, 4);
+  assert.equal(gameState.state.saveVersion, 5);
   assert.equal(gameState.state.museumReputation, 0);
   
   // Should have populated obtainedItems from legacy inventory, equipment, and displays

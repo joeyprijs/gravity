@@ -199,6 +199,19 @@ test('luck leaf: games without the resource evaluate against 0', () => {
   assert.equal(evaluateCondition({ luck: { at_least: 1 } }, makeState()), false);
 });
 
+// ── clock leaf ────────────────────────────────────────────────────────────────
+
+test('clock leaf: compares a running clock\'s progress; missing clock is 0', () => {
+  const state = makeState();
+  state.getClocks = () => ({ hunt: { label: 'The Hunt', segments: 4, filled: 2, onFilled: [] } });
+  assert.equal(evaluateCondition({ clock: 'hunt', progress: { at_least: 2 } }, state), true);
+  assert.equal(evaluateCondition({ clock: 'hunt', progress: { at_least: 3 } }, state), false);
+  assert.equal(evaluateCondition({ clock: 'hunt' }, state), true); // progress defaults to 1
+  // Never started (or filled and retired) → progress 0.
+  assert.equal(evaluateCondition({ clock: 'other' }, state), false);
+  assert.equal(evaluateCondition({ clock: 'other', progress: { at_most: 0 } }, state), true);
+});
+
 // ── custom attributes shadowing built-in leaves ───────────────────────────────
 
 test('a custom attribute named like a time/luck leaf keeps its attribute semantics', () => {

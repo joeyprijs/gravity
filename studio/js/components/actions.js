@@ -221,6 +221,9 @@ function renderParams(action, container, onChange) {
       const idInput = el('input', { type: 'text', class: 'form-input', value: action.id ?? '', placeholder: 'timer id' });
       idInput.addEventListener('input', () => { action.id = idInput.value.trim(); onChange(); });
       container.appendChild(param('Timer ID', idInput));
+      const timerLabel = el('input', { type: 'text', class: 'form-input', value: action.label ?? '', placeholder: 'blank = hidden timer' });
+      timerLabel.addEventListener('input', () => { action.label = timerLabel.value || undefined; onChange(); });
+      container.appendChild(param('Label', timerLabel));
       // Write the displayed default into the action — the engine treats a
       // missing afterTicks as 0 (fires on the very next tick), not the 1
       // shown here. Hand-authored atTick deadlines are left alone.
@@ -235,6 +238,37 @@ function renderParams(action, container, onChange) {
       const input = el('input', { type: 'text', class: 'form-input', value: action.id ?? '', placeholder: 'timer id' });
       input.addEventListener('input', () => { action.id = input.value.trim(); onChange(); });
       container.appendChild(param('Timer ID', input));
+      break;
+    }
+
+    case 'start_clock': {
+      const idInput = el('input', { type: 'text', class: 'form-input', value: action.id ?? '', placeholder: 'clock id' });
+      idInput.addEventListener('input', () => { action.id = idInput.value.trim(); onChange(); });
+      container.appendChild(param('Clock ID', idInput));
+      const labelInput = el('input', { type: 'text', class: 'form-input', value: action.label ?? '', placeholder: 'shown in the quest panel' });
+      labelInput.addEventListener('input', () => { action.label = labelInput.value || undefined; onChange(); });
+      container.appendChild(param('Label', labelInput));
+      // Write the displayed default — the engine requires a positive count.
+      if (action.segments === undefined) action.segments = 4;
+      container.appendChild(param('Segments', numInput(action.segments, v => { action.segments = v; onChange(); }, 'sm')));
+      if (!Array.isArray(action.onFilled)) action.onFilled = [];
+      container.appendChild(param('On Filled (quiet actions only)', renderActionPipeline(action.onFilled, onChange)));
+      break;
+    }
+
+    case 'advance_clock': {
+      const idInput = el('input', { type: 'text', class: 'form-input', value: action.id ?? '', placeholder: 'clock id' });
+      idInput.addEventListener('input', () => { action.id = idInput.value.trim(); onChange(); });
+      container.appendChild(param('Clock ID', idInput));
+      if (action.amount === undefined) action.amount = 1;
+      container.appendChild(param('Segments', numInput(action.amount, v => { action.amount = v; onChange(); }, 'sm')));
+      break;
+    }
+
+    case 'cancel_clock': {
+      const input = el('input', { type: 'text', class: 'form-input', value: action.id ?? '', placeholder: 'clock id' });
+      input.addEventListener('input', () => { action.id = input.value.trim(); onChange(); });
+      container.appendChild(param('Clock ID', input));
       break;
     }
 

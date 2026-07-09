@@ -1,5 +1,5 @@
 import { gameState } from "../core/state.js";
-import { LOG, ACTIONS, FLAG_KEYS, GOLD_ITEM_ID } from "../core/config.js";
+import { LOG, ACTIONS, FLAG_KEYS, GOLD_ITEM_ID, TIMER_SAFE_ACTIONS } from "../core/config.js";
 import { ticksUntilSegment } from "./time.js";
 
 // Built-in action handlers for the scene option action pipeline.
@@ -126,17 +126,57 @@ function handleAdvanceTime(action, engine) {
 // { type: "set_timer", id, afterTicks: 12, actions: [...] } — when the clock
 // passes the deadline, the (quiet-only) pipeline runs. atTick sets an
 // absolute deadline instead. Re-arming an id replaces the previous timer.
+// A timer with a "label" shows as a visible countdown in the quest UI;
+// unlabeled timers stay the world's secret machinery.
 function handleSetTimer(action) {
   if (!action.id) {
     console.warn('[Gravity] set_timer: missing "id" — ignored');
     return;
   }
   const deadline = action.atTick ?? (gameState.getTicks() + (action.afterTicks ?? 0));
-  gameState.setTimer({ id: action.id, deadline, actions: action.actions || [] });
+  gameState.setTimer({ id: action.id, deadline, label: action.label, actions: action.actions || [] });
 }
 
 function handleCancelTimer(action) {
   gameState.cancelTimer(action.id);
+}
+
+// --- Progress clocks ---
+
+// { type: "start_clock", id, label, segments: 4, onFilled: [...] } — begins a
+// visible progress track at 0/segments. Restarting an id resets it.
+function handleStartClock(action) {
+  if (!action.id) {
+    console.warn('[Gravity] start_clock: missing "id" — ignored');
+    return;
+  }
+  gameState.startClock({
+    id: action.id,
+    label: action.label,
+    segments: action.segments,
+    onFilled: action.onFilled || [],
+  });
+}
+
+// { type: "advance_clock", id, amount: 1 } — fills segments on a running
+// clock. Filling the last segment retires the clock and runs its onFilled
+// pipeline, restricted to quiet actions for the same reentrancy reasons as
+// timer pipelines (a clock can fill mid-anything).
+function handleAdvanceClock(action, engine) {
+  const onFilled = gameState.advanceClock(action.id, action.amount ?? 1);
+  if (!onFilled) return;
+  const safe = onFilled.filter(a => {
+    if (TIMER_SAFE_ACTIONS.has(a.type)) return true;
+    console.warn(`[Gravity] clock "${action.id}": action type "${a.type}" is not allowed in onFilled pipelines — skipped`);
+    return false;
+  });
+  engine.runActions(safe);
+}
+
+// { type: "cancel_clock", id } — removes a running clock without firing
+// onFilled: the threat passed, the opportunity closed.
+function handleCancelClock(action) {
+  gameState.cancelClock(action.id);
 }
 
 // --- Luck actions ---
@@ -169,5 +209,8 @@ export function registerBuiltinActions(engine) {
   engine.registerAction(ACTIONS.ADVANCE_TIME,    handleAdvanceTime);
   engine.registerAction(ACTIONS.SET_TIMER,       handleSetTimer);
   engine.registerAction(ACTIONS.CANCEL_TIMER,    handleCancelTimer);
+  engine.registerAction(ACTIONS.START_CLOCK,     handleStartClock);
+  engine.registerAction(ACTIONS.ADVANCE_CLOCK,   handleAdvanceClock);
+  engine.registerAction(ACTIONS.CANCEL_CLOCK,    handleCancelClock);
   engine.registerAction(ACTIONS.RESTORE_LUCK,    handleRestoreLuck);
 }

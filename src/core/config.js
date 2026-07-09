@@ -37,6 +37,9 @@ export const ACTIONS = {
   ADVANCE_TIME:    'advance_time',
   SET_TIMER:       'set_timer',
   CANCEL_TIMER:    'cancel_timer',
+  START_CLOCK:     'start_clock',
+  ADVANCE_CLOCK:   'advance_clock',
+  CANCEL_CLOCK:    'cancel_clock',
   RESTORE_LUCK:    'restore_luck',
 
   // Dialogue actions — registered by DialogueSystem (see dialogue.js). They
@@ -162,7 +165,10 @@ export const EL = {
 // starts — so they are restricted to "quiet" actions that only change state
 // and log. The world reacts through flags, which already flow into scene
 // re-renders, option visibility, and dialogue gating naturally.
-export const TIMER_SAFE_ACTIONS = new Set(['set_flag', 'log', 'questTrigger', 'cancel_timer', 'set_timer']);
+export const TIMER_SAFE_ACTIONS = new Set([
+  'set_flag', 'log', 'questTrigger', 'cancel_timer', 'set_timer',
+  'start_clock', 'advance_clock', 'cancel_clock',
+]);
 
 // Canonical mission status values — used by QuestSystem, StateManager, QuestUI, and conditions.
 export const MISSION_STATUS = {
