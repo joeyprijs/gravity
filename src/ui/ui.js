@@ -102,15 +102,16 @@ export class UIManager {
         panel.innerHTML = `<div class="scene__options"><div class="minimap" id="minimap" title="Click to open full map" hidden><div class="minimap__canvas" id="minimap-canvas"></div></div></div>`;
       }
 
-      // Attributes widget: render custom attributes as stat cards
+      // Attributes widget: render custom attributes as a label/value list —
+      // one row per stat (the chip style is reserved for the header).
       if (tab.widget === 'attributes') {
         const items = (rules.customAttributes ?? []).map(attr =>
-          `<div class="stat-item">
-            <span class="stat-item__label">${attr.id.toUpperCase()}</span>
-            <span class="stat-item__value" data-stat-bind="attributes.${attr.id}"></span>
+          `<div class="attr-list__row">
+            <span class="attr-list__label">${attr.id.toUpperCase()}</span>
+            <span class="attr-list__value" data-stat-bind="attributes.${attr.id}"></span>
           </div>`
         ).join('');
-        panel.innerHTML = `<div class="scene__options"><div class="stat-group">${items}</div></div>`;
+        panel.innerHTML = `<div class="scene__options"><div class="attr-list">${items}</div></div>`;
       }
 
       playerPanel.appendChild(panel);

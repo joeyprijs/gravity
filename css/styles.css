@@ -372,6 +372,37 @@ body {
   font-size: var(--font-md);
 }
 
+/* Skills tab: attributes as a list — label left, value right, one per row. */
+.attr-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.attr-list__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 0.5);
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.attr-list__row:last-child {
+  border-bottom: none;
+}
+
+.attr-list__label {
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+}
+
+.attr-list__value {
+  font-size: var(--font-sm);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
 
 /* ==========================================================================
  HEADER: GAME CONTROLS
