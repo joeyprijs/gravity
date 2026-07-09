@@ -312,6 +312,36 @@ test('flags the removed luck subsystem rules keys and the restore_luck action', 
 });
 
 
+test('flags a farmable check: success loots but nothing retires it', () => {
+  const data = makeToolkitData();
+  data.scenes.cave.skills.push({
+    text: 'Dig', skillCheck: 'perception', dc: 12,
+    outcomes: { success: { actions: [{ type: 'loot', item: 'potion' }] } },
+  });
+  const messages = issuesFor(data);
+  assert.ok(messages.some(m => m.includes('can be re-rolled for duplicates')));
+
+  // Self-gated version passes: success sets the flag the condition requires false.
+  const gated = makeToolkitData();
+  gated.scenes.cave.skills.push({
+    text: 'Dig', skillCheck: 'perception', dc: 12,
+    condition: { and: [{ flag: 'dug', value: false }] },
+    outcomes: { success: { actions: [
+      { type: 'set_flag', flag: 'dug', value: true },
+      { type: 'loot', item: 'potion' },
+    ] } },
+  });
+  assert.ok(!issuesFor(gated).some(m => m.includes('can be re-rolled for duplicates')));
+
+  // resolveOnce also passes.
+  const once = makeToolkitData();
+  once.scenes.cave.skills.push({
+    text: 'Dig', skillCheck: 'perception', dc: 12, resolveOnce: true,
+    outcomes: { success: { actions: [{ type: 'loot', item: 'potion' }] } },
+  });
+  assert.ok(!issuesFor(once).some(m => m.includes('can be re-rolled for duplicates')));
+});
+
 test('skillRetry: flags an undeclared resource, bad cost, and negative restRestore', () => {
   const data = makeToolkitData();
   data.rules.skillRetry = { resource: 'luckPoints', cost: 0, restRestore: -1 };

@@ -93,8 +93,16 @@
       "dc": 12,
       "maxAttempts": 3,
       "condition": {
-        "flag": "wanderer_defeated",
-        "value": true
+        "and": [
+          {
+            "flag": "wanderer_defeated",
+            "value": true
+          },
+          {
+            "flag": "corridor_rubble_settled",
+            "value": false
+          }
+        ]
       },
       "onExhausted": [
         {

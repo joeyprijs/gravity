@@ -77,6 +77,31 @@
       ]
     },
     {
+      "text": "Slip past the goblins the way you did before",
+      "condition": {
+        "and": [
+          {
+            "flag": "goblins_snuck_past",
+            "value": true
+          },
+          {
+            "flag": "defeated_goblin_guard",
+            "value": false
+          },
+          {
+            "flag": "goblins_pacified",
+            "value": false
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "dungeon_chamber"
+        }
+      ]
+    },
+    {
       "text": "Proceed deeper into the dungeon",
       "condition": {
         "or": [
@@ -132,6 +157,10 @@
           },
           {
             "flag": "goblins_pacified",
+            "value": false
+          },
+          {
+            "flag": "goblins_snuck_past",
             "value": false
           }
         ]

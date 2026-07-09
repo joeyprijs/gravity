@@ -165,9 +165,38 @@ function validateActions(ctx, group, actions, where) {
   }
 }
 
+// Collects the flags a condition tree requires to be false — the shape of a
+// self-gating check ("success sets flag X; the check requires X false").
+function collectFalseFlagGates(condition, out = new Set()) {
+  if (!condition) return out;
+  (condition.and || []).forEach(c => collectFalseFlagGates(c, out));
+  (condition.or || []).forEach(c => collectFalseFlagGates(c, out));
+  if (condition.not && 'flag' in condition.not && condition.not.value === true)
+    out.add(condition.not.flag);
+  if ('flag' in condition && condition.value === false) out.add(condition.flag);
+  return out;
+}
+
+// A success that rewards loot but never retires the check is farmable: the
+// player re-rolls it for duplicate rewards. A check avoids the warning by
+// being resolveOnce, or by gating itself on a flag its own success sets.
+function warnIfSuccessFarmable(ctx, group, check, where) {
+  if (check.resolveOnce || !(check.dc > 0)) return;
+  const successTiers = [check.outcomes?.success, check.outcomes?.critical];
+  const legacySuccess = check.actions || [];
+  const successActions = successTiers.flatMap(t => t?.actions || []).concat(legacySuccess);
+  if (!successActions.some(a => a.type === 'loot')) return;
+  const gates = collectFalseFlagGates(check.condition);
+  const setsOwnGate = successActions.some(a =>
+    a.type === 'set_flag' && a.value === true && gates.has(a.flag));
+  if (!setsOwnGate)
+    ctx.add(group, `${where}: success loots a reward but nothing retires the check — it can be re-rolled for duplicates. Add resolveOnce, or gate the check on a flag its success sets (condition { "flag": X, "value": false } + success set_flag X).`);
+}
+
 // Validates the check-flavor fields shared by scene skill options and dialogue
 // responses: outcome tiers, one-shot markers, attempt budgets.
 function validateCheck(ctx, group, check, where) {
+  warnIfSuccessFarmable(ctx, group, check, where);
   if (check.luckCheck)
     ctx.add(group, `${where}: "luckCheck" (the 2d6 Test-Your-Luck gamble) was removed — use a d20 check against a luck custom attribute ("skillCheck": "luck" with a dc) instead`);
   if ('increment' in check || (check.items || []).some(l => 'increment' in l))
