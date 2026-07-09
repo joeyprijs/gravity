@@ -111,7 +111,10 @@ export class UIManager {
             <span class="attr-list__value" data-stat-bind="attributes.${attr.id}"></span>
           </div>`
         ).join('');
-        panel.innerHTML = `<div class="scene__options"><div class="attr-list">${items}</div></div>`;
+        panel.innerHTML = `<div class="scene__options">
+          <div class="${CSS.SCENE_SECTION_HEADING}">${this.engine.t('ui.attributesTitle')}</div>
+          <div class="attr-list">${items}</div>
+        </div>`;
       }
 
       playerPanel.appendChild(panel);

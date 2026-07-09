@@ -50,6 +50,7 @@
     "tabInventory":        "Inventory",
     "tabQuests":           "Quests",
     "tabAttributes":       "Skills",
+    "attributesTitle":     "Your Skills",
     "tabMap":              "Map",
     "equippedSection":     "Equipped",
     "equippedTo":          "Equipped: {slot}",
