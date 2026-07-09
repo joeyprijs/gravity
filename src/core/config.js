@@ -135,8 +135,6 @@ export const EL = {
   BTN_SAVE:                'btn-save',
   BTN_LOAD:                'btn-load',
   BTN_RESTART:             'btn-restart',
-  BTN_TOGGLE_SHEET:        'btn-toggle-sheet',
-  PLAYER_SHEET_STATS:      'player-sheet-stats',
   FILE_UPLOAD:             'file-upload',
 
   // Character creation overlay

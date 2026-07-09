@@ -128,11 +128,7 @@ function buildExhibitsTable(engine, sceneId) {
 
 function injectReputationHeader() {
   if (document.querySelector('.stat-item--reputation')) return;
-  // Reputation moves slowly — it belongs in the collapsible character-sheet
-  // row with LVL/AC/INIT, not the always-visible vitals. Fall back to the
-  // gold group for shells without a sheet row.
-  const target = document.querySelector('#player-sheet-stats .stat-group')
-    ?? document.querySelector('.stat-item--gold')?.parentNode;
+  const target = document.querySelector('.stat-item--gold')?.parentNode;
   if (target) {
     const repItem = document.createElement('div');
     repItem.className = 'stat-item stat-item--reputation';

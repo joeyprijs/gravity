@@ -61,7 +61,6 @@
     "locationCombat":      "Combat",
     "notEnoughGold":       "Not enough gold!",
     "timeChipDay":         "Day {day}",
-    "timeChipSegment":     "Day {day} — {segment}",
     "luckLabel":           "LUCK"
   },
   "time": {
