@@ -139,6 +139,7 @@ export const EL = {
   BTN_LOAD:                'btn-load',
   BTN_RESTART:             'btn-restart',
   FILE_UPLOAD:             'file-upload',
+  CLOCK_STRIP:             'clock-strip',
 
   // Character creation overlay
   CHAR_CREATION:           'char-creation',

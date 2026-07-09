@@ -2,6 +2,37 @@ import { gameState } from "../core/state.js";
 import { createElement } from "../core/utils.js";
 import { CSS, EL, MISSION_STATUS } from "../core/config.js";
 
+/**
+ * The displayable clock entries: progress clocks as filled/empty pips,
+ * labeled timers as ticks-remaining countdowns. Unlabeled timers stay the
+ * world's secret machinery and never surface. Shared by the quest panel's
+ * Clocks section and the narrative overlay strip.
+ *
+ * @param {object} engine - The RPGEngine instance (used for locale).
+ * @returns {Array<{label: string, value: string, pips: boolean}>}
+ */
+export function buildClockEntries(engine) {
+  const entries = [];
+
+  for (const clock of Object.values(gameState.getClocks())) {
+    const pips = '●'.repeat(clock.filled) + '○'.repeat(Math.max(0, clock.segments - clock.filled));
+    entries.push({ label: clock.label, value: pips, pips: true });
+  }
+
+  const now = gameState.getTicks();
+  for (const timer of gameState.getTimers()) {
+    if (!timer.label) continue;
+    const remaining = Math.max(0, timer.deadline - now);
+    entries.push({
+      label: timer.label,
+      value: remaining === 1 ? engine.t('ui.clockTickLeft') : engine.t('ui.clockTicksLeft', { count: remaining }),
+      pips: false,
+    });
+  }
+
+  return entries;
+}
+
 // QuestUI renders the quest log sidebar panel.
 export class QuestUI {
   constructor(engine) {
@@ -68,33 +99,16 @@ export class QuestUI {
     }
   }
 
-  // Clocks: progress tracks render as filled/empty pips, labeled timers as
-  // ticks-remaining countdowns. Unlabeled timers stay the world's secret
-  // machinery and never surface here. Rows reuse the attr-list idiom
-  // (label left, value right).
+  // Clock rows for the quest panel, reusing the attr-list idiom (label left,
+  // value right). Entry building is shared with the narrative overlay strip.
   _buildClockRows() {
-    const rows = [];
-
-    for (const clock of Object.values(gameState.getClocks())) {
+    return buildClockEntries(this.engine).map(entry => {
       const row = createElement('div', 'attr-list__row');
-      row.appendChild(createElement('span', 'attr-list__label', clock.label));
-      const pips = '●'.repeat(clock.filled) + '○'.repeat(Math.max(0, clock.segments - clock.filled));
-      row.appendChild(createElement('span', 'attr-list__value attr-list__value--pips', pips));
-      rows.push(row);
-    }
-
-    const now = gameState.getTicks();
-    for (const timer of gameState.getTimers()) {
-      if (!timer.label) continue;
-      const remaining = Math.max(0, timer.deadline - now);
-      const row = createElement('div', 'attr-list__row');
-      row.appendChild(createElement('span', 'attr-list__label', timer.label));
-      row.appendChild(createElement('span', 'attr-list__value', remaining === 1
-        ? this.engine.t('ui.clockTickLeft')
-        : this.engine.t('ui.clockTicksLeft', { count: remaining })));
-      rows.push(row);
-    }
-
-    return rows;
+      row.appendChild(createElement('span', 'attr-list__label', entry.label));
+      row.appendChild(createElement('span',
+        entry.pips ? 'attr-list__value attr-list__value--pips' : 'attr-list__value',
+        entry.value));
+      return row;
+    });
   }
 }
