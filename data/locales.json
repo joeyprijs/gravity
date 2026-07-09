@@ -28,6 +28,10 @@
       "stealth": {
         "label": "Stealth",
         "description": "+1 Stealth per point"
+      },
+      "luck": {
+        "label": "Luck",
+        "description": "+1 Luck per point"
       }
     }
   },
@@ -46,7 +50,8 @@
     "initiative": "{value}",
     "perception": "{value}",
     "stealth": "{value}",
-    "gold": "{value}"
+    "gold": "{value}",
+    "luck": "{value}"
   },
   "ui": {
     "inventoryEmpty": "Inventory is empty.",
@@ -77,7 +82,7 @@
     "notEnoughGold": "Not enough gold!",
     "timeChipDay": "Day {day}",
     "resources": {
-      "luckPoints": "Luck"
+      "luckPoints": "Luck Points"
     }
   },
   "time": {
@@ -129,12 +134,14 @@
     "skillBadge": {
       "perception": "DC {dc}, Perception {mod}",
       "charisma": "DC {dc}, Charisma {mod}",
-      "stealth": "DC {dc}, Stealth {mod}"
+      "stealth": "DC {dc}, Stealth {mod}",
+      "luck": "DC {dc}, Luck {mod}"
     },
     "skillBadgeFree": {
       "perception": "Perception",
       "charisma": "Charisma",
-      "stealth": "Stealth"
+      "stealth": "Stealth",
+      "luck": "Luck"
     },
     "skillCritical": "({breakdown} = {roll} vs DC {dc}) — a triumph!",
     "skillSuccess": "({breakdown} = {roll} vs DC {dc}) — success!",
@@ -144,7 +151,7 @@
     "lookAroundFound": "You search the area ({breakdown} = {roll}) — your keen eye spots something!",
     "lookAroundFoundMore": "You search the area ({breakdown} = {roll}) — your keen eye spots something, though you sense the area still holds more.",
     "lookAroundFail": "You search the area ({breakdown} = {roll}) — nothing reveals itself, yet you sense there's something you're missing.",
-    "badgeWithRetryCost": "{badge} — retry: {cost} {resource}"
+    "badgeWithRetryCost": "{badge} — retry: {cost} Luck Point"
   },
   "player": {
     "equipped": "Equipped {name} to {slot}.",

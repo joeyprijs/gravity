@@ -116,12 +116,12 @@ Combat does not advance the clock by default; author an `advance_time` in `onVic
 
 ## There is no luck subsystem
 
-"Luck" is not a built-in mechanic — model it however your game wants, from the pieces above:
+"Luck" is not a built-in mechanic — it's modeled from the pieces above. The demo combines both halves:
 
-- **As a retry currency** (what the demo does): a `luckPoints` resource + `rules.skillRetry` — see *Retry currency*. Luck is the do-over budget.
-- **As a d20 skill**: a plain custom attribute (`{ "id": "luck", "default": 0 }`) rolled with `"skillCheck": "luck"` against a DC, exactly like perception. Read in conditions (`{ "luck": { "at_least": 2 } }`), offered in character creation.
+- **Luck the skill**: a plain custom attribute (`{ "id": "luck", "default": 0 }`), point-buyable in character creation, rolled with `"skillCheck": "luck"` against a DC exactly like perception, readable in conditions (`{ "luck": { "at_least": 2 } }`).
+- **Luck Points the pool**: a `luckPoints` resource + `rules.skillRetry` — see *Retry currency*. Pushing your luck spends from it: the first attempt at a luck check (or any check) is free, each retry costs a point, and rest refills the pool.
 
-Either way it's one resolution mechanic everywhere — d20 + modifier vs DC — with luck as flavor on top, never a parallel dice system.
+Together they read as one theme — the skill is how good you are at being lucky, the points are how much luck you have left to push — while staying one resolution mechanic everywhere: d20 + modifier vs DC, never a parallel dice system. Either half works alone; a game can also skip luck entirely.
 
 *History: a Fighting-Fantasy-style 2d6 roll-under luck subsystem (depleting resource, Test Your Luck gambles, combat gambles) shipped briefly and was removed — a second resolution mechanic cost more in player legibility than it earned. The validator flags its leftover authoring surface (`luckCheck`, `restore_luck`, `rules.luck`, a `luck` resource) with pointers to these conventions.*
 
@@ -145,8 +145,8 @@ Rolled silently on the player's **first** entry, once per game, writing pass/fai
 | Timer + world reaction | Opening the cellar door arms `dungeon_alarm` (12 ticks → hallway description changes) |
 | Partial / critical tiers | Hallway stealth check (graze through / pickpocket on a critical) |
 | Budgeted persuasion → consequence | Hallway goblin charm (3 tries, then they attack) |
-| Narrative check | Corridor "Study the wanderer's tracks" |
-| Luck as a skill | Corridor rubble check (sunstone shard or crushed fingers) |
+| Narrative check | Kitchen "Sneak a taste of the stew" (repeatable, escalating resultText) |
+| Luck skill + retry currency | Corridor rubble dig: d20 + Luck vs DC 12; retries cost a Luck Point, escalating failure lines |
 | Passive check | Grand Chamber ceiling shimmer → one-shot fail-forward climb |
 | One-shot dialogue check with tiers | Stranger's discount haggle (critical: 20% + a clover; failure: marked-up prices) |
 | Time + sleep | Bedroom "Sleep until morning"; kitchen changes at night |

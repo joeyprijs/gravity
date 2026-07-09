@@ -103,6 +103,10 @@
     {
       "id": "stealth",
       "default": 0
+    },
+    {
+      "id": "luck",
+      "default": 0
     }
   ],
   "charCreation": {
@@ -135,6 +139,12 @@
       {
         "id": "attributes.stealth",
         "localeKey": "stealth",
+        "bonusPerPoint": 1,
+        "min": 0
+      },
+      {
+        "id": "attributes.luck",
+        "localeKey": "luck",
         "bonusPerPoint": 1,
         "min": 0
       }

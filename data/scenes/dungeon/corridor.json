@@ -89,7 +89,7 @@
     {
       "text": "Dig at the glinting thing wedged under the rubble.",
       "retryText": "Try the rubble again.",
-      "skillCheck": "perception",
+      "skillCheck": "luck",
       "dc": 12,
       "maxAttempts": 3,
       "condition": {
