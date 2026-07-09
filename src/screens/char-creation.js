@@ -220,9 +220,12 @@ export class CharCreationScreen {
       if (bonus > 0) {
         const current = getByPath(player, stat.id) ?? 0;
         setByPath(player, stat.id, current + bonus);
-        // For maxHp: also update current hp so the player starts at full health
-        if (stat.id === 'resources.hp.max') {
-          player.resources.hp.current = player.resources.hp.max;
+        // Raising a resource cap raises the resource itself by the same
+        // amount, so invested points are felt immediately — HP starts full
+        // and stays full; luck keeps its authored headroom below the cap.
+        const resource = stat.id.match(/^resources\.(\w+)\.max$/)?.[1];
+        if (resource && player.resources[resource]?.current !== undefined) {
+          player.resources[resource].current += bonus;
         }
       }
     });

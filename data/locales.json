@@ -14,7 +14,7 @@
       "perception": { "label": "Perception",        "description": "+1 Perception per point" },
       "charisma":   { "label": "Charisma",          "description": "+1 Charisma per point" },
       "stealth":    { "label": "Stealth",           "description": "+1 Stealth per point" },
-      "luck":       { "label": "Luck (max)",        "description": "+1 maximum Luck per point" }
+      "luck":       { "label": "Luck",              "description": "+1 Luck per point (raises your cap too)" }
     }
   },
   "system": {
