@@ -103,6 +103,61 @@ export function getItemLabel(itemsData, itemId, amount = 1) {
 }
 
 /**
+ * Normalizes rules.apEconomy into a complete knob set. Every default
+ * reproduces the engine's classic behavior (AP refills fully at combat
+ * boundaries, every round, and on rest; skill checks are free; no per-turn
+ * floor or cap), so games without the block play exactly as before.
+ *
+ * @param {object|null} rules - The loaded rules object.
+ * @returns {{refillOnCombatStart: boolean, refillPerRound: ('full'|number),
+ *   restRestore: ('full'|number), minPerTurn: number, maxPerTurn: number,
+ *   skillAttemptCost: number}}
+ */
+export function apEconomyRules(rules) {
+  const eco = rules?.apEconomy || {};
+  return {
+    refillOnCombatStart: eco.refillOnCombatStart !== false,
+    refillPerRound: eco.refillPerRound ?? 'full',
+    restRestore: eco.restRestore ?? 'full',
+    minPerTurn: eco.minPerTurn ?? 0,
+    maxPerTurn: eco.maxPerTurn ?? 0,
+    skillAttemptCost: eco.skillAttemptCost ?? 0,
+  };
+}
+
+/**
+ * Builds the displayable stat lines for an item — one string per stat, in a
+ * fixed order: AP cost, hit modifier (signed), then scalar attributes. Known
+ * stats resolve their label through the locale (itemStats.<key>); unknown
+ * attribute keys fall back to "key: value". Shared by the combat attack
+ * buttons and the inventory panel so an item reads the same in both.
+ *
+ * @param {function} t - The engine's translate function.
+ * @param {object} itemData - The item definition from data/items.
+ * @returns {string[]} Stat lines, possibly empty.
+ */
+export function itemStatLines(t, itemData) {
+  const lines = [];
+  if (itemData.actionPoints !== undefined) {
+    lines.push(t('itemStats.actionPoints', { value: itemData.actionPoints }));
+  }
+  if (itemData.bonusHitChance !== undefined) {
+    const mod = itemData.bonusHitChance;
+    lines.push(t('itemStats.bonusHitChance', { value: mod >= 0 ? `+${mod}` : `${mod}` }));
+  }
+  if (itemData.attributes) {
+    for (const k in itemData.attributes) {
+      const v = itemData.attributes[k];
+      if (typeof v === 'object') continue;
+      const key = `itemStats.${k}`;
+      const line = t(key, { value: v });
+      lines.push(line !== key ? line : `${k}: ${v}`);
+    }
+  }
+  return lines;
+}
+
+/**
  * Resets the scene options panel to an empty state: clears the option button
  * container, removes injected option sections, and clears + hides the skills
  * container. The location reminder is re-appended as the container's first

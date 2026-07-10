@@ -317,23 +317,36 @@ class RPGEngine {
     if (gameState.countPlayerItem(itemId, { includeEquipped: false }) <= 0) return;
 
     const apCost = itemData.actionPoints ?? 0;
-    if (this.inCombat && gameState.getPlayer().resources.ap.current < apCost) {
+    // The precheck mirrors _spendAP's turn-budget guard exactly — the effect
+    // applies before the spend, so the two must never disagree.
+    if (this.inCombat && this.combatSystem.remainingTurnBudget() < apCost) {
       this.log(LOG.SYSTEM, this.t('player.notEnoughAP', { cost: apCost }));
       return;
     }
 
-    // Apply effect BEFORE spending AP so the log order is always:
-    // "used potion" → (AP spent) → enemy turn fires.
-    if (itemData.attributes?.healingAmount) {
-      let amount = itemData.attributes.healingAmount;
+    // Consumes one die-notation-or-number attribute: applies it via applyStat
+    // and logs the given locale key. Returns true if the attribute was present.
+    const consumeStat = (value, stat, msgKey) => {
+      if (!value) return false;
+      let amount = value;
       let rollSuffix = "";
       if (typeof amount === 'string') {
         const result = parseDamage(amount);
+        rollSuffix = this.t('player.rollSuffix', { dice: amount, roll: result.string });
         amount = result.total;
-        rollSuffix = this.t('player.rollSuffix', { roll: result.string });
       }
-      gameState.modifyPlayerStat('hp', amount);
-      this.log(LOG.SYSTEM, this.t('player.usedItem', { name: itemData.name, amount, rollSuffix }), 'loot');
+      gameState.modifyPlayerStat(stat, amount);
+      this.log(LOG.SYSTEM, this.t(msgKey, { name: itemData.name, amount, rollSuffix }), 'loot');
+      return true;
+    };
+
+    // Apply effect BEFORE spending AP so the log order is always:
+    // "used potion" → (AP spent) → enemy turn fires. Healing and AP restore
+    // are independent — an item may carry both (the apRestore side is the
+    // consumable counterpart of the modify_ap action).
+    const healed = consumeStat(itemData.attributes?.healingAmount, 'hp', 'player.usedItem');
+    const restoredAp = consumeStat(itemData.attributes?.apRestore, 'ap', 'player.usedItemAp');
+    if (healed || restoredAp) {
       gameState.removeFromInventory(itemId, 1);
     } else if (itemData.attributes?.teleportScene) {
       if (this.inCombat) {
@@ -351,6 +364,15 @@ class RPGEngine {
     }
 
     this._spendAP(apCost);
+
+    // Out of combat, consuming an item can change what the scene affords
+    // (AP-gated checks, condition-gated options) — rebuild the options so
+    // buttons don't go stale. In combat/dialogue/custom UI the owning panel
+    // refreshes itself.
+    if (!this.inCombat && !this.inDialogue && !this.inCustomUI) {
+      const scene = this.data.scenes[gameState.getCurrentSceneId()];
+      if (scene) this.scene.renderOptions(scene);
+    }
   }
 
   equipItem(slot, itemId) {
@@ -362,7 +384,7 @@ class RPGEngine {
     if (gameState.countPlayerItem(itemId, { includeEquipped: false }) <= 0) return;
 
     const apCost = itemData.actionPoints ?? 0;
-    if (this.inCombat && gameState.getPlayer().resources.ap.current < apCost) {
+    if (this.inCombat && this.combatSystem.remainingTurnBudget() < apCost) {
       this.log(LOG.SYSTEM, this.t('player.notEnoughAP', { cost: apCost }));
       return;
     }
@@ -382,7 +404,7 @@ class RPGEngine {
     const itemId = gameState.getPlayer().equipment[slot];
     if (!itemId) return;
     const unequipCost = this.data.rules?.unequipApCost ?? 1;
-    if (this.inCombat && gameState.getPlayer().resources.ap.current < unequipCost) {
+    if (this.inCombat && this.combatSystem.remainingTurnBudget() < unequipCost) {
       this.log(LOG.SYSTEM, this.t('player.notEnoughAP', { cost: unequipCost }));
       return;
     }
@@ -394,18 +416,20 @@ class RPGEngine {
     this._spendAP(unequipCost);
   }
 
-  // Deducts AP in combat. Returns false (blocking the action) if insufficient.
+  // Deducts AP in combat. Returns false (blocking the action) if the cost
+  // exceeds the remaining turn budget (current AP, further capped by
+  // rules.apEconomy.maxPerTurn — see CombatSystem.remainingTurnBudget).
   // Emits player:apSpent so CombatSystem can refresh the UI and hand off to
-  // the enemy if AP hits zero — engine no longer calls combat methods directly.
+  // the enemy when the budget runs out — engine no longer calls combat
+  // methods directly.
   _spendAP(cost) {
     if (!this.inCombat) return true;
-    const player = gameState.getPlayer();
-    if (player.resources.ap.current < cost) {
+    if (this.combatSystem.remainingTurnBudget() < cost) {
       this.log(LOG.SYSTEM, this.t('player.notEnoughAP', { cost }));
       return false;
     }
     gameState.modifyPlayerStat('ap', -cost);
-    this.emit('player:apSpent', { remaining: gameState.getPlayer().resources.ap.current });
+    this.emit('player:apSpent', { remaining: gameState.getPlayer().resources.ap.current, amount: cost });
     return true;
   }
 

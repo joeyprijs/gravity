@@ -5,7 +5,8 @@ import { evaluateCondition } from "./condition.js";
 import {
   performSkillCheck, normalizeOutcomes, resolveRetryText,
   getAttempts, recordAttempt, isResolved, markResolved,
-  skillBadge, retryGate, applyRetryGate
+  skillBadge, retryGate, applyRetryGate, spendRetryCost,
+  skillApCost, apGate, applyApGate, spendAp
 } from "./skill-checks.js";
 
 // Actions that move the conversation to a new panel (node, store, or scene).
@@ -210,22 +211,30 @@ export class DialogueSystem {
 
       const attempts = needsCheck ? getAttempts(dcStateKey, resKey) : 0;
       const gate = needsCheck ? retryGate(this.engine, attempts) : { cost: 0, blocked: false };
+      // Checked responses charge apCost ?? rules default; plain responses stay
+      // free unless they set an explicit apCost (like scene narrative beats).
+      const ap = apGate(this.engine, needsCheck ? skillApCost(this.engine, res) : (res.apCost ?? 0));
       const displayText = needsCheck ? resolveRetryText(res, attempts) : res.text;
-      const badge = needsCheck ? applyRetryGate(this.engine, gate, skillBadge(this.engine, res.skillCheck, res.dc)) : null;
+      const badge = needsCheck
+        ? applyRetryGate(this.engine, gate, applyApGate(this.engine, ap, skillBadge(this.engine, res.skillCheck, res.dc)))
+        : applyApGate(this.engine, ap, null);
       const btn = buildOptionButton(displayText, badge);
-      if (gate.blocked) btn.disabled = true;
+      if (gate.blocked || ap.blocked) btn.disabled = true;
 
       btn.onclick = () => {
         this.engine.log(LOG.PLAYER, displayText, 'choice');
 
         // Dialogue is free by default; an explicit timeCost on a response
-        // advances the clock (browsing a store never costs time).
-        if (res.timeCost > 0) this.engine.advanceTime(res.timeCost);
-
+        // advances the clock (browsing a store never costs time). Checked
+        // responses charge after the roll is narrated, so the passage of time
+        // reads as a consequence of the attempt; plain responses charge up
+        // front, before their pipeline can navigate away.
         if (needsCheck) {
-          if (gate.cost > 0) gameState.modifyPlayerStat(gate.resource, -gate.cost);
+          spendRetryCost(this.engine, gate);
+          spendAp(ap);
           const outcomes = normalizeOutcomes(res);
           const { tier, success } = performSkillCheck(this.engine, res.skillCheck, res.dc, outcomes, attempts);
+          if (res.timeCost > 0) this.engine.advanceTime(res.timeCost);
           if (res.resolveOnce) markResolved(resolvedKey, resKey);
 
           if (!success) {
@@ -255,6 +264,8 @@ export class DialogueSystem {
         // Action routing for plain (check-free) responses. Read through
         // normalizeOutcomes so a response Studio migrated to the outcomes
         // shape keeps working if its check is later removed.
+        spendAp(ap);
+        if (res.timeCost > 0) this.engine.advanceTime(res.timeCost);
         this._runActions(normalizeOutcomes(res).success.actions);
       };
 

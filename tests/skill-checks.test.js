@@ -4,7 +4,8 @@ import { gameState } from '../src/core/state.js';
 import {
   normalizeOutcomes, pickTier, performSkillCheck, formatMod, resolveRetryText,
   getAttempts, recordAttempt, isResolved, markResolved, resetAttempts,
-  rollBreakdown, skillLabel, resolveTierText, retryCost, retryGate, applyRetryGate,
+  rollBreakdown, skillLabel, resolveTierText, retryCost, retryGate, applyRetryGate, spendRetryCost,
+  skillApCost, apGate, applyApGate, spendAp,
 } from '../src/systems/skill-checks.js';
 
 const TEST_RULES = {
@@ -244,6 +245,27 @@ test('retryGate: first attempt free; retries cost the resource; blocks when unaf
   assert.equal(retryGate(engine, 1).blocked, true);                         // can't afford
 });
 
+test('spendRetryCost: deducts the resource and logs the spend with the balance left', () => {
+  gameState.init(RETRY_RULES);
+  const logs = [];
+  const engine = {
+    t: (k, p) => p ? `${k}:${JSON.stringify(p)}` : k,
+    log: (type, message, variant) => logs.push({ type, message, variant }),
+  };
+
+  spendRetryCost(engine, { cost: 0, blocked: false });                      // free gate: no-op
+  assert.equal(gameState.getPlayer().resources.luckPoints.current, 3);
+  assert.equal(logs.length, 0);
+
+  spendRetryCost(engine, { cost: 1, resource: 'luckPoints' });
+  assert.equal(gameState.getPlayer().resources.luckPoints.current, 2);
+  assert.equal(logs.length, 1);
+  assert.match(logs[0].message, /actions\.retrySpent/);
+  assert.match(logs[0].message, /"cost":1/);
+  assert.match(logs[0].message, /"remaining":2/);
+  assert.match(logs[0].message, /ui\.resources\.luckPoints/);               // label resolved through locale
+});
+
 test('applyRetryGate: appends the cost with the resource label; free gate is unchanged', () => {
   const engine = retryEngine({});
   assert.equal(applyRetryGate(engine, { cost: 0 }, 'DC 12'), 'DC 12');
@@ -283,6 +305,38 @@ test('performSkillCheck: passes breakdown parameters to translation engine', () 
   const params = loggedParams.find(p => p !== undefined);
   assert.equal(params.roll, 13);
   assert.equal(params.dc, 12);
-  assert.equal(params.skill, 'perception');
+  assert.equal(params.skill, 'Perception'); // display label, not the raw id
   assert.equal(params.breakdown, '1d20: 11 + 2 Perception');
+});
+
+// ── Skill-attempt AP costs (rules.apEconomy) ──────────────────────────────────
+
+test('skillApCost: explicit apCost wins; rules default applies; free otherwise', () => {
+  const engine = retryEngine({});
+  assert.equal(skillApCost(engine, {}), 0);
+  assert.equal(skillApCost(engine, { apCost: 2 }), 2);
+
+  engine.data.rules = { apEconomy: { skillAttemptCost: 1 } };
+  assert.equal(skillApCost(engine, {}), 1);
+  assert.equal(skillApCost(engine, { apCost: 0 }), 0); // explicit 0 opts out
+});
+
+test('apGate/spendAp: blocks unaffordable attempts and deducts on spend', () => {
+  const engine = retryEngine({});
+  assert.deepEqual(apGate(engine, 0), { cost: 0, blocked: false });
+  assert.deepEqual(apGate(engine, 2), { cost: 2, blocked: false }); // has 3
+
+  spendAp({ cost: 2 });
+  assert.equal(gameState.getPlayer().resources.ap.current, 1);
+  assert.equal(apGate(engine, 2).blocked, true); // can no longer afford
+  spendAp({ cost: 0 }); // free gate is a no-op
+  assert.equal(gameState.getPlayer().resources.ap.current, 1);
+});
+
+test('applyApGate: appends the AP badge line; free gate is unchanged', () => {
+  const engine = retryEngine({});
+  assert.equal(applyApGate(engine, { cost: 0 }, 'DC 12'), 'DC 12');
+  const out = applyApGate(engine, { cost: 1 }, 'DC 12');
+  assert.match(out, /badgeWithApCost/);
+  assert.match(out, /"cost":1/);
 });

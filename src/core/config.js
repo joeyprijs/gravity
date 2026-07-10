@@ -28,6 +28,7 @@ export const ACTIONS = {
   RETURN:          'return',
   FULL_REST:       'full_rest',
   HEAL:            'heal',
+  MODIFY_AP:       'modify_ap',
   NAVIGATE:        'navigate',
   SET_FLAG:        'set_flag',
   LOG:             'log',

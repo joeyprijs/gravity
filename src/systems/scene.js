@@ -7,7 +7,8 @@ import { resolveTimeCost } from "./time.js";
 import {
   performSkillCheck, normalizeOutcomes, resolveRetryText,
   getAttempts, recordAttempt, isResolved, markResolved, resetAttempts,
-  skillBadge, retryGate, applyRetryGate, rollBreakdown, skillLabel
+  skillBadge, retryGate, applyRetryGate, spendRetryCost,
+  skillApCost, apGate, applyApGate, spendAp, rollBreakdown, skillLabel
 } from "./skill-checks.js";
 
 // SceneRenderer handles navigating to scenes, resolving their descriptions,
@@ -294,8 +295,10 @@ export class SceneRenderer {
 
   // Advances the world clock for a chosen option/check. An explicit timeCost
   // always wins; otherwise the kind's default from rules.time.defaultCosts
-  // applies. Charged BEFORE the pipeline runs, so a timer that fires can set
-  // flags the pipeline's destination scene already sees.
+  // applies. Always charged BEFORE any pipeline that can navigate, so a timer
+  // that fires can set flags the destination scene already sees. Plain options
+  // charge up front; skill checks charge after their roll and loot are
+  // narrated, so the passage of time reads as a consequence of the attempt.
   _chargeTime(opt, kind) {
     const cost = resolveTimeCost(opt.timeCost, kind, this.engine.data.rules);
     if (cost > 0) this.engine.advanceTime(cost);
@@ -359,16 +362,18 @@ export class SceneRenderer {
     const lowestDc = Math.min(...items.map(l => l.dc ?? 10).filter((_, idx) => !state.found[idx]));
     const displayText = resolveRetryText(opt, state.tries || 0);
     const gate = retryGate(this.engine, state.tries || 0);
-    const btn = buildOptionButton(displayText, applyRetryGate(this.engine, gate, skillBadge(this.engine, opt.skillCheck, lowestDc)));
-    if (gate.blocked) {
+    const ap = apGate(this.engine, skillApCost(this.engine, opt));
+    const btn = buildOptionButton(displayText,
+      applyRetryGate(this.engine, gate, applyApGate(this.engine, ap, skillBadge(this.engine, opt.skillCheck, lowestDc))));
+    if (gate.blocked || ap.blocked) {
       btn.disabled = true;
       return btn;
     }
     btn.onclick = () => {
       this.engine.isGameStart = false;
       this.engine.log(LOG.PLAYER, displayText, 'choice');
-      if (gate.cost > 0) gameState.modifyPlayerStat(gate.resource, -gate.cost);
-      this._chargeTime(opt, 'skillAttempt');
+      spendRetryCost(this.engine, gate);
+      spendAp(ap);
       this._resolveDiscovery(opt, i, state, skillKey, scene);
     };
     return btn;
@@ -384,6 +389,10 @@ export class SceneRenderer {
     const baseRoll = roll(1, MAX_D20_ROLL);
     const hitRoll = baseRoll + mod;
 
+    // The DC the roll is narrated against: the easiest still-hidden item's —
+    // the same number the button's badge advertised for this attempt.
+    const lowestDc = Math.min(...items.map(l => l.dc ?? 10).filter((_, idx) => !state.found[idx]));
+
     const newlyFound = [];
     items.forEach((l, idx) => {
       if (state.found[idx]) return;
@@ -395,12 +404,18 @@ export class SceneRenderer {
     const msgKey = anyFound
       ? (stillMore ? 'actions.lookAroundFoundMore' : 'actions.lookAroundFound')
       : 'actions.lookAroundFail';
-    this.engine.log(LOG.SYSTEM, this.engine.t(msgKey, {
+    const variant = anyFound ? 'loot' : 'system';
+    this.engine.log(LOG.SYSTEM, this.engine.t('actions.lookAroundRoll', {
       roll: hitRoll,
+      dc: lowestDc,
       breakdown: rollBreakdown(baseRoll, mod, skillLabel(this.engine, opt.skillCheck)),
-    }), anyFound ? 'loot' : 'system');
+    }), variant);
+    // The outcome narration is its own log entry: same source, so it groups
+    // under the roll line with a breathing gap (like combat's damage lines).
+    this.engine.log(LOG.SYSTEM, this.engine.t(msgKey), variant);
 
     this._awardDiscoveredLoot(newlyFound);
+    this._chargeTime(opt, 'skillAttempt');
 
     state.tries = (state.tries || 0) + 1;
     const allFound = state.found.every(f => f);
@@ -481,11 +496,17 @@ export class SceneRenderer {
       ? this.engine.t(badgeKey)
       : this.engine.t('actions.lookAroundBadge');
 
-    const btn = buildOptionButton(opt.text, badge);
+    // Narrative beats are free story moments — only an explicit apCost
+    // charges (the rules-level skillAttemptCost is for rolled checks).
+    const ap = apGate(this.engine, opt.apCost ?? 0);
+    const btn = buildOptionButton(opt.text, applyApGate(this.engine, ap, badge));
+    if (ap.blocked) {
+      btn.disabled = true;
+      return btn;
+    }
     btn.onclick = () => {
       this.engine.isGameStart = false;
-      // Narrative beats are free by default — no skillAttempt default cost.
-      this._chargeTime(opt, null);
+      spendAp(ap);
       const map = typeof state === 'object' && state !== null ? state : {};
       map[`uses_${i}`] = uses + 1;
       gameState.setFlag(skillKey, map);
@@ -497,6 +518,9 @@ export class SceneRenderer {
       } else {
         this.engine.log(LOG.SYSTEM, this.engine.t('actions.lookAroundEmpty'));
       }
+
+      // Narrative beats are free by default — no skillAttempt default cost.
+      this._chargeTime(opt, null);
 
       const sceneIdBefore = gameState.getCurrentSceneId();
       this.engine.runActions(normalizeOutcomes(opt).success.actions);
@@ -515,18 +539,21 @@ export class SceneRenderer {
     const attempts = getAttempts(skillKey, i);
     const displayText = resolveRetryText(opt, attempts);
     const gate = retryGate(this.engine, attempts);
-    const btn = buildOptionButton(displayText, applyRetryGate(this.engine, gate, skillBadge(this.engine, opt.skillCheck, opt.dc)));
-    if (gate.blocked) {
+    const ap = apGate(this.engine, skillApCost(this.engine, opt));
+    const btn = buildOptionButton(displayText,
+      applyRetryGate(this.engine, gate, applyApGate(this.engine, ap, skillBadge(this.engine, opt.skillCheck, opt.dc))));
+    if (gate.blocked || ap.blocked) {
       btn.disabled = true;
       return btn;
     }
     btn.onclick = () => {
       this.engine.isGameStart = false;
       this.engine.log(LOG.PLAYER, displayText, 'choice');
-      if (gate.cost > 0) gameState.modifyPlayerStat(gate.resource, -gate.cost);
-      this._chargeTime(opt, 'skillAttempt');
+      spendRetryCost(this.engine, gate);
+      spendAp(ap);
       const outcomes = normalizeOutcomes(opt);
       const { tier, success } = performSkillCheck(this.engine, opt.skillCheck, opt.dc, outcomes, attempts);
+      this._chargeTime(opt, 'skillAttempt');
       if (opt.resolveOnce) markResolved(skillKey, i);
       const sceneIdBefore = gameState.getCurrentSceneId();
       if (success) {

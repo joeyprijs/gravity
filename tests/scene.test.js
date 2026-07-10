@@ -244,14 +244,16 @@ test('_resolveDiscovery: log key reflects found / found-more / fail', () => {
   const opt = { skillCheck: 'perception', items: [{ item: 'healing_potion', dc: 5 }, { item: 'rusty_sword', dc: 15 }] };
   const skillKey = FLAG_KEYS.skillDc('perception', 'cell');
 
-  // Each discovery logs the roll outcome first, then the found-loot summary.
+  // Each discovery logs the roll line, then the outcome narration as its own
+  // entry, then the found-loot summary.
   mock.method(Math, 'random', () => 0.45); // roll 10: one hit, one miss → more to find
   sr._resolveDiscovery(opt, 0, { found: [false, false] }, skillKey, {});
-  assert.equal(calls.logs[0].message, 'actions.lookAroundFoundMore');
+  assert.equal(calls.logs[0].message, 'actions.lookAroundRoll');
+  assert.equal(calls.logs[1].message, 'actions.lookAroundFoundMore');
 
   mock.method(Math, 'random', () => 0.95); // roll 20: last item found
   sr._resolveDiscovery(opt, 0, { found: [true, false] }, skillKey, {});
-  assert.equal(calls.logs[2].message, 'actions.lookAroundFound');
+  assert.equal(calls.logs[4].message, 'actions.lookAroundFound');
 
   mock.method(Math, 'random', () => 0); // roll 1: nothing found
   sr._resolveDiscovery(opt, 0, { found: [false, false] }, skillKey, {});
@@ -556,6 +558,39 @@ test('skill attempts charge the skillAttempt default (or their explicit timeCost
   sr._buildPassFailButton({ text: 'Try', skillCheck: 'perception', dc: 10 }, 0, 'cell', {}).onclick();
   sr._buildPassFailButton({ text: 'Try', skillCheck: 'perception', dc: 10, timeCost: 5 }, 1, 'cell', {}).onclick();
   assert.deepEqual(charged, [1, 5]);
+});
+
+test('a discovery attempt narrates the roll and loot before time is charged', () => {
+  const { sr, engine, calls } = makeSR();
+  engine.data.rules = { time: { defaultCosts: { skillAttempt: 1 } } };
+  engine.advanceTime = () => calls.logs.push({ message: 'timePassed' });
+  gameState.setCurrentSceneId('cell');
+  const opt = { skillCheck: 'perception', items: [{ item: 'healing_potion', dc: 5 }] };
+
+  mock.method(Math, 'random', () => 0.45); // roll 10 ≥ 5 — found
+  sr._resolveDiscovery(opt, 0, { found: [false] }, FLAG_KEYS.skillDc('perception', 'cell'), {});
+
+  const messages = calls.logs.map(l => l.message);
+  const timeAt = messages.indexOf('timePassed');
+  assert.ok(timeAt !== -1);
+  assert.ok(messages.indexOf('actions.lookAroundFound') < timeAt);
+  assert.ok(messages.findIndex(m => m.includes('Healing Potion')) < timeAt);
+});
+
+test('a pass/fail attempt narrates the roll before time is charged', () => {
+  const { sr, engine, calls } = makeSR();
+  engine.data.rules = { time: { defaultCosts: { skillAttempt: 1 } } };
+  engine.advanceTime = () => calls.logs.push({ message: 'timePassed' });
+  gameState.setCurrentSceneId('cell');
+
+  mock.method(Math, 'random', () => 0); // roll 1 — failure
+  sr._buildPassFailButton({ text: 'Try', skillCheck: 'perception', dc: 15 }, 0, 'cell', {}).onclick();
+
+  const messages = calls.logs.map(l => l.message);
+  const timeAt = messages.indexOf('timePassed');
+  assert.ok(timeAt !== -1);
+  assert.ok(messages.indexOf('actions.skillFail') !== -1);
+  assert.ok(messages.indexOf('actions.skillFail') < timeAt);
 });
 
 // ── Shared-skill flag map: discovery must not clobber sibling check state ────

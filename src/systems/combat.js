@@ -1,5 +1,5 @@
 import { gameState } from "../core/state.js";
-import { createElement, buildSceneDescription, buildOptionButton, resetOptionsPanel } from "../core/utils.js";
+import { createElement, buildSceneDescription, buildOptionButton, resetOptionsPanel, itemStatLines, apEconomyRules } from "../core/utils.js";
 import { MAX_D20_ROLL, EL, CSS, LOG, WEAPON_SLOTS, ENEMY_CLAW_ID } from "../core/config.js";
 import { roll, parseDamage } from "./dice.js";
 import { rollBreakdown } from "./skill-checks.js";
@@ -32,13 +32,18 @@ export class CombatSystem {
     // On victory, the option's onVictory actions array is executed as a pipeline.
     this.originOption = null;
     this.playerInit = 0;
+    // AP spent since the player's turn began — measured against
+    // rules.apEconomy.maxPerTurn (see remainingTurnBudget).
+    this.apSpentThisTurn = 0;
     this.renderer = new CombatRenderer(this);
 
     // Event listener: triggers whenever the player spends AP inside combat.
-    // If the player exhausts their Action Points, the turn automatically hands off to enemies.
-    this.engine.on('player:apSpent', ({ remaining }) => {
+    // When the turn budget runs out (AP exhausted, or the maxPerTurn cap is
+    // reached), the turn automatically hands off to enemies.
+    this.engine.on('player:apSpent', ({ remaining, amount }) => {
       if (!this.inCombat) return;
-      if (remaining <= 0) {
+      this.apSpentThisTurn += amount ?? 0;
+      if (remaining <= 0 || this.remainingTurnBudget() <= 0) {
         this.enemyTurn('after');
       } else {
         this.renderer.render(); // Update interface to reflect depleted AP
@@ -74,9 +79,17 @@ export class CombatSystem {
     this.enemies = enemyDataList;
     this.originOption = originOption;
 
-    // Restore player AP to maximum at the start of combat so they begin fully charged
+    // AP at the combat boundary is governed by rules.apEconomy: classic games
+    // (the default) begin fully charged; a persistent economy carries the
+    // pool in, topped up to the minPerTurn floor so the player can always act.
+    const eco = apEconomyRules(this.engine.data.rules);
     const player = gameState.getPlayer();
-    gameState.modifyPlayerStat('ap', player.resources.ap.max - player.resources.ap.current);
+    if (eco.refillOnCombatStart) {
+      gameState.modifyPlayerStat('ap', player.resources.ap.max - player.resources.ap.current);
+    } else if (player.resources.ap.current < eco.minPerTurn) {
+      gameState.modifyPlayerStat('ap', eco.minPerTurn - player.resources.ap.current);
+    }
+    this.apSpentThisTurn = 0;
 
     const names = this.enemies.map(e => e.name).join(' & ');
 
@@ -123,7 +136,8 @@ export class CombatSystem {
     ].sort((a, b) => b.roll - a.roll);
 
     const turnOrder = allCombatants.map(c => c.name).join(' → ');
-    this.engine.log(LOG.COMBAT, this.engine.t('combat.initiative', { playerRoll: this.playerInit, playerBreakdown, enemyRolls, turnOrder }), 'combat');
+    this.engine.log(LOG.COMBAT, this.engine.t('combat.initiative', { playerRoll: this.playerInit, playerBreakdown, enemyRolls }), 'combat');
+    this.engine.log(LOG.COMBAT, this.engine.t('combat.turnOrder', { turnOrder }), 'combat');
 
     this.renderer.render();
 
@@ -153,7 +167,11 @@ export class CombatSystem {
 
       this.engine.log(LOG.PLAYER, this.engine.t('combat.attackHit', {
         weapon: weapon.name, roll: hitRoll, breakdown,
-        ac: targetEnemy.attributes.armorClass, damage: dmgResult.total,
+        ac: targetEnemy.attributes.armorClass
+      }), 'damage');
+      // The damage result is its own log entry (see enemyTurn).
+      this.engine.log(LOG.PLAYER, this.engine.t('combat.enemyTakesDamage', {
+        target: targetEnemy.name, damage: dmgResult.total,
         dice: weapon.attributes.damageRoll, rollStr: dmgResult.string
       }), 'damage');
 
@@ -169,6 +187,20 @@ export class CombatSystem {
 
     // Spend the weapon's AP cost, triggering interface updates or enemy phases
     this.engine._spendAP(weapon.actionPoints);
+  }
+
+  /**
+   * AP the player may still spend this turn: current AP, further capped by
+   * rules.apEconomy.maxPerTurn (0 = uncapped). The engine's _spendAP checks
+   * this before any combat action and the renderer disables attacks that
+   * exceed it, so an oversized persistent pool can't inflate a single turn.
+   * @returns {number}
+   */
+  remainingTurnBudget() {
+    const ap = gameState.getPlayer().resources.ap.current;
+    const { maxPerTurn } = apEconomyRules(this.engine.data.rules);
+    if (maxPerTurn > 0) return Math.min(ap, Math.max(0, maxPerTurn - this.apSpentThisTurn));
+    return ap;
   }
 
   // Resolves an enemy's (possible) defeat after damage lands. Returns true
@@ -231,13 +263,13 @@ export class CombatSystem {
             ? this.engine.t('combat.attackTwice')
             : this.engine.t('combat.attackMany', { count: result.attackCount });
             
-        let summary = this.engine.t('combat.enemyAttack', { name: enemy.name, weapon: eWeapon.name, times, parts: parts.join(', ') });
-        
-        summary += ' ' + (result.hits > 0
+        this.engine.log(enemy.name, this.engine.t('combat.enemyAttack', { name: enemy.name, weapon: eWeapon.name, times, parts: parts.join(', ') }), 'damage');
+
+        // The damage result is its own log entry: same source, so it groups
+        // under the attack line with a breathing gap instead of a repeated label.
+        this.engine.log(enemy.name, result.hits > 0
           ? this.engine.t('combat.playerTakesDamage', { damage: result.totalDamage, dice: eWeapon.attributes.damageRoll, rolls: result.damageRolls.join(' and ') })
-          : this.engine.t('combat.playerTakesNoDamage'));
-          
-        this.engine.log(enemy.name, summary, 'damage');
+          : this.engine.t('combat.playerTakesNoDamage'), 'damage');
       }
 
       // Check if the player fell in battle
@@ -253,8 +285,18 @@ export class CombatSystem {
       this.renderer.render();
     } else {
       // Low-initiative enemies have finished, ending the round.
-      // 1. Fully charge the player's AP pool for the new round.
-      gameState.modifyPlayerStat('ap', player.resources.ap.max - player.resources.ap.current);
+      // 1. Recharge the player's AP pool per rules.apEconomy (classic: full
+      //    refill), top up to the minPerTurn floor, and open a fresh turn budget.
+      const eco = apEconomyRules(this.engine.data.rules);
+      if (eco.refillPerRound === 'full') {
+        gameState.modifyPlayerStat('ap', player.resources.ap.max - player.resources.ap.current);
+      } else if (eco.refillPerRound > 0) {
+        gameState.modifyPlayerStat('ap', eco.refillPerRound);
+      }
+      if (player.resources.ap.current < eco.minPerTurn) {
+        gameState.modifyPlayerStat('ap', eco.minPerTurn - player.resources.ap.current);
+      }
+      this.apSpentThisTurn = 0;
 
       // 2. Check if high-initiative enemies act at the beginning of the next round.
       const hasBeforeEnemies = this.enemies.some(e => e.attributes.healthPoints > 0 && (e.initiativeRoll ?? 0) > this.playerInit);
@@ -315,7 +357,7 @@ export class CombatSystem {
       // D&D AC Check: Attack roll must meet or exceed player Armor Class
       if (hitRoll >= player.attributes.ac) {
         hits++;
-        hitRolls.push(`${hitRoll} (${breakdown})`);
+        hitRolls.push(this.engine.t('combat.enemyAttackRoll', { roll: hitRoll, breakdown, ac: player.attributes.ac }));
         
         const dmgResult = parseDamage(eWeapon.attributes.damageRoll);
         totalDamage += dmgResult.total;
@@ -325,7 +367,7 @@ export class CombatSystem {
         gameState.modifyPlayerStat('hp', -dmgResult.total);
       } else {
         misses++;
-        missRolls.push(`${hitRoll} (${breakdown})`);
+        missRolls.push(this.engine.t('combat.enemyAttackRoll', { roll: hitRoll, breakdown, ac: player.attributes.ac }));
       }
       if (player.resources.hp.current <= 0) break;
     }
@@ -352,9 +394,12 @@ export class CombatSystem {
       if (totalXp > 0) gameState.addXP(totalXp);
       this.engine.log(LOG.SYSTEM, this.engine.t(totalXp > 0 ? 'combat.victoryXp' : 'combat.victory', { names, xp: totalXp }), 'loot');
 
-      // Restore player AP back to max capacity after battle
-      const player = gameState.getPlayer();
-      gameState.modifyPlayerStat('ap', player.resources.ap.max - player.resources.ap.current);
+      // Classic games restore AP to max at the combat boundary; a persistent
+      // economy (refillOnCombatStart: false) carries the spent pool out.
+      if (apEconomyRules(this.engine.data.rules).refillOnCombatStart) {
+        const player = gameState.getPlayer();
+        gameState.modifyPlayerStat('ap', player.resources.ap.max - player.resources.ap.current);
+      }
 
       // Execute onVictory action pipeline
       const sceneIdBefore = gameState.getCurrentSceneId();
@@ -472,10 +517,11 @@ class CombatRenderer {
       attacks.forEach(att => {
         const btn = createElement('button', [CSS.BTN, CSS.OPTION_BTN, CSS.OPTION_BTN_STACKED]);
         btn.appendChild(createElement('span', '', this.cs.engine.t('combat.attackTarget', { name: att.name })));
-        btn.appendChild(createElement('span', CSS.OPTION_BTN_BADGE, this.cs.engine.t('combat.apCost', { cost: att.actionPoints })));
+        btn.appendChild(createElement('span', CSS.OPTION_BTN_BADGE, itemStatLines(this.cs.engine.t.bind(this.cs.engine), att).join('\n')));
         
-        // Disable attack controls if the player lacks sufficient AP
-        if (gameState.getPlayer().resources.ap.current < att.actionPoints) {
+        // Disable attack controls that exceed the remaining turn budget
+        // (current AP, capped by rules.apEconomy.maxPerTurn).
+        if (this.cs.remainingTurnBudget() < att.actionPoints) {
           btn.disabled = true;
         }
         btn.onclick = () => this.cs.playerAttack(att, target);

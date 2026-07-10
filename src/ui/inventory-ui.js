@@ -1,4 +1,4 @@
-import { createElement, getItemLabel } from "../core/utils.js";
+import { createElement, getItemLabel, itemStatLines } from "../core/utils.js";
 import { EL, CSS, WEAPON_SLOTS } from "../core/config.js";
 
 // InventoryUI renders the inventory and equipment sidebar panels.
@@ -110,21 +110,12 @@ export class InventoryUI {
     });
   }
 
-  // Returns a div.item__stats element, or null if the item has no displayable stats.
+  // Returns a div.item__stats element, or null if the item has no displayable
+  // stats. Same lines as the combat attack buttons (see itemStatLines), one
+  // stat per row.
   buildItemStatsEl(itemData) {
-    const statStrs = [];
-    if (itemData.actionPoints !== undefined) statStrs.push(`AP: ${itemData.actionPoints}`);
-    if (itemData.bonusHitChance !== undefined) {
-      const sign = itemData.bonusHitChance >= 0 ? '+' : '';
-      statStrs.push(`Hit: ${sign}${itemData.bonusHitChance}`);
-    }
-    if (itemData.attributes) {
-      for (const k in itemData.attributes) {
-        const v = itemData.attributes[k];
-        if (typeof v !== 'object') statStrs.push(`${k}: ${v}`);
-      }
-    }
-    if (statStrs.length === 0) return null;
-    return createElement('div', CSS.ITEM_STATS, statStrs.join(', '));
+    const lines = itemStatLines(this.engine.t.bind(this.engine), itemData);
+    if (lines.length === 0) return null;
+    return createElement('div', CSS.ITEM_STATS, lines.join('\n'));
   }
 }

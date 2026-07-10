@@ -399,3 +399,35 @@ test('reserved condition keys now include the time and luck leaves', () => {
   data.locale.actions.skillBadge.segment = 'SEG {dc}';
   assert.ok(issuesFor(data).some(m => m.includes('"segment": name is reserved')));
 });
+
+test('apEconomy: flags bad values and the no-recovery configuration', () => {
+  const data = makeToolkitData();
+  data.rules.apEconomy = { refillPerRound: -1, restRestore: 'lots', minPerTurn: -2 };
+  let messages = issuesFor(data);
+  assert.ok(messages.some(m => m.includes('apEconomy.refillPerRound must be')));
+  assert.ok(messages.some(m => m.includes('apEconomy.restRestore must be')));
+  assert.ok(messages.some(m => m.includes('apEconomy.minPerTurn must be')));
+
+  // Stranding is per-fight: no per-round income and no floor warns even with
+  // out-of-combat recovery left at its defaults.
+  data.rules.apEconomy = { refillPerRound: 0 };
+  messages = issuesFor(data);
+  assert.ok(messages.some(m => m.includes('refillPerRound 0 with no minPerTurn floor')));
+
+  data.rules.apEconomy = { refillPerRound: 0, minPerTurn: 1 };
+  messages = issuesFor(data);
+  assert.ok(!messages.some(m => m.includes('refillPerRound 0 with no minPerTurn floor')));
+});
+
+test('apEconomy: warns when maxPerTurn is below every weapon cost', () => {
+  const data = makeToolkitData();
+  data.items.sword = { name: 'Sword', type: 'Weapon', actionPoints: 3 };
+  data.rules.apEconomy = { maxPerTurn: 2 };
+  assert.ok(issuesFor(data).some(m => m.includes('below every weapon/spell AP cost')));
+});
+
+test('warns when every weapon and spell costs 0 AP', () => {
+  const data = makeToolkitData();
+  data.items.stick = { name: 'Stick', type: 'Weapon', actionPoints: 0 };
+  assert.ok(issuesFor(data).some(m => m.includes('combat turns will never end automatically')));
+});

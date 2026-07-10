@@ -265,6 +265,11 @@
             "minimum": 0,
             "description": "Ticks one attempt advances the world clock. Overrides rules.time.defaultCosts.skillAttempt; 0 opts out explicitly."
           },
+          "apCost": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "AP one attempt costs. Overrides rules.apEconomy.skillAttemptCost; 0 opts out explicitly. Narrative (roll-free) checks only charge an explicit apCost."
+          },
           "items": {
             "type": "array",
             "description": "Item-discovery entries supporting sequential search yields.",

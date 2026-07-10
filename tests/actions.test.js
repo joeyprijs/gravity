@@ -218,3 +218,64 @@ test('registerBuiltinActions registers every built-in action type', () => {
     assert.ok(registry.has(type), `expected "${type}" to be registered`);
   }
 });
+
+// ── modify_ap / AP economy ────────────────────────────────────────────────────
+
+test('modify_ap: a fixed amount is clamped to max; default/full refills the pool', () => {
+  const { run, calls } = makeEngine();
+  gameState.modifyPlayerStat('ap', -3); // 0/3
+  run({ type: ACTIONS.MODIFY_AP, amount: 2 });
+  assert.equal(ap(), 2);
+  assert.equal(calls.logs[0].message, 'actions.restoreAp');
+
+  run({ type: ACTIONS.MODIFY_AP, amount: 99 });
+  assert.equal(ap(), 3); // clamped
+
+  gameState.modifyPlayerStat('ap', -3);
+  run({ type: ACTIONS.MODIFY_AP }); // amount omitted → full
+  assert.equal(ap(), 3);
+});
+
+test('modify_ap: a negative amount drains, clamped at 0, and logs the drain key', () => {
+  const { run, calls } = makeEngine();
+  run({ type: ACTIONS.MODIFY_AP, amount: -2 });
+  assert.equal(ap(), 1);
+  assert.equal(calls.logs[0].message, 'actions.drainAp');
+
+  run({ type: ACTIONS.MODIFY_AP, amount: -99 });
+  assert.equal(ap(), 0); // clamped at empty
+});
+
+test('modify_ap: a no-op (already full or already empty) stays silent', () => {
+  const { run, calls } = makeEngine();
+  run({ type: ACTIONS.MODIFY_AP, amount: 'full' }); // already at max
+  run({ type: ACTIONS.MODIFY_AP, amount: 2 });      // still at max
+  gameState.modifyPlayerStat('ap', -3);
+  run({ type: ACTIONS.MODIFY_AP, amount: -2 });     // already empty
+  assert.equal(calls.logs.length, 0);
+  assert.equal(ap(), 0);
+});
+
+test('full_rest: apEconomy.restRestore limits AP recovery while HP still fills', () => {
+  const rules = { ...TEST_RULES, apEconomy: { restRestore: 1 } };
+  const { run } = makeEngine({ rules });
+  gameState.modifyPlayerStat('hp', -5);
+  gameState.modifyPlayerStat('ap', -3);
+  run({ type: ACTIONS.FULL_REST });
+  assert.equal(hp(), 10);
+  assert.equal(ap(), 1);
+});
+
+test('full_rest: restRestore 0 leaves AP untouched; default restores fully', () => {
+  const zero = { ...TEST_RULES, apEconomy: { restRestore: 0 } };
+  const { run } = makeEngine({ rules: zero });
+  gameState.modifyPlayerStat('ap', -2);
+  run({ type: ACTIONS.FULL_REST });
+  assert.equal(ap(), 1);
+
+  const { run: runDefault } = makeEngine();
+  run({ type: ACTIONS.FULL_REST }); // still the zero-restore engine
+  assert.equal(ap(), 1);
+  runDefault({ type: ACTIONS.FULL_REST }); // classic default: full refill
+  assert.equal(ap(), 3);
+});

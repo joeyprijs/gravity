@@ -212,6 +212,11 @@
                   "type": "integer",
                   "minimum": 0,
                   "description": "Ticks this response advances the world clock. Dialogue is free unless set."
+                },
+                "apCost": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "AP this response costs. Checked responses default to rules.apEconomy.skillAttemptCost (0 opts out); plain responses only charge an explicit apCost."
                 }
               },
               "required": [

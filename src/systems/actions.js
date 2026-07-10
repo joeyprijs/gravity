@@ -1,5 +1,6 @@
 import { gameState } from "../core/state.js";
 import { LOG, ACTIONS, FLAG_KEYS, GOLD_ITEM_ID } from "../core/config.js";
+import { apEconomyRules } from "../core/utils.js";
 import { ticksUntilSegment } from "./time.js";
 
 // Built-in action handlers for the scene option action pipeline.
@@ -63,7 +64,14 @@ function handleReturn(_action, engine) {
 function handleFullRest(action, engine) {
   const p = gameState.getPlayer();
   gameState.modifyPlayerStat('hp', p.resources.hp.max - p.resources.hp.current);
-  gameState.modifyPlayerStat('ap', p.resources.ap.max - p.resources.ap.current);
+  // AP recovery on rest follows rules.apEconomy.restRestore (classic: full) —
+  // the recovery valve for persistent-AP economies.
+  const restRestore = apEconomyRules(engine.data.rules).restRestore;
+  if (restRestore === 'full') {
+    gameState.modifyPlayerStat('ap', p.resources.ap.max - p.resources.ap.current);
+  } else if (restRestore > 0) {
+    gameState.modifyPlayerStat('ap', restRestore);
+  }
   // A night's rest also refills the retry currency (rules.skillRetry.restRestore,
   // clamped to max) — the cozy counterweight to spending do-overs while out.
   const retry = engine.data.rules?.skillRetry;
@@ -73,6 +81,25 @@ function handleFullRest(action, engine) {
   if (action.log !== false) {
     const msg = typeof action.log === 'string' ? action.log : engine.t('actions.fullRest');
     engine.log(LOG.SYSTEM, msg);
+  }
+}
+
+// Moves AP mid-story, in either direction: { type: "modify_ap", amount: 2 }
+// restores, a negative amount drains, and "full" (also the default) resets
+// the pool to max. The narrative-side valve of rules.apEconomy — scenes,
+// dialogue choices, and victory pipelines hand exertion back or take it.
+function handleModifyAp(action, engine) {
+  const ap = gameState.getPlayer().resources.ap;
+  const amount = action.amount === undefined || action.amount === 'full'
+    ? ap.max - ap.current
+    : Math.max(Math.min(action.amount, ap.max - ap.current), -ap.current);
+  if (amount === 0) return; // already full/empty — nothing to move or narrate
+  gameState.modifyPlayerStat('ap', amount);
+  if (action.log !== false) {
+    const msg = typeof action.log === 'string'
+      ? action.log
+      : engine.t(amount < 0 ? 'actions.drainAp' : 'actions.restoreAp', { amount: Math.abs(amount) });
+    engine.log(LOG.SYSTEM, msg, amount < 0 ? 'system' : 'loot');
   }
 }
 
@@ -146,6 +173,7 @@ export function registerBuiltinActions(engine) {
   engine.registerAction(ACTIONS.RETURN,          handleReturn);
   engine.registerAction(ACTIONS.FULL_REST,       handleFullRest);
   engine.registerAction(ACTIONS.HEAL,            handleHeal);
+  engine.registerAction(ACTIONS.MODIFY_AP,       handleModifyAp);
   engine.registerAction(ACTIONS.NAVIGATE,        handleNavigate);
   engine.registerAction(ACTIONS.SET_FLAG,        handleSetFlag);
   engine.registerAction(ACTIONS.LOG,             handleLog);

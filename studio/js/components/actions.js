@@ -141,6 +141,16 @@ function renderParams(action, container, onChange) {
       break;
     }
 
+    case 'modify_ap': {
+      // Positive restores, negative drains; empty means a full refill.
+      const input = numInput(typeof action.amount === 'number' ? action.amount : '', v => {
+        action.amount = v ?? undefined; onChange();
+      }, 'sm');
+      input.placeholder = 'full';
+      container.appendChild(param('Amount', input));
+      break;
+    }
+
     case 'log': {
       const input = el('input', { type: 'text', class: 'form-input', value: action.message ?? '' });
       input.addEventListener('input', () => { action.message = input.value; onChange(); });

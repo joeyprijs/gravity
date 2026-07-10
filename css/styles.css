@@ -487,6 +487,9 @@ body {
 
 .item__stats {
   color: var(--accent-color);
+  /* One stat per row: lines come \n-joined from itemStatLines (same
+     convention as .option-btn__badge). */
+  white-space: pre-line;
 }
 
 .item__actions {
