@@ -208,3 +208,12 @@ test('uniqueId: suffixes until free', async () => {
   assert.equal(uniqueId('barn', id => taken.has(id)), 'barn');
   assert.equal(uniqueId('', () => false), 'entry');
 });
+
+test('detectChoiceKind: pipelines classify as go/talk/custom', async () => {
+  const { detectChoiceKind } = await import('../studio/js/components/scene-form.js');
+  assert.equal(detectChoiceKind({ actions: [{ type: 'navigate', destination: 'x' }] }), 'go');
+  assert.equal(detectChoiceKind({ actions: [{ type: 'dialogue', npc: 'x' }] }), 'talk');
+  assert.equal(detectChoiceKind({ actions: [] }), 'custom');
+  assert.equal(detectChoiceKind({ actions: [{ type: 'navigate' }, { type: 'set_flag' }] }), 'custom');
+  assert.equal(detectChoiceKind({}), 'custom');
+});

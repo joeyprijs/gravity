@@ -55,7 +55,19 @@ creation/navigation model.
   - Guided New Item (name→slug, kind template with sensible mechanics
     defaults per type)
   - Preview pane opens automatically after workspace load, auto-refresh on
-- **Phase 2 — scene editor rebuilt** around the unified choice card.
+- **Phase 2 — scene editor rebuilt** around the unified choice card. [SHIPPED]
+  - One Choices list: go somewhere / talk to someone / attempt a check /
+    custom, detected from existing data (one-action navigate → go, one-action
+    dialogue → talk; skills[] entries → check) so every scene round-trips
+  - Check cards pick a style (roll vs DC / search for items / narrative
+    beat) that fronts the relevant editor; nothing is deleted on switch
+  - Go/talk cards front only their destination; option extras (requires
+    item, time cost, log mode, condition) fold behind Advanced, with a
+    view-only "edit full pipeline" escalation
+  - Scene form reordered to player-order: description → choices; passive
+    checks/auto-attack/quest trigger under a collapsed "When the scene
+    loads"; XP/hooks/map/exhibits/stands under collapsed "Advanced"
+  - apCost/timeCost now authorable on checks (previously JSON-only)
 - **Phase 3 — map as home** (create/connect/edit from the canvas; auto
   map placement for new scenes).
 - **Phase 4 — dialogue graph as primary** dialogue surface.

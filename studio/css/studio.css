@@ -1149,3 +1149,76 @@ body {
   top: 0;
   right: 0;
 }
+
+/* ── Phase 2: unified choice cards ──────────────────────────────────────── */
+
+.choice-kind-badge {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: var(--radius);
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+
+.choice-add-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+/* Collapsed sections: heading is the toggle, hint says what's inside. */
+.form-section-title.collapsible {
+  cursor: pointer;
+  user-select: none;
+}
+
+.form-section-title.collapsible::before {
+  content: "▾ ";
+  color: var(--text-dim);
+}
+
+.form-section-title.collapsible.collapsed::before {
+  content: "▸ ";
+}
+
+.section-hint {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-dim);
+  margin-left: 8px;
+}
+
+.section-body {
+  margin-bottom: 24px;
+}
+
+/* Advanced fold inside a choice card. */
+.adv-fold-hdr {
+  cursor: pointer;
+  user-select: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+
+.adv-fold-hdr::before {
+  content: "▾ ";
+}
+
+.adv-fold-hdr.collapsed::before {
+  content: "▸ ";
+}
+
+.adv-fold-body {
+  margin-top: 8px;
+}
