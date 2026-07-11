@@ -538,9 +538,11 @@ body {
   margin-inline: auto;
 }
 
-/* Let the opening of the tale breathe instead of hugging the panel edge. */
+/* Let the opening of the tale breathe instead of hugging the panel edge.
+   Margin, not padding: the scene--new accent rail spans the scene's box,
+   and must start at the title, not in the empty space above it. */
 .scene:first-child {
-  padding-top: calc(var(--spacing) * 5);
+  margin-top: calc(var(--spacing) * 5);
 }
 
 /* Everything that appeared since the player's last action carries a slim
@@ -568,21 +570,31 @@ body {
   display: none;
 }
 
+/* The gap above the ornament (scene margin) and below it (ornament margin)
+   must stay EQUAL so the diamonds sit centered in the chapter break. */
 .scene + .scene {
-  margin-top: calc(var(--spacing) * 3);
-  padding-top: calc(var(--spacing) * 3);
+  margin-top: calc(var(--spacing) * 4.5);
 }
 
-/* Chapter-break ornament between scenes instead of a hard rule. */
+/* Chapter-break ornament between scenes instead of a hard rule.
+   line-height 1 keeps its height exactly var(--font-sm), so the accent
+   rail below can start right under it with plain arithmetic. */
 .scene + .scene::before {
   content: "✦ ✦ ✦";
   display: block;
   text-align: center;
   font-size: var(--font-sm);
+  line-height: 1;
   letter-spacing: calc(var(--spacing) * 1.5);
   color: var(--text-secondary);
   opacity: 0.6;
-  margin-bottom: calc(var(--spacing) * 3);
+  margin-bottom: calc(var(--spacing) * 4.5);
+}
+
+/* The ornament belongs to the chapter break, not to "new since your last
+   move" — start the rail below it (ornament height + its margin). */
+.scene + .scene--new::after {
+  top: calc(var(--font-sm) + var(--spacing) * 4.5 + 2px);
 }
 
 /* New scenes and log entries breathe in; scene--new is flushed by the
@@ -604,16 +616,6 @@ body {
 
 .scene__body-text {
   display: block;
-}
-
-/* Storybook drop cap on narration (the span is only wrapped around
-   engine-labelled narrator bodies, so NPC speech is exempt). */
-.scene__body-text::first-letter {
-  float: left;
-  font-size: 3em;
-  line-height: 0.8;
-  font-weight: 600;
-  padding-right: calc(var(--spacing) * 0.75);
 }
 
 .scene__title--game-over {
