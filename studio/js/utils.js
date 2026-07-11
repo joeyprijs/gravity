@@ -28,6 +28,23 @@ export function formRow(label, input) {
   return el('div', { class: 'form-row' }, [lbl, input]);
 }
 
+/** Turns a display name into a snake_case id ("Old Mill" → "old_mill"). */
+export function slugify(text) {
+  return String(text).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
+/**
+ * First free id from a base slug: "old_mill", then "old_mill_2", "_3", …
+ * @param {string} base - Slug candidate ('' falls back to "entry").
+ * @param {(id: string) => boolean} exists - Collision test.
+ */
+export function uniqueId(base, exists) {
+  const stem = base || 'entry';
+  let id = stem;
+  for (let n = 2; exists(id); n++) id = `${stem}_${n}`;
+  return id;
+}
+
 /** Read a nested value by dot-path, e.g. "attributes.damageRoll". */
 export function getPath(obj, path) {
   return path.split('.').reduce((cur, k) => cur?.[k], obj);

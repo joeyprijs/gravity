@@ -191,3 +191,20 @@ test('rewriteInboundRefs repoints node-level, response, and onFailure references
   assert.equal(conversations.start.responses[1].onFailure[0].node, 'new');
   assert.equal(conversations.start.responses[2].actions[0].node, 'other'); // unrelated ref untouched
 });
+
+// ── Guided-creation helpers ───────────────────────────────────────────────────
+
+test('slugify: display names become snake_case ids', async () => {
+  const { slugify } = await import('../studio/js/utils.js');
+  assert.equal(slugify('The Old Mill'), 'the_old_mill');
+  assert.equal(slugify("Mira the Miller's Loft!"), 'mira_the_miller_s_loft');
+  assert.equal(slugify('  --  '), '');
+});
+
+test('uniqueId: suffixes until free', async () => {
+  const { uniqueId } = await import('../studio/js/utils.js');
+  const taken = new Set(['mill', 'mill_2']);
+  assert.equal(uniqueId('mill', id => taken.has(id)), 'mill_3');
+  assert.equal(uniqueId('barn', id => taken.has(id)), 'barn');
+  assert.equal(uniqueId('', () => false), 'entry');
+});

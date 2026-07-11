@@ -1,8 +1,8 @@
-import { store, setActiveFile } from '../store.js';
-import { el, makeCollapsible } from '../utils.js';
+import { store, setActiveFile, markDirty } from '../store.js';
+import { el, makeCollapsible, slugify, uniqueId } from '../utils.js';
 import { openMapView } from '../complex/map.js';
 import { createEntry, deleteEntry } from '../io.js';
-import { showModal, showConfirm, toast } from '../ui.js';
+import { showModal, showConfirm, showFormModal, toast } from '../ui.js';
 
 // UI state preserved across rebuilds (create/delete re-render the sidebar).
 const expandedSections = new Set();
@@ -60,7 +60,131 @@ function makeSection(title, children, nested = false, onAdd = null) {
   return section;
 }
 
-async function addEntry(type) {
+// ── Guided creation flows ─────────────────────────────────────────────────────
+// Authors supply a name and intent; Studio slugs the id, writes a working
+// entity, and wires the cross-links the engine's implicit contracts expect
+// (dialogues need a `start` node; entities are only real once reachable).
+
+// The first free snake_case id for a display name, or null (with a toast)
+// when the name has no usable characters.
+function idFor(type, name) {
+  const base = slugify(name);
+  if (!base) {
+    toast('Name needs at least one letter or digit', 'error');
+    return null;
+  }
+  return uniqueId(base, id => !!store.index[type]?.[id]);
+}
+
+// "Reachable from" select options: every scene, plus a none entry.
+function sceneOptions() {
+  return [['', '— not yet —'],
+    ...Object.keys(store.index.scenes ?? {}).map(id => [id, store.files[`scenes:${id}`]?.title || id])];
+}
+
+// Appends an option to a source scene's pipeline (the cross-link half of
+// guided creation) and marks it dirty.
+function linkFromScene(sceneId, option) {
+  const key = `scenes:${sceneId}`;
+  const scene = store.files[key];
+  if (!scene) return;
+  if (!Array.isArray(scene.options)) scene.options = [];
+  scene.options.push(option);
+  markDirty(key);
+}
+
+async function finishCreate(type, id, data, after = null) {
+  try {
+    const key = await createEntry(type, id, data);
+    after?.();
+    renderSidebar(document.getElementById('sidebar'));
+    setActiveFile(key);
+  } catch (e) {
+    toast(`Failed to create: ${e.message}`, 'error');
+  }
+}
+
+async function addScene() {
+  const input = await showFormModal('New Scene', [
+    { key: 'title', label: 'Title', placeholder: 'The Old Mill', required: true },
+    { key: 'region', label: 'Region', type: 'select', options: [['', '— none —'], ...Object.keys(store.index.regions ?? {}).map(r => [r, store.index.regions[r]?.name || r])] },
+    { key: 'description', label: 'What does the player see?', type: 'textarea', placeholder: 'A sagging mill leans over the stream…' },
+    { key: 'linkFrom', label: 'Reachable from', type: 'select', options: sceneOptions() },
+  ]);
+  if (!input) return;
+  const id = idFor('scenes', input.title);
+  if (!id) return;
+
+  const data = {
+    title: input.title,
+    region: input.region,
+    description: input.description ? [{ text: input.description }] : [],
+    options: [],
+  };
+  await finishCreate('scenes', id, data, () => {
+    if (input.linkFrom) {
+      linkFromScene(input.linkFrom, { text: `Go to ${input.title}`, actions: [{ type: 'navigate', destination: id }] });
+    }
+  });
+}
+
+async function addNpc() {
+  const input = await showFormModal('New NPC', [
+    { key: 'name', label: 'Name', placeholder: 'Mira the Miller', required: true },
+    { key: 'greeting', label: 'What do they say first?', type: 'textarea', placeholder: 'Greetings, traveler.' },
+    { key: 'linkFrom', label: 'Reachable from', type: 'select', options: sceneOptions() },
+  ]);
+  if (!input) return;
+  const id = idFor('npcs', input.name);
+  if (!id) return;
+
+  // A working dialogue out of the box: the engine requires a `start` node,
+  // and every conversation needs a way out.
+  const data = {
+    name: input.name,
+    conversations: {
+      start: {
+        npcText: input.greeting || 'Greetings, traveler.',
+        responses: [{ text: 'Farewell.', actions: [{ type: 'leave' }] }],
+      },
+    },
+    carriedItems: [],
+    attributes: {},
+  };
+  await finishCreate('npcs', id, data, () => {
+    if (input.linkFrom) {
+      linkFromScene(input.linkFrom, { text: `Talk to ${input.name}`, actions: [{ type: 'dialogue', npc: id }] });
+    }
+  });
+}
+
+// Working mechanics per item kind, so a new item plays without further
+// setup. attackAttribute is left to the author (it must name one of the
+// game's declared attributes; validation guides that choice).
+const ITEM_TEMPLATES = {
+  Weapon:     () => ({ type: 'Weapon', slot: 'Right Hand', value: 0, attributes: { actionPoints: 1, damageRoll: '1d6' } }),
+  Spell:      () => ({ type: 'Spell', slot: 'Right Hand', value: 0, attributes: { actionPoints: 2, damageRoll: '2d6' } }),
+  Armor:      () => ({ type: 'Armor', slot: 'Torso', value: 0, attributes: { actionPoints: 0, armorClassBonus: 1 } }),
+  Consumable: () => ({ type: 'Consumable', value: 0, attributes: { actionPoints: 1, healingAmount: '1d8+2' } }),
+  Flavour:    () => ({ type: 'Flavour' }),
+};
+
+async function addItem() {
+  const input = await showFormModal('New Item', [
+    { key: 'name', label: 'Name', placeholder: 'Miller\'s Hammer', required: true },
+    { key: 'kind', label: 'Kind', type: 'select', options: Object.keys(ITEM_TEMPLATES).map(k => [k, k]), value: 'Flavour' },
+  ]);
+  if (!input) return;
+  const id = idFor('items', input.name);
+  if (!id) return;
+
+  const data = { name: input.name, description: '', ...ITEM_TEMPLATES[input.kind]() };
+  await finishCreate('items', id, data);
+}
+
+// Missions/tables/flags keep the plain ID prompt for now (Phase 1 targets
+// the big three — see docs/studio-rework.md).
+async function addPlain(type) {
   const raw = await showModal(`New ${type} ID`, 'use_snake_case');
   if (!raw) return;
   const id = raw.trim().replace(/\s+/g, '_');
@@ -76,13 +200,14 @@ async function addEntry(type) {
     return;
   }
 
-  try {
-    const key = await createEntry(type, id);
-    renderSidebar(document.getElementById('sidebar'));
-    setActiveFile(key);
-  } catch (e) {
-    toast(`Failed to create: ${e.message}`, 'error');
-  }
+  await finishCreate(type, id, null);
+}
+
+async function addEntry(type) {
+  if (type === 'scenes') return addScene();
+  if (type === 'npcs')   return addNpc();
+  if (type === 'items')  return addItem();
+  return addPlain(type);
 }
 
 export function renderSidebar(container) {

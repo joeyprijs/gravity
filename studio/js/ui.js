@@ -27,6 +27,74 @@ export function showModal(title, placeholder = '') {
   });
 }
 
+/**
+ * Multi-field modal for guided creation flows. fields:
+ *   [{ key, label, type: 'text'|'textarea'|'select', placeholder?,
+ *      options?: [[value, label]], required?, value? }]
+ * Resolves with { key: trimmedValue, ... } or null on cancel. Required
+ * fields block confirm (marked with the error class instead).
+ */
+export function showFormModal(title, fields, confirmLabel = 'Create') {
+  return new Promise(resolve => {
+    const overlay = el('div', { class: 'modal-overlay' });
+    const box     = el('div', { class: 'modal-box' });
+    box.appendChild(el('div', { class: 'modal-title' }, [title]));
+
+    const inputs = new Map();
+    for (const f of fields) {
+      let input;
+      if (f.type === 'select') {
+        input = el('select', { class: 'form-select' });
+        for (const [value, label] of (f.options ?? [])) {
+          const opt = el('option', { value }, [label]);
+          if (value === f.value) opt.selected = true;
+          input.appendChild(opt);
+        }
+      } else if (f.type === 'textarea') {
+        input = el('textarea', { class: 'form-textarea', rows: 3, placeholder: f.placeholder ?? '' }, [f.value ?? '']);
+      } else {
+        input = el('input', { type: 'text', class: 'form-input', placeholder: f.placeholder ?? '', value: f.value ?? '' });
+      }
+      inputs.set(f, input);
+      box.appendChild(el('div', { class: 'form-row' }, [
+        el('label', { class: 'form-label' }, [f.label]),
+        input,
+      ]));
+    }
+
+    const actions = el('div', { class: 'modal-actions' });
+    const cancel  = el('button', { class: 'btn btn-secondary' }, ['Cancel']);
+    const confirm = el('button', { class: 'btn btn-primary'   }, [confirmLabel]);
+
+    const close = val => { overlay.remove(); resolve(val); };
+    const submit = () => {
+      const out = {};
+      let blocked = false;
+      for (const [f, input] of inputs) {
+        const value = input.value.trim();
+        input.classList.toggle('form-input-error', !!f.required && !value);
+        if (f.required && !value) blocked = true;
+        out[f.key] = value;
+      }
+      if (!blocked) close(out);
+    };
+
+    cancel.addEventListener('click', () => close(null));
+    confirm.addEventListener('click', submit);
+    overlay.addEventListener('click', e => { if (e.target === overlay) close(null); });
+    box.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') { e.preventDefault(); submit(); }
+      if (e.key === 'Escape') close(null);
+    });
+
+    actions.append(cancel, confirm);
+    box.appendChild(actions);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => inputs.values().next().value?.focus());
+  });
+}
+
 export function showConfirm(message, confirmLabel = 'Delete') {
   return new Promise(resolve => {
     const overlay = el('div', { class: 'modal-overlay' });

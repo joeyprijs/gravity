@@ -3,7 +3,7 @@ import { openWorkspace, saveFile, resetWorkspace } from './io.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderForm } from './components/forms.js';
 import { toast, showConfirm, showValidationResults } from './ui.js';
-import { togglePreview, refreshPreview } from './complex/preview.js';
+import { togglePreview, refreshPreview, openPreview } from './complex/preview.js';
 import { gatherIssues } from './validate-workspace.js';
 
 setFormRenderer(renderForm);
@@ -58,6 +58,8 @@ async function handleOpen() {
     document.getElementById('btn-reset').disabled = false;
     document.getElementById('btn-validate').disabled = false;
     document.getElementById('btn-preview').disabled = false;
+    // Seeing the game while editing is the default, not a mode.
+    openPreview();
   } catch (e) {
     if (e.name !== 'AbortError') toast(`Error: ${e.message}`, 'error');
   }

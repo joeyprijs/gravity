@@ -127,14 +127,16 @@ const DEFAULTS = {
   flags:    () => ({}),
 };
 
-export async function createEntry(type, id) {
+export async function createEntry(type, id, initialData = null) {
   const path = `data/${type}/${id}.json`;
 
   const dataDir = await store.dirHandle.getDirectoryHandle('data', { create: true });
   const typeDir = await dataDir.getDirectoryHandle(type, { create: true });
   const fileHandle = await typeDir.getFileHandle(`${id}.json`, { create: true });
 
-  const data = DEFAULTS[type]?.() ?? {};
+  // Guided creation flows pass fully-formed entities; the bare (+) fallback
+  // still gets the minimal type default.
+  const data = initialData ?? DEFAULTS[type]?.() ?? {};
   const writable = await fileHandle.createWritable();
   await writable.write(JSON.stringify(data, null, 2) + '\n');
   await writable.close();

@@ -915,12 +915,15 @@ body {
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
   display: flex;
-  align-items: center;
-  justify-content: center;
+  /* margin:auto on the box (not align/justify center) so a modal taller
+     than a short viewport scrolls instead of clipping off-screen. */
+  overflow-y: auto;
+  padding: 24px;
   z-index: 1000;
 }
 
 .modal-box {
+  margin: auto;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);

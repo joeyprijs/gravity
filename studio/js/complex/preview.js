@@ -12,7 +12,7 @@ import { showValidationResults } from '../ui.js';
 const PREVIEW_SRC = '../index.html?preview=1';
 const AUTO_REFRESH_DELAY = 700;
 let iframe = null;
-let autoRefresh = false;
+let autoRefresh = true; // on by default — the checkbox opts out
 let debounceTimer = null;
 
 const pane = () => document.getElementById('preview-pane');
