@@ -101,11 +101,11 @@ export function renderNpcForm(key, data) {
 
   const convHdr = el('div', { class: 'section-hdr-row' });
   convHdr.appendChild(el('h3', { class: 'form-section-title bare' }, ['Conversations']));
-  if (Object.keys(data.conversations ?? {}).length > 0) {
-    const graphBtn = el('button', { class: 'btn btn-secondary btn-sm' }, ['View Graph']);
-    graphBtn.addEventListener('click', () => openDialogueGraph(key));
-    convHdr.appendChild(graphBtn);
-  }
+  // The graph is the primary dialogue surface — writing, connecting, and
+  // creating nodes all happen there; this form stays the expert view.
+  const graphBtn = el('button', { class: 'btn btn-secondary btn-sm' }, ['Edit in Graph']);
+  graphBtn.addEventListener('click', () => openDialogueGraph(key));
+  convHdr.appendChild(graphBtn);
   form.appendChild(convHdr);
   form.appendChild(renderConversations(data, onChange));
 
@@ -159,6 +159,8 @@ function countInboundRefs(conversations, nodeId) {
     for (const resp of node.responses ?? []) {
       scan(resp.actions);
       scan(resp.onFailure);
+      scan(resp.onExhausted);
+      for (const tier of Object.values(resp.outcomes ?? {})) scan(tier?.actions);
     }
   }
   return count;
@@ -177,6 +179,8 @@ export function rewriteInboundRefs(conversations, oldId, newId) {
     for (const resp of node.responses ?? []) {
       scan(resp.actions);
       scan(resp.onFailure);
+      scan(resp.onExhausted);
+      for (const tier of Object.values(resp.outcomes ?? {})) scan(tier?.actions);
     }
   }
 }

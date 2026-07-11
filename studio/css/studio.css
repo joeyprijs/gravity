@@ -856,14 +856,58 @@ body {
 }
 
 .dg-npc-text {
+  display: block;
+  width: 100%;
   padding: 8px 12px;
   font-size: 12px;
+  font-family: var(--font);
   color: var(--text-muted);
   font-style: italic;
   line-height: 1.5;
+  background: transparent;
+  border: none;
   border-bottom: 1px solid var(--border);
+  border-radius: 0;
   min-height: 32px;
+  resize: none;
+  overflow: hidden;
+  outline: none;
 }
+
+.dg-npc-text:focus {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.dg-resp-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-family: var(--font);
+  color: var(--text);
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+}
+
+.dg-resp-input:focus { color: var(--text-bright); }
+
+.dg-add-resp {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-family: var(--font);
+  text-align: left;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.dg-add-resp:hover { color: var(--accent); }
 
 .dg-responses {
   display: flex;

@@ -1,13 +1,54 @@
 import { store, markDirty, setActiveFile } from '../store.js';
-import { el } from '../utils.js';
+import { el, slugify, uniqueId } from '../utils.js';
+import { showFormModal, showConfirm, toast } from '../ui.js';
 
 // A response's pipeline lives either flat (`actions`) or, once outcome tiers
 // are authored, in `outcomes.success.actions` — connections read from both.
 const successActions = resp => resp?.actions ?? resp?.outcomes?.success?.actions ?? [];
 
+// Every action pipeline hanging off a node where a goToConversation can live.
+function* nodePipelines(node) {
+  yield node.actions;
+  for (const resp of node.responses ?? []) {
+    yield resp.actions;
+    yield resp.onFailure;
+    yield resp.onExhausted;
+    for (const tier of Object.values(resp.outcomes ?? {})) yield tier?.actions;
+  }
+}
+
+function countInbound(convs, nodeId) {
+  let n = 0;
+  for (const node of Object.values(convs)) {
+    for (const actions of nodePipelines(node)) {
+      n += (actions ?? []).filter(a => a.type === 'goToConversation' && a.node === nodeId).length;
+    }
+  }
+  return n;
+}
+
+function removeInbound(convs, nodeId) {
+  for (const node of Object.values(convs)) {
+    for (const actions of nodePipelines(node)) {
+      if (!actions) continue;
+      for (let i = actions.length - 1; i >= 0; i--) {
+        if (actions[i].type === 'goToConversation' && actions[i].node === nodeId) actions.splice(i, 1);
+      }
+    }
+  }
+}
+
+// Node id from the NPC's line: first few words, slugged, made unique.
+// Exported for testing.
+export function nodeIdFromText(text, exists) {
+  const base = slugify(String(text).split(/\s+/).slice(0, 4).join(' '));
+  return uniqueId(base, exists);
+}
+
 const NODE_W   = 240;
 const COL_GAP  = 320;
-const ROW_GAP  = 200;
+// Nodes show their full text and reply editors now — leave room for it.
+const ROW_GAP  = 300;
 const GRID     = 5;
 const snap     = v => Math.round(v / GRID) * GRID;
 // Node positions are editor state, not game data — they live in localStorage
@@ -47,8 +88,15 @@ function buildGraph(npcKey) {
   backBtn.addEventListener('click', () => setActiveFile(npcKey));
   hdr.append(backBtn, el('span', { class: 'dg-title' }, [`${npc?.name ?? npcKey} — Dialogue Graph`]));
   hdr.appendChild(el('span', { class: 'map-hint' },
-    ['Drag nodes to reposition · drag anchor dot to connect · drop it on empty space to disconnect']));
+    ['double-click empty space to add a node · drag the dot to connect · drop it on empty space to disconnect']));
   wrap.appendChild(hdr);
+
+  // Structural changes (nodes or replies added/removed) rebuild the whole
+  // graph; positions survive through the saved layout.
+  function rebuild() {
+    saveLayout(npcKey, pos);
+    openDialogueGraph(npcKey);
+  }
 
   // Scroll area
   const scrollWrap = el('div', { class: 'dg-scroll' });
@@ -62,6 +110,32 @@ function buildGraph(npcKey) {
   const svg = document.createElementNS(NS, 'svg');
   svg.classList.add('dg-svg');
   canvas.appendChild(svg);
+
+  // ── Create a node on the canvas ──────────────────────────────────────────
+  canvas.addEventListener('dblclick', async e => {
+    if (e.target !== canvas && !svg.contains(e.target)) return;
+    const wRect = scrollWrap.getBoundingClientRect();
+    const x = snap(e.clientX - wRect.left + scrollWrap.scrollLeft);
+    const y = snap(e.clientY - wRect.top + scrollWrap.scrollTop);
+
+    const input = await showFormModal('New dialogue node', [
+      { key: 'text', label: 'What does the NPC say?', type: 'textarea', required: true },
+      { key: 'id', label: 'Node ID (optional)', placeholder: 'auto' },
+    ]);
+    if (!input) return;
+
+    const conversations = (store.files[npcKey].conversations ??= {});
+    const id = input.id
+      ? slugify(input.id)
+      : nodeIdFromText(input.text, nid => !!conversations[nid]);
+    if (!id) { toast('Node id needs at least one letter or digit', 'error'); return; }
+    if (conversations[id]) { toast(`Node "${id}" already exists`, 'error'); return; }
+
+    pos[id] = { x, y };
+    conversations[id] = { npcText: input.text, responses: [] };
+    markDirty(npcKey);
+    rebuild();
+  });
 
   // Ensure layout exists and covers all current nodes
   const pos = loadLayout(npcKey) ?? autoLayout(convs);
@@ -84,7 +158,7 @@ function buildGraph(npcKey) {
   // Build node elements
   const nodeEls = {};
   for (const [nodeId, node] of Object.entries(convs)) {
-    const card = makeNode(nodeId, node, pos[nodeId], npcKey, convs, pos, scrollWrap, svg, scheduleRedraw);
+    const card = makeNode(nodeId, node, pos[nodeId], npcKey, convs, pos, scrollWrap, svg, scheduleRedraw, rebuild);
     nodeEls[nodeId] = card;
     canvas.appendChild(card);
   }
@@ -176,25 +250,58 @@ function buildGraph(npcKey) {
 
 // ── Node card ─────────────────────────────────────────────────────────────
 
-function makeNode(nodeId, node, initPos, npcKey, convs, pos, scrollWrap, svg, redraw) {
+function makeNode(nodeId, node, initPos, npcKey, convs, pos, scrollWrap, svg, redraw, rebuild) {
   const card = el('div', { class: 'dg-node' });
   card.style.cssText = `left:${initPos.x}px;top:${initPos.y}px`;
 
   // Draggable header
   const hdr = el('div', { class: 'dg-node-hdr', 'data-node-id': nodeId });
   hdr.appendChild(el('code', {}, [nodeId]));
+  if (nodeId !== 'start') {
+    // The engine opens dialogue at "start" — that node can't be deleted here.
+    const rm = el('button', { class: 'btn-hdr', title: 'Delete node' }, ['✕']);
+    rm.addEventListener('mousedown', e => e.stopPropagation());
+    rm.addEventListener('click', async () => {
+      const inbound = countInbound(convs, nodeId);
+      const msg = inbound
+        ? `Delete "${nodeId}"? ${inbound} connection${inbound === 1 ? '' : 's'} pointing here will be removed too.`
+        : `Delete "${nodeId}"?`;
+      if (!(await showConfirm(msg))) return;
+      delete convs[nodeId];
+      removeInbound(convs, nodeId);
+      markDirty(npcKey);
+      rebuild();
+    });
+    hdr.appendChild(rm);
+  }
   card.appendChild(hdr);
 
-  // NPC text preview
-  const preview = (node.npcText ?? '').slice(0, 90) + ((node.npcText ?? '').length > 90 ? '…' : '');
-  card.appendChild(el('div', { class: 'dg-npc-text' }, [preview || '(no text)']));
+  // NPC text, edited in place. Height follows the text, so arrows re-route.
+  const ta = el('textarea', { class: 'dg-npc-text', rows: '2', placeholder: 'What does the NPC say?' }, [node.npcText ?? '']);
+  const autosize = () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
+  ta.addEventListener('input', () => {
+    node.npcText = ta.value;
+    markDirty(npcKey);
+    autosize();
+    redraw();
+  });
+  requestAnimationFrame(autosize);
+  card.appendChild(ta);
 
   // Response rows
   const respWrap = el('div', { class: 'dg-responses' });
   (node.responses ?? []).forEach((resp, ri) => {
-    respWrap.appendChild(makeResponseRow(ri, resp, nodeId, convs, npcKey, scrollWrap, svg, redraw));
+    respWrap.appendChild(makeResponseRow(ri, resp, nodeId, node, convs, npcKey, scrollWrap, svg, redraw, rebuild));
   });
   card.appendChild(respWrap);
+
+  const addBtn = el('button', { class: 'dg-add-resp' }, ['+ reply']);
+  addBtn.addEventListener('click', () => {
+    (node.responses ??= []).push({ text: '' });
+    markDirty(npcKey);
+    rebuild();
+  });
+  card.appendChild(addBtn);
 
   // Drag the node by its header
   makeDraggable(hdr, card, nodeId, pos, npcKey, scrollWrap, redraw);
@@ -202,11 +309,20 @@ function makeNode(nodeId, node, initPos, npcKey, convs, pos, scrollWrap, svg, re
   return card;
 }
 
-function makeResponseRow(ri, resp, nodeId, convs, npcKey, scrollWrap, svg, redraw) {
+function makeResponseRow(ri, resp, nodeId, node, convs, npcKey, scrollWrap, svg, redraw, rebuild) {
   const row = el('div', { class: 'dg-response' });
 
-  const text = el('span', { class: 'dg-resp-text' }, [resp.text?.slice(0, 32) || '(empty)']);
+  const text = el('input', { type: 'text', class: 'dg-resp-input', value: resp.text ?? '', placeholder: 'Player reply…' });
+  text.addEventListener('input', () => { resp.text = text.value; markDirty(npcKey); });
   row.appendChild(text);
+
+  const rm = el('button', { class: 'btn-hdr', title: 'Delete reply' }, ['✕']);
+  rm.addEventListener('click', () => {
+    node.responses.splice(ri, 1);
+    markDirty(npcKey);
+    rebuild();
+  });
+  row.appendChild(rm);
 
   const anchor = el('div', { class: 'dg-anchor', 'data-anchor': String(ri) });
   const hasConn = successActions(resp).some(a => a.type === 'goToConversation' && a.node);

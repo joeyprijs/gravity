@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 import { pack, unpack, detectType } from '../studio/js/complex/logic.js';
-import { autoLayout } from '../studio/js/complex/nodes.js';
+import { autoLayout, nodeIdFromText } from '../studio/js/complex/nodes.js';
 import { makeReplacer } from '../studio/js/io.js';
 import { normalizeDescription } from '../studio/js/components/scene-form.js';
 import { rewriteInboundRefs } from '../studio/js/components/npc-form.js';
@@ -168,6 +168,12 @@ test('autoLayout handles cycles without infinite looping', () => {
   assert.equal(Object.keys(pos).length, 2);
 });
 
+test('nodeIdFromText slugs the first words and dodges collisions', () => {
+  assert.equal(nodeIdFromText('Who are you, stranger? I ask.', () => false), 'who_are_you_stranger');
+  assert.equal(nodeIdFromText('Who are you?', id => id === 'who_are_you'), 'who_are_you_2');
+  assert.equal(nodeIdFromText('???', () => false), 'entry');
+});
+
 test('autoLayout follows connections inside outcome tiers', () => {
   const convs = {
     start: { responses: [{ outcomes: { success: { actions: [{ type: 'goToConversation', node: 'next' }] } } }] },
@@ -200,6 +206,23 @@ test('rewriteInboundRefs repoints node-level, response, and onFailure references
   assert.equal(conversations.start.responses[0].actions[0].node, 'new');
   assert.equal(conversations.start.responses[1].onFailure[0].node, 'new');
   assert.equal(conversations.start.responses[2].actions[0].node, 'other'); // unrelated ref untouched
+});
+
+test('rewriteInboundRefs repoints references inside outcome tiers and onExhausted', () => {
+  const conversations = {
+    start: {
+      responses: [
+        { text: 'A', outcomes: { success: { actions: [{ type: 'goToConversation', node: 'old' }] } } },
+        { text: 'B', onExhausted: [{ type: 'goToConversation', node: 'old' }] },
+      ],
+    },
+    old: { npcText: 'Renamed me' },
+  };
+
+  rewriteInboundRefs(conversations, 'old', 'new');
+
+  assert.equal(conversations.start.responses[0].outcomes.success.actions[0].node, 'new');
+  assert.equal(conversations.start.responses[1].onExhausted[0].node, 'new');
 });
 
 // ── Guided-creation helpers ───────────────────────────────────────────────────

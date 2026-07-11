@@ -78,7 +78,18 @@ creation/navigation model.
     in the current view
   - Guided "New Scene" (sidebar) auto-places next to its "reachable from"
     source when that scene is on the map
-- **Phase 4 — dialogue graph as primary** dialogue surface.
+- **Phase 4 — dialogue graph as primary** dialogue surface. [SHIPPED]
+  - NPC text and reply text edit in place on the node cards (nodes grow
+    with their text; arrows re-route live)
+  - Double-clicking empty canvas creates a node there — NPC line first,
+    id auto-slugged from it (or given explicitly)
+  - "+ reply" adds a response; ✕ deletes a reply or a whole node, with a
+    confirm that counts and removes inbound connections ("start" is
+    protected — the engine's entry node)
+  - Inbound-ref helpers (rename + delete) now scan outcome tiers and
+    onExhausted pipelines, not just the flat actions/onFailure
+  - NPC form's Conversations section links "Edit in Graph" always (also
+    for NPCs with no dialogue yet) and remains the expert escape hatch
 
 ## Known hotspots the later phases must resolve
 
