@@ -233,7 +233,7 @@ export class CuratorUI {
     repSection.appendChild(repTitle);
 
     const repVal = getMuseumReputation();
-    const repText = createElement('div', [CSS.ITEM_STATS, 'curator-panel__rep-value'], this.engine.t('plugin.curator.museumReputationValue', { value: repVal }));
+    const repText = createElement('div', [CSS.CARD_STATS, 'curator-panel__rep-value'], this.engine.t('plugin.curator.museumReputationValue', { value: repVal }));
     repSection.appendChild(repText);
     
     panel.insertBefore(repSection, skillsContainer);
@@ -316,20 +316,20 @@ export class CuratorUI {
     detailSection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, display.name));
 
     // Item Info
-    const infoContainer = createElement('div', [CSS.ITEM_LIST_ITEM, 'curator-panel__item-info']);
+    const infoContainer = createElement('div', [CSS.CARD, 'curator-panel__item-info']);
 
-    infoContainer.appendChild(createElement('h3', CSS.ITEM_TITLE, name));
+    infoContainer.appendChild(createElement('h3', CSS.CARD_TITLE, name));
     if (itemData?.type) {
-      infoContainer.appendChild(createElement('div', CSS.ITEM_TYPE, itemData.type));
+      infoContainer.appendChild(createElement('div', CSS.CARD_BODY, itemData.type));
     }
     if (itemData?.description) {
-      infoContainer.appendChild(createElement('p', CSS.ITEM_DESCRIPTION, itemData.description));
+      infoContainer.appendChild(createElement('p', CSS.CARD_BODY, itemData.description));
     }
     
     if (itemData?.value !== undefined || itemData?.attributes?.actionPoints !== undefined) {
       let stats = this.engine.t('plugin.curator.inspectValue', { value: itemData.value ?? 0 });
       if (itemData.attributes?.actionPoints) stats += ` | ${this.engine.t('plugin.curator.inspectApCost', { ap: itemData.attributes.actionPoints })}`;
-      infoContainer.appendChild(createElement('p', CSS.ITEM_STATS, stats));
+      infoContainer.appendChild(createElement('p', CSS.CARD_STATS, stats));
     }
 
     detailSection.appendChild(infoContainer);
@@ -390,7 +390,7 @@ export class CuratorUI {
         selectSection.appendChild(btn);
       });
     } else {
-      const noneLabel = createElement('p', [CSS.ITEM_TYPE, 'curator-panel__empty-note'], this.engine.t('plugin.curator.curatorNoEligibleItems'));
+      const noneLabel = createElement('p', [CSS.CARD_BODY, 'curator-panel__empty-note'], this.engine.t('plugin.curator.curatorNoEligibleItems'));
       selectSection.appendChild(noneLabel);
     }
 

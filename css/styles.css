@@ -244,14 +244,12 @@ body {
 }
 
 /* ==========================================================================
-   .button — single source of truth for all button visuals.
-   Modifier classes (.btn--item, etc.) handle layout and sizing
-   only (padding, dimensions, justify-content) — never visual properties.
-   .item-list__item shares the visual base but has its own layout rule below.
+   .button — single source of truth for small action-button visuals
+   (Use, Equip, Save/Load, the stat-point "+"). Modifier classes
+   (.btn--item, etc.) handle layout and sizing only.
    ========================================================================== */
 
-.button,
-.item-list__item {
+.button {
   -webkit-appearance: none;
   appearance: none;
   background: var(--btn-bg);
@@ -263,17 +261,13 @@ body {
   line-height: 1;
   cursor: pointer;
   transition: all 0.3s ease;
-}
-
-.button {
   padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 1.75);
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-.button:hover:not(:disabled),
-.item-list__item:hover {
+.button:hover:not(:disabled) {
   background: var(--btn-hover-bg);
   border-color: var(--accent-hover);
   box-shadow: var(--btn-hover-shadow);
@@ -286,30 +280,98 @@ body {
   background: var(--btn-disabled-bg);
 }
 
-/* .option-btn — scene action buttons; space-between positions req-text on the right */
-.option-btn {
-  justify-content: space-between;
-  line-height: 22px;
-}
+/* ==========================================================================
+   .card — THE building block for every titled box in the game: scene
+   options, skill checks, dialogue responses, combat attacks, inventory
+   items, quests, chest rows, exhibits (built by buildCard in core/utils.js).
+   Restyle the whole game's cards right here.
 
-.option-btn--stacked {
-  flex-direction: column;
-  align-items: flex-start;
-  height: auto;
-  text-align: left;
-}
+   Two shapes, one look:
+   - interactive card:  <button class="card"> — the entire card is the control
+   - container card:    <li>/<div class="card"> with buttons in .card__actions
 
-.option-btn__badge {
-  display: block;
-  color: var(--accent-color);
-  /* Same size as .item__stats (body default) so badge facts read at the
-     same scale as the inventory's stat lines. */
+   Structure: .card__title (bold first line) → .card__body (muted lines)
+   → .card__stats (accent stat lines, one per row) → .card__actions.
+   ========================================================================== */
+
+.card {
+  background: var(--btn-bg);
+  border: 1px solid var(--panel-border);
+  color: var(--text-primary);
+  font-family: inherit;
   font-size: var(--font-md);
   font-weight: 400;
+  line-height: 22px;
+  text-align: left;
+  padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2);
+  transition: all 0.3s ease;
+}
+
+button.card {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  cursor: pointer;
+}
+
+.card:hover:not(:disabled) {
+  background: var(--btn-hover-bg);
+  border-color: var(--accent-hover);
+  box-shadow: var(--btn-hover-shadow);
+}
+
+button.card:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(1);
+  background: var(--btn-disabled-bg);
+}
+
+/* Every fact is its own row with a consistent gap. */
+.card > * + * {
   margin-top: var(--spacing);
-  /* Badges may stack facts (stakes, odds, costs) as lines: locale strings
-     use \n and each fact renders on its own row. */
+}
+
+.card__title {
+  display: block;
+  font-weight: 600;
+}
+
+.card__body {
+  display: block;
+  color: var(--text-secondary);
+}
+
+/* Accent stat lines — \n-joined by the builders, one fact per row. */
+.card__stats {
+  display: block;
+  color: var(--accent-color);
   white-space: pre-line;
+}
+
+.card__actions {
+  display: flex;
+  gap: var(--spacing);
+  margin-top: calc(var(--spacing) * 2);
+}
+
+/* Card lists (inventory sections, quests): plain stacked columns. */
+.card-list {
+  list-style: none;
+  padding: 0;
+}
+
+.card-list .card {
+  margin-bottom: calc(var(--spacing) * 2);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.card--completed {
+  opacity: 0.8;
 }
 
 /* .btn--item — inventory action buttons (Use, Equip, Unequip, Deposit) */
@@ -344,7 +406,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 3px;
+  gap: calc(var(--spacing) * 0.75);
   padding: calc(var(--spacing) * 1.25) calc(var(--spacing) * 1.75);
   line-height: 1;
   background: var(--list-item-bg);
@@ -437,9 +499,13 @@ body {
 .game__controls {
   gap: calc(var(--spacing) * 1);
   margin-left: auto;
+  /* Center the buttons instead of letting flex stretch them to the bar's
+     height — taller neighbors (multi-line chips) must not inflate them. */
+  align-items: center;
 
   button {
     justify-content: center;
+    height: 40px;
   }
 }
 
@@ -471,61 +537,6 @@ body {
  SIDEBAR: INVENTORY & EQUIPMENT
  ========================================================================== */
 
-
-.item-list__items {
-  line-height: calc(var(--spacing) * 2.5);
-  list-style: none;
-  padding: 0;
-}
-
-.item-list__item {
-  font-weight: 400;
-  line-height: 22px;
-  padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2);
-  margin-bottom: calc(var(--spacing) * 2);
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-}
-
-.item-list__item--completed {
-  opacity: 0.8;
-}
-
-.item-list__item > * + *,
-.item__description > * + * {
-  margin-top: var(--spacing);
-
-  &:empty {
-    margin-top: 0;
-  }
-}
-
-.item__title {
-  display: block;
-}
-
-.item__type {
-  display: block;
-  color: var(--text-secondary);
-}
-
-.item__stats {
-  color: var(--accent-color);
-  /* One stat per row: lines come \n-joined from itemStatLines (same
-     convention as .option-btn__badge). */
-  white-space: pre-line;
-}
-
-.item__actions {
-  display: flex;
-  gap: var(--spacing);
-}
-
-.item__actions:has(button) {
-  margin-top: calc(var(--spacing) * 2);
-}
 
 /* ==========================================================================
  MAIN: SCENE
@@ -710,7 +721,7 @@ body {
 }
 
 
-.scene__options .option-btn {
+.scene__options .card {
   margin-bottom: calc(var(--spacing) * 2);
 
   &:last-child {

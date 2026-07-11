@@ -77,7 +77,7 @@ export class ChestUI {
         invSection.appendChild(btn);
       });
     } else {
-      invSection.appendChild(createElement('p', CSS.ITEM_TYPE, this.engine.t('ui.inventoryEmpty')));
+      invSection.appendChild(createElement('p', CSS.CARD_BODY, this.engine.t('ui.inventoryEmpty')));
     }
     panel.insertBefore(invSection, skillsContainer);
 

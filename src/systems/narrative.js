@@ -18,10 +18,11 @@ export class NarrativeLog {
     this.isGameStart = true;
     this._scrollRaf = undefined;
 
-    // Flush scene--new from log entries before each option-btn action fires.
-    // Capture phase ensures the flush runs before the button's onclick handler.
+    // Flush scene--new from log entries before each interactive card
+    // (option button) fires. Capture phase ensures the flush runs before
+    // the button's onclick handler.
     document.addEventListener('click', e => {
-      if (e.target.closest(`.${CSS.OPTION_BTN}`)) {
+      if (e.target.closest(`button.${CSS.CARD}`)) {
         this.flushScenes();
         this.flushEntries();
       }

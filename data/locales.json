@@ -117,7 +117,7 @@
   },
   "itemStats": {
     "actionPoints": "AP: {value}",
-    "hit": "Uses: {attribute} {value}",
+    "hit": "Hit bonus: {value} ({attribute})",
     "damageRoll": "Damage: {value}",
     "healingAmount": "Healing: {value}",
     "apRestore": "Restores AP: {value}",

@@ -1,8 +1,10 @@
-import { createElement, getItemLabel, itemStatLines } from "../core/utils.js";
+import { createElement, buildCard, getItemLabel, itemStatLines } from "../core/utils.js";
 import { EL, CSS, WEAPON_SLOTS } from "../core/config.js";
 import { gameState } from "../core/state.js";
 
-// InventoryUI renders the inventory and equipment sidebar panels.
+// InventoryUI renders the inventory and equipment sidebar panels. Every item
+// renders as a standard card (see buildCard) with its controls in the
+// actions row.
 export class InventoryUI {
   constructor(engine) {
     this.engine = engine;
@@ -22,7 +24,7 @@ export class InventoryUI {
 
     if (equippedEntries.length === 0 && sortedInv.length === 0) {
       const section = createElement('div', CSS.SCENE_OPTIONS);
-      section.appendChild(createElement('p', CSS.ITEM_TYPE, this.engine.t('ui.inventoryEmpty')));
+      section.appendChild(createElement('p', CSS.CARD_BODY, this.engine.t('ui.inventoryEmpty')));
       panel.appendChild(section);
       return;
     }
@@ -31,25 +33,20 @@ export class InventoryUI {
     if (equippedEntries.length > 0) {
       const section = createElement('div', CSS.SCENE_OPTIONS);
       section.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('ui.equippedSection')));
-      const ul = createElement('ul', CSS.ITEM_LIST_ITEMS);
+      const ul = createElement('ul', CSS.CARD_LIST);
       equippedEntries.forEach(([slot, itemId]) => {
         const itemData = this.engine.data.items[itemId];
         if (!itemData) return;
-        const li = createElement('li', CSS.ITEM_LIST_ITEM);
-        const descDiv = createElement('div', CSS.ITEM_DESCRIPTION);
-        descDiv.appendChild(createElement('strong', CSS.ITEM_TITLE, itemData.name));
-        descDiv.appendChild(createElement('div', CSS.ITEM_TYPE, itemData.description));
-        descDiv.appendChild(createElement('div', CSS.ITEM_TYPE, this.engine.t('ui.equippedTo', { slot })));
-        const statsEl = this.buildItemStatsEl(itemData);
-        if (statsEl) descDiv.appendChild(statsEl);
-        const actionsDiv = createElement('div', CSS.ITEM_ACTIONS);
         const btn = createElement('button', [CSS.BTN, CSS.BTN_ITEM], this.engine.t('inventory.unequipButton'));
         btn.dataset.action = 'unequip';
         btn.dataset.slot = slot;
-        actionsDiv.appendChild(btn);
-        li.appendChild(descDiv);
-        li.appendChild(actionsDiv);
-        ul.appendChild(li);
+        ul.appendChild(buildCard({
+          tag: 'li',
+          title: itemData.name,
+          body: [itemData.description, this.engine.t('ui.equippedTo', { slot })],
+          stats: this._itemStats(itemData),
+          actions: [btn],
+        }));
       });
       section.appendChild(ul);
       panel.appendChild(section);
@@ -67,56 +64,50 @@ export class InventoryUI {
         currentType = itemData.type;
         currentSection = createElement('div', CSS.SCENE_OPTIONS);
         currentSection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t(`itemTypes.${itemData.type}`)));
-        currentUl = createElement('ul', CSS.ITEM_LIST_ITEMS);
+        currentUl = createElement('ul', CSS.CARD_LIST);
         currentSection.appendChild(currentUl);
         panel.appendChild(currentSection);
       }
 
-      const li = createElement('li', CSS.ITEM_LIST_ITEM);
-      const label = getItemLabel(this.engine.data.items, invItem.item, invItem.amount);
-      const descDiv = createElement('div', CSS.ITEM_DESCRIPTION);
-      descDiv.appendChild(createElement('strong', CSS.ITEM_TITLE, label));
-      descDiv.appendChild(createElement('div', CSS.ITEM_TYPE, itemData.description));
-      if (itemData.type === 'Armor' && itemData.slot) {
-        descDiv.appendChild(createElement('div', CSS.ITEM_TYPE, this.engine.t('ui.armorSlot', { slot: itemData.slot })));
-      }
-      const statsEl = this.buildItemStatsEl(itemData);
-      if (statsEl) descDiv.appendChild(statsEl);
-
-      const actionsDiv = createElement('div', CSS.ITEM_ACTIONS);
+      const actions = [];
       if (itemData.type === 'Consumable') {
         const btn = createElement('button', [CSS.BTN, CSS.BTN_ITEM], this.engine.t('inventory.useButton'));
         btn.dataset.action = 'consume';
         btn.dataset.item = invItem.item;
-        actionsDiv.appendChild(btn);
+        actions.push(btn);
       } else if (itemData.type === 'Weapon' || itemData.type === 'Spell') {
         for (const [slot, labelKey] of [[WEAPON_SLOTS[0], 'inventory.leftHandButton'], [WEAPON_SLOTS[1], 'inventory.rightHandButton']]) {
           const btn = createElement('button', [CSS.BTN, CSS.BTN_ITEM], this.engine.t(labelKey));
           btn.dataset.action = 'equip';
           btn.dataset.slot = slot;
           btn.dataset.item = invItem.item;
-          actionsDiv.appendChild(btn);
+          actions.push(btn);
         }
       } else if (itemData.type === 'Armor') {
         const btn = createElement('button', [CSS.BTN, CSS.BTN_ITEM], this.engine.t('inventory.equipButton'));
         btn.dataset.action = 'equip';
         btn.dataset.slot = itemData.slot;
         btn.dataset.item = invItem.item;
-        actionsDiv.appendChild(btn);
+        actions.push(btn);
       }
 
-      li.appendChild(descDiv);
-      li.appendChild(actionsDiv);
-      currentUl.appendChild(li);
+      currentUl.appendChild(buildCard({
+        tag: 'li',
+        title: getItemLabel(this.engine.data.items, invItem.item, invItem.amount),
+        body: [
+          itemData.description,
+          itemData.type === 'Armor' && itemData.slot ? this.engine.t('ui.armorSlot', { slot: itemData.slot }) : null,
+        ],
+        stats: this._itemStats(itemData),
+        actions,
+      }));
     });
   }
 
-  // Returns a div.item__stats element, or null if the item has no displayable
-  // stats. Same lines as the combat attack buttons (see itemStatLines), one
-  // stat per row; the hit line shows the player's current attribute modifier.
-  buildItemStatsEl(itemData) {
+  // The card's accent stat lines — same lines as the combat attack buttons
+  // (see itemStatLines); the hit line shows the player's current modifier.
+  _itemStats(itemData) {
     const lines = itemStatLines(this.engine.t.bind(this.engine), itemData, gameState.getPlayer().attributes);
-    if (lines.length === 0) return null;
-    return createElement('div', CSS.ITEM_STATS, lines.join('\n'));
+    return lines.length > 0 ? lines.join('\n') : undefined;
   }
 }

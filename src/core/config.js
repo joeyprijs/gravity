@@ -78,21 +78,20 @@ export const CSS = {
   TABS_PANEL:             'tabs__panel',
 
   // Buttons
-  OPTION_BTN:             'option-btn',
-  OPTION_BTN_STACKED:     'option-btn--stacked',
-  OPTION_BTN_BADGE:       'option-btn__badge',
   BTN:                    'button',
   BTN_ITEM:               'btn--item',
 
-  // Item lists
-  ITEM_LIST_ITEMS:        'item-list__items',
-  ITEM_LIST_ITEM:         'item-list__item',
-  ITEM_LIST_ITEM_DONE:    'item-list__item--completed',
-  ITEM_DESCRIPTION:       'item__description',
-  ITEM_TITLE:             'item__title',
-  ITEM_TYPE:              'item__type',
-  ITEM_STATS:             'item__stats',
-  ITEM_ACTIONS:           'item__actions',
+  // Cards — THE standard block for every titled box in the UI: scene options,
+  // skill checks, dialogue responses, combat attacks, inventory items, quests,
+  // chest rows, exhibits. One DOM shape + class vocabulary (see buildCard in
+  // core/utils.js), restyled in one place (the .card block in styles.css).
+  CARD:                   'card',
+  CARD_TITLE:             'card__title',
+  CARD_BODY:              'card__body',
+  CARD_STATS:             'card__stats',
+  CARD_ACTIONS:           'card__actions',
+  CARD_LIST:              'card-list',
+  CARD_DONE:              'card--completed',
 
   // Map
   MAP_NODE:               'map-node',

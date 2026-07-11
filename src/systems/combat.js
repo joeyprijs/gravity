@@ -522,10 +522,9 @@ class CombatRenderer {
       ));
       
       attacks.forEach(att => {
-        const btn = createElement('button', [CSS.BTN, CSS.OPTION_BTN, CSS.OPTION_BTN_STACKED]);
-        btn.appendChild(createElement('span', '', this.cs.engine.t('combat.attackTarget', { name: att.name })));
-        btn.appendChild(createElement('span', CSS.OPTION_BTN_BADGE,
-          itemStatLines(this.cs.engine.t.bind(this.cs.engine), att, gameState.getPlayer().attributes).join('\n')));
+        const btn = buildOptionButton(
+          this.cs.engine.t('combat.attackTarget', { name: att.name }),
+          itemStatLines(this.cs.engine.t.bind(this.cs.engine), att, gameState.getPlayer().attributes).join('\n'));
         
         // Disable attack controls that exceed the remaining turn budget
         // (current AP, capped by rules.apEconomy.maxPerTurn).

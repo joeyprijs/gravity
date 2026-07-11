@@ -293,21 +293,55 @@ export function buildSceneDescription(title, body = null, t = null) {
 }
 
 /**
- * Builds an option button:
- *   button.option-btn > span[text] + optional span.option-btn__badge
- *
- * Pass reqText to show a badge on the right (AP cost, price, skill DC, etc.).
+ * Builds an interactive card (button.card) with a title and optional accent
+ * stat lines — the standard clickable option (see buildCard). Pass reqText
+ * for the stat lines (AP cost, price, skill DC, retry cost — \n-separated).
  * Returns the button element — caller sets .onclick and .disabled.
  */
 
 export function buildOptionButton(text, reqText = null) {
-  const classes = reqText !== null
-    ? [CSS.BTN, CSS.OPTION_BTN, CSS.OPTION_BTN_STACKED]
-    : [CSS.BTN, CSS.OPTION_BTN];
-  const btn = createElement('button', classes);
-  btn.appendChild(createElement('span', '', text));
-  if (reqText !== null) {
-    btn.appendChild(createElement('span', CSS.OPTION_BTN_BADGE, reqText));
+  return buildCard({ tag: 'button', title: text, stats: reqText ?? undefined });
+}
+
+/**
+ * Builds a card — THE standard block for anything presented as a titled box:
+ * scene options, skill checks, dialogue responses, combat attacks, inventory
+ * items, quests, chest rows, exhibits. One DOM shape and one class
+ * vocabulary, so a designer restyles every card in the game from the .card
+ * block in styles.css:
+ *
+ *   <tag class="card">
+ *     <.card__title>     the bold first line
+ *     <.card__body>      0..n muted secondary lines
+ *     <.card__stats>     accent stat lines (\n-separated, one per row)
+ *     <.card__actions>   optional row of action buttons
+ *
+ * Interactive cards are <button class="card"> — the whole card is the
+ * control (scene options, chest rows). Container cards are <div>/<li>
+ * carrying their controls in .card__actions (inventory items).
+ *
+ * @param {object} spec
+ * @param {string} [spec.tag='div'] - 'button' | 'div' | 'li'.
+ * @param {string} [spec.title] - Title line.
+ * @param {string|string[]} [spec.body] - Muted line(s); empties are skipped.
+ * @param {string} [spec.stats] - Accent stat lines, \n-joined.
+ * @param {HTMLElement[]} [spec.actions] - Buttons for the actions row.
+ * @param {string[]} [spec.classes] - Extra classes on the card element.
+ * @returns {HTMLElement}
+ */
+export function buildCard({ tag = 'div', title, body, stats, actions = [], classes = [] } = {}) {
+  // Buttons may not contain block elements — inline children only.
+  const child = tag === 'button' ? 'span' : 'div';
+  const card = createElement(tag, [CSS.CARD, ...classes]);
+  if (title) card.appendChild(createElement(tag === 'button' ? 'span' : 'strong', CSS.CARD_TITLE, title));
+  for (const line of (Array.isArray(body) ? body : [body])) {
+    if (line) card.appendChild(createElement(child, CSS.CARD_BODY, line));
   }
-  return btn;
+  if (stats) card.appendChild(createElement(child, CSS.CARD_STATS, stats));
+  if (actions.length > 0) {
+    const row = createElement('div', CSS.CARD_ACTIONS);
+    actions.forEach(a => row.appendChild(a));
+    card.appendChild(row);
+  }
+  return card;
 }
