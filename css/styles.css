@@ -407,6 +407,17 @@ button.section-toggle--collapsed {
   margin-bottom: 0;
 }
 
+.section-toggle__label {
+  flex: 1;
+}
+
+/* Muted unit count beside the chevron — what a collapsed section holds. */
+.section-toggle__count {
+  color: var(--text-secondary);
+  font-weight: 400;
+  margin-right: var(--spacing);
+}
+
 .section-toggle::after {
   content: "▾";
   color: var(--text-secondary);

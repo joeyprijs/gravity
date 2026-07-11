@@ -37,7 +37,7 @@ export class InventoryUI {
     // Equipped section — no description line: the slot and stats are what
     // matter for gear you already know you own.
     if (equippedEntries.length > 0) {
-      const ul = this._buildSection(panel, 'equipped', this.engine.t('ui.equippedSection'));
+      const ul = this._buildSection(panel, 'equipped', this.engine.t('ui.equippedSection'), equippedEntries.length);
       equippedEntries.forEach(([slot, itemId]) => {
         const itemData = this.engine.data.items[itemId];
         if (!itemData) return;
@@ -63,7 +63,11 @@ export class InventoryUI {
 
       if (itemData.type !== currentType) {
         currentType = itemData.type;
-        currentUl = this._buildSection(panel, `type:${itemData.type}`, this.engine.t(`itemTypes.${itemData.type}`));
+        // The heading count is total units, so potion stacks count in full.
+        const count = sortedInv.reduce((sum, entry) =>
+          (this.engine.data.items[entry.item]?.type || 'Flavour') === itemData.type
+            ? sum + (entry.amount ?? 1) : sum, 0);
+        currentUl = this._buildSection(panel, `type:${itemData.type}`, this.engine.t(`itemTypes.${itemData.type}`), count);
       }
 
       const actions = [];
@@ -116,10 +120,13 @@ export class InventoryUI {
 
   // Builds a collapsible section (heading toggle + card list) and returns
   // the list element. Collapsing hides the list in place — no re-render, so
-  // the action buttons keep their bindings.
-  _buildSection(panel, key, labelText) {
+  // the action buttons keep their bindings. The muted count tells the player
+  // what a collapsed section holds without opening it.
+  _buildSection(panel, key, labelText, count) {
     const section = createElement('div', CSS.SCENE_OPTIONS);
-    const heading = createElement('button', [CSS.SCENE_SECTION_HEADING, CSS.SECTION_TOGGLE], labelText);
+    const heading = createElement('button', [CSS.SCENE_SECTION_HEADING, CSS.SECTION_TOGGLE]);
+    heading.appendChild(createElement('span', CSS.SECTION_TOGGLE_LABEL, labelText));
+    if (count !== undefined) heading.appendChild(createElement('span', CSS.SECTION_TOGGLE_COUNT, String(count)));
     const ul = createElement('ul', CSS.CARD_LIST);
     const applyState = (collapsed) => {
       ul.hidden = collapsed;

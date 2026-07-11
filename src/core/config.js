@@ -97,6 +97,8 @@ export const CSS = {
   // Collapsible section headings (inventory panel)
   SECTION_TOGGLE:           'section-toggle',
   SECTION_TOGGLE_COLLAPSED: 'section-toggle--collapsed',
+  SECTION_TOGGLE_LABEL:     'section-toggle__label',
+  SECTION_TOGGLE_COUNT:     'section-toggle__count',
 
   // Map
   MAP_NODE:               'map-node',
