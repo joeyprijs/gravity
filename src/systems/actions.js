@@ -84,21 +84,49 @@ function handleFullRest(action, engine) {
   }
 }
 
+// Clamped delta for a { current, max } resource: 'full' (or omitted) tops it
+// up; a number moves it within [0, max]. Returns the amount actually applied.
+function resourceDelta(res, amount) {
+  return amount === undefined || amount === 'full'
+    ? res.max - res.current
+    : Math.max(Math.min(amount, res.max - res.current), -res.current);
+}
+
 // Moves AP mid-story, in either direction: { type: "modify_ap", amount: 2 }
 // restores, a negative amount drains, and "full" (also the default) resets
 // the pool to max. The narrative-side valve of rules.apEconomy — scenes,
 // dialogue choices, and victory pipelines hand exertion back or take it.
 function handleModifyAp(action, engine) {
-  const ap = gameState.getPlayer().resources.ap;
-  const amount = action.amount === undefined || action.amount === 'full'
-    ? ap.max - ap.current
-    : Math.max(Math.min(action.amount, ap.max - ap.current), -ap.current);
+  const amount = resourceDelta(gameState.getPlayer().resources.ap, action.amount);
   if (amount === 0) return; // already full/empty — nothing to move or narrate
   gameState.modifyPlayerStat('ap', amount);
   if (action.log !== false) {
     const msg = typeof action.log === 'string'
       ? action.log
       : engine.t(amount < 0 ? 'actions.drainAp' : 'actions.restoreAp', { amount: Math.abs(amount) });
+    engine.log(LOG.SYSTEM, msg, amount < 0 ? 'system' : 'loot');
+  }
+}
+
+// modify_ap's generic sibling: moves any declared { current, max } resource
+// in either direction — { type: "modify_resource", resource: "luckPoints",
+// amount: 1 }, negative drains, "full" (also the default) tops it up. The
+// authoring valve for custom currencies (Luck Points, favor, ...).
+function handleModifyResource(action, engine) {
+  const res = gameState.getPlayer().resources[action.resource];
+  if (!res || typeof res !== 'object') {
+    console.warn(`[Gravity] modify_resource: "${action.resource}" is not a declared { current, max } resource — skipped`);
+    return;
+  }
+  const amount = resourceDelta(res, action.amount);
+  if (amount === 0) return;
+  gameState.modifyPlayerStat(action.resource, amount);
+  if (action.log !== false) {
+    const labelKey = `ui.resources.${action.resource}`;
+    const label = engine.t(labelKey) !== labelKey ? engine.t(labelKey) : action.resource;
+    const msg = typeof action.log === 'string'
+      ? action.log
+      : engine.t(amount < 0 ? 'actions.resourceLoss' : 'actions.resourceGain', { amount: Math.abs(amount), resource: label });
     engine.log(LOG.SYSTEM, msg, amount < 0 ? 'system' : 'loot');
   }
 }
@@ -174,6 +202,7 @@ export function registerBuiltinActions(engine) {
   engine.registerAction(ACTIONS.FULL_REST,       handleFullRest);
   engine.registerAction(ACTIONS.HEAL,            handleHeal);
   engine.registerAction(ACTIONS.MODIFY_AP,       handleModifyAp);
+  engine.registerAction(ACTIONS.MODIFY_RESOURCE, handleModifyResource);
   engine.registerAction(ACTIONS.NAVIGATE,        handleNavigate);
   engine.registerAction(ACTIONS.SET_FLAG,        handleSetFlag);
   engine.registerAction(ACTIONS.LOG,             handleLog);

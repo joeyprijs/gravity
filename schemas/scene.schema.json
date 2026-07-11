@@ -536,7 +536,15 @@
           "type": "string"
         },
         "amount": {
-          "type": "integer"
+          "type": [
+            "integer",
+            "string"
+          ],
+          "description": "loot/heal: integer. modify_ap / modify_resource: integer (negative drains) or \"full\"."
+        },
+        "resource": {
+          "type": "string",
+          "description": "modify_resource: id of a resource declared in rules.playerDefaults.resources."
         },
         "xpReward": {
           "type": "integer"

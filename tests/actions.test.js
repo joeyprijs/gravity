@@ -279,3 +279,42 @@ test('full_rest: restRestore 0 leaves AP untouched; default restores fully', () 
   runDefault({ type: ACTIONS.FULL_REST }); // classic default: full refill
   assert.equal(ap(), 3);
 });
+
+// ── modify_resource ───────────────────────────────────────────────────────────
+
+const LUCK_RULES = {
+  ...TEST_RULES,
+  playerDefaults: {
+    ...TEST_RULES.playerDefaults,
+    resources: { ...TEST_RULES.playerDefaults.resources, luckPoints: { current: 1, max: 3 } },
+  },
+};
+const luck = () => gameState.getPlayer().resources.luckPoints.current;
+
+test('modify_resource: gains and drains a declared resource, clamped both ways', () => {
+  gameState.init(LUCK_RULES);
+  const { run, calls } = makeEngine({ rules: LUCK_RULES });
+
+  run({ type: ACTIONS.MODIFY_RESOURCE, resource: 'luckPoints', amount: 1 });
+  assert.equal(luck(), 2);
+  assert.equal(calls.logs[0].message, 'actions.resourceGain');
+
+  run({ type: ACTIONS.MODIFY_RESOURCE, resource: 'luckPoints', amount: -99 });
+  assert.equal(luck(), 0); // clamped at empty
+  assert.equal(calls.logs[1].message, 'actions.resourceLoss');
+
+  run({ type: ACTIONS.MODIFY_RESOURCE, resource: 'luckPoints' }); // default → full
+  assert.equal(luck(), 3);
+
+  run({ type: ACTIONS.MODIFY_RESOURCE, resource: 'luckPoints', amount: 1 }); // no-op at max
+  assert.equal(calls.logs.length, 3);
+});
+
+test('modify_resource: an undeclared or plain-number resource is a warned no-op', () => {
+  gameState.init(LUCK_RULES);
+  const { run, calls } = makeEngine({ rules: LUCK_RULES });
+  run({ type: ACTIONS.MODIFY_RESOURCE, resource: 'gold', amount: 5 });   // plain number
+  run({ type: ACTIONS.MODIFY_RESOURCE, resource: 'nonexistent', amount: 5 });
+  assert.equal(gameState.getPlayer().resources.gold, 0);
+  assert.equal(calls.logs.length, 0);
+});

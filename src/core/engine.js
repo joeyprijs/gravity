@@ -324,9 +324,10 @@ class RPGEngine {
       return;
     }
 
-    // Consumes one die-notation-or-number attribute: applies it via applyStat
-    // and logs the given locale key. Returns true if the attribute was present.
-    const consumeStat = (value, stat, msgKey) => {
+    // Consumes one die-notation-or-number attribute: applies it to the named
+    // stat/resource and logs the given locale key. Returns true if the
+    // attribute was present.
+    const consumeStat = (value, stat, msgKey, extraParams = {}) => {
       if (!value) return false;
       let amount = value;
       let rollSuffix = "";
@@ -336,17 +337,24 @@ class RPGEngine {
         amount = result.total;
       }
       gameState.modifyPlayerStat(stat, amount);
-      this.log(LOG.SYSTEM, this.t(msgKey, { name: itemData.name, amount, rollSuffix }), 'loot');
+      this.log(LOG.SYSTEM, this.t(msgKey, { name: itemData.name, amount, rollSuffix, ...extraParams }), 'loot');
       return true;
     };
 
     // Apply effect BEFORE spending AP so the log order is always:
-    // "used potion" → (AP spent) → enemy turn fires. Healing and AP restore
-    // are independent — an item may carry both (the apRestore side is the
-    // consumable counterpart of the modify_ap action).
-    const healed = consumeStat(itemData.attributes?.healingAmount, 'hp', 'player.usedItem');
-    const restoredAp = consumeStat(itemData.attributes?.apRestore, 'ap', 'player.usedItemAp');
-    if (healed || restoredAp) {
+    // "used potion" → (AP spent) → enemy turn fires. The effects are
+    // independent — an item may carry any mix (apRestore and modifyResource
+    // are the consumable counterparts of the modify_ap/modify_resource actions).
+    const mod = itemData.attributes?.modifyResource;
+    const modLabelKey = `ui.resources.${mod?.resource}`;
+    const consumed = [
+      consumeStat(itemData.attributes?.healingAmount, 'hp', 'player.usedItem'),
+      consumeStat(itemData.attributes?.apRestore, 'ap', 'player.usedItemAp'),
+      mod?.resource && consumeStat(mod.amount, mod.resource, 'player.usedItemResource', {
+        resource: this.t(modLabelKey) !== modLabelKey ? this.t(modLabelKey) : mod.resource,
+      }),
+    ].some(Boolean);
+    if (consumed) {
       gameState.removeFromInventory(itemId, 1);
     } else if (itemData.attributes?.teleportScene) {
       if (this.inCombat) {

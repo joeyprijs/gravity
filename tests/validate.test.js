@@ -431,3 +431,17 @@ test('warns when every weapon and spell costs 0 AP', () => {
   data.items.stick = { name: 'Stick', type: 'Weapon', actionPoints: 0 };
   assert.ok(issuesFor(data).some(m => m.includes('combat turns will never end automatically')));
 });
+
+test('modify_resource: flags a missing or undeclared resource; declared is clean', () => {
+  const data = makeToolkitData();
+  data.rules.playerDefaults.resources = { hp: { current: 10, max: 10 }, luckPoints: { current: 3, max: 3 } };
+  data.scenes.cave.options.push(
+    { text: 'Pray', actions: [{ type: 'modify_resource', amount: 1 }] },
+    { text: 'Tithe', actions: [{ type: 'modify_resource', resource: 'gold', amount: -5 }] },
+    { text: 'Wish', actions: [{ type: 'modify_resource', resource: 'luckPoints', amount: 1 }] },
+  );
+  const messages = issuesFor(data);
+  assert.ok(messages.some(m => m.includes('modify_resource needs a "resource"')));
+  assert.ok(messages.some(m => m.includes('resource "gold" is not a declared')));
+  assert.ok(!messages.some(m => m.includes('"luckPoints" is not a declared')));
+});

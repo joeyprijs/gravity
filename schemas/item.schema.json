@@ -76,6 +76,35 @@
         "teleportScene": {
           "type": "string",
           "description": "Scene ID to teleport to upon usage. Used for consumable items."
+        },
+        "apRestore": {
+          "type": [
+            "integer",
+            "string"
+          ],
+          "description": "AP restored on consumption. Supports flat numbers or dice notation."
+        },
+        "modifyResource": {
+          "type": "object",
+          "description": "Moves a declared { current, max } resource on consumption (e.g. Luck Points).",
+          "properties": {
+            "resource": {
+              "type": "string",
+              "description": "Id of a resource declared in rules.playerDefaults.resources."
+            },
+            "amount": {
+              "type": [
+                "integer",
+                "string"
+              ],
+              "description": "Flat number (negative drains) or dice notation."
+            }
+          },
+          "required": [
+            "resource",
+            "amount"
+          ],
+          "additionalProperties": false
         }
       },
       "additionalProperties": false

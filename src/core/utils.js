@@ -148,6 +148,15 @@ export function itemStatLines(t, itemData) {
   if (itemData.attributes) {
     for (const k in itemData.attributes) {
       const v = itemData.attributes[k];
+      // modifyResource is the one object-shaped attribute with a display line:
+      // the resource's label plus a signed amount ("Luck Points: +1").
+      if (k === 'modifyResource' && v?.resource) {
+        const labelKey = `ui.resources.${v.resource}`;
+        const label = t(labelKey) !== labelKey ? t(labelKey) : v.resource;
+        const value = typeof v.amount === 'number' && v.amount >= 0 ? `+${v.amount}` : `${v.amount}`;
+        lines.push(t('itemStats.modifyResource', { resource: label, value }));
+        continue;
+      }
       if (typeof v === 'object') continue;
       const key = `itemStats.${k}`;
       const line = t(key, { value: v });

@@ -108,7 +108,8 @@
     "bonusHitChance": "Hit: {value}",
     "damageRoll": "Damage: {value}",
     "healingAmount": "Healing: {value}",
-    "apRestore": "Restores AP: {value}"
+    "apRestore": "Restores AP: {value}",
+    "modifyResource": "{resource}: {value}"
   },
   "inventory": {
     "useButton": "Use",
@@ -164,6 +165,8 @@
     "badgeWithRetryCost": "{badge}\nRetry: {cost} Luck Point",
     "restoreAp": "You recover {amount} AP.",
     "drainAp": "You lose {amount} AP.",
+    "resourceGain": "You gain {amount} {resource}.",
+    "resourceLoss": "You lose {amount} {resource}.",
     "retrySpent": "You spend {cost} Luck Point to press your luck. ({remaining} remaining)"
   },
   "player": {
@@ -171,6 +174,7 @@
     "unequipped": "Unequipped {name} from {slot}.",
     "usedItem": "You used {name} and recovered {amount} HP{rollSuffix}.",
     "usedItemAp": "You used {name} and recovered {amount} AP{rollSuffix}.",
+    "usedItemResource": "You used {name} and gained {amount} {resource}{rollSuffix}.",
     "rollSuffix": " ({dice}: {roll})",
     "teleported": "You gripped the {name} and vanished into thin air...",
     "alreadyHere": "You are already here.",

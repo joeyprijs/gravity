@@ -162,6 +162,13 @@ function validateActions(ctx, group, actions, where) {
     }
     if (action.type === 'restore_luck')
       ctx.add(group, `${where}: "restore_luck" was removed with the 2d6 luck subsystem — model luck as a custom attribute instead`);
+    if (action.type === 'modify_resource') {
+      const res = ctx.rules?.playerDefaults?.resources?.[action.resource];
+      if (!action.resource)
+        ctx.add(group, `${where}: modify_resource needs a "resource" — the currency it moves`);
+      else if (!(res && typeof res === 'object' && 'current' in res))
+        ctx.add(group, `${where}: modify_resource resource "${action.resource}" is not a declared { current, max } resource in playerDefaults.resources`);
+    }
   }
 }
 

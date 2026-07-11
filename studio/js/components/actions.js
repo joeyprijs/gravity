@@ -151,6 +151,24 @@ function renderParams(action, container, onChange) {
       break;
     }
 
+    case 'modify_resource': {
+      // Only { current, max } resources qualify — plain numbers (gold) use loot.
+      const resourceIds = Object.entries(store.files['__rules']?.playerDefaults?.resources ?? {})
+        .filter(([, r]) => r && typeof r === 'object' && 'current' in r)
+        .map(([id]) => id);
+      container.appendChild(param('Resource',
+        select([['', '— resource —'], ...resourceIds.map(id => [id, id])], action.resource ?? '', v => {
+          action.resource = v || undefined; onChange();
+        }, 'form-select')
+      ));
+      const input = numInput(typeof action.amount === 'number' ? action.amount : '', v => {
+        action.amount = v ?? undefined; onChange();
+      }, 'sm');
+      input.placeholder = 'full';
+      container.appendChild(param('Amount', input));
+      break;
+    }
+
     case 'log': {
       const input = el('input', { type: 'text', class: 'form-input', value: action.message ?? '' });
       input.addEventListener('input', () => { action.message = input.value; onChange(); });

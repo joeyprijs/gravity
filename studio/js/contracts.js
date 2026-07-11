@@ -17,6 +17,7 @@ export const ACTION_TYPES = [
   ['dialogue',          'Start Dialogue'],
   ['heal',              'Heal Player'],
   ['modify_ap',         'Modify AP'],
+  ['modify_resource',   'Modify Resource'],
   ['full_rest',         'Full Rest'],
   ['return',            'Return'],
   ['log',               'Log Message'],
