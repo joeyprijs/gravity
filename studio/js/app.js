@@ -103,6 +103,12 @@ document.addEventListener('keydown', e => {
   }
 });
 
+// Surfaces that create entities outside the sidebar (the map's
+// double-click flow) announce it; rebuild the tree to show them.
+document.addEventListener('studio:sidebar-refresh', () => {
+  renderSidebar(document.getElementById('sidebar'));
+});
+
 window.addEventListener('beforeunload', e => {
   if (store.dirtyFiles.size > 0) {
     e.preventDefault();

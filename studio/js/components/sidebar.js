@@ -121,6 +121,17 @@ async function addScene() {
     description: input.description ? [{ text: input.description }] : [],
     options: [],
   };
+  // If the source scene sits on the map in the same region, place the new
+  // scene beside it so it's immediately visible on the canvas.
+  const srcScene = input.linkFrom ? store.files[`scenes:${input.linkFrom}`] : null;
+  if (srcScene?.mapDefinitions && srcScene.region === input.region) {
+    const src = srcScene.mapDefinitions;
+    data.mapDefinitions = {
+      top: src.top + (src.height ?? 50) + 30,
+      left: src.left + (src.width ?? 50) + 30,
+      width: 50, height: 50,
+    };
+  }
   await finishCreate('scenes', id, data, () => {
     if (input.linkFrom) {
       linkFromScene(input.linkFrom, { text: `Go to ${input.title}`, actions: [{ type: 'navigate', destination: id }] });

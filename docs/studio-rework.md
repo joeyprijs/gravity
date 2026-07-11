@@ -68,8 +68,16 @@ creation/navigation model.
     checks/auto-attack/quest trigger under a collapsed "When the scene
     loads"; XP/hooks/map/exhibits/stands under collapsed "Advanced"
   - apCost/timeCost now authorable on checks (previously JSON-only)
-- **Phase 3 — map as home** (create/connect/edit from the canvas; auto
-  map placement for new scenes).
+- **Phase 3 — map as home.** [SHIPPED]
+  - Navigate connections draw as arrows between placed scenes and track
+    live while dragging
+  - Dragging a scene's anchor onto another writes the "Go to" option
+    (deduped per destination); double-clicking empty canvas creates a
+    scene at that spot in the current region
+  - Unplaced scenes of the region wait in a tray; one click places them
+    in the current view
+  - Guided "New Scene" (sidebar) auto-places next to its "reachable from"
+    source when that scene is on the map
 - **Phase 4 — dialogue graph as primary** dialogue surface.
 
 ## Known hotspots the later phases must resolve

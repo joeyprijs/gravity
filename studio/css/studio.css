@@ -1222,3 +1222,50 @@ body {
 .adv-fold-body {
   margin-top: 8px;
 }
+
+/* ── Phase 3: map as home ───────────────────────────────────────────────── */
+
+.map-conn-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.map-conn-line {
+  stroke: color-mix(in srgb, var(--accent) 55%, transparent);
+  stroke-width: 2;
+}
+
+.map-conn-pending {
+  stroke-dasharray: 5 4;
+  opacity: 0.7;
+}
+
+.map-anchor {
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  cursor: crosshair;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.map-scene:hover .map-anchor {
+  opacity: 1;
+}
+
+.map-tray {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+}
