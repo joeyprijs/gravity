@@ -411,20 +411,10 @@ button.section-toggle--collapsed {
   flex: 1;
 }
 
-/* Muted unit count beside the chevron — what a collapsed section holds. */
+/* Muted unit count on the right — what a collapsed section holds. */
 .section-toggle__count {
   color: var(--text-secondary);
   font-weight: 400;
-  margin-right: var(--spacing);
-}
-
-.section-toggle::after {
-  content: "▾";
-  color: var(--text-secondary);
-}
-
-.section-toggle--collapsed::after {
-  content: "▸";
 }
 
 /* .btn--item — inventory action buttons (Use, Equip, Unequip, Deposit) */
