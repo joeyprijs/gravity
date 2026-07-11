@@ -29,6 +29,14 @@
         "label": "Stealth",
         "description": "+1 Stealth per point"
       },
+      "strength": {
+        "label": "Strength",
+        "description": "+1 Strength per point — added to melee attacks"
+      },
+      "intelligence": {
+        "label": "Intelligence",
+        "description": "+1 Intelligence per point — added to spell attacks"
+      },
       "luck": {
         "label": "Luck",
         "description": "+1 Luck per point"
@@ -44,6 +52,8 @@
   "stats": {
     "level": "{value}",
     "charisma": "{value}",
+    "strength": "{value}",
+    "intelligence": "{value}",
     "hp": "{current}/{max}",
     "ap": "{current}/{max}",
     "ac": "{value}",
@@ -70,6 +80,8 @@
     "tabQuests": "Quests",
     "tabAttributes": "Skills",
     "attributesTitle": "Your Skills",
+    "statPoints": "Points to spend:",
+    "spendStatPoint": "Spend a stat point",
     "tabMap": "Map",
     "equippedSection": "Equipped",
     "equippedTo": "Equipped: {slot}",
@@ -105,10 +117,12 @@
   },
   "itemStats": {
     "actionPoints": "AP: {value}",
-    "bonusHitChance": "Hit: {value}",
+    "hit": "{attribute}: {value}",
     "damageRoll": "Damage: {value}",
     "healingAmount": "Healing: {value}",
     "apRestore": "Restores AP: {value}",
+    "armorClassBonus": "Armor: +{value}",
+    "attributeBonus": "{attribute}: {value}",
     "modifyResource": "{resource}: {value}"
   },
   "inventory": {
@@ -143,12 +157,16 @@
       "perception": "Perception: {mod}\nDifficulty Check (DC): {dc}",
       "charisma": "Charisma: {mod}\nDifficulty Check (DC): {dc}",
       "stealth": "Stealth: {mod}\nDifficulty Check (DC): {dc}",
+      "strength": "Strength: {mod}\nDifficulty Check (DC): {dc}",
+      "intelligence": "Intelligence: {mod}\nDifficulty Check (DC): {dc}",
       "luck": "Luck: {mod}\nDifficulty Check (DC): {dc}"
     },
     "skillBadgeFree": {
       "perception": "Perception",
       "charisma": "Charisma",
       "stealth": "Stealth",
+      "strength": "Strength",
+      "intelligence": "Intelligence",
       "luck": "Luck"
     },
     "skillCritical": "{skill} check: {breakdown} = {roll} vs DC {dc}, a triumph!",

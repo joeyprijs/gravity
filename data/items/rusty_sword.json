@@ -8,5 +8,5 @@
   "attributes": {
     "damageRoll": "1d6"
   },
-  "bonusHitChance": 0
+  "attackAttribute": "strength"
 }

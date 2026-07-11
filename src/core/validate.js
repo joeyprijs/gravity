@@ -73,9 +73,27 @@ export function validateGameData(data, knownActionTypes) {
   validateTables(ctx);
   validateScenes(ctx);
   validateNpcs(ctx);
+  validateItems(ctx);
   validateRules(ctx);
 
   return issues;
+}
+
+// Items: attribute references must name declared attributes (playerDefaults
+// attributes or customAttributes) — a typo'd attackAttribute silently rolls
+// +0 and a typo'd attributeBonuses key silently does nothing on equip.
+function validateItems(ctx) {
+  for (const [id, item] of Object.entries(ctx.items ?? {})) {
+    const group = `Item "${id}"`;
+    if (item.attackAttribute && !ctx.knownSkills.has(item.attackAttribute))
+      ctx.add(group, `attackAttribute "${item.attackAttribute}" is not a declared attribute (playerDefaults.attributes or customAttributes)`);
+    if (item.bonusHitChance !== undefined)
+      ctx.add(group, 'bonusHitChance was removed — accuracy comes from the wielder\'s attackAttribute; model an accurate weapon as attributeBonuses on the governing attribute');
+    for (const key of Object.keys(item.attributes?.attributeBonuses ?? {})) {
+      if (!ctx.knownSkills.has(key))
+        ctx.add(group, `attributeBonuses key "${key}" is not a declared attribute (playerDefaults.attributes or customAttributes)`);
+    }
+  }
 }
 
 // The set of attribute names a skillCheck may reference: the player's base
@@ -293,6 +311,20 @@ function validateNpcs(ctx) {
       if (itemId && !ctx.items[itemId]) ctx.add(group, `equipment[${slot}] → unknown item "${itemId}"`);
     }
 
+    // A combat-capable NPC whose weapon rolls an attackAttribute needs that
+    // attribute in its stat block — otherwise it silently attacks at +0.
+    // Checks the equipped weapons plus the fallback claw NPCs without
+    // weapons swing with.
+    if (npc.attributes?.healthPoints !== undefined) {
+      const wielded = Object.values(npc.equipment || {}).filter(Boolean);
+      if (!wielded.length && ctx.rules?.fallbackWeapons?.enemy) wielded.push(ctx.rules.fallbackWeapons.enemy);
+      for (const itemId of wielded) {
+        const attr = ctx.items[itemId]?.attackAttribute;
+        if (attr && npc.attributes[attr] === undefined)
+          ctx.add(group, `wields "${itemId}" (attackAttribute "${attr}") but declares no ${attr} attribute — its attacks roll +0; add "${attr}" to the NPC's attributes`);
+      }
+    }
+
     for (const [nodeId, node] of Object.entries(npc.conversations || {})) {
       const where = `conversation node "${nodeId}"`;
       validateActions(ctx, group, node.actions, where);
@@ -346,7 +378,14 @@ function validateRules(ctx) {
       ctx.add(group, `customAttributes "${attr.id}": missing locale entry at actions.skillBadge.${attr.id}`);
     if (!locale?.actions?.skillBadgeFree?.[attr.id])
       ctx.add(group, `customAttributes "${attr.id}": missing locale entry at actions.skillBadgeFree.${attr.id} — roll breakdowns fall back to the capitalized id`);
+    if (attr.max !== undefined && !(typeof attr.max === 'number' && attr.max >= (attr.default ?? 0)))
+      ctx.add(group, `customAttributes "${attr.id}": max must be a number ≥ its default`);
   }
+
+  // Level-up point buy: statPoints must be a non-negative integer —
+  // spendStatPoint's whole-point math breaks on fractional banks.
+  if (rules?.levelUp?.statPoints !== undefined && !(Number.isInteger(rules.levelUp.statPoints) && rules.levelUp.statPoints >= 0))
+    ctx.add(group, 'levelUp.statPoints must be a non-negative integer');
 
   for (const stat of (rules?.charCreation?.stats || [])) {
     if (!locale?.charCreation?.stats?.[stat.localeKey])

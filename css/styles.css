@@ -395,12 +395,36 @@ body {
   font-weight: 600;
   color: var(--text-secondary);
   letter-spacing: 0.05em;
+  /* The label absorbs the free space so every row's value column lines up
+     regardless of label length. */
+  flex: 1;
 }
 
 .attr-list__value {
   font-size: var(--font-sm);
   font-weight: 700;
   color: var(--text-primary);
+}
+
+/* Level-up point-buy controls (shown only while points are banked). */
+.attr-list__points {
+  font-size: var(--font-sm);
+  color: var(--accent-color);
+  padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 0.5) 0;
+}
+
+.attr-list__spend {
+  margin-left: calc(var(--spacing) * 1.5);
+  padding: 0 calc(var(--spacing) * 1.25);
+  font-size: var(--font-sm);
+  line-height: 1.6;
+}
+
+/* .button sets display:flex, which outranks the UA stylesheet's [hidden]
+   handling — restate it so the spend buttons actually disappear when the
+   player has no points banked. */
+.attr-list__spend[hidden] {
+  display: none;
 }
 
 

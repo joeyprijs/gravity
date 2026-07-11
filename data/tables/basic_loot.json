@@ -17,6 +17,10 @@
     {
       "item": "simple_dagger",
       "dropWeight": 2
+    },
+    {
+      "item": "eagle_eye_amulet",
+      "dropWeight": 1
     }
   ]
 }

@@ -49,9 +49,9 @@
       "minimum": 0,
       "description": "Action Points (AP) required to swing/equip/use inside combat."
     },
-    "bonusHitChance": {
-      "type": "integer",
-      "description": "Flat bonus added to d20 hit rolls. Used for weapons and spells."
+    "attackAttribute": {
+      "type": "string",
+      "description": "Attribute added to this weapon/spell's hit rolls (e.g. \"strength\", \"intelligence\"). The attacker's value applies — player or enemy."
     },
     "attributes": {
       "type": "object",
@@ -65,6 +65,13 @@
         "armorClassBonus": {
           "type": "integer",
           "description": "Flat AC protection added when equipped. Used for Armor."
+        },
+        "attributeBonuses": {
+          "type": "object",
+          "description": "Attribute deltas applied while equipped and removed on unequip (e.g. { \"perception\": 1 }). Keys must be declared attributes.",
+          "additionalProperties": {
+            "type": "integer"
+          }
         },
         "healingAmount": {
           "type": [

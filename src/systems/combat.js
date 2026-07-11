@@ -2,7 +2,7 @@ import { gameState } from "../core/state.js";
 import { createElement, buildSceneDescription, buildOptionButton, resetOptionsPanel, itemStatLines, apEconomyRules } from "../core/utils.js";
 import { MAX_D20_ROLL, EL, CSS, LOG, WEAPON_SLOTS, ENEMY_CLAW_ID } from "../core/config.js";
 import { roll, parseDamage } from "./dice.js";
-import { rollBreakdown } from "./skill-checks.js";
+import { rollBreakdown, skillLabel } from "./skill-checks.js";
 
 /**
  * CombatSystem manages the full lifecycle of a turn-based combat encounter.
@@ -154,11 +154,15 @@ export class CombatSystem {
    * @param {object} targetEnemy - The cloned NPC object being attacked.
    */
   playerAttack(weapon, targetEnemy) {
-    const hitModifier = weapon.bonusHitChance ?? 0;
+    // Accuracy is the wielder's: d20 + the weapon's governing attribute
+    // (attackAttribute — strength for a sword, intelligence for a spell).
+    // Weapons themselves carry no hit bonus; an "accurate blade" is gear
+    // with attributeBonuses on the governing attribute.
+    const attrId = weapon.attackAttribute;
+    const attrMod = attrId ? (gameState.getPlayer().attributes[attrId] ?? 0) : 0;
     const baseRoll = roll(1, MAX_D20_ROLL);
-    const hitRoll = baseRoll + hitModifier;
-    // The hit bonus comes from the weapon, so the weapon names the modifier.
-    const breakdown = rollBreakdown(baseRoll, hitModifier, weapon.name);
+    const hitRoll = baseRoll + attrMod;
+    const breakdown = rollBreakdown(baseRoll, attrMod, attrId ? skillLabel(this.engine, attrId) : '');
 
     // D&D AC Check: Attack roll must equal or exceed target Armor Class to connect
     if (hitRoll >= targetEnemy.attributes.armorClass) {
@@ -349,10 +353,13 @@ export class CombatSystem {
       eAP -= eWeapon.actionPoints;
       attackCount++;
 
-      const hitModifier = eWeapon.bonusHitChance ?? 0;
+      // Enemies use their own attribute for the weapon's attackAttribute —
+      // an accurate enemy is one with the stat, not one with a special blade.
+      const attrId = eWeapon.attackAttribute;
+      const attrMod = attrId ? (enemy.attributes[attrId] ?? 0) : 0;
       const baseRoll = roll(1, MAX_D20_ROLL);
-      const hitRoll = baseRoll + hitModifier;
-      const breakdown = rollBreakdown(baseRoll, hitModifier, eWeapon.name);
+      const hitRoll = baseRoll + attrMod;
+      const breakdown = rollBreakdown(baseRoll, attrMod, attrId ? skillLabel(this.engine, attrId) : '');
 
       // D&D AC Check: Attack roll must meet or exceed player Armor Class
       if (hitRoll >= player.attributes.ac) {
@@ -517,7 +524,8 @@ class CombatRenderer {
       attacks.forEach(att => {
         const btn = createElement('button', [CSS.BTN, CSS.OPTION_BTN, CSS.OPTION_BTN_STACKED]);
         btn.appendChild(createElement('span', '', this.cs.engine.t('combat.attackTarget', { name: att.name })));
-        btn.appendChild(createElement('span', CSS.OPTION_BTN_BADGE, itemStatLines(this.cs.engine.t.bind(this.cs.engine), att).join('\n')));
+        btn.appendChild(createElement('span', CSS.OPTION_BTN_BADGE,
+          itemStatLines(this.cs.engine.t.bind(this.cs.engine), att, gameState.getPlayer().attributes).join('\n')));
         
         // Disable attack controls that exceed the remaining turn budget
         // (current AP, capped by rules.apEconomy.maxPerTurn).

@@ -1,0 +1,12 @@
+{
+  "name": "Eagle-Eye Amulet",
+  "type": "Armor",
+  "slot": "Amulet",
+  "description": "A hawk's talon set in tarnished silver. The world sharpens when it rests against your chest.",
+  "value": 40,
+  "attributes": {
+    "attributeBonuses": {
+      "perception": 1
+    }
+  }
+}

@@ -4,7 +4,7 @@ import { gameState } from '../src/core/state.js';
 import {
   normalizeOutcomes, pickTier, performSkillCheck, formatMod, resolveRetryText,
   getAttempts, recordAttempt, isResolved, markResolved, resetAttempts,
-  rollBreakdown, skillLabel, resolveTierText, retryCost, retryGate, applyRetryGate, spendRetryCost,
+  rollBreakdown, rollBreakdownParts, skillLabel, resolveTierText, retryCost, retryGate, applyRetryGate, spendRetryCost,
   skillApCost, apGate, applyApGate, spendAp,
 } from '../src/systems/skill-checks.js';
 
@@ -339,4 +339,15 @@ test('applyApGate: appends the AP badge line; free gate is unchanged', () => {
   const out = applyApGate(engine, { cost: 1 }, 'DC 12');
   assert.match(out, /badgeWithApCost/);
   assert.match(out, /"cost":1/);
+});
+
+// ── rollBreakdownParts ────────────────────────────────────────────────────────
+
+test('rollBreakdownParts: names each modifier, skips zeros, handles negatives', () => {
+  assert.equal(rollBreakdownParts(12, [{ mod: 2, label: 'Strength' }, { mod: 1, label: 'Sword' }]),
+    '1d20: 12 + 2 Strength + 1 Sword');
+  assert.equal(rollBreakdownParts(12, [{ mod: 0, label: 'Strength' }, { mod: 1, label: 'Sword' }]),
+    '1d20: 12 + 1 Sword');
+  assert.equal(rollBreakdownParts(12, [{ mod: -1, label: 'Cursed' }]), '1d20: 12 - 1 Cursed');
+  assert.equal(rollBreakdownParts(12, []), '1d20: 12');
 });

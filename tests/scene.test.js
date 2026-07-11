@@ -629,3 +629,31 @@ test('discovery adopts legacy top-level state from older saves', () => {
   // Everything already found in the legacy state → no button.
   assert.equal(sr._buildItemDiscoveryButton(opt, 0, 'cell', {}), null);
 });
+
+// ── Game over: the scene must not clobber the recovery panel ─────────────────
+
+test('_didNavigate treats game over as navigation, so options are not re-rendered over it', () => {
+  // Regression: dying to fast enemies inside the option pipeline that started
+  // the combat — endCombat has already cleared inCombat when the stack
+  // unwinds, and handleOption re-rendered the scene's options on top of the
+  // game-over panel, letting the player fight on after death.
+  const { sr, engine } = makeSR({ scenes: { cell: {} } });
+  gameState.setCurrentSceneId('cell');
+  engine.runActions = () => { engine.isGameOver = true; }; // pipeline kills the player
+  sr.renderOptions = mock.fn();
+  sr.handleOption({ text: 'Prepare to fight!', actions: [{ type: 'combat', enemies: ['x'] }] });
+  assert.equal(sr.renderOptions.mock.callCount(), 0);
+});
+
+test('scene buttons are inert after game over', () => {
+  const { sr, engine, calls } = makeSR({ scenes: { cell: {} } });
+  gameState.setCurrentSceneId('cell');
+  engine.isGameOver = true;
+
+  sr.handleOption({ text: 'Go', actions: [{ type: 'navigate', destination: 'exit' }] });
+  assert.equal(calls.logs.length, 0); // not even the choice echo
+
+  mock.method(Math, 'random', () => 0.9999);
+  sr._buildPassFailButton({ text: 'Try', skillCheck: 'perception', dc: 5 }, 0, 'cell', {}).onclick();
+  assert.equal(calls.logs.length, 0);
+});

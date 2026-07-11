@@ -6,10 +6,13 @@
     "armorClass": 7,
     "actionPoints": 2,
     "initiative": 1,
-    "xpReward": 50
+    "xpReward": 50,
+    "strength": 0
   },
   "equipment": {
     "Right Hand": "rusty_sword"
   },
-  "carriedItems": ["healing_potion"]
+  "carriedItems": [
+    "healing_potion"
+  ]
 }

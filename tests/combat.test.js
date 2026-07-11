@@ -56,8 +56,8 @@ function makeMockEngine(items = {}) {
 }
 
 // Minimal weapon fixture.
-function makeWeapon({ actionPoints = 1, damageRoll = '1d6', bonusHitChance = 0, ac = 0 } = {}) {
-  return { name: 'Test Sword', type: 'Weapon', actionPoints, attributes: { damageRoll }, bonusHitChance };
+function makeWeapon({ actionPoints = 1, damageRoll = '1d6', ac = 0, attackAttribute } = {}) {
+  return { name: 'Test Sword', type: 'Weapon', actionPoints, attributes: { damageRoll }, attackAttribute };
 }
 
 // Minimal enemy fixture. healthPoints > 0 so the loop doesn't skip it.
@@ -182,20 +182,17 @@ test('_resolveEnemyAttacks: stops early when player HP reaches 0', () => {
   Math.random = orig;
 });
 
-test('_resolveEnemyAttacks: bonusHitChance is reflected in hitRolls string', () => {
+test('_resolveEnemyAttacks: attribute-less weapons roll a bare d20 vs player AC', () => {
   const orig = Math.random;
   Math.random = () => 0.9999;
 
   const cs = makeCS();
   cs.engine.t = (key, p) => p ? `${key}:${JSON.stringify(p)}` : key;
-  const weapon = makeWeapon({ actionPoints: 1, bonusHitChance: 2 });
-  const enemy = makeEnemy();
-  const result = cs._resolveEnemyAttacks(weapon, 1, enemy);
+  const result = cs._resolveEnemyAttacks(makeWeapon({ actionPoints: 1 }), 1, makeEnemy());
 
-  // Roll = 20, modifier = +2, named after its source weapon, vs player AC
   assert.match(result.hitRolls[0], /enemyAttackRoll/);
-  assert.match(result.hitRolls[0], /"roll":22/);
-  assert.match(result.hitRolls[0], /1d20: 20 \+ 2 Test Sword/);
+  assert.match(result.hitRolls[0], /"roll":20/);
+  assert.match(result.hitRolls[0], /"breakdown":"1d20: 20"/);
   assert.match(result.hitRolls[0], /"ac":10/);
 
   Math.random = orig;
@@ -503,4 +500,52 @@ test('endCombat victory: refillOnCombatStart false carries the spent pool out', 
   gameState.modifyPlayerStat('ap', -2);
   cs.endCombat(true);
   assert.equal(ap(), 1); // persistent economy: AP survives the combat boundary
+});
+
+// ─── attackAttribute ─────────────────────────────────────────────────────────
+
+test('playerAttack: the weapon\'s attackAttribute joins the hit roll and breakdown', () => {
+  const orig = Math.random;
+  Math.random = () => 0.9999; // d20 → 20, damage max
+
+  gameState.init({
+    ...TEST_RULES,
+    playerDefaults: {
+      ...TEST_RULES.playerDefaults,
+      attributes: { ...TEST_RULES.playerDefaults.attributes, strength: 2 },
+    },
+  });
+  const cs = makeCS();
+  cs.engine.t = (key, p) => p ? `${key}:${JSON.stringify(p)}` : key;
+  cs.inCombat = true;
+  const enemy = makeEnemy();
+  cs.enemies = [enemy];
+
+  cs.playerAttack(makeWeapon({ actionPoints: 1, attackAttribute: 'strength' }), enemy);
+
+  const logged = [];
+  // playerAttack logs through engine.log — recapture via a fresh attack with a collector.
+  cs.engine.log = (type, message) => logged.push(message);
+  cs.playerAttack(makeWeapon({ actionPoints: 1, attackAttribute: 'strength' }), enemy);
+  assert.match(logged[0], /"roll":22/);                       // 20 + 2 Strength
+  assert.match(logged[0], /1d20: 20 \+ 2 Strength/);
+
+  Math.random = orig;
+});
+
+test('_resolveEnemyAttacks: the enemy\'s own attribute powers the weapon\'s attackAttribute', () => {
+  const orig = Math.random;
+  Math.random = () => 0.9999;
+
+  const cs = makeCS();
+  cs.engine.t = (key, p) => p ? `${key}:${JSON.stringify(p)}` : key;
+  const weapon = makeWeapon({ actionPoints: 1, attackAttribute: 'strength' });
+  const enemy = makeEnemy();
+  enemy.attributes.strength = 3;
+  const result = cs._resolveEnemyAttacks(weapon, 1, enemy);
+
+  assert.match(result.hitRolls[0], /"roll":23/);              // 20 + 3 Strength
+  assert.match(result.hitRolls[0], /1d20: 20 \+ 3 Strength/);
+
+  Math.random = orig;
 });

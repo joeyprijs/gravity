@@ -1,4 +1,5 @@
 import { MISSION_STATUS } from "./config.js";
+import { equipmentAttributeBonuses } from "./utils.js";
 
 const MAX_LOG_ENTRIES = 200;
 
@@ -51,6 +52,8 @@ function makeDefaultState(rules) {
   (rules.customAttributes ?? []).forEach(attr => {
     player.attributes[attr.id] = attr.default ?? 0;
   });
+  // Banked level-up stat points (rules.levelUp.statPoints per level).
+  player.statPoints = 0;
   return {
     saveVersion: SAVE_VERSION,
     player,
@@ -231,6 +234,19 @@ class StateManager {
       }
     }
 
+    // Same for attributes the rules declare but the save predates (e.g.
+    // strength/intelligence added after release) — without the backfill,
+    // stat points can never be spent on them and attacks roll +0 forever.
+    if (parsedData.player.attributes) {
+      for (const attr of (this._rules?.customAttributes ?? [])) {
+        if (!(attr.id in parsedData.player.attributes)) {
+          parsedData.player.attributes[attr.id] = attr.default ?? 0;
+        }
+      }
+    }
+    // And the banked stat-point counter (added with rules.levelUp).
+    parsedData.player.statPoints ??= 0;
+
     this.state = parsedData;
     this.notifyListeners();
     this._emitMutation('loadFromObject');
@@ -399,17 +415,61 @@ class StateManager {
     // threshold of 0 would make `xp >= threshold` always true and loop forever.
     // XP still banks; validate.js flags the misconfiguration on boot.
     if (xpPerLevel > 0) {
+      const statPointsPerLevel = this._rules.levelUp?.statPoints ?? 0;
       let threshold = p.level * xpPerLevel;
       while (p.xp >= threshold) {
         p.xp -= threshold;
         p.level++;
         p.resources.hp.max += this._rules.levelUpHpBonus;
         p.resources.hp.current = p.resources.hp.max;
+        // Bank point-buy currency (spent via spendStatPoint / the stats panel).
+        if (statPointsPerLevel > 0) p.statPoints = (p.statPoints ?? 0) + statPointsPerLevel;
         threshold = p.level * xpPerLevel;
       }
     }
     this.notifyListeners('stats');
     this._emitMutation('addXP', { amount });
+  }
+
+  /**
+   * An attribute's base value: the live value minus what worn equipment
+   * contributes (attributeBonuses / armorClassBonus). Point-buy caps compare
+   * against this, so gear can neither block a legitimate spend nor be
+   * equip-cycled to exceed the configured max.
+   *
+   * @param {string} attrId - A declared attribute id.
+   * @returns {number}
+   */
+  playerBaseAttribute(attrId) {
+    const p = this.state.player;
+    let worn = 0;
+    for (const itemId of Object.values(p.equipment ?? {})) {
+      if (itemId) worn += equipmentAttributeBonuses(this._items[itemId])[attrId] ?? 0;
+    }
+    return (p.attributes?.[attrId] ?? 0) - worn;
+  }
+
+  /**
+   * Spends one banked level-up stat point on an attribute: +1 to the
+   * attribute, -1 from the bank. Refused (returns false) when no points are
+   * banked, the attribute isn't declared, or its BASE value (worn bonuses
+   * excluded — see playerBaseAttribute) already sits at the optional
+   * per-attribute cap (customAttributes[].max).
+   *
+   * @param {string} attrId - A declared attribute id (e.g. 'perception').
+   * @returns {boolean} Whether the point was spent.
+   */
+  spendStatPoint(attrId) {
+    const p = this.state.player;
+    if ((p.statPoints ?? 0) <= 0) return false;
+    if (!(p.attributes && attrId in p.attributes)) return false;
+    const decl = (this._rules.customAttributes ?? []).find(a => a.id === attrId);
+    if (decl?.max !== undefined && this.playerBaseAttribute(attrId) >= decl.max) return false;
+    p.attributes[attrId] += 1;
+    p.statPoints -= 1;
+    this.notifyListeners('stats');
+    this._emitMutation('spendStatPoint', { attrId });
+    return true;
   }
 
   // Shared add/remove logic for {item, amount} stack collections (the player

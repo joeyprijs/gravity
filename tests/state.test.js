@@ -283,3 +283,81 @@ test('addXP: does not hang when xpPerLevel is 0 — banks XP without leveling', 
   assert.equal(p.level, 1);
   assert.equal(p.xp, 50);
 });
+
+// ── Level-up stat points (rules.levelUp.statPoints) ───────────────────────────
+
+test('addXP banks stat points per level when rules.levelUp.statPoints is set', () => {
+  gameState.init({
+    ...TEST_RULES,
+    levelUp: { statPoints: 1 },
+    customAttributes: [{ id: 'perception', default: 0, max: 2 }],
+  });
+  gameState.addXP(300); // levels 1→2 (100) and 2→3 (200)
+  const p = gameState.getPlayer();
+  assert.equal(p.level, 3);
+  assert.equal(p.statPoints, 2);
+});
+
+test('addXP banks nothing without rules.levelUp (classic behavior)', () => {
+  gameState.init(TEST_RULES);
+  gameState.addXP(100);
+  assert.equal(gameState.getPlayer().statPoints, 0);
+});
+
+test('spendStatPoint: raises the attribute, respects the cap and the bank', () => {
+  gameState.init({
+    ...TEST_RULES,
+    levelUp: { statPoints: 1 },
+    customAttributes: [{ id: 'perception', default: 0, max: 1 }],
+  });
+  const p = gameState.getPlayer();
+
+  assert.equal(gameState.spendStatPoint('perception'), false); // no points banked
+  gameState.addXP(300); // bank 2
+  assert.equal(gameState.spendStatPoint('perception'), true);
+  assert.equal(p.attributes.perception, 1);
+  assert.equal(p.statPoints, 1);
+
+  assert.equal(gameState.spendStatPoint('perception'), false); // at max
+  assert.equal(gameState.spendStatPoint('nonexistent'), false); // unknown attribute
+  assert.equal(p.statPoints, 1); // refused spends don't drain the bank
+});
+
+test('loadFromObject: backfills attributes and statPoints a save predates', () => {
+  gameState.init({
+    ...TEST_RULES,
+    levelUp: { statPoints: 1 },
+    customAttributes: [{ id: 'strength', default: 0, max: 5 }],
+  });
+  // A save from before strength/statPoints existed.
+  const ok = gameState.loadFromObject({
+    saveVersion: 4,
+    player: { ...structuredClone(TEST_RULES.playerDefaults), attributes: { ac: 10 } },
+    log: [],
+  });
+  assert.equal(ok, true);
+  const p = gameState.getPlayer();
+  assert.equal(p.attributes.strength, 0); // seeded from customAttributes
+  assert.equal(p.statPoints, 0);          // seeded counter
+  gameState.addXP(100);
+  assert.equal(gameState.spendStatPoint('strength'), true); // spendable on old saves
+  assert.equal(p.attributes.strength, 1);
+});
+
+test('spendStatPoint: the cap compares base values, not gear-inflated ones', () => {
+  const items = { charm: { name: 'Charm', attributes: { attributeBonuses: { perception: 1 } } } };
+  gameState.init({
+    ...TEST_RULES,
+    levelUp: { statPoints: 1 },
+    customAttributes: [{ id: 'perception', default: 0, max: 1 }],
+  }, items);
+  const p = gameState.getPlayer();
+  gameState.addXP(300); // bank 2 points
+
+  // Simulate wearing the charm: equipment slot filled, live value raised.
+  p.equipment.Amulet = 'charm';
+  p.attributes.perception = 1; // base 0 + worn 1
+  assert.equal(gameState.playerBaseAttribute('perception'), 0);
+  assert.equal(gameState.spendStatPoint('perception'), true);  // base 0 < cap 1 — gear must not block
+  assert.equal(gameState.spendStatPoint('perception'), false); // base now 1 = cap — gear must not extend
+});

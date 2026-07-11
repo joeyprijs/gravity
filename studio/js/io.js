@@ -244,7 +244,6 @@ export async function resetWorkspace() {
     name: "Unarmed Strike",
     type: "Weapon",
     actionPoints: 1,
-    bonusHitChance: 0,
     attributes: { damageRoll: "1d4" }
   };
   const w1 = await unarmedStrikeHandle.createWritable();
@@ -257,7 +256,6 @@ export async function resetWorkspace() {
     name: "Claws",
     type: "Weapon",
     actionPoints: 1,
-    bonusHitChance: 0,
     attributes: { damageRoll: "1d4" }
   };
   const w2 = await enemyClawHandle.createWritable();

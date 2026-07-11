@@ -36,8 +36,23 @@ export function formatMod(mod) {
  * @returns {string}
  */
 export function rollBreakdown(base, mod, label) {
-  if (!mod) return `1d20: ${base}`;
-  return `1d20: ${base} ${mod < 0 ? '-' : '+'} ${Math.abs(mod)} ${label}`;
+  return rollBreakdownParts(base, [{ mod, label }]);
+}
+
+/**
+ * Multi-modifier variant of rollBreakdown: each part names its own source,
+ * zero modifiers are skipped ("1d20: 12 + 2 Strength + 1 Rusty Sword").
+ * @param {number} base - The natural die result.
+ * @param {Array<{mod: number, label: string}>} parts - Modifiers in display order.
+ * @returns {string}
+ */
+export function rollBreakdownParts(base, parts) {
+  let out = `1d20: ${base}`;
+  for (const { mod, label } of parts) {
+    if (!mod) continue;
+    out += ` ${mod < 0 ? '-' : '+'} ${Math.abs(mod)} ${label}`;
+  }
+  return out;
 }
 
 /**

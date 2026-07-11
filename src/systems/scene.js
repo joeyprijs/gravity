@@ -266,6 +266,7 @@ export class SceneRenderer {
    * @param {object} opt - The option object from the scene's `options` array.
    */
   handleOption(opt) {
+    if (this.engine.isGameOver) return; // only Load/Restart act after death
     this.engine.isGameStart = false;
     if (opt.log !== false) this.engine.log(LOG.PLAYER, opt.text, 'choice');
 
@@ -305,11 +306,16 @@ export class SceneRenderer {
   }
 
   // Returns true when the last pipeline run moved the player somewhere else —
-  // a scene change, combat, dialogue, or a custom UI. Callers skip re-rendering
-  // the current scene's options so they don't clobber the new panel.
+  // a scene change, combat, dialogue, a custom UI, or the game-over screen.
+  // Callers skip re-rendering the current scene's options so they don't
+  // clobber the new panel. isGameOver matters for a death during the very
+  // pipeline that started the combat (fast enemies act first): combat is
+  // already over when the stack unwinds, but the game-over panel with its
+  // Load/Restart buttons must survive.
   _didNavigate(sceneIdBefore) {
     return gameState.getCurrentSceneId() !== sceneIdBefore ||
-      this.engine.inCombat || this.engine.inDialogue || this.engine.inCustomUI;
+      this.engine.inCombat || this.engine.inDialogue || this.engine.inCustomUI ||
+      this.engine.isGameOver;
   }
 
   // Reads one discovery entry's state from the shared per-skill flag map.
@@ -370,6 +376,7 @@ export class SceneRenderer {
       return btn;
     }
     btn.onclick = () => {
+      if (this.engine.isGameOver) return;
       this.engine.isGameStart = false;
       this.engine.log(LOG.PLAYER, displayText, 'choice');
       spendRetryCost(this.engine, gate);
@@ -505,6 +512,7 @@ export class SceneRenderer {
       return btn;
     }
     btn.onclick = () => {
+      if (this.engine.isGameOver) return;
       this.engine.isGameStart = false;
       spendAp(ap);
       const map = typeof state === 'object' && state !== null ? state : {};
@@ -547,6 +555,7 @@ export class SceneRenderer {
       return btn;
     }
     btn.onclick = () => {
+      if (this.engine.isGameOver) return;
       this.engine.isGameStart = false;
       this.engine.log(LOG.PLAYER, displayText, 'choice');
       spendRetryCost(this.engine, gate);

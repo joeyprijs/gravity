@@ -445,3 +445,35 @@ test('modify_resource: flags a missing or undeclared resource; declared is clean
   assert.ok(messages.some(m => m.includes('resource "gold" is not a declared')));
   assert.ok(!messages.some(m => m.includes('"luckPoints" is not a declared')));
 });
+
+test('flags bad levelUp.statPoints, customAttributes max, and item attribute references', () => {
+  const data = makeToolkitData();
+  data.rules.levelUp = { statPoints: -1 };
+  data.rules.customAttributes.push({ id: 'grit', default: 3, max: 1 });
+  data.locale.actions.skillBadge.grit = 'Grit {dc}';
+  data.locale.actions.skillBadgeFree.grit = 'Grit';
+  data.items.wand = { name: 'Wand', type: 'Spell', attackAttribute: 'sorcery' };
+  data.items.ring = { name: 'Ring', type: 'Armor', attributes: { attributeBonuses: { agility: 1 } } };
+  const messages = issuesFor(data);
+  assert.ok(messages.some(m => m.includes('levelUp.statPoints must be a non-negative integer')));
+  assert.ok(messages.some(m => m.includes('"grit": max must be a number')));
+  assert.ok(messages.some(m => m.includes('attackAttribute "sorcery" is not a declared attribute')));
+  assert.ok(messages.some(m => m.includes('attributeBonuses key "agility" is not a declared attribute')));
+});
+
+test('flags a combat NPC whose weapon attackAttribute is missing from its stat block', () => {
+  const data = makeToolkitData();
+  data.items.wand = { name: 'Wand', type: 'Spell', attackAttribute: 'perception' };
+  data.npcs.goblin.equipment = { 'Right Hand': 'wand' };
+  assert.ok(issuesFor(data).some(m => m.includes('declares no perception attribute')));
+
+  // Declaring the attribute clears the warning.
+  data.npcs.goblin.attributes.perception = 2;
+  assert.ok(!issuesFor(data).some(m => m.includes('declares no perception attribute')));
+});
+
+test('flags fractional levelUp.statPoints', () => {
+  const data = makeToolkitData();
+  data.rules.levelUp = { statPoints: 0.5 };
+  assert.ok(issuesFor(data).some(m => m.includes('levelUp.statPoints must be a non-negative integer')));
+});

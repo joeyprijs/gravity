@@ -6,6 +6,7 @@ import { NarrativeLog } from "../systems/narrative.js";
 import { UIManager } from "../ui/ui.js";
 import { SceneRenderer } from "../systems/scene.js";
 import { DEFAULT_WORLD_MAP_SIZE, LOG, TIMER_SAFE_ACTIONS } from "./config.js";
+import { equipmentAttributeBonuses } from "./utils.js";
 import { resolveLanguage } from "./i18n.js";
 import { normalizeCarriedItems, validateGameData } from "./validate.js";
 import { registerBuiltinActions } from "../systems/actions.js";
@@ -397,12 +398,17 @@ class RPGEngine {
       return;
     }
 
+    // Swap the worn attribute bonuses (attributeBonuses + armorClassBonus):
+    // remove the outgoing item's, apply the incoming item's, as one delta.
     const oldItemId = gameState.getPlayer().equipment[targetSlot];
-    const oldBonus = (oldItemId && this.data.items[oldItemId]?.attributes?.armorClassBonus) || 0;
-    const newBonus = itemData.attributes?.armorClassBonus ?? 0;
+    const oldBonuses = equipmentAttributeBonuses(oldItemId ? this.data.items[oldItemId] : null);
+    const newBonuses = equipmentAttributeBonuses(itemData);
     const success = gameState.equipItem(targetSlot, itemId);
     if (!success) return;
-    if (newBonus - oldBonus !== 0) gameState.modifyPlayerStat('ac', newBonus - oldBonus);
+    for (const key of new Set([...Object.keys(oldBonuses), ...Object.keys(newBonuses)])) {
+      const delta = (newBonuses[key] ?? 0) - (oldBonuses[key] ?? 0);
+      if (delta !== 0) gameState.modifyPlayerStat(key, delta);
+    }
     this.log(LOG.PLAYER, this.t('player.equipped', { name: itemData.name, slot: targetSlot }));
     this._spendAP(apCost);
   }
@@ -417,9 +423,11 @@ class RPGEngine {
       return;
     }
     const itemName = this.data.items[itemId]?.name || itemId;
-    const bonus = this.data.items[itemId]?.attributes?.armorClassBonus ?? 0;
+    const bonuses = equipmentAttributeBonuses(this.data.items[itemId]);
     gameState.equipItem(slot, null);
-    if (bonus !== 0) gameState.modifyPlayerStat('ac', -bonus);
+    for (const [key, bonus] of Object.entries(bonuses)) {
+      if (bonus !== 0) gameState.modifyPlayerStat(key, -bonus);
+    }
     this.log(LOG.PLAYER, this.t('player.unequipped', { name: itemName, slot }));
     this._spendAP(unequipCost);
   }

@@ -126,6 +126,34 @@ export function apEconomyRules(rules) {
 }
 
 /**
+ * The attribute deltas one equipment piece carries while worn: its
+ * attributeBonuses map, plus the legacy armorClassBonus folded into 'ac'.
+ * equipItem/unequipItem apply these on swap, so a relic can raise any
+ * declared attribute the way armor has always raised AC.
+ * @param {object|null} itemData - The item definition, or null for an empty slot.
+ * @returns {Object<string, number>}
+ */
+export function equipmentAttributeBonuses(itemData) {
+  const map = { ...(itemData?.attributes?.attributeBonuses || {}) };
+  const acBonus = itemData?.attributes?.armorClassBonus ?? 0;
+  if (acBonus) map.ac = (map.ac ?? 0) + acBonus;
+  return map;
+}
+
+// Item attributes that are authoring data, not player-facing stats — never
+// rendered as stat lines (a scene id on a card helps nobody).
+const HIDDEN_ITEM_ATTRS = new Set(['teleportScene']);
+
+// The display name of an attribute (actions.skillBadgeFree.<id>), falling
+// back to the capitalized id — mirrors skillLabel, but takes the translate
+// function directly so display helpers here don't need an engine reference.
+function attributeLabel(t, attrId) {
+  const key = `actions.skillBadgeFree.${attrId}`;
+  const name = t(key);
+  return name !== key ? name : attrId.charAt(0).toUpperCase() + attrId.slice(1);
+}
+
+/**
  * Builds the displayable stat lines for an item — one string per stat, in a
  * fixed order: AP cost, hit modifier (signed), then scalar attributes. Known
  * stats resolve their label through the locale (itemStats.<key>); unknown
@@ -134,21 +162,37 @@ export function apEconomyRules(rules) {
  *
  * @param {function} t - The engine's translate function.
  * @param {object} itemData - The item definition from data/items.
+ * @param {Object<string, number>} [attributes] - The wielder's attributes,
+ *   used to show the governing attribute's current modifier.
  * @returns {string[]} Stat lines, possibly empty.
  */
-export function itemStatLines(t, itemData) {
+export function itemStatLines(t, itemData, attributes = {}) {
   const lines = [];
   if (itemData.actionPoints !== undefined) {
     lines.push(t('itemStats.actionPoints', { value: itemData.actionPoints }));
   }
-  if (itemData.bonusHitChance !== undefined) {
-    const mod = itemData.bonusHitChance;
-    lines.push(t('itemStats.bonusHitChance', { value: mod >= 0 ? `+${mod}` : `${mod}` }));
+  // The hit line shows the governing attribute with the wielder's current
+  // modifier ("Strength: +2") — accuracy is the wielder's, so show theirs.
+  if (itemData.attackAttribute) {
+    const mod = attributes[itemData.attackAttribute] ?? 0;
+    lines.push(t('itemStats.hit', {
+      attribute: attributeLabel(t, itemData.attackAttribute),
+      value: mod >= 0 ? `+${mod}` : `${mod}`,
+    }));
   }
   if (itemData.attributes) {
     for (const k in itemData.attributes) {
+      if (HIDDEN_ITEM_ATTRS.has(k)) continue;
       const v = itemData.attributes[k];
-      // modifyResource is the one object-shaped attribute with a display line:
+      // attributeBonuses renders one line per worn bonus ("Perception: +1").
+      if (k === 'attributeBonuses' && v && typeof v === 'object') {
+        for (const [attr, amt] of Object.entries(v)) {
+          const value = amt >= 0 ? `+${amt}` : `${amt}`;
+          lines.push(t('itemStats.attributeBonus', { attribute: attributeLabel(t, attr), value }));
+        }
+        continue;
+      }
+      // modifyResource is an object-shaped attribute with a display line:
       // the resource's label plus a signed amount ("Luck Points: +1").
       if (k === 'modifyResource' && v?.resource) {
         const labelKey = `ui.resources.${v.resource}`;

@@ -5,6 +5,9 @@
   "restHealAmount": 10,
   "snackHealAmount": 2,
   "levelUpHpBonus": 5,
+  "levelUp": {
+    "statPoints": 1
+  },
   "xpPerLevel": 100,
   "levelingCurve": "linear",
   "time": {
@@ -94,19 +97,33 @@
   "customAttributes": [
     {
       "id": "perception",
-      "default": 0
+      "default": 0,
+      "max": 5
     },
     {
       "id": "charisma",
-      "default": 0
+      "default": 0,
+      "max": 5
     },
     {
       "id": "stealth",
-      "default": 0
+      "default": 0,
+      "max": 5
+    },
+    {
+      "id": "strength",
+      "default": 0,
+      "max": 5
+    },
+    {
+      "id": "intelligence",
+      "default": 0,
+      "max": 5
     },
     {
       "id": "luck",
-      "default": 0
+      "default": 0,
+      "max": 5
     }
   ],
   "charCreation": {
@@ -139,6 +156,18 @@
       {
         "id": "attributes.stealth",
         "localeKey": "stealth",
+        "bonusPerPoint": 1,
+        "min": 0
+      },
+      {
+        "id": "attributes.strength",
+        "localeKey": "strength",
+        "bonusPerPoint": 1,
+        "min": 0
+      },
+      {
+        "id": "attributes.intelligence",
+        "localeKey": "intelligence",
         "bonusPerPoint": 1,
         "min": 0
       },

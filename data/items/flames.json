@@ -6,7 +6,10 @@
   "value": 100,
   "actionPoints": 2,
   "attributes": {
-    "damageRoll": "2d6"
+    "damageRoll": "2d6",
+    "attributeBonuses": {
+      "intelligence": 1
+    }
   },
-  "bonusHitChance": 2
+  "attackAttribute": "intelligence"
 }

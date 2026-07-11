@@ -103,18 +103,35 @@ export class UIManager {
       }
 
       // Attributes widget: render custom attributes as a label/value list —
-      // one row per stat (the chip style is reserved for the header).
+      // one row per stat (the chip style is reserved for the header). With
+      // rules.levelUp.statPoints configured, each row grows a spend button
+      // and a banked-points line, shown only while points are banked
+      // (see _updateStatPointControls).
       if (tab.widget === 'attributes') {
+        const canSpend = (rules.levelUp?.statPoints ?? 0) > 0;
         const items = (rules.customAttributes ?? []).map(attr =>
           `<div class="attr-list__row">
             <span class="attr-list__label">${attr.id.toUpperCase()}</span>
-            <span class="attr-list__value" data-stat-bind="attributes.${attr.id}"></span>
+            <span class="attr-list__value" data-stat-bind="attributes.${attr.id}"></span>${canSpend ? `
+            <button class="${CSS.BTN} attr-list__spend" data-spend-attr="${attr.id}" title="${this.engine.t('ui.spendStatPoint')}" hidden>+</button>` : ''}
           </div>`
         ).join('');
         panel.innerHTML = `<div class="scene__options">
-          <div class="${CSS.SCENE_SECTION_HEADING}">${this.engine.t('ui.attributesTitle')}</div>
+          <div class="${CSS.SCENE_SECTION_HEADING}">${this.engine.t('ui.attributesTitle')}</div>${canSpend ? `
+          <div class="attr-list__points" hidden>${this.engine.t('ui.statPoints')} <span data-stat-bind="statPoints"></span></div>` : ''}
           <div class="attr-list">${items}</div>
         </div>`;
+        if (canSpend) {
+          panel.addEventListener('click', (e) => {
+            const attrId = e.target?.dataset?.spendAttr;
+            if (!attrId || this.engine.isGameOver) return; // dead characters don't grow
+            // Mid-combat the stats update skips panel rebuilds, so refresh the
+            // combat controls here — the attack buttons show hit modifiers.
+            if (gameState.spendStatPoint(attrId) && this.engine.inCombat) {
+              this.engine.combatSystem.renderer.render();
+            }
+          });
+        }
       }
 
       playerPanel.appendChild(panel);
@@ -191,6 +208,23 @@ export class UIManager {
     this._timeChipValue.textContent = segment ? this.engine.t(`time.segments.${segment}`) : '';
   }
 
+  // Shows the banked stat-point controls while the player has points to
+  // spend; a spend button disables at its attribute's cap
+  // (customAttributes[].max). No-op for games without rules.levelUp.
+  _updateStatPointControls(player) {
+    const pointsRow = document.querySelector('.attr-list__points');
+    if (!pointsRow) return;
+    const points = player.statPoints ?? 0;
+    pointsRow.hidden = points <= 0;
+    const caps = new Map((this.engine.data.rules?.customAttributes ?? []).map(a => [a.id, a.max]));
+    document.querySelectorAll('[data-spend-attr]').forEach(btn => {
+      const max = caps.get(btn.dataset.spendAttr);
+      btn.hidden = points <= 0;
+      // The cap compares base values (worn gear excluded), like spendStatPoint.
+      btn.disabled = max !== undefined && gameState.playerBaseAttribute(btn.dataset.spendAttr) >= max;
+    });
+  }
+
   update(hint) {
     const player = gameState.getPlayer();
 
@@ -202,9 +236,14 @@ export class UIManager {
       document.querySelectorAll('[data-stat-bind]').forEach(el => {
         el.textContent = getByPath(player, el.dataset.statBind) ?? '';
       });
+      this._updateStatPointControls(player);
     }
 
-    if (!hint || hint === 'inventory') {
+    // Item cards show live attribute modifiers (itemStatLines), so stat
+    // changes re-render the inventory too — except mid-combat, where stats
+    // tick on every AP/HP change and the full panel rebuild would churn for
+    // no reason (the combat attack buttons re-render themselves).
+    if (!hint || hint === 'inventory' || (hint === 'stats' && !this.engine.inCombat)) {
       this.inventoryUI.renderInventory(player);
       this.bindItemActions();
     }

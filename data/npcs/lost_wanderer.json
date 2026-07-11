@@ -6,7 +6,8 @@
     "armorClass": 6,
     "actionPoints": 2,
     "initiative": 3,
-    "xpReward": 35
+    "xpReward": 35,
+    "strength": 1
   },
   "equipment": {
     "Right Hand": "simple_dagger"
