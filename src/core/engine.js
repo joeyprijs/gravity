@@ -317,7 +317,7 @@ class RPGEngine {
 
     if (gameState.countPlayerItem(itemId, { includeEquipped: false }) <= 0) return;
 
-    const apCost = itemData.actionPoints ?? 0;
+    const apCost = itemData.attributes?.actionPoints ?? 0;
     // The precheck mirrors _spendAP's turn-budget guard exactly — the effect
     // applies before the spend, so the two must never disagree.
     if (this.inCombat && this.combatSystem.remainingTurnBudget() < apCost) {
@@ -392,7 +392,7 @@ class RPGEngine {
 
     if (gameState.countPlayerItem(itemId, { includeEquipped: false }) <= 0) return;
 
-    const apCost = itemData.actionPoints ?? 0;
+    const apCost = itemData.attributes?.actionPoints ?? 0;
     if (this.inCombat && this.combatSystem.remainingTurnBudget() < apCost) {
       this.log(LOG.SYSTEM, this.t('player.notEnoughAP', { cost: apCost }));
       return;

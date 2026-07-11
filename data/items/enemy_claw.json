@@ -1,9 +1,9 @@
 {
   "name": "Claws",
   "type": "Weapon",
-  "actionPoints": 1,
   "attributes": {
-    "damageRoll": "1d4"
-  },
-  "attackAttribute": "strength"
+    "damageRoll": "1d4",
+    "attackAttribute": "strength",
+    "actionPoints": 1
+  }
 }

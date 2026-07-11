@@ -243,8 +243,7 @@ export async function resetWorkspace() {
   const unarmedStrikeData = {
     name: "Unarmed Strike",
     type: "Weapon",
-    actionPoints: 1,
-    attributes: { damageRoll: "1d4" }
+    attributes: { actionPoints: 1, damageRoll: "1d4" }
   };
   const w1 = await unarmedStrikeHandle.createWritable();
   await w1.write(JSON.stringify(unarmedStrikeData, null, 2) + '\n');
@@ -255,8 +254,7 @@ export async function resetWorkspace() {
   const enemyClawData = {
     name: "Claws",
     type: "Weapon",
-    actionPoints: 1,
-    attributes: { damageRoll: "1d4" }
+    attributes: { actionPoints: 1, damageRoll: "1d4" }
   };
   const w2 = await enemyClawHandle.createWritable();
   await w2.write(JSON.stringify(enemyClawData, null, 2) + '\n');

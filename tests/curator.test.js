@@ -27,7 +27,7 @@ const TEST_RULES = {
 };
 
 const TEST_ITEMS = {
-  relic_crown: { name: 'Ancient Crown', type: 'Flavour', reputation: 25 },
+  relic_crown: { name: 'Ancient Crown', type: 'Flavour', attributes: { reputation: 25 } },
 };
 
 // Minimal engine mock — only the registration surface the plugin touches.

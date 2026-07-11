@@ -26,12 +26,12 @@ const TEST_ITEMS = {
   relic_crown: {
     name: "Ancient Crown",
     type: "Flavour",
-    reputation: 25
+    attributes: { reputation: 25 }
   },
   relic_shard: {
     name: "Sunstone Shard",
     type: "Flavour",
-    reputation: 10
+    attributes: { reputation: 10 }
   },
   rusty_sword: {
     name: "Rusty Sword",

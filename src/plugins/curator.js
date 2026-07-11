@@ -28,7 +28,7 @@ function updateReputation() {
   for (const sceneId in (gameState.state.displays ?? {})) {
     for (const display of gameState.state.displays[sceneId]) {
       if (display.item && curatorItems[display.item]) {
-        rep += curatorItems[display.item].reputation ?? 0;
+        rep += curatorItems[display.item].attributes?.reputation ?? 0;
       }
     }
   }
@@ -39,11 +39,11 @@ function updateReputation() {
 // permanently. obtainedItems tracks which items have already been counted.
 function handleAcquisition(itemId) {
   const itemData = curatorItems[itemId];
-  if (!itemData?.reputation) return;
+  if (!itemData?.attributes?.reputation) return;
   if (!gameState.state.obtainedItems) gameState.state.obtainedItems = [];
   if (gameState.state.obtainedItems.includes(itemId)) return;
   gameState.state.obtainedItems.push(itemId);
-  gameState.modifyPlayerStat('reputation', itemData.reputation);
+  gameState.modifyPlayerStat('reputation', itemData.attributes.reputation);
 }
 
 // Registers the curator's state integrations: the reputation stat handler,
@@ -326,9 +326,9 @@ export class CuratorUI {
       infoContainer.appendChild(createElement('p', CSS.ITEM_DESCRIPTION, itemData.description));
     }
     
-    if (itemData?.value !== undefined || itemData?.actionPoints !== undefined) {
+    if (itemData?.value !== undefined || itemData?.attributes?.actionPoints !== undefined) {
       let stats = this.engine.t('plugin.curator.inspectValue', { value: itemData.value ?? 0 });
-      if (itemData.actionPoints) stats += ` | ${this.engine.t('plugin.curator.inspectApCost', { ap: itemData.actionPoints })}`;
+      if (itemData.attributes?.actionPoints) stats += ` | ${this.engine.t('plugin.curator.inspectApCost', { ap: itemData.attributes.actionPoints })}`;
       infoContainer.appendChild(createElement('p', CSS.ITEM_STATS, stats));
     }
 

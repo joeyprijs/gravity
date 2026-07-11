@@ -57,7 +57,7 @@ function makeMockEngine(items = {}) {
 
 // Minimal weapon fixture.
 function makeWeapon({ actionPoints = 1, damageRoll = '1d6', ac = 0, attackAttribute } = {}) {
-  return { name: 'Test Sword', type: 'Weapon', actionPoints, attributes: { damageRoll }, attackAttribute };
+  return { name: 'Test Sword', type: 'Weapon', attributes: { actionPoints, damageRoll, attackAttribute } };
 }
 
 // Minimal enemy fixture. healthPoints > 0 so the loop doesn't skip it.

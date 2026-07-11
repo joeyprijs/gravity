@@ -100,15 +100,15 @@ function renderItemForm(key, data) {
 
   form.appendChild(formRow('Description', bindTextarea('description')));
   form.appendChild(formRow('Value (gold)', bindInput('value', 'number')));
-  form.appendChild(formRow('Action Points', bindInput('actionPoints', 'number')));
-  form.appendChild(formRow('Reputation', bindInput('reputation', 'number')));
+  form.appendChild(formRow('Action Points', bindInput('attributes.actionPoints', 'number')));
+  form.appendChild(formRow('Reputation', bindInput('attributes.reputation', 'number')));
 
   // Governing attribute for attack rolls (weapons/spells). Clearing the
   // field removes the key (the weapon rolls a bare d20) — the second
   // listener runs after bindInput's and replaces its raw '' write.
-  const attackAttrInput = bindInput('attackAttribute', 'text');
+  const attackAttrInput = bindInput('attributes.attackAttribute', 'text');
   attackAttrInput.addEventListener('input', () => {
-    setPath(data, 'attackAttribute', attackAttrInput.value.trim() || undefined);
+    setPath(data, 'attributes.attackAttribute', attackAttrInput.value.trim() || undefined);
   });
   const hitRow = formRow('Attack Attribute', attackAttrInput);
   form.appendChild(hitRow);

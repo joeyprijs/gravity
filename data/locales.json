@@ -122,6 +122,7 @@
     "healingAmount": "Healing: {value}",
     "apRestore": "Restores AP: {value}",
     "armorClassBonus": "Armor: +{value}",
+    "reputation": "Reputation: {value}",
     "attributeBonus": "{attribute}: {value}",
     "modifyResource": "{resource}: {value}"
   },

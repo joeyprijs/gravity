@@ -3,9 +3,9 @@
   "type": "Weapon",
   "description": "A plain iron dagger. Nothing fancy, but sharp enough.",
   "value": 8,
-  "actionPoints": 1,
   "attributes": {
-    "damageRoll": "1d4+1"
-  },
-  "attackAttribute": "strength"
+    "damageRoll": "1d4+1",
+    "attackAttribute": "strength",
+    "actionPoints": 1
+  }
 }

@@ -8,7 +8,7 @@ const t = (key, p) => p ? `${key}:${JSON.stringify(p)}` : key;
 // ── itemStatLines ─────────────────────────────────────────────────────────────
 
 test('itemStatLines: AP, hit attribute with wielder modifier, then attributes in order', () => {
-  const item = { actionPoints: 1, attackAttribute: 'strength', attributes: { damageRoll: '1d6' } };
+  const item = { attributes: { actionPoints: 1, damageRoll: '1d6', attackAttribute: 'strength' } };
   const lines = itemStatLines(t, item, { strength: 2 });
   assert.match(lines[0], /itemStats\.actionPoints/);
   assert.match(lines[1], /itemStats\.hit.*"Strength".*"\+2"/);

@@ -4,9 +4,9 @@
   "slot": "Right Hand",
   "description": "Conjure a burst of raw fire. Requires no weapon to cast.",
   "value": 100,
-  "actionPoints": 2,
   "attributes": {
-    "damageRoll": "2d6"
-  },
-  "attackAttribute": "intelligence"
+    "damageRoll": "2d6",
+    "attackAttribute": "intelligence",
+    "actionPoints": 2
+  }
 }

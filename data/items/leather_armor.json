@@ -4,8 +4,8 @@
   "slot": "Torso",
   "description": "Tough leather, provides basic protection.",
   "value": 25,
-  "actionPoints": 0,
   "attributes": {
-    "armorClassBonus": 2
+    "armorClassBonus": 2,
+    "actionPoints": 0
   }
 }

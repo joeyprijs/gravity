@@ -140,9 +140,10 @@ export function equipmentAttributeBonuses(itemData) {
   return map;
 }
 
-// Item attributes that are authoring data, not player-facing stats — never
-// rendered as stat lines (a scene id on a card helps nobody).
-const HIDDEN_ITEM_ATTRS = new Set(['teleportScene']);
+// Item attributes the generic stat-line loop must skip: authoring data that
+// isn't a player-facing stat (a scene id on a card helps nobody), and
+// attackAttribute, which gets its own "Uses:" line above the loop.
+const HIDDEN_ITEM_ATTRS = new Set(['teleportScene', 'attackAttribute', 'actionPoints']);
 
 // The display name of an attribute (actions.skillBadgeFree.<id>), falling
 // back to the capitalized id — mirrors skillLabel, but takes the translate
@@ -168,15 +169,17 @@ function attributeLabel(t, attrId) {
  */
 export function itemStatLines(t, itemData, attributes = {}) {
   const lines = [];
-  if (itemData.actionPoints !== undefined) {
-    lines.push(t('itemStats.actionPoints', { value: itemData.actionPoints }));
+  const apCost = itemData.attributes?.actionPoints;
+  if (apCost !== undefined) {
+    lines.push(t('itemStats.actionPoints', { value: apCost }));
   }
   // The hit line shows the governing attribute with the wielder's current
-  // modifier ("Strength: +2") — accuracy is the wielder's, so show theirs.
-  if (itemData.attackAttribute) {
-    const mod = attributes[itemData.attackAttribute] ?? 0;
+  // modifier ("Uses: Strength +2") — accuracy is the wielder's, so show theirs.
+  const attackAttr = itemData.attributes?.attackAttribute;
+  if (attackAttr) {
+    const mod = attributes[attackAttr] ?? 0;
     lines.push(t('itemStats.hit', {
-      attribute: attributeLabel(t, itemData.attackAttribute),
+      attribute: attributeLabel(t, attackAttr),
       value: mod >= 0 ? `+${mod}` : `${mod}`,
     }));
   }

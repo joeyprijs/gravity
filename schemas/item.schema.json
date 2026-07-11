@@ -27,11 +27,6 @@
       "minimum": 0,
       "description": "Gold purchase value. Reselling fetches half value by default."
     },
-    "reputation": {
-      "type": "integer",
-      "minimum": 0,
-      "description": "Reputation value. Contributes to player's reputation upon acquisition and museum's reputation when placed in display cases."
-    },
     "slot": {
       "type": "string",
       "enum": [
@@ -44,19 +39,14 @@
       ],
       "description": "The equipment slot target. Required for weapons, spells, and armor."
     },
-    "actionPoints": {
-      "type": "integer",
-      "minimum": 0,
-      "description": "Action Points (AP) required to swing/equip/use inside combat."
-    },
-    "attackAttribute": {
-      "type": "string",
-      "description": "Attribute added to this weapon/spell's hit rolls (e.g. \"strength\", \"intelligence\"). The attacker's value applies — player or enemy."
-    },
     "attributes": {
       "type": "object",
       "description": "Custom parameter extensions depending on item type.",
       "properties": {
+        "attackAttribute": {
+          "type": "string",
+          "description": "Attribute added to this weapon/spell's hit rolls (e.g. \"strength\", \"intelligence\"). The attacker's value applies — player or enemy."
+        },
         "damageRoll": {
           "type": "string",
           "pattern": "^((\\d+)d(\\d+)([\\+\\-]\\d+)?|\\d+\\-\\d+)$",
@@ -112,6 +102,16 @@
             "amount"
           ],
           "additionalProperties": false
+        },
+        "actionPoints": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Action Points (AP) required to swing/equip/use inside combat."
+        },
+        "reputation": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Reputation value. Contributes to player's reputation upon acquisition and museum's reputation when placed in display cases."
         }
       },
       "additionalProperties": false

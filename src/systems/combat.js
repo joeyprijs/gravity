@@ -155,10 +155,10 @@ export class CombatSystem {
    */
   playerAttack(weapon, targetEnemy) {
     // Accuracy is the wielder's: d20 + the weapon's governing attribute
-    // (attackAttribute — strength for a sword, intelligence for a spell).
-    // Weapons themselves carry no hit bonus; an "accurate blade" is gear
-    // with attributeBonuses on the governing attribute.
-    const attrId = weapon.attackAttribute;
+    // (attributes.attackAttribute — strength for a sword, intelligence for a
+    // spell). Weapons themselves carry no hit bonus; an "accurate blade" is
+    // gear with attributeBonuses on the governing attribute.
+    const attrId = weapon.attributes?.attackAttribute;
     const attrMod = attrId ? (gameState.getPlayer().attributes[attrId] ?? 0) : 0;
     const baseRoll = roll(1, MAX_D20_ROLL);
     const hitRoll = baseRoll + attrMod;
@@ -180,7 +180,7 @@ export class CombatSystem {
       }), 'damage');
 
       if (this._handleEnemyDefeat(targetEnemy)) return;
-      this.engine._spendAP(weapon.actionPoints);
+      this.engine._spendAP(weapon.attributes?.actionPoints ?? 0);
       return;
     }
 
@@ -190,7 +190,7 @@ export class CombatSystem {
     }), 'damage');
 
     // Spend the weapon's AP cost, triggering interface updates or enemy phases
-    this.engine._spendAP(weapon.actionPoints);
+    this.engine._spendAP(weapon.attributes?.actionPoints ?? 0);
   }
 
   /**
@@ -340,7 +340,7 @@ export class CombatSystem {
    *   - attackCount, hits, misses, totalDamage, and breakdowns of rolls.
    */
   _resolveEnemyAttacks(eWeapon, eAP, enemy) {
-    if (!eWeapon.actionPoints) {
+    if (!eWeapon.attributes?.actionPoints) {
       return { attackCount: 0, hits: 0, misses: 0, totalDamage: 0, hitRolls: [], missRolls: [], damageRolls: [] };
     }
 
@@ -349,13 +349,13 @@ export class CombatSystem {
     const hitRolls = [], missRolls = [], damageRolls = [];
 
     // Iterative attack loops checking that resources and targets remain active
-    while (eAP >= eWeapon.actionPoints && player.resources.hp.current > 0 && enemy.attributes.healthPoints > 0) {
-      eAP -= eWeapon.actionPoints;
+    while (eAP >= eWeapon.attributes.actionPoints && player.resources.hp.current > 0 && enemy.attributes.healthPoints > 0) {
+      eAP -= eWeapon.attributes.actionPoints;
       attackCount++;
 
       // Enemies use their own attribute for the weapon's attackAttribute —
       // an accurate enemy is one with the stat, not one with a special blade.
-      const attrId = eWeapon.attackAttribute;
+      const attrId = eWeapon.attributes?.attackAttribute;
       const attrMod = attrId ? (enemy.attributes[attrId] ?? 0) : 0;
       const baseRoll = roll(1, MAX_D20_ROLL);
       const hitRoll = baseRoll + attrMod;
@@ -529,7 +529,7 @@ class CombatRenderer {
         
         // Disable attack controls that exceed the remaining turn budget
         // (current AP, capped by rules.apEconomy.maxPerTurn).
-        if (this.cs.remainingTurnBudget() < att.actionPoints) {
+        if (this.cs.remainingTurnBudget() < (att.attributes?.actionPoints ?? 0)) {
           btn.disabled = true;
         }
         btn.onclick = () => this.cs.playerAttack(att, target);

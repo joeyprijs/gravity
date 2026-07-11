@@ -85,8 +85,15 @@ export function validateGameData(data, knownActionTypes) {
 function validateItems(ctx) {
   for (const [id, item] of Object.entries(ctx.items ?? {})) {
     const group = `Item "${id}"`;
-    if (item.attackAttribute && !ctx.knownSkills.has(item.attackAttribute))
-      ctx.add(group, `attackAttribute "${item.attackAttribute}" is not a declared attribute (playerDefaults.attributes or customAttributes)`);
+    const attackAttr = item.attributes?.attackAttribute;
+    if (attackAttr && !ctx.knownSkills.has(attackAttr))
+      ctx.add(group, `attributes.attackAttribute "${attackAttr}" is not a declared attribute (playerDefaults.attributes or customAttributes)`);
+    if (item.attackAttribute !== undefined)
+      ctx.add(group, 'attackAttribute moved into the attributes object — write attributes.attackAttribute');
+    if (item.actionPoints !== undefined)
+      ctx.add(group, 'actionPoints moved into the attributes object — write attributes.actionPoints');
+    if (item.reputation !== undefined)
+      ctx.add(group, 'reputation moved into the attributes object — write attributes.reputation');
     if (item.bonusHitChance !== undefined)
       ctx.add(group, 'bonusHitChance was removed — accuracy comes from the wielder\'s attackAttribute; model an accurate weapon as attributeBonuses on the governing attribute');
     for (const key of Object.keys(item.attributes?.attributeBonuses ?? {})) {
@@ -319,7 +326,7 @@ function validateNpcs(ctx) {
       const wielded = Object.values(npc.equipment || {}).filter(Boolean);
       if (!wielded.length && ctx.rules?.fallbackWeapons?.enemy) wielded.push(ctx.rules.fallbackWeapons.enemy);
       for (const itemId of wielded) {
-        const attr = ctx.items[itemId]?.attackAttribute;
+        const attr = ctx.items[itemId]?.attributes?.attackAttribute;
         if (attr && npc.attributes[attr] === undefined)
           ctx.add(group, `wields "${itemId}" (attackAttribute "${attr}") but declares no ${attr} attribute — its attacks roll +0; add "${attr}" to the NPC's attributes`);
       }
@@ -481,13 +488,13 @@ function validateRules(ctx) {
     if (eco.refillPerRound === 0 && !(eco.minPerTurn > 0))
       ctx.add(group, 'apEconomy: refillPerRound 0 with no minPerTurn floor — a player who empties their AP mid-fight can never act again for the rest of that combat; add a minPerTurn floor or a per-round refill');
 
-    const positiveCosts = attackItems.map(i => i.actionPoints ?? 0).filter(c => c > 0);
+    const positiveCosts = attackItems.map(i => i.attributes?.actionPoints ?? 0).filter(c => c > 0);
     if (eco.maxPerTurn > 0 && positiveCosts.length && Math.min(...positiveCosts) > eco.maxPerTurn)
       ctx.add(group, `apEconomy.maxPerTurn ${eco.maxPerTurn} is below every weapon/spell AP cost — the player can never act in combat`);
   }
 
   // Every weapon/spell at 0 AP means combat turns never end on their own —
   // the End Turn button becomes the only handoff. Usually an authoring slip.
-  if (attackItems.length && attackItems.every(i => !(i.actionPoints > 0)))
+  if (attackItems.length && attackItems.every(i => !(i.attributes?.actionPoints > 0)))
     ctx.add(group, 'every Weapon/Spell has an AP cost of 0 — combat turns will never end automatically (End Turn becomes the only handoff)');
 }

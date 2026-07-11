@@ -421,14 +421,14 @@ test('apEconomy: flags bad values and the no-recovery configuration', () => {
 
 test('apEconomy: warns when maxPerTurn is below every weapon cost', () => {
   const data = makeToolkitData();
-  data.items.sword = { name: 'Sword', type: 'Weapon', actionPoints: 3 };
+  data.items.sword = { name: 'Sword', type: 'Weapon', attributes: { actionPoints: 3 } };
   data.rules.apEconomy = { maxPerTurn: 2 };
   assert.ok(issuesFor(data).some(m => m.includes('below every weapon/spell AP cost')));
 });
 
 test('warns when every weapon and spell costs 0 AP', () => {
   const data = makeToolkitData();
-  data.items.stick = { name: 'Stick', type: 'Weapon', actionPoints: 0 };
+  data.items.stick = { name: 'Stick', type: 'Weapon', attributes: { actionPoints: 0 } };
   assert.ok(issuesFor(data).some(m => m.includes('combat turns will never end automatically')));
 });
 
@@ -452,18 +452,20 @@ test('flags bad levelUp.statPoints, customAttributes max, and item attribute ref
   data.rules.customAttributes.push({ id: 'grit', default: 3, max: 1 });
   data.locale.actions.skillBadge.grit = 'Grit {dc}';
   data.locale.actions.skillBadgeFree.grit = 'Grit';
-  data.items.wand = { name: 'Wand', type: 'Spell', attackAttribute: 'sorcery' };
+  data.items.wand = { name: 'Wand', type: 'Spell', attributes: { attackAttribute: 'sorcery' } };
+  data.items.oldWand = { name: 'Old Wand', type: 'Spell', attackAttribute: 'perception' };
   data.items.ring = { name: 'Ring', type: 'Armor', attributes: { attributeBonuses: { agility: 1 } } };
   const messages = issuesFor(data);
   assert.ok(messages.some(m => m.includes('levelUp.statPoints must be a non-negative integer')));
   assert.ok(messages.some(m => m.includes('"grit": max must be a number')));
   assert.ok(messages.some(m => m.includes('attackAttribute "sorcery" is not a declared attribute')));
+  assert.ok(messages.some(m => m.includes('attackAttribute moved into the attributes object')));
   assert.ok(messages.some(m => m.includes('attributeBonuses key "agility" is not a declared attribute')));
 });
 
 test('flags a combat NPC whose weapon attackAttribute is missing from its stat block', () => {
   const data = makeToolkitData();
-  data.items.wand = { name: 'Wand', type: 'Spell', attackAttribute: 'perception' };
+  data.items.wand = { name: 'Wand', type: 'Spell', attributes: { attackAttribute: 'perception' } };
   data.npcs.goblin.equipment = { 'Right Hand': 'wand' };
   assert.ok(issuesFor(data).some(m => m.includes('declares no perception attribute')));
 

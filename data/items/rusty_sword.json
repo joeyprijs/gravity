@@ -4,9 +4,9 @@
   "slot": "Right Hand",
   "description": "An old, chipped blade. Better than nothing.",
   "value": 5,
-  "actionPoints": 1,
   "attributes": {
-    "damageRoll": "1d6"
-  },
-  "attackAttribute": "strength"
+    "damageRoll": "1d6",
+    "attackAttribute": "strength",
+    "actionPoints": 1
+  }
 }
