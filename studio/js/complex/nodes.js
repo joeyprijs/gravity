@@ -1,6 +1,10 @@
 import { store, markDirty, setActiveFile } from '../store.js';
 import { el } from '../utils.js';
 
+// A response's pipeline lives either flat (`actions`) or, once outcome tiers
+// are authored, in `outcomes.success.actions` — connections read from both.
+const successActions = resp => resp?.actions ?? resp?.outcomes?.success?.actions ?? [];
+
 const NODE_W   = 240;
 const COL_GAP  = 320;
 const ROW_GAP  = 200;
@@ -120,7 +124,7 @@ function buildGraph(npcKey) {
       if (!card) continue;
 
       (node.responses ?? []).forEach((resp, ri) => {
-        const target = (resp.actions ?? []).find(a => a.type === 'goToConversation')?.node;
+        const target = successActions(resp).find(a => a.type === 'goToConversation')?.node;
         if (!target || !nodeEls[target]) return;
 
         const anchor = card.querySelector(`[data-anchor="${ri}"]`);
@@ -205,7 +209,7 @@ function makeResponseRow(ri, resp, nodeId, convs, npcKey, scrollWrap, svg, redra
   row.appendChild(text);
 
   const anchor = el('div', { class: 'dg-anchor', 'data-anchor': String(ri) });
-  const hasConn = (resp.actions ?? []).some(a => a.type === 'goToConversation' && a.node);
+  const hasConn = successActions(resp).some(a => a.type === 'goToConversation' && a.node);
   if (hasConn) anchor.classList.add('dg-anchor-on');
   row.appendChild(anchor);
 
@@ -245,16 +249,17 @@ function makeResponseRow(ri, resp, nodeId, convs, npcKey, scrollWrap, svg, redra
       const target = tHdr?.dataset.nodeId;
 
       if (target && target !== nodeId) {
-        const actions = resp.actions ?? (resp.actions = []);
+        const actions = resp.actions ?? resp.outcomes?.success?.actions ?? (resp.actions = []);
         const existing = actions.find(a => a.type === 'goToConversation');
         if (existing) existing.node = target;
         else actions.push({ type: 'goToConversation', node: target });
         markDirty(npcKey);
       } else if (!tHdr) {
         // Dropped on empty canvas — remove the existing connection, if any.
-        const idx = (resp.actions ?? []).findIndex(a => a.type === 'goToConversation');
+        const actions = successActions(resp);
+        const idx = actions.findIndex(a => a.type === 'goToConversation');
         if (idx !== -1) {
-          resp.actions.splice(idx, 1);
+          actions.splice(idx, 1);
           anchor.classList.remove('dg-anchor-on');
           markDirty(npcKey);
         }
@@ -321,7 +326,7 @@ export function autoLayout(convs) {
     const next = new Set();
     for (const id of level) {
       for (const resp of convs[id]?.responses ?? []) {
-        for (const a of resp?.actions ?? []) {
+        for (const a of successActions(resp)) {
           if (a.type === 'goToConversation' && a.node && !visited.has(a.node) && convs[a.node]) {
             next.add(a.node);
           }

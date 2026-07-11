@@ -4,8 +4,10 @@
 // outcome tiers. The `outcomes` object is the one authoring
 // shape: every tier (critical/success/partial/failure) carries its own
 // narration and action pipeline. The engine still reads the legacy fields
-// (`actions` = success pipeline, `onFailure` = failure pipeline), but Studio
-// folds them into `outcomes` on open and only ever writes the new shape.
+// (`actions` = success pipeline, `onFailure` = failure pipeline); Studio
+// displays those as their tier but only folds them into `outcomes` when the
+// author edits a tier — rendering must leave the data untouched, because
+// the dialogue graph and unsaved-change tracking read the flat shape too.
 import { el } from '../utils.js';
 import { renderActionPipeline } from './actions.js';
 
@@ -22,6 +24,16 @@ function migrateLegacyPipelines(check) {
   }
   delete check.actions;
   delete check.onFailure;
+}
+
+// Read-only view of a tier that sees through the legacy flat fields, so a
+// not-yet-migrated check still displays its success/failure pipelines.
+function tierView(check, tierName) {
+  const tier = check.outcomes?.[tierName];
+  if (tier) return tier;
+  if (tierName === 'success' && check.actions?.length)   return { actions: check.actions };
+  if (tierName === 'failure' && check.onFailure?.length) return { actions: check.onFailure };
+  return undefined;
 }
 
 // retryText / resultText / tier text areas: one line → string, several → array.
@@ -56,14 +68,22 @@ function labeledCheck(label, checked, onValue) {
 function renderTier(check, tierName, onChange, { hasMargin, hasActions, hint }) {
   const wrap = el('div');
 
+  // The tier object to write to; migrates the legacy flat pipelines first so
+  // every edit lands in the one authored shape.
+  const live = () => {
+    migrateLegacyPipelines(check);
+    check.outcomes ??= {};
+    return check.outcomes[tierName] ??= {};
+  };
+
   function render() {
     wrap.innerHTML = '';
-    const tier = check.outcomes?.[tierName];
+    const tier = tierView(check, tierName);
     if (!tier) {
       const btn = el('button', { class: 'btn btn-secondary btn-sm' }, [`+ ${tierName} tier`]);
       btn.addEventListener('click', () => {
-        if (!check.outcomes) check.outcomes = {};
-        check.outcomes[tierName] = hasActions ? { actions: [] } : {};
+        const t = live();
+        if (hasActions && !Array.isArray(t.actions)) t.actions = [];
         onChange(); render();
       });
       wrap.appendChild(btn);
@@ -75,8 +95,9 @@ function renderTier(check, tierName, onChange, { hasMargin, hasActions, hint }) 
     hdr.appendChild(el('span', { class: 'card-hdr-label' }, [`Outcome: ${tierName}${hint ? ` — ${hint}` : ''}`]));
     const rm = el('button', { class: 'btn-hdr' }, ['✕']);
     rm.addEventListener('click', () => {
-      delete check.outcomes[tierName];
-      if (!Object.keys(check.outcomes).length) delete check.outcomes;
+      migrateLegacyPipelines(check);
+      delete check.outcomes?.[tierName];
+      if (check.outcomes && !Object.keys(check.outcomes).length) delete check.outcomes;
       onChange(); render();
     });
     hdr.appendChild(rm);
@@ -86,16 +107,21 @@ function renderTier(check, tierName, onChange, { hasMargin, hasActions, hint }) 
     if (hasMargin) {
       const row = el('div', { class: 'drop-rhs' });
       const marginLabel = tierName === 'critical' ? 'Beat DC by ≥' : 'Miss DC by ≤';
-      row.append(...labeledNum(marginLabel, tier.margin, v => { tier.margin = v; onChange(); }));
+      row.append(...labeledNum(marginLabel, tier.margin, v => { live().margin = v; onChange(); }));
       body.appendChild(row);
     }
     const ta = el('textarea', { class: 'form-textarea ta-sm', placeholder: 'Narration when this tier lands…' }, [tier.text ?? '']);
     ta.addEventListener('input', () => {
-      tier.text = ta.value || undefined;
+      live().text = ta.value || undefined;
       onChange();
     });
     body.appendChild(ta);
     if (hasActions) {
+      // Bind the pipeline editor to the array where it lives today. If the
+      // check is still legacy-shaped, migration moves this same array object
+      // into outcomes, so the binding survives the first edit. (A tier with
+      // no actions array is always a real outcomes tier — the legacy view
+      // only exists when the flat pipeline does.)
       if (!Array.isArray(tier.actions)) tier.actions = [];
       body.appendChild(renderActionPipeline(tier.actions, onChange));
     }
@@ -114,7 +140,6 @@ function renderTier(check, tierName, onChange, { hasMargin, hasActions, hint }) 
  * @param {{ retry?: boolean }} [opts] - retry: offer the retryText editor.
  */
 export function renderCheckBehavior(check, onChange, { retry = true } = {}) {
-  migrateLegacyPipelines(check);
   const wrap = el('div', { class: 'card-section' });
   wrap.appendChild(el('div', { class: 'card-section-label' }, ['Check Behavior']));
 

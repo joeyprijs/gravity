@@ -168,6 +168,16 @@ test('autoLayout handles cycles without infinite looping', () => {
   assert.equal(Object.keys(pos).length, 2);
 });
 
+test('autoLayout follows connections inside outcome tiers', () => {
+  const convs = {
+    start: { responses: [{ outcomes: { success: { actions: [{ type: 'goToConversation', node: 'next' }] } } }] },
+    next:  { responses: [] },
+  };
+  const pos = autoLayout(convs);
+  assert.equal(pos.next.x > pos.start.x, true);
+  assert.equal(pos.next.y, 40);
+});
+
 // ── rewriteInboundRefs (audit M8: node rename must not leave dangling refs) ───
 
 test('rewriteInboundRefs repoints node-level, response, and onFailure references', () => {

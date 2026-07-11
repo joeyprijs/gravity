@@ -1229,12 +1229,21 @@ body {
   position: absolute;
   top: 0;
   left: 0;
+  /* Above the cards: edges terminate at card borders so they never cross
+     card interiors on their own, and doorway arrows between touching
+     cards must stay visible. Pointer-transparent, so cards keep their
+     clicks and drags. */
+  z-index: 1;
   pointer-events: none;
 }
 
 .map-conn-line {
   stroke: color-mix(in srgb, var(--accent) 55%, transparent);
   stroke-width: 2;
+}
+
+.map-conn-head {
+  fill: color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
 .map-conn-pending {

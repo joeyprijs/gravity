@@ -70,25 +70,33 @@ function buildMapView() {
       if (!scene.mapDefinitions) continue;
       canvas.appendChild(makeSceneCard(key, scene, scrollWrap, svg, redrawEdges));
     }
-    redrawEdges();
+    // Edges need the cards' rendered geometry — wait for layout.
+    requestAnimationFrame(redrawEdges);
     rebuildTray();
   }
 
   // ── Edges: every navigate action whose destination is placed here ────────
+  // Geometry comes from the rendered cards, not mapDefinitions: CSS min
+  // sizes make cards larger than their authored width/height, and the
+  // arrows must land on what the author actually sees.
   function redrawEdges() {
     svg.innerHTML = '';
-    const placed = new Map(regionScenes()
-      .filter(s => s.scene.mapDefinitions)
-      .map(s => [s.id, s.scene.mapDefinitions]));
+    addArrowDef(svg);
+    const cards = new Map();
+    for (const cardEl of canvas.querySelectorAll('.map-scene')) {
+      cards.set(cardEl.dataset.sceneKey.slice('scenes:'.length), cardEl);
+    }
+    const rectOf = c => ({ x: c.offsetLeft, y: c.offsetTop, w: c.offsetWidth, h: c.offsetHeight });
 
-    for (const [id, md] of placed) {
+    for (const [id, cardEl] of cards) {
       const scene = store.files[`scenes:${id}`];
       for (const opt of (scene.options ?? [])) {
-        for (const action of (opt.actions ?? [])) {
+        const pipeline = opt.actions ?? opt.outcomes?.success?.actions ?? [];
+        for (const action of pipeline) {
           if (action.type !== 'navigate') continue;
-          const target = placed.get(action.destination);
+          const target = cards.get(action.destination);
           if (!target) continue;
-          drawEdge(svg, md, target);
+          drawEdge(svg, rectOf(cardEl), rectOf(target));
         }
       }
     }
@@ -152,42 +160,65 @@ function buildMapView() {
   return wrap;
 }
 
-// Straight arrow between two placed scenes, center to center, trimmed so
-// the head lands on the target's edge rather than under the card.
+// Point where the segment from this rect's center toward `toward` crosses
+// the rect's border.
+function borderPoint(rect, toward) {
+  const cx = rect.x + rect.w / 2, cy = rect.y + rect.h / 2;
+  const dx = toward.x - cx, dy = toward.y - cy;
+  const s = Math.min(
+    dx ? (rect.w / 2) / Math.abs(dx) : Infinity,
+    dy ? (rect.h / 2) / Math.abs(dy) : Infinity
+  );
+  if (!Number.isFinite(s)) return { x: cx, y: cy };
+  return { x: cx + dx * s, y: cy + dy * s };
+}
+
+// Straight arrow between two placed scenes, clipped to the rendered card
+// borders so the line spans the gap between cards, with the head sitting
+// on the target's edge. Touching or overlapping cards (tile-style maps
+// have no gap at all) get a short arrow across the shared boundary
+// instead.
 function drawEdge(svg, from, to) {
-  const x1 = from.left + (from.width ?? 50) / 2;
-  const y1 = from.top  + (from.height ?? 50) / 2;
-  const x2 = to.left   + (to.width ?? 50) / 2;
-  const y2 = to.top    + (to.height ?? 50) / 2;
-  const dx = x2 - x1, dy = y2 - y1;
-  const len = Math.hypot(dx, dy) || 1;
-  // Pull the endpoint back to the target's boundary (approximate: half the
-  // smaller card dimension) so the arrowhead is visible.
-  const trim = Math.min(to.width ?? 50, to.height ?? 50) / 2 + 4;
-  const ex = x2 - (dx / len) * trim;
-  const ey = y2 - (dy / len) * trim;
+  const c1 = { x: from.x + from.w / 2, y: from.y + from.h / 2 };
+  const c2 = { x: to.x + to.w / 2, y: to.y + to.h / 2 };
+  const len = Math.hypot(c2.x - c1.x, c2.y - c1.y);
+  if (!len) return;
+
+  let p1 = borderPoint(from, c2);
+  let p2 = borderPoint(to, c1);
+  if ((p2.x - p1.x) * (c2.x - c1.x) + (p2.y - p1.y) * (c2.y - c1.y) <= 0) {
+    const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
+    const ux = (c2.x - c1.x) / len, uy = (c2.y - c1.y) / len;
+    p1 = { x: mx - ux * 12, y: my - uy * 12 };
+    p2 = { x: mx + ux * 12, y: my + uy * 12 };
+  }
 
   const line = document.createElementNS(NS, 'line');
-  line.setAttribute('x1', String(x1));
-  line.setAttribute('y1', String(y1));
-  line.setAttribute('x2', String(ex));
-  line.setAttribute('y2', String(ey));
+  line.setAttribute('x1', String(p1.x));
+  line.setAttribute('y1', String(p1.y));
+  line.setAttribute('x2', String(p2.x));
+  line.setAttribute('y2', String(p2.y));
   line.setAttribute('class', 'map-conn-line');
+  line.setAttribute('marker-end', 'url(#map-arrow)');
   svg.appendChild(line);
+}
 
-  // Arrowhead: two short strokes.
-  const angle = Math.atan2(dy, dx);
-  for (const off of [Math.PI * 0.85, -Math.PI * 0.85]) {
-    const hx = ex + Math.cos(angle + off) * 8;
-    const hy = ey + Math.sin(angle + off) * 8;
-    const head = document.createElementNS(NS, 'line');
-    head.setAttribute('x1', String(ex));
-    head.setAttribute('y1', String(ey));
-    head.setAttribute('x2', String(hx));
-    head.setAttribute('y2', String(hy));
-    head.setAttribute('class', 'map-conn-line');
-    svg.appendChild(head);
-  }
+function addArrowDef(svg) {
+  const defs   = document.createElementNS(NS, 'defs');
+  const marker = document.createElementNS(NS, 'marker');
+  marker.setAttribute('id',           'map-arrow');
+  marker.setAttribute('markerWidth',  '8');
+  marker.setAttribute('markerHeight', '6');
+  marker.setAttribute('refX',         '8');
+  marker.setAttribute('refY',         '3');
+  marker.setAttribute('orient',       'auto');
+  marker.setAttribute('markerUnits',  'userSpaceOnUse');
+  const poly = document.createElementNS(NS, 'polygon');
+  poly.setAttribute('points', '0 0, 8 3, 0 6');
+  poly.setAttribute('class',  'map-conn-head');
+  marker.appendChild(poly);
+  defs.appendChild(marker);
+  svg.appendChild(defs);
 }
 
 function makeSceneCard(sceneKey, scene, scrollWrap, svg, redrawEdges) {
@@ -210,13 +241,17 @@ function makeSceneCard(sceneKey, scene, scrollWrap, svg, redrawEdges) {
     e.preventDefault();
 
     const wRect = scrollWrap.getBoundingClientRect();
-    const startX = md.left + (md.width ?? 50) / 2;
-    const startY = md.top + (md.height ?? 50) / 2;
+    // The pending line hangs off the anchor dot at the card's rendered
+    // right edge — the place the author is actually dragging from.
+    const startX = card.offsetLeft + card.offsetWidth;
+    const startY = card.offsetTop + card.offsetHeight / 2;
 
     const pending = document.createElementNS(NS, 'line');
     pending.setAttribute('class', 'map-conn-line map-conn-pending');
     pending.setAttribute('x1', String(startX));
     pending.setAttribute('y1', String(startY));
+    pending.setAttribute('x2', String(startX));
+    pending.setAttribute('y2', String(startY));
     svg.appendChild(pending);
 
     const onMove = ev => {
