@@ -926,8 +926,10 @@ button.section-toggle--collapsed {
   inset: 0;
   z-index: 200;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  /* margin:auto on the panel (not align/justify center) so a panel taller
+     than a short viewport scrolls instead of clipping its top off-screen. */
+  overflow-y: auto;
+  padding: calc(var(--spacing) * 3);
   background: radial-gradient(circle at top right, var(--bg-gradient-start), var(--bg-gradient-end));
 }
 
@@ -940,6 +942,7 @@ button.section-toggle--collapsed {
   display: flex;
   flex-direction: column;
   gap: calc(var(--spacing) * 3);
+  margin: auto;
 }
 
 .char-creation__title {
