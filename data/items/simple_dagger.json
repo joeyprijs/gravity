@@ -5,10 +5,7 @@
   "value": 8,
   "actionPoints": 1,
   "attributes": {
-    "damageRoll": "1d4+1",
-    "attributeBonuses": {
-      "strength": 1
-    }
+    "damageRoll": "1d4+1"
   },
   "attackAttribute": "strength"
 }

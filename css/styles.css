@@ -302,7 +302,9 @@ body {
 .option-btn__badge {
   display: block;
   color: var(--accent-color);
-  font-size: var(--font-sm);
+  /* Same size as .item__stats (body default) so badge facts read at the
+     same scale as the inventory's stat lines. */
+  font-size: var(--font-md);
   font-weight: 400;
   margin-top: var(--spacing);
   /* Badges may stack facts (stakes, odds, costs) as lines: locale strings
