@@ -92,6 +92,11 @@ export const CSS = {
   CARD_ACTIONS:           'card__actions',
   CARD_LIST:              'card-list',
   CARD_DONE:              'card--completed',
+  CARD_COMPACT:           'card--compact',
+
+  // Collapsible section headings (inventory panel)
+  SECTION_TOGGLE:           'section-toggle',
+  SECTION_TOGGLE_COLLAPSED: 'section-toggle--collapsed',
 
   // Map
   MAP_NODE:               'map-node',

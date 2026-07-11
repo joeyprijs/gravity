@@ -374,6 +374,48 @@ button.card:disabled {
   opacity: 0.8;
 }
 
+/* Compact card — actionless items (keepsakes, key items): title and stats
+   only, slimmer padding, so collections stay scannable. */
+.card--compact {
+  padding: var(--spacing) calc(var(--spacing) * 2);
+}
+
+/* Collapsible section headings: the whole heading is the toggle. Restates
+   the .scene__section-heading underline/padding explicitly (this selector
+   outranks it, so it can't inherit them through the cascade); the chevron
+   flips with state. */
+button.section-toggle {
+  -webkit-appearance: none;
+  appearance: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  background: none;
+  border: 0;
+  border-bottom: calc(var(--spacing) * 0.125) solid var(--panel-border);
+  padding: 0 0 calc(var(--spacing) * 1.5);
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* A collapsed section is just its heading — drop the gap its list left. */
+button.section-toggle--collapsed {
+  margin-bottom: 0;
+}
+
+.section-toggle::after {
+  content: "▾";
+  color: var(--text-secondary);
+}
+
+.section-toggle--collapsed::after {
+  content: "▸";
+}
+
 /* .btn--item — inventory action buttons (Use, Equip, Unequip, Deposit) */
 .btn--item { }
 

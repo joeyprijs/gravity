@@ -2,12 +2,17 @@ import { createElement, buildCard, getItemLabel, itemStatLines } from "../core/u
 import { EL, CSS, WEAPON_SLOTS } from "../core/config.js";
 import { gameState } from "../core/state.js";
 
+// Collapse state persists across page loads — it's a UI preference, not game
+// state, so it lives beside the page rather than in the save file.
+const COLLAPSED_KEY = 'gravity:inventory-collapsed';
+
 // InventoryUI renders the inventory and equipment sidebar panels. Every item
-// renders as a standard card (see buildCard) with its controls in the
-// actions row.
+// renders as a standard card (see buildCard); sections collapse via their
+// headings so a grown inventory stays navigable.
 export class InventoryUI {
   constructor(engine) {
     this.engine = engine;
+    this._collapsed = new Set(this._loadCollapsed());
   }
 
   renderInventory(player) {
@@ -29,11 +34,10 @@ export class InventoryUI {
       return;
     }
 
-    // Equipped section
+    // Equipped section — no description line: the slot and stats are what
+    // matter for gear you already know you own.
     if (equippedEntries.length > 0) {
-      const section = createElement('div', CSS.SCENE_OPTIONS);
-      section.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('ui.equippedSection')));
-      const ul = createElement('ul', CSS.CARD_LIST);
+      const ul = this._buildSection(panel, 'equipped', this.engine.t('ui.equippedSection'));
       equippedEntries.forEach(([slot, itemId]) => {
         const itemData = this.engine.data.items[itemId];
         if (!itemData) return;
@@ -43,18 +47,15 @@ export class InventoryUI {
         ul.appendChild(buildCard({
           tag: 'li',
           title: itemData.name,
-          body: [itemData.description, this.engine.t('ui.equippedTo', { slot })],
+          body: this.engine.t('ui.equippedTo', { slot }),
           stats: this._itemStats(itemData),
           actions: [btn],
         }));
       });
-      section.appendChild(ul);
-      panel.appendChild(section);
     }
 
     // Unequipped items, grouped by type
     let currentType = null;
-    let currentSection = null;
     let currentUl = null;
     sortedInv.forEach(invItem => {
       const itemData = this.engine.data.items[invItem.item];
@@ -62,11 +63,7 @@ export class InventoryUI {
 
       if (itemData.type !== currentType) {
         currentType = itemData.type;
-        currentSection = createElement('div', CSS.SCENE_OPTIONS);
-        currentSection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t(`itemTypes.${itemData.type}`)));
-        currentUl = createElement('ul', CSS.CARD_LIST);
-        currentSection.appendChild(currentUl);
-        panel.appendChild(currentSection);
+        currentUl = this._buildSection(panel, `type:${itemData.type}`, this.engine.t(`itemTypes.${itemData.type}`));
       }
 
       const actions = [];
@@ -91,9 +88,22 @@ export class InventoryUI {
         actions.push(btn);
       }
 
+      const title = getItemLabel(this.engine.data.items, invItem.item, invItem.amount);
+      // Actionless items (keepsakes, key items) render compact — title and
+      // stats only — so collections don't turn the panel into a scroll.
+      if (actions.length === 0) {
+        currentUl.appendChild(buildCard({
+          tag: 'li',
+          title,
+          stats: this._itemStats(itemData),
+          classes: [CSS.CARD_COMPACT],
+        }));
+        return;
+      }
+
       currentUl.appendChild(buildCard({
         tag: 'li',
-        title: getItemLabel(this.engine.data.items, invItem.item, invItem.amount),
+        title,
         body: [
           itemData.description,
           itemData.type === 'Armor' && itemData.slot ? this.engine.t('ui.armorSlot', { slot: itemData.slot }) : null,
@@ -102,6 +112,44 @@ export class InventoryUI {
         actions,
       }));
     });
+  }
+
+  // Builds a collapsible section (heading toggle + card list) and returns
+  // the list element. Collapsing hides the list in place — no re-render, so
+  // the action buttons keep their bindings.
+  _buildSection(panel, key, labelText) {
+    const section = createElement('div', CSS.SCENE_OPTIONS);
+    const heading = createElement('button', [CSS.SCENE_SECTION_HEADING, CSS.SECTION_TOGGLE], labelText);
+    const ul = createElement('ul', CSS.CARD_LIST);
+    const applyState = (collapsed) => {
+      ul.hidden = collapsed;
+      heading.classList.toggle(CSS.SECTION_TOGGLE_COLLAPSED, collapsed);
+    };
+    applyState(this._collapsed.has(key));
+    heading.onclick = () => {
+      const collapsed = !this._collapsed.delete(key);
+      if (collapsed) this._collapsed.add(key);
+      applyState(collapsed);
+      this._saveCollapsed();
+    };
+    section.appendChild(heading);
+    section.appendChild(ul);
+    panel.appendChild(section);
+    return ul;
+  }
+
+  _loadCollapsed() {
+    try {
+      return JSON.parse(globalThis.localStorage?.getItem(COLLAPSED_KEY) || '[]');
+    } catch {
+      return [];
+    }
+  }
+
+  _saveCollapsed() {
+    try {
+      globalThis.localStorage?.setItem(COLLAPSED_KEY, JSON.stringify([...this._collapsed]));
+    } catch { /* storage unavailable (private mode) — collapse state stays per-session */ }
   }
 
   // The card's accent stat lines — same lines as the combat attack buttons
