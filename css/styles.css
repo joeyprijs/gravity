@@ -54,8 +54,6 @@
   --font-lg: 16px;
   --font-xl: 18px;
   --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-  /* Book face for the story text; UI stays on --font-ui. */
-  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
 
   /* Spacing */
   --spacing: 8px;
@@ -155,22 +153,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: calc(var(--spacing) * 0);
-}
-
-.game__header {
-  background: var(--panel-bg);
-  box-shadow: 0 0 0 1px var(--panel-border);
-  padding: calc(var(--spacing) * 2.5);
-  display: flex;
-  flex-flow: row wrap;
-  justify-content: flex-start;
-
-  .game__stats,
-  .game__controls {
-    display: flex;
-    flex-flow: row wrap;
-    justify-content: flex-start;
-  }
 }
 
 .game__scene-options,
@@ -343,11 +325,16 @@ button.card:disabled {
   color: var(--text-secondary);
 }
 
-/* Accent stat lines — \n-joined by the builders, one fact per row. */
+/* Accent stat lines — a <ul> of <li>s in container cards, block spans in
+   button cards (see buildCard). Either way: one fact per row. */
 .card__stats {
   display: block;
   color: var(--accent-color);
-  white-space: pre-line;
+  list-style: none;
+}
+
+.card__stats > * {
+  display: block;
 }
 
 .card__actions {
@@ -381,9 +368,9 @@ button.card:disabled {
 }
 
 /* Collapsible section headings: the whole heading is the toggle. Restates
-   the .scene__section-heading underline/padding explicitly (this selector
-   outranks it, so it can't inherit them through the cascade); the chevron
-   flips with state. */
+   the .section-heading underline/padding explicitly (this selector
+   outranks it, so it can't inherit them through the cascade); the +/−
+   indicator flips with state. */
 button.section-toggle {
   -webkit-appearance: none;
   appearance: none;
@@ -411,6 +398,16 @@ button.section-toggle--collapsed {
   flex: 1;
 }
 
+/* − while expanded, + while collapsed. */
+.section-toggle__label::before {
+  content: '−';
+  margin-right: calc(var(--spacing) * 1);
+}
+
+button.section-toggle--collapsed .section-toggle__label::before {
+  content: '+';
+}
+
 /* Muted unit count on the right — what a collapsed section holds. */
 .section-toggle__count {
   color: var(--text-secondary);
@@ -420,69 +417,16 @@ button.section-toggle--collapsed {
 /* .btn--item — inventory action buttons (Use, Equip, Unequip, Deposit) */
 .btn--item { }
 
-/* ==========================================================================
- HEADER: PLAYER STATS
- ========================================================================== */
-
-.game__stats {
-  display: flex;
-  flex-flow: row wrap;
-  align-items: center;
-}
-
-.stat-group {
-  display: flex;
-  flex-flow: row wrap;
-  gap: calc(var(--spacing) * 1);
-  padding: 0 calc(var(--spacing) * 2);
-  border-left: 1px solid var(--panel-border);
-
-  &:first-child {
-    padding-left: 0;
-    border-left: none;
-  }
-}
-
-/* Chips stack their label over their value — each stat stays narrow, so the
-   header holds the whole row without crowding on smaller screens. */
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: calc(var(--spacing) * 0.75);
-  padding: calc(var(--spacing) * 1.25) calc(var(--spacing) * 1.75);
-  line-height: 1;
-  background: var(--list-item-bg);
-  border: 1px solid var(--panel-border);
-}
-
-.stat-item__label {
-  font-size: var(--font-xs);
-  font-weight: 600;
-  color: var(--text-secondary);
-  letter-spacing: 0.05em;
-}
-
-.stat-item__value {
-  font-size: var(--font-sm);
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.stat-item--name {
-  display: block;
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--accent-color);
-  font-weight: 700;
-  font-size: var(--font-md);
-}
-
 /* Skills tab: attributes as a list — label left, value right, one per row. */
 .attr-list {
   display: flex;
   flex-direction: column;
+}
+
+/* display:flex outranks the UA stylesheet's [hidden] handling — restate it
+   so collapsing a sheet section actually hides the list. */
+.attr-list[hidden] {
+  display: none;
 }
 
 .attr-list__row {
@@ -497,20 +441,20 @@ button.section-toggle--collapsed {
   border-bottom: none;
 }
 
+/* The section heading's own margin supplies the gap above the list — without
+   this the first row's padding stacks on it and the rows look detached. */
+.attr-list__row:first-child {
+  padding-top: 0;
+}
+
 .attr-list__label {
-  font-size: var(--font-xs);
-  font-weight: 600;
-  color: var(--text-secondary);
-  letter-spacing: 0.05em;
   /* The label absorbs the free space so every row's value column lines up
      regardless of label length. */
   flex: 1;
 }
 
 .attr-list__value {
-  font-size: var(--font-sm);
   font-weight: 700;
-  color: var(--text-primary);
 }
 
 /* Level-up point-buy controls (shown only while points are banked). */
@@ -536,20 +480,14 @@ button.section-toggle--collapsed {
 
 
 /* ==========================================================================
- HEADER: GAME CONTROLS
+ SIDEBAR: OPTIONS TAB
  ========================================================================== */
 
-.game__controls {
+/* Save/load/restart, stacked full width. */
+.options-actions {
+  display: flex;
+  flex-direction: column;
   gap: calc(var(--spacing) * 1);
-  margin-left: auto;
-  /* Center the buttons instead of letting flex stretch them to the bar's
-     height — taller neighbors (multi-line chips) must not inflate them. */
-  align-items: center;
-
-  button {
-    justify-content: center;
-    height: 40px;
-  }
 }
 
 /* ==========================================================================
@@ -585,6 +523,30 @@ button.section-toggle--collapsed {
  MAIN: SCENE
  ========================================================================== */
 
+/* Scene top bar: player stats and the world clock pinned above the
+   narrative. The negative margins pull it flush with the panel edges; the
+   narrative scrolls beneath it, so it needs no position: sticky. */
+.scene__topbar {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: calc(var(--spacing) * -4) calc(var(--spacing) * -4) calc(var(--spacing) * 3);
+  padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 4);
+  background: var(--list-item-bg);
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.scene__topbar-stats {
+  display: flex;
+  flex-flow: row wrap;
+  gap: calc(var(--spacing) * 3);
+}
+
+.scene__topbar-stat-value {
+  font-weight: 700;
+}
+
 .scene__narrative {
   overflow-y: auto;
   flex-grow: 1;
@@ -609,10 +571,9 @@ button.section-toggle--collapsed {
   background: var(--scrollbar-thumb-hover);
 }
 
-/* The story column reads like a book page: serif face, a capped measure
-   centered in the panel, and generous leading. UI chrome stays sans. */
+/* The story column reads like a book page: a capped measure centered in
+   the panel, and generous leading. */
 .scene {
-  font-family: var(--font-serif);
   font-size: var(--font-lg);
   max-width: 68ch;
   margin-inline: auto;
@@ -742,20 +703,20 @@ button.section-toggle--collapsed {
  MAIN: SCENE ACTIONS
  ========================================================================== */
 
-.scene__options {
+.panel-section {
   display: flex;
   flex-direction: column;
 }
 
-.scene__options--skills {
+.panel-section--skills {
   flex-grow: 0;
 }
 
-.scene__options + .scene__options {
+.panel-section + .panel-section {
   margin-top: calc(var(--spacing) * 3);
 }
 
-.scene__section-heading {
+.section-heading {
   margin-bottom: calc(var(--spacing) * 2);
   color: var(--text-primary);
   font-weight: 600;
@@ -764,7 +725,7 @@ button.section-toggle--collapsed {
 }
 
 
-.scene__options .card {
+.panel-section .card {
   margin-bottom: calc(var(--spacing) * 2);
 
   &:last-child {

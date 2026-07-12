@@ -1,11 +1,21 @@
 import { gameState } from "../core/state.js";
-import { clearElement, createElement, getByPath } from "../core/utils.js";
+import { clearElement, createElement, escapeHtml, getByPath } from "../core/utils.js";
 import { EL, CSS, LOG } from "../core/config.js";
 import { getDay, getSegment } from "../systems/time.js";
+import { skillLabel } from "../systems/skill-checks.js";
 import { MapManager } from "../world/map.js";
 import { ChestUI } from "./chest-ui.js";
 import { QuestUI } from "./quest-ui.js";
 import { InventoryUI } from "./inventory-ui.js";
+
+// Sheet section collapse state persists across page loads — a UI preference,
+// not game state, same treatment as the inventory's (see inventory-ui.js).
+const SHEET_COLLAPSED_KEY = 'gravity:sheet-collapsed';
+
+// A data-stat-bind span for an innerHTML template — the stats update loop
+// (see update()) fills every bound span on each stats change. Shared by the
+// sheet's character section and the scene top bar.
+const bindSpan = (path) => `<span data-stat-bind="${path}"></span>`;
 
 export class UIManager {
   constructor(engine) {
@@ -17,12 +27,12 @@ export class UIManager {
 
   setup() {
     this._buildTabs();
-    this._buildTimeChip();
-    this._buildResourceChips();
+    this._buildTopBar();
     this.map.setup();
 
-    // Save
-    document.getElementById(EL.BTN_SAVE).addEventListener('click', () => {
+    // Save/load/restart buttons live in the options tab (the 'options'
+    // widget, built by _buildTabs above) — absent in games without one.
+    document.getElementById(EL.BTN_SAVE)?.addEventListener('click', () => {
       if (this.engine.inCombat) {
         this.engine.log(LOG.SYSTEM, this.engine.t('player.noCombatSave'));
         return;
@@ -33,7 +43,7 @@ export class UIManager {
 
     // Load
     const fileInput = document.getElementById(EL.FILE_UPLOAD);
-    document.getElementById(EL.BTN_LOAD).addEventListener('click', () => fileInput.click());
+    document.getElementById(EL.BTN_LOAD)?.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -61,7 +71,7 @@ export class UIManager {
     });
 
     // Restart
-    document.getElementById(EL.BTN_RESTART).addEventListener('click', () => {
+    document.getElementById(EL.BTN_RESTART)?.addEventListener('click', () => {
       gameState.reset();
       window.location.reload();
     });
@@ -99,28 +109,72 @@ export class UIManager {
 
       // Map widget: inject minimap structure so MapManager.setup() can find it
       if (tab.widget === 'map') {
-        panel.innerHTML = `<div class="scene__options"><div class="minimap" id="minimap" title="Click to open full map" hidden><div class="minimap__canvas" id="minimap-canvas"></div></div></div>`;
+        panel.innerHTML = `<div class="${CSS.PANEL_SECTION}"><div class="minimap" id="minimap" title="Click to open full map" hidden><div class="minimap__canvas" id="minimap-canvas"></div></div></div>`;
       }
 
-      // Attributes widget: render custom attributes as a label/value list —
-      // one row per stat (the chip style is reserved for the header). With
-      // rules.levelUp.statPoints configured, each row grows a spend button
-      // and a banked-points line, shown only while points are banked
-      // (see _updateStatPointControls).
+      // Options widget: the save/load/restart buttons. The click handlers
+      // bind in setup() right after the tabs are built.
+      if (tab.widget === 'options') {
+        panel.innerHTML = `<div class="${CSS.PANEL_SECTION}">
+          <div class="options-actions">
+            <button class="${CSS.BTN}" id="${EL.BTN_SAVE}">${escapeHtml(this.engine.t('ui.btnSave'))}</button>
+            <button class="${CSS.BTN}" id="${EL.BTN_LOAD}">${escapeHtml(this.engine.t('ui.btnLoad'))}</button>
+            <button class="${CSS.BTN}" id="${EL.BTN_RESTART}">${escapeHtml(this.engine.t('ui.btnRestart'))}</button>
+          </div>
+        </div>`;
+      }
+
+      // Attributes widget: the character sheet. A character section (same
+      // stats as the scene top bar, plus name/level/initiative) above the
+      // custom-attribute list, both as label/value rows. With
+      // rules.levelUp.statPoints configured, each attribute row grows a
+      // spend button and a banked-points line, shown only while points are
+      // banked (see _updateStatPointControls).
       if (tab.widget === 'attributes') {
         const canSpend = (rules.levelUp?.statPoints ?? 0) > 0;
+        // The data-stat-bind spans ride the existing stats update loop.
+        const statRow = (label, valueHtml) =>
+          `<div class="attr-list__row">
+            <span class="attr-list__label">${escapeHtml(label)}</span>
+            <span class="attr-list__value">${valueHtml}</span>
+          </div>`;
+        const characterRows = [
+          statRow(this.engine.t('ui.statName'), bindSpan('name')),
+          statRow(this.engine.t('ui.statLevel'), bindSpan('level')),
+          statRow(this.engine.t('ui.statHp'), `${bindSpan('resources.hp.current')}/${bindSpan('resources.hp.max')}`),
+          statRow(this.engine.t('ui.statAc'), bindSpan('attributes.ac')),
+          statRow(this.engine.t('ui.statAp'), `${bindSpan('resources.ap.current')}/${bindSpan('resources.ap.max')}`),
+          statRow(this.engine.t('ui.statInitiative'), bindSpan('attributes.initiative')),
+          statRow(this.engine.t('ui.statGold'), bindSpan('resources.gold')),
+          ...this._headerResourceEntries().map(([label, valueHtml]) => statRow(label, valueHtml)),
+        ].join('');
         const items = (rules.customAttributes ?? []).map(attr =>
           `<div class="attr-list__row">
-            <span class="attr-list__label">${attr.id.toUpperCase()}</span>
-            <span class="attr-list__value" data-stat-bind="attributes.${attr.id}"></span>${canSpend ? `
-            <button class="${CSS.BTN} attr-list__spend" data-spend-attr="${attr.id}" title="${this.engine.t('ui.spendStatPoint')}" hidden>+</button>` : ''}
+            <span class="attr-list__label">${escapeHtml(skillLabel(this.engine, attr.id))}</span>
+            <span class="attr-list__value" data-stat-bind="attributes.${escapeHtml(attr.id)}"></span>${canSpend ? `
+            <button class="${CSS.BTN} attr-list__spend" data-spend-attr="${escapeHtml(attr.id)}" title="${escapeHtml(this.engine.t('ui.spendStatPoint'))}" hidden>+</button>` : ''}
           </div>`
         ).join('');
-        panel.innerHTML = `<div class="scene__options">
-          <div class="${CSS.SCENE_SECTION_HEADING}">${this.engine.t('ui.attributesTitle')}</div>${canSpend ? `
-          <div class="attr-list__points" hidden>${this.engine.t('ui.statPoints')} <span data-stat-bind="statPoints"></span></div>` : ''}
+        const sectionHeading = (key, labelText) =>
+          `<button class="${CSS.SECTION_HEADING} ${CSS.SECTION_TOGGLE}" data-section="${key}">
+            <span class="${CSS.SECTION_TOGGLE_LABEL}">${escapeHtml(labelText)}</span>
+          </button>`;
+        // One panel-section wrapper per section, like the inventory panel —
+        // the adjacent-sibling margin is what spaces the sections apart. The
+        // banked-points line sits outside the collapsible body so a player
+        // with points to spend sees the cue even while Skills is collapsed.
+        panel.innerHTML = `<div class="${CSS.PANEL_SECTION}">
+          ${sectionHeading('character', this.engine.t('ui.sheetCharacterTitle'))}
+          <div class="attr-list attr-list--character" data-section-body="character">${characterRows}</div>
+        </div>
+        <div class="${CSS.PANEL_SECTION}">
+          ${sectionHeading('skills', this.engine.t('ui.attributesTitle'))}${canSpend ? `
+          <div class="attr-list__points" hidden>${escapeHtml(this.engine.t('ui.statPoints'))} <span data-stat-bind="statPoints"></span></div>` : ''}
+          <div data-section-body="skills">
           <div class="attr-list">${items}</div>
+          </div>
         </div>`;
+        this._bindSheetToggles(panel);
         if (canSpend) {
           panel.addEventListener('click', (e) => {
             const attrId = e.target?.dataset?.spendAttr;
@@ -152,60 +206,99 @@ export class UIManager {
     });
   }
 
-  // Injects the world-clock chip into the header stats bar. Only present when
-  // the game opts into a readable clock via rules.time.ticksPerDay — a game
-  // without time config keeps today's HUD untouched.
-  _buildTimeChip() {
-    if (!this.engine.data.rules?.time?.ticksPerDay) return;
-    const statsBar = document.getElementById(EL.PLAYER_BASIC_STATS);
-    if (!statsBar) return;
-    const group = createElement('div', 'stat-group');
-    const item = createElement('div', 'stat-item stat-item--time');
-    // Stacked like every other chip: "Day 1" as the label, the segment
-    // ("Evening") as the value — empty when segments aren't configured.
-    this._timeChipLabel = createElement('span', 'stat-item__label', '');
-    this._timeChipValue = createElement('span', 'stat-item__value');
-    item.append(this._timeChipLabel, this._timeChipValue);
-    group.appendChild(item);
-    statsBar.appendChild(group);
-    this._updateTimeChip();
-  }
-
-  // Injects a header chip per resource listed in rules.headerResources — the
-  // general way a game surfaces a custom resource (e.g. luckPoints) beside the
-  // built-in HP/AP/Gold. Labels come from ui.resources.<id>; the current/max
-  // data-stat-bind spans ride the existing stats update loop.
-  _buildResourceChips() {
-    const ids = this.engine.data.rules?.headerResources || [];
-    if (!ids.length) return;
-    const statsBar = document.getElementById(EL.PLAYER_BASIC_STATS);
-    if (!statsBar) return;
-    const group = createElement('div', 'stat-group');
-    ids.forEach(id => {
-      const res = gameState.getPlayer().resources?.[id];
-      if (!res || typeof res !== 'object' || !('current' in res)) return;
-      const item = createElement('div', 'stat-item');
-      item.appendChild(createElement('span', 'stat-item__label', this.engine.t(`ui.resources.${id}`)));
-      const value = createElement('span', 'stat-item__value');
-      const current = createElement('span');
-      current.dataset.statBind = `resources.${id}.current`;
-      const max = createElement('span');
-      max.dataset.statBind = `resources.${id}.max`;
-      value.append(current, '/', max);
-      item.appendChild(value);
-      group.appendChild(item);
+  // Wires the sheet's section headings as collapse toggles — same behavior
+  // as the inventory sections (see InventoryUI._buildSection): the body hides
+  // in place, so bindings and buttons survive, and the state persists.
+  _bindSheetToggles(panel) {
+    const toggles = panel.querySelectorAll(`.${CSS.SECTION_TOGGLE}`);
+    // Sections start collapsed; the stored set (even an empty one) only
+    // exists once the player has toggled something, and wins from then on.
+    const allKeys = () => new Set([...toggles].map(btn => btn.dataset.section));
+    let collapsed;
+    try {
+      const stored = globalThis.localStorage?.getItem(SHEET_COLLAPSED_KEY);
+      collapsed = stored ? new Set(JSON.parse(stored)) : allKeys();
+    } catch {
+      collapsed = allKeys();
+    }
+    toggles.forEach(btn => {
+      const key = btn.dataset.section;
+      const body = panel.querySelector(`[data-section-body="${key}"]`);
+      const applyState = (isCollapsed) => {
+        body.hidden = isCollapsed;
+        btn.classList.toggle(CSS.SECTION_TOGGLE_COLLAPSED, isCollapsed);
+      };
+      applyState(collapsed.has(key));
+      btn.onclick = () => {
+        const isCollapsed = !collapsed.delete(key);
+        if (isCollapsed) collapsed.add(key);
+        applyState(isCollapsed);
+        try {
+          globalThis.localStorage?.setItem(SHEET_COLLAPSED_KEY, JSON.stringify([...collapsed]));
+        } catch { /* storage unavailable (private mode) — collapse state stays per-session */ }
+      };
     });
-    if (group.children.length) statsBar.appendChild(group);
   }
 
-  _updateTimeChip() {
-    if (!this._timeChipValue) return;
-    const timeRules = this.engine.data.rules?.time;
+  // Builds the bar pinned to the top of the scene panel: combat-relevant
+  // stats on the left (HP/AC/AP plus any rules.headerResources, e.g. luck
+  // points), the world clock on the right (only with rules.time.ticksPerDay).
+  // It sits above the narrative, which is the panel's scroll container — so
+  // the bar stays put while the story scrolls. The data-stat-bind spans ride
+  // the stats update loop; the time text is filled by _updateTimeBar.
+  _buildTopBar() {
+    const scenePanel = document.getElementById(EL.SCENE_PANEL);
+    if (!scenePanel) return;
+    const bar = createElement('div', 'scene__topbar');
+
+    const stats = createElement('div', 'scene__topbar-stats');
+    const stat = (label, valueHtml) => {
+      const item = createElement('span', 'scene__topbar-stat');
+      item.innerHTML = `${escapeHtml(label)}: <span class="scene__topbar-stat-value">${valueHtml}</span>`;
+      return item;
+    };
+    stats.append(
+      stat(this.engine.t('ui.statHp'), `${bindSpan('resources.hp.current')}/${bindSpan('resources.hp.max')}`),
+      stat(this.engine.t('ui.statAc'), bindSpan('attributes.ac')),
+      stat(this.engine.t('ui.statAp'), `${bindSpan('resources.ap.current')}/${bindSpan('resources.ap.max')}`),
+      stat(this.engine.t('ui.statGold'), bindSpan('resources.gold')),
+      ...this._headerResourceEntries().map(([label, valueHtml]) => stat(label, valueHtml)),
+    );
+    bar.appendChild(stats);
+
+    if (this.engine.data.rules?.time?.ticksPerDay) {
+      this._timeBarEl = createElement('div', 'scene__topbar-time');
+      bar.appendChild(this._timeBarEl);
+    }
+
+    scenePanel.prepend(bar);
+    this._updateTimeBar();
+  }
+
+  // The rules.headerResources entries that render as a label plus a bound
+  // current/max value — shared by the sheet's character section and the
+  // scene top bar so the two surfaces can't drift apart.
+  // @returns {Array<[string, string]>} [label, valueHtml] pairs.
+  _headerResourceEntries() {
+    const player = gameState.getPlayer();
+    return (this.engine.data.rules?.headerResources || [])
+      .filter(id => { const r = player.resources?.[id]; return r && typeof r === 'object' && 'current' in r; })
+      .map(id => [
+        this.engine.t(`ui.resources.${id}`),
+        `${bindSpan(`resources.${id}.current`)}/${bindSpan(`resources.${id}.max`)}`,
+      ]);
+  }
+
+  // Renders "Day 1: Morning" as one plain string — or just "Day 1" for
+  // games whose time config has no named segments. The element is cached by
+  // _buildTopBar; this runs on every stats notification.
+  _updateTimeBar() {
+    if (!this._timeBarEl) return;
+    const timeRules = this.engine.data.rules.time;
     const ticks = gameState.getTicks();
-    const day = getDay(ticks, timeRules);
+    const dayText = this.engine.t('ui.timeChipDay', { day: getDay(ticks, timeRules) });
     const segment = getSegment(ticks, timeRules);
-    this._timeChipLabel.textContent = this.engine.t('ui.timeChipDay', { day });
-    this._timeChipValue.textContent = segment ? this.engine.t(`time.segments.${segment}`) : '';
+    this._timeBarEl.textContent = segment ? `${dayText}: ${this.engine.t(`time.segments.${segment}`)}` : dayText;
   }
 
   // Shows the banked stat-point controls while the player has points to
@@ -229,7 +322,7 @@ export class UIManager {
     const player = gameState.getPlayer();
 
     if (!hint || hint === 'stats' || hint === 'time') {
-      this._updateTimeChip();
+      this._updateTimeBar();
     }
 
     if (!hint || hint === 'stats') {

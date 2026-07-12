@@ -233,7 +233,7 @@ export class SceneRenderer {
     });
 
     if (skillBtns.length > 0) {
-      const heading = createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('ui.skillsHeading'));
+      const heading = createElement('div', CSS.SECTION_HEADING, this.engine.t('ui.skillsHeading'));
       skillsContainer.appendChild(heading);
       skillBtns.forEach(b => skillsContainer.appendChild(b));
       skillsContainer.removeAttribute('hidden');

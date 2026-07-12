@@ -187,17 +187,20 @@ export function performSkillCheck(engine, skillId, dc, outcomes = null, attempts
 }
 
 /**
- * Builds the badge for a skill-check button/response: the DC plus the
- * player's current modifier, resolved through the locale (a badge string
- * without a {mod} placeholder simply doesn't show it).
+ * Builds the badge lines for a skill-check button/response: the player's
+ * current modifier (resolved through the locale — a badge string without a
+ * {mod} placeholder simply doesn't show it), then the DC on its own line.
  * @param {object} engine - The RPGEngine instance (used for locale).
  * @param {string} skillId - Attribute ID the check rolls.
  * @param {number} dc - Difficulty class shown on the badge.
- * @returns {string}
+ * @returns {string[]}
  */
 export function skillBadge(engine, skillId, dc) {
   const mod = gameState.getPlayer().attributes[skillId] ?? 0;
-  return engine.t(`actions.skillBadge.${skillId}`, { dc, mod: formatMod(mod) });
+  return [
+    engine.t(`actions.skillBadge.${skillId}`, { dc, mod: formatMod(mod) }),
+    engine.t('actions.skillBadgeDc', { dc }),
+  ];
 }
 
 /**
@@ -229,19 +232,23 @@ export function retryGate(engine, attempts) {
   return { cost: policy.amount, resource: policy.resource, blocked: have < policy.amount };
 }
 
+// Normalizes a badge (null | string | string[]) to an array of lines, so the
+// gates below can append their cost lines uniformly.
+const badgeLines = (badge) => Array.isArray(badge) ? badge : badge ? [badge] : [];
+
 /**
- * Appends the retry cost to a check badge when a retry charges one. The
- * currency's display name comes from ui.resources.<resource>. Returns the
- * (possibly rewritten) badge text.
+ * Appends the retry cost to a check badge when a retry charges one, as its
+ * own badge line. The currency's display name comes from
+ * ui.resources.<resource>. Returns the (possibly extended) badge lines.
  * @param {object} engine - The RPGEngine instance (used for locale).
  * @param {{cost: number, resource?: string}} gate - Result of retryGate().
- * @param {string} badge - The base badge text.
- * @returns {string}
+ * @param {?string|string[]} badge - The base badge line(s), or null.
+ * @returns {?string|string[]}
  */
 export function applyRetryGate(engine, gate, badge) {
   if (gate.cost <= 0) return badge;
   const label = engine.t(`ui.resources.${gate.resource}`);
-  return engine.t('actions.badgeWithRetryCost', { badge, cost: gate.cost, resource: label });
+  return [...badgeLines(badge), engine.t('actions.badgeRetryCost', { cost: gate.cost, resource: label })];
 }
 
 /**
@@ -290,16 +297,15 @@ export function apGate(engine, cost) {
  * Appends the AP cost to a check badge when the attempt charges one, as its
  * own badge line ("AP: 1"). Without a base badge (a plain dialogue response
  * with an explicit apCost) the AP line stands alone. Returns the (possibly
- * rewritten) badge text.
+ * extended) badge lines.
  * @param {object} engine - The RPGEngine instance (used for locale).
  * @param {{cost: number}} gate - Result of apGate().
- * @param {?string} badge - The base badge text, or null.
- * @returns {?string}
+ * @param {?string|string[]} badge - The base badge line(s), or null.
+ * @returns {?string|string[]}
  */
 export function applyApGate(engine, gate, badge) {
   if (gate.cost <= 0) return badge;
-  if (!badge) return engine.t('actions.badgeApCost', { cost: gate.cost });
-  return engine.t('actions.badgeWithApCost', { badge, cost: gate.cost });
+  return [...badgeLines(badge), engine.t('actions.badgeApCost', { cost: gate.cost })];
 }
 
 /**

@@ -126,18 +126,29 @@ function buildExhibitsTable(engine, sceneId) {
   return `<div class="exhibits-table-container"><table class="exhibits-table">${header}<tbody>${rows}</tbody></table></div>`;
 }
 
-function injectReputationHeader() {
-  if (document.querySelector('.stat-item--reputation')) return;
-  const target = document.querySelector('.stat-item--gold')?.parentNode;
-  if (target) {
-    const repItem = document.createElement('div');
-    repItem.className = 'stat-item stat-item--reputation';
-    repItem.innerHTML = `
-      <span class="stat-item__label">REP</span>
-      <span class="stat-item__value" data-stat-bind="attributes.reputation"></span>
-    `;
-    target.appendChild(repItem);
-  }
+// Whether the sheet row has been injected — checked before touching the DOM
+// so the subscribe callback below costs a boolean once injection is done.
+let sheetRowInjected = false;
+
+// Injects a reputation row into the sheet tab's character list (the
+// attributes widget), after the gold row.
+function injectReputationSheetRow(engine) {
+  if (sheetRowInjected) return;
+  const list = document.querySelector('.attr-list--character');
+  if (!list) return;
+  const row = document.createElement('div');
+  row.className = 'attr-list__row attr-list__row--reputation';
+  row.innerHTML = `
+    <span class="attr-list__label">${escapeHtml(engine.t('plugin.curator.reputationLabel'))}</span>
+    <span class="attr-list__value" data-stat-bind="attributes.reputation"></span>
+  `;
+  // The stats update loop only fills binds on 'stats' notifications; seed the
+  // value here so the row isn't blank when injected by a non-stats one.
+  row.querySelector('[data-stat-bind]').textContent = getMuseumReputation();
+  const goldRow = list.querySelector('[data-stat-bind="resources.gold"]')?.closest('.attr-list__row');
+  if (goldRow) goldRow.insertAdjacentElement('afterend', row);
+  else list.appendChild(row);
+  sheetRowInjected = true;
 }
 
 export default function curatorPlugin(engine) {
@@ -181,10 +192,11 @@ export default function curatorPlugin(engine) {
     engine.log(LOG.SYSTEM, engine.t('plugin.curator.displayAddedLog', { name: displayName }));
   });
 
-  // 4. Inject reputation stat DOM element into header
-  injectReputationHeader();
+  // 4. Inject the reputation row into the sheet tab. The sheet panel doesn't
+  // exist yet at plugin-load time (ui.setup runs later), so injection rides
+  // the state notifications and retries until the panel appears.
   gameState.subscribe(() => {
-    injectReputationHeader();
+    injectReputationSheetRow(engine);
   });
 }
 
@@ -227,9 +239,9 @@ export class CuratorUI {
     container.appendChild(doneBtn);
 
     // Museum Reputation Section
-    const repSection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION, 'curator-panel__rep']);
+    const repSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC, 'curator-panel__rep']);
 
-    const repTitle = createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('plugin.curator.museumReputationHeading'));
+    const repTitle = createElement('div', CSS.SECTION_HEADING, this.engine.t('plugin.curator.museumReputationHeading'));
     repSection.appendChild(repTitle);
 
     const repVal = getMuseumReputation();
@@ -239,8 +251,8 @@ export class CuratorUI {
     panel.insertBefore(repSection, skillsContainer);
 
     // 2. Exhibits Section
-    const exhibitsSection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);
-    exhibitsSection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('plugin.curator.curatorHeadingExhibits')));
+    const exhibitsSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
+    exhibitsSection.appendChild(createElement('div', CSS.SECTION_HEADING, this.engine.t('plugin.curator.curatorHeadingExhibits')));
 
     const displays = gameState.getDisplaysForScene(sceneId);
     if (displays.length > 0) {
@@ -269,7 +281,7 @@ export class CuratorUI {
     const p = gameState.getPlayer();
     const canInstall = p.resources.gold >= installCost;
     
-    const installSection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);
+    const installSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
     const installBtn = buildOptionButton(
       this.engine.t('plugin.curator.curatorInstall', { cost: installCost }),
       canInstall ? null : this.engine.t('ui.notEnoughGold')
@@ -312,8 +324,8 @@ export class CuratorUI {
     container.appendChild(backBtn);
 
     // 2. Display Details Section
-    const detailSection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);
-    detailSection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, display.name));
+    const detailSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
+    detailSection.appendChild(createElement('div', CSS.SECTION_HEADING, display.name));
 
     // Item Info
     const infoContainer = createElement('div', [CSS.CARD, 'curator-panel__item-info']);
@@ -361,8 +373,8 @@ export class CuratorUI {
     container.appendChild(cancelBtn);
 
     // 2. Select Artifact Section
-    const selectSection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);
-    selectSection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('plugin.curator.curatorSelectArtifact')));
+    const selectSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
+    selectSection.appendChild(createElement('div', CSS.SECTION_HEADING, this.engine.t('plugin.curator.curatorSelectArtifact')));
 
     // Get eligible player inventory items
     const player = gameState.getPlayer();

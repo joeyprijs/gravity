@@ -487,13 +487,22 @@ class CombatRenderer {
     // Clear panel areas to focus strictly on recovery controls
     const { container } = resetOptionsPanel();
 
-    const loadBtn = buildOptionButton(this.cs.engine.t('combat.loadLastSave'));
-    loadBtn.onclick = () => document.getElementById(EL.BTN_LOAD).click();
-    container.appendChild(loadBtn);
+    // The recovery controls delegate to the options-tab buttons, which only
+    // exist when rules.tabs includes an 'options' widget — skip a control
+    // whose target is missing rather than render a dead button.
+    const loadTarget = document.getElementById(EL.BTN_LOAD);
+    if (loadTarget) {
+      const loadBtn = buildOptionButton(this.cs.engine.t('combat.loadLastSave'));
+      loadBtn.onclick = () => loadTarget.click();
+      container.appendChild(loadBtn);
+    }
 
-    const restartBtn = buildOptionButton(this.cs.engine.t('combat.restartGame'));
-    restartBtn.onclick = () => document.getElementById(EL.BTN_RESTART).click();
-    container.appendChild(restartBtn);
+    const restartTarget = document.getElementById(EL.BTN_RESTART);
+    if (restartTarget) {
+      const restartBtn = buildOptionButton(this.cs.engine.t('combat.restartGame'));
+      restartBtn.onclick = () => restartTarget.click();
+      container.appendChild(restartBtn);
+    }
 
     // Disable sidebar actions to prevent post-death items activation
     document.querySelectorAll(`.${CSS.BTN_ITEM}`).forEach(btn => { btn.disabled = true; });
@@ -516,15 +525,15 @@ class CombatRenderer {
 
     // Render individual combat sections for each active opponent
     livingEnemies.forEach(target => {
-      const section = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);
-      section.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING,
+      const section = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
+      section.appendChild(createElement('div', CSS.SECTION_HEADING,
         this.cs.engine.t('combat.enemyStats', { name: target.name, hp: target.attributes.healthPoints, ac: target.attributes.armorClass })
       ));
       
       attacks.forEach(att => {
         const btn = buildOptionButton(
           this.cs.engine.t('combat.attackTarget', { name: att.name }),
-          itemStatLines(this.cs.engine.t.bind(this.cs.engine), att, gameState.getPlayer().attributes).join('\n'));
+          itemStatLines(this.cs.engine.t.bind(this.cs.engine), att, gameState.getPlayer().attributes));
         
         // Disable attack controls that exceed the remaining turn budget
         // (current AP, capped by rules.apEconomy.maxPerTurn).

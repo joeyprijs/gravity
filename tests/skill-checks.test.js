@@ -63,7 +63,7 @@ test('normalizeOutcomes: a critical tier never does less than a plain success', 
   let tiers = normalizeOutcomes({ actions: [{ type: 'a' }], outcomes: { critical: { text: 'wow' } } });
   assert.deepEqual(tiers.critical.actions, [{ type: 'a' }]);
 
-  // Studio authors an empty pipeline — still falls back.
+  // An authoring tool may emit an empty pipeline — still falls back.
   tiers = normalizeOutcomes({ actions: [{ type: 'a' }], outcomes: { critical: { actions: [] } } });
   assert.deepEqual(tiers.critical.actions, [{ type: 'a' }]);
 
@@ -266,12 +266,14 @@ test('spendRetryCost: deducts the resource and logs the spend with the balance l
   assert.match(logs[0].message, /ui\.resources\.luckPoints/);               // label resolved through locale
 });
 
-test('applyRetryGate: appends the cost with the resource label; free gate is unchanged', () => {
+test('applyRetryGate: appends the cost as its own badge line; free gate is unchanged', () => {
   const engine = retryEngine({});
   assert.equal(applyRetryGate(engine, { cost: 0 }, 'DC 12'), 'DC 12');
   const out = applyRetryGate(engine, { cost: 1, resource: 'luckPoints' }, 'DC 12');
-  assert.match(out, /badgeWithRetryCost/);
-  assert.match(out, /ui\.resources\.luckPoints/); // label resolved through locale
+  assert.equal(out.length, 2);
+  assert.equal(out[0], 'DC 12');
+  assert.match(out[1], /badgeRetryCost/);
+  assert.match(out[1], /ui\.resources\.luckPoints/); // label resolved through locale
 });
 
 test('rollBreakdown: formats breakdown strings correctly', () => {
@@ -333,12 +335,14 @@ test('apGate/spendAp: blocks unaffordable attempts and deducts on spend', () => 
   assert.equal(gameState.getPlayer().resources.ap.current, 1);
 });
 
-test('applyApGate: appends the AP badge line; free gate is unchanged', () => {
+test('applyApGate: appends the AP cost as its own badge line; free gate is unchanged', () => {
   const engine = retryEngine({});
   assert.equal(applyApGate(engine, { cost: 0 }, 'DC 12'), 'DC 12');
   const out = applyApGate(engine, { cost: 1 }, 'DC 12');
-  assert.match(out, /badgeWithApCost/);
-  assert.match(out, /"cost":1/);
+  assert.equal(out.length, 2);
+  assert.equal(out[0], 'DC 12');
+  assert.match(out[1], /badgeApCost/);
+  assert.match(out[1], /"cost":1/);
 });
 
 // ── rollBreakdownParts ────────────────────────────────────────────────────────

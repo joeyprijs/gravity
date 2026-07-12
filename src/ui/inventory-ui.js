@@ -28,7 +28,7 @@ export class InventoryUI {
     });
 
     if (equippedEntries.length === 0 && sortedInv.length === 0) {
-      const section = createElement('div', CSS.SCENE_OPTIONS);
+      const section = createElement('div', CSS.PANEL_SECTION);
       section.appendChild(createElement('p', CSS.CARD_BODY, this.engine.t('ui.inventoryEmpty')));
       panel.appendChild(section);
       return;
@@ -123,8 +123,8 @@ export class InventoryUI {
   // the action buttons keep their bindings. The muted count tells the player
   // what a collapsed section holds without opening it.
   _buildSection(panel, key, labelText, count) {
-    const section = createElement('div', CSS.SCENE_OPTIONS);
-    const heading = createElement('button', [CSS.SCENE_SECTION_HEADING, CSS.SECTION_TOGGLE]);
+    const section = createElement('div', CSS.PANEL_SECTION);
+    const heading = createElement('button', [CSS.SECTION_HEADING, CSS.SECTION_TOGGLE]);
     heading.appendChild(createElement('span', CSS.SECTION_TOGGLE_LABEL, labelText));
     if (count !== undefined) heading.appendChild(createElement('span', CSS.SECTION_TOGGLE_COUNT, String(count)));
     const ul = createElement('ul', CSS.CARD_LIST);
@@ -163,6 +163,6 @@ export class InventoryUI {
   // (see itemStatLines); the hit line shows the player's current modifier.
   _itemStats(itemData) {
     const lines = itemStatLines(this.engine.t.bind(this.engine), itemData, gameState.getPlayer().attributes);
-    return lines.length > 0 ? lines.join('\n') : undefined;
+    return lines.length > 0 ? lines : undefined;
   }
 }

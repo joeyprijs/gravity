@@ -33,23 +33,23 @@ export class QuestUI {
     }
 
     if (activeList.length > 0) {
-      const section = createElement('div', CSS.SCENE_OPTIONS);
-      section.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('ui.questsActive')));
+      const section = createElement('div', CSS.PANEL_SECTION);
+      section.appendChild(createElement('div', CSS.SECTION_HEADING, this.engine.t('ui.questsActive')));
       const ul = createElement('ul', CSS.CARD_LIST);
       activeList.forEach(li => ul.appendChild(li));
       section.appendChild(ul);
       panel.appendChild(section);
     }
     if (completedList.length > 0) {
-      const section = createElement('div', CSS.SCENE_OPTIONS);
-      section.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('ui.questsCompleted')));
+      const section = createElement('div', CSS.PANEL_SECTION);
+      section.appendChild(createElement('div', CSS.SECTION_HEADING, this.engine.t('ui.questsCompleted')));
       const ul = createElement('ul', CSS.CARD_LIST);
       completedList.forEach(li => ul.appendChild(li));
       section.appendChild(ul);
       panel.appendChild(section);
     }
     if (activeList.length === 0 && completedList.length === 0) {
-      const section = createElement('div', CSS.SCENE_OPTIONS);
+      const section = createElement('div', CSS.PANEL_SECTION);
       section.appendChild(createElement('p', CSS.CARD_BODY, this.engine.t('ui.questsNone')));
       panel.appendChild(section);
     }

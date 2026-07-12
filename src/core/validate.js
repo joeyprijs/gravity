@@ -12,8 +12,8 @@ const COMBAT_NPC_ATTRIBUTES = ['healthPoints', 'armorClass', 'actionPoints'];
 
 // Words a condition leaf already uses structurally. A custom attribute sharing
 // one of these names is indistinguishable from the built-in leaf (e.g. a
-// `{ "gold": 5 }` condition), so the engine — and the Studio condition editor —
-// would mis-resolve it. Reserved to prevent that ambiguity.
+// `{ "gold": 5 }` condition), so the engine would mis-resolve it. Reserved to
+// prevent that ambiguity.
 const RESERVED_CONDITION_KEYS = new Set([
   'and', 'or', 'not', 'flag', 'value', 'item', 'count', 'gold', 'level', 'mission', 'status',
   'time', 'day', 'segment',
@@ -388,6 +388,11 @@ function validateRules(ctx) {
     if (attr.max !== undefined && !(typeof attr.max === 'number' && attr.max >= (attr.default ?? 0)))
       ctx.add(group, `customAttributes "${attr.id}": max must be a number ≥ its default`);
   }
+  // Skill-check badges always append the shared DC line (see skillBadge).
+  if ((rules?.customAttributes || []).length && !locale?.actions?.skillBadgeDc)
+    ctx.add(group, 'missing locale entry at actions.skillBadgeDc — skill-check badges render the raw key as their DC line');
+  if (rules?.skillRetry?.resource && !locale?.actions?.badgeRetryCost)
+    ctx.add(group, 'skillRetry: missing locale entry at actions.badgeRetryCost — retry badges render the raw key');
 
   // Level-up point buy: statPoints must be a non-negative integer —
   // spendStatPoint's whole-point math breaks on fractional banks.
@@ -459,13 +464,19 @@ function validateRules(ctx) {
       ctx.add(group, 'skillRetry.restRestore must be a non-negative number');
   }
 
-  // Header chips: every id must be a declared resource with a display label.
+  // headerResources render in the scene top bar and the sheet's character
+  // section: every id must be a declared resource with a display label.
   for (const id of (rules?.headerResources ?? [])) {
     if (!isResource(id))
       ctx.add(group, `headerResources "${id}" is not a declared { current, max } resource in playerDefaults.resources`);
     if (!locale?.ui?.resources?.[id])
       ctx.add(group, `headerResources "${id}": missing locale entry at ui.resources.${id}`);
   }
+
+  // The save/load/restart buttons only render inside an options-widget tab —
+  // a tabs list without one leaves the player unable to save or restart.
+  if (rules?.tabs && !rules.tabs.some(t => t?.widget === 'options'))
+    ctx.add(group, 'tabs: no tab with widget "options" — the save/load/restart buttons render nowhere');
 
   // AP economy: value sanity, plus warnings for the two classic foot-guns —
   // a player who can never recover AP, and a turn cap no attack fits under.

@@ -1,5 +1,6 @@
 {
   "museumReputationHeading": "Museum Reputation",
+  "reputationLabel":         "Reputation",
   "museumReputationValue":   "{value} Points",
   "curatorTitle":            "Museum Curator Panel",
   "curatorDone":             "Done",

@@ -230,7 +230,7 @@ export function resetOptionsPanel(reminderText = null) {
   clearElement(container);
   clearElement(skillsContainer);
   skillsContainer.setAttribute('hidden', '');
-  panel.querySelectorAll(`.${CSS.SCENE_OPTIONS_SECTION}`).forEach(el => el.remove());
+  panel.querySelectorAll(`.${CSS.PANEL_SECTION_DYNAMIC}`).forEach(el => el.remove());
 
   if (reminder) {
     if (reminderText !== null) reminder.innerText = reminderText;
@@ -295,8 +295,9 @@ export function buildSceneDescription(title, body = null, t = null) {
 /**
  * Builds an interactive card (button.card) with a title and optional accent
  * stat lines — the standard clickable option (see buildCard). Pass reqText
- * for the stat lines (AP cost, price, skill DC, retry cost — \n-separated).
- * Returns the button element — caller sets .onclick and .disabled.
+ * for the stat lines (AP cost, price, skill DC, retry cost — a line or an
+ * array of lines). Returns the button element — caller sets .onclick and
+ * .disabled.
  */
 
 export function buildOptionButton(text, reqText = null) {
@@ -313,7 +314,9 @@ export function buildOptionButton(text, reqText = null) {
  *   <tag class="card">
  *     <.card__title>     the bold first line
  *     <.card__body>      0..n muted secondary lines
- *     <.card__stats>     accent stat lines (\n-separated, one per row)
+ *     <.card__stats>     accent stat lines, one element per fact — a real
+ *                        <ul>/<li> in container cards; block <span>s inside
+ *                        button cards (buttons allow phrasing content only)
  *     <.card__actions>   optional row of action buttons
  *
  * Interactive cards are <button class="card"> — the whole card is the
@@ -324,7 +327,9 @@ export function buildOptionButton(text, reqText = null) {
  * @param {string} [spec.tag='div'] - 'button' | 'div' | 'li'.
  * @param {string} [spec.title] - Title line.
  * @param {string|string[]} [spec.body] - Muted line(s); empties are skipped.
- * @param {string} [spec.stats] - Accent stat lines, \n-joined.
+ * @param {string|string[]} [spec.stats] - Accent stat lines. Strings (array
+ *   elements included) are split on \n so game packs with multi-line locale
+ *   strings keep working.
  * @param {HTMLElement[]} [spec.actions] - Buttons for the actions row.
  * @param {string[]} [spec.classes] - Extra classes on the card element.
  * @returns {HTMLElement}
@@ -337,7 +342,16 @@ export function buildCard({ tag = 'div', title, body, stats, actions = [], class
   for (const line of (Array.isArray(body) ? body : [body])) {
     if (line) card.appendChild(createElement(child, CSS.CARD_BODY, line));
   }
-  if (stats) card.appendChild(createElement(child, CSS.CARD_STATS, stats));
+  const statLines = stats == null ? []
+    : (Array.isArray(stats) ? stats : [stats]).flatMap(s => String(s).split('\n')).filter(Boolean);
+  if (statLines.length > 0) {
+    // Screen readers flatten a button to its text anyway, so the spans lose
+    // nothing over a list there; CSS displays both shapes as one-fact rows.
+    const [listTag, lineTag] = tag === 'button' ? ['span', 'span'] : ['ul', 'li'];
+    const list = createElement(listTag, CSS.CARD_STATS);
+    statLines.forEach(line => list.appendChild(createElement(lineTag, '', line)));
+    card.appendChild(list);
+  }
   if (actions.length > 0) {
     const row = createElement('div', CSS.CARD_ACTIONS);
     actions.forEach(a => row.appendChild(a));

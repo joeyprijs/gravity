@@ -68,9 +68,12 @@ export const CSS = {
   SCENE_BODY_TEXT:        'scene__body-text',
   SCENE_LOG:              'scene__log',
   SCENE_LOG_PREFIX:       'scene__log-prefix',
-  SCENE_OPTIONS:          'scene__options',
-  SCENE_OPTIONS_SECTION:  'scene__options--section',
-  SCENE_SECTION_HEADING:  'scene__section-heading',
+  // Generic section container and heading — used by the scene options panel,
+  // the player tabs (inventory/quests/sheet/map), and the chest/merchant/
+  // curator panels.
+  PANEL_SECTION:          'panel-section',
+  PANEL_SECTION_DYNAMIC:  'panel-section--dynamic',
+  SECTION_HEADING:        'section-heading',
 
   // Tabs (ui.js setup)
   TABS_BTN:               'tabs__btn',
@@ -94,7 +97,7 @@ export const CSS = {
   CARD_DONE:              'card--completed',
   CARD_COMPACT:           'card--compact',
 
-  // Collapsible section headings (inventory panel)
+  // Collapsible section headings (inventory & sheet panels)
   SECTION_TOGGLE:           'section-toggle',
   SECTION_TOGGLE_COLLAPSED: 'section-toggle--collapsed',
   SECTION_TOGGLE_LABEL:     'section-toggle__label',
@@ -132,6 +135,7 @@ export const CSS = {
 // HTML element IDs — single source of truth for every getElementById call in JS.
 export const EL = {
   // Narrative / scene
+  SCENE_PANEL:             'scene-panel',
   SCENE_NARRATIVE:         'scene-narrative',
   SCENE_OPTIONS_PANEL:     'scene-options-panel',
   SCENE_OPTIONS:           'scene-options',
@@ -146,9 +150,6 @@ export const EL = {
 
   // Character creation overlay
   CHAR_CREATION:           'char-creation',
-
-  // Header
-  PLAYER_BASIC_STATS:      'player-basic-stats',
 
   // Sidebar tabs
   PLAYER_PANEL:            'player-panel',

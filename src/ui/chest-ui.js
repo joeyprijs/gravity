@@ -41,8 +41,8 @@ export class ChestUI {
     };
     container.appendChild(doneBtn);
 
-    const chestSection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);
-    chestSection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.tChest('Title')));
+    const chestSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
+    chestSection.appendChild(createElement('div', CSS.SECTION_HEADING, this.tChest('Title')));
     if (chest.length > 0) {
       chest.forEach(b => {
         const name = getItemLabel(this.engine.data.items, b.item);
@@ -62,8 +62,8 @@ export class ChestUI {
     }
     panel.insertBefore(chestSection, skillsContainer);
 
-    const invSection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);
-    invSection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('ui.inventoryTitle')));
+    const invSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
+    invSection.appendChild(createElement('div', CSS.SECTION_HEADING, this.engine.t('ui.inventoryTitle')));
     if (pInv.length > 0) {
       pInv.forEach(b => {
         const name = getItemLabel(this.engine.data.items, b.item);

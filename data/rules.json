@@ -184,23 +184,28 @@
   },
   "tabs": [
     {
-      "id": "inventory-tab",
-      "localeKey": "ui.tabInventory",
+      "id": "attributes-tab",
+      "localeKey": "ui.tabAttributes",
+      "widget": "attributes",
       "default": true
+    },
+    {
+      "id": "inventory-tab",
+      "localeKey": "ui.tabInventory"
     },
     {
       "id": "quests-tab",
       "localeKey": "ui.tabQuests"
     },
     {
-      "id": "attributes-tab",
-      "localeKey": "ui.tabAttributes",
-      "widget": "attributes"
-    },
-    {
       "id": "map-tab",
       "localeKey": "ui.tabMap",
       "widget": "map"
+    },
+    {
+      "id": "options-tab",
+      "localeKey": "ui.tabOptions",
+      "widget": "options"
     }
   ],
   "skillRetry": {

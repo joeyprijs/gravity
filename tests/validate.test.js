@@ -56,7 +56,7 @@ function makeCleanData() {
       customAttributes: [{ id: 'perception', default: 0 }],
       fallbackWeapons: { player: 'sword', enemy: 'sword' },
     },
-    locale: { actions: { skillBadge: { perception: 'PER {dc}' }, skillBadgeFree: { perception: 'Perception' } } },
+    locale: { actions: { skillBadge: { perception: 'PER {dc}' }, skillBadgeFree: { perception: 'Perception' }, skillBadgeDc: 'DC {dc}' } },
   };
 }
 
@@ -357,9 +357,23 @@ test('skillRetry + headerResources: clean when the resource is declared with a l
   data.rules.skillRetry = { resource: 'luckPoints', cost: 1, restRestore: 3 };
   data.rules.headerResources = ['luckPoints'];
   data.locale.ui = { resources: { luckPoints: 'Luck' } };
+  data.locale.actions.badgeRetryCost = 'Retry: {cost} {resource}';
   const messages = issuesFor(data);
   assert.ok(!messages.some(m => m.includes('skillRetry')));
   assert.ok(!messages.some(m => m.includes('headerResources')));
+});
+
+test('flags missing skillBadgeDc, missing badgeRetryCost, and a tabs list without an options widget', () => {
+  const data = makeToolkitData();
+  delete data.locale.actions.skillBadgeDc;
+  data.rules.playerDefaults.resources = { luckPoints: { current: 3, max: 3 } };
+  data.rules.skillRetry = { resource: 'luckPoints', cost: 1 };
+  data.locale.ui = { resources: { luckPoints: 'Luck' } };
+  data.rules.tabs = [{ id: 'inventory-tab', localeKey: 'ui.tabInventory' }];
+  const messages = issuesFor(data);
+  assert.ok(messages.some(m => m.includes('missing locale entry at actions.skillBadgeDc')));
+  assert.ok(messages.some(m => m.includes('missing locale entry at actions.badgeRetryCost')));
+  assert.ok(messages.some(m => m.includes('no tab with widget "options"')));
 });
 
 test('headerResources: flags an undeclared resource and a missing label', () => {
