@@ -129,7 +129,7 @@
   },
   "itemStats": {
     "actionPoints": "AP: {value}",
-    "hit": "Hit bonus: {value} ({attribute})",
+    "hit": "Bonus: {attribute} {value}",
     "damageRoll": "Damage: {value}",
     "healingAmount": "Healing: {value}",
     "apRestore": "Restores AP: {value}",
@@ -167,12 +167,12 @@
     "lookAround": "Look Around",
     "lookAroundBadge": "Skill: Perception",
     "skillBadge": {
-      "perception": "Perception: {mod}",
-      "charisma": "Charisma: {mod}",
-      "stealth": "Stealth: {mod}",
-      "strength": "Strength: {mod}",
-      "intelligence": "Intelligence: {mod}",
-      "luck": "Luck: {mod}"
+      "perception": "Bonus: Perception {mod}",
+      "charisma": "Bonus: Charisma {mod}",
+      "stealth": "Bonus: Stealth {mod}",
+      "strength": "Bonus: Strength {mod}",
+      "intelligence": "Bonus: Intelligence {mod}",
+      "luck": "Bonus: Luck {mod}"
     },
     "skillBadgeDc": "Difficulty Check (DC): {dc}",
     "skillBadgeFree": {
