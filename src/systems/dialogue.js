@@ -262,7 +262,7 @@ export class DialogueSystem {
         }
 
         // Action routing for plain (check-free) responses. Read through
-        // normalizeOutcomes so a response Studio migrated to the outcomes
+        // normalizeOutcomes so a response authored in the outcomes
         // shape keeps working if its check is later removed.
         spendAp(ap);
         if (res.timeCost > 0) this.engine.advanceTime(res.timeCost);
@@ -277,7 +277,7 @@ export class DialogueSystem {
     });
 
     if (skillResponses.length > 0) {
-      const heading = createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('ui.skillsHeading'));
+      const heading = createElement('div', CSS.SECTION_HEADING, this.engine.t('ui.skillsHeading'));
       skillsContainer.appendChild(heading);
       skillResponses.forEach(btn => skillsContainer.appendChild(btn));
       skillsContainer.removeAttribute('hidden');
@@ -415,8 +415,8 @@ export class DialogueSystem {
 
     if (!buyItems.length) return;
 
-    const buySection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);
-    buySection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('dialogue.buyGroup')));
+    const buySection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
+    buySection.appendChild(createElement('div', CSS.SECTION_HEADING, this.engine.t('dialogue.buyGroup')));
 
     buyItems.forEach(({ id: itemId, item, stock, npcAmount }) => {
       const displayName = stock !== null ? `${item.name} (x${stock})` : item.name;
@@ -462,8 +462,8 @@ export class DialogueSystem {
 
     if (!sellItems.length) return;
 
-    const sellSection = createElement('div', [CSS.SCENE_OPTIONS, CSS.SCENE_OPTIONS_SECTION]);
-    sellSection.appendChild(createElement('div', CSS.SCENE_SECTION_HEADING, this.engine.t('dialogue.sellGroup')));
+    const sellSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
+    sellSection.appendChild(createElement('div', CSS.SECTION_HEADING, this.engine.t('dialogue.sellGroup')));
 
     sellItems.forEach(invItem => {
       const item = this.engine.data.items[invItem.item];

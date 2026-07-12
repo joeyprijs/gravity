@@ -23,11 +23,7 @@ const DEFAULT_LOCALE_PATH = 'data/locales.json';
 // data from JSON, and exposes a thin delegate API so subsystems can call each
 // other without importing each other directly (avoiding circular deps).
 class RPGEngine {
-  constructor(previewBundle = null) {
-    // When running inside Studio's live-preview iframe, game data is injected
-    // as an in-memory bundle instead of being fetched from disk. null in normal play.
-    this._previewBundle = previewBundle;
-
+  constructor() {
     // Populated by loadData(). Kept as an empty shell here so subsystems
     // constructed below can safely reference this.engine.data without null checks.
     this.data = { items: {}, npcs: {}, scenes: {}, missions: {}, tables: {}, regions: {}, worldMapSize: DEFAULT_WORLD_MAP_SIZE, locale: {}, rules: null, flags: {} };
@@ -117,11 +113,6 @@ class RPGEngine {
     gameState.registerMissions(this.data.missions);
     gameState.registerSceneFlags(this.data.flags);
 
-    // Studio preview deep-link: start on the scene being edited if it exists.
-    if (this._previewStartScene && this.data.scenes[this._previewStartScene]) {
-      gameState.setCurrentSceneId(this._previewStartScene);
-    }
-
     this.ui.setup();
     // Every state change triggers a full UI update. Subsystems mutate state
     // and the reactive UI re-renders — no manual refresh calls needed.
@@ -144,10 +135,6 @@ class RPGEngine {
 
   // Returns the manifest object so init() can read manifest.plugins.
   async loadData() {
-    // Studio live-preview: render the in-memory bundle the parent window
-    // injected instead of fetching from disk, so unsaved edits show immediately.
-    if (this._previewBundle) return this._loadFromBundle(this._previewBundle);
-
     // Load the default locale first — must be available before the try-catch
     // below so error messages can still be translated if game data fails to load.
     this.data.locale = await fetch(DEFAULT_LOCALE_PATH, { cache: 'no-cache' }).then(r => r.json()).catch(() => ({}));
@@ -221,50 +208,6 @@ class RPGEngine {
       this.log(LOG.SYSTEM, this.t('system.dataError'));
       return null;
     }
-  }
-
-  /**
-   * Loads game data from an in-memory bundle (Studio live-preview) instead of
-   * fetching from disk. The bundle mirrors the loaded-data shape: category maps
-   * keyed by id, plus the manifest for regions/worldMapSize/plugins/locales.
-   * Mirrors the assembly the fetch path does in the try-block above.
-   *
-   * @param {object} bundle - { manifest, rules, locale, items, npcs, scenes, missions, tables, flags }
-   * @returns {object} The manifest, so init() can read manifest.plugins.
-   */
-  _loadFromBundle(bundle) {
-    const manifest = bundle.manifest || {};
-    // Optional deep-link: boot straight to the scene the author is editing.
-    this._previewStartScene = bundle.preview?.startScene || null;
-    this.language = resolveLanguage(
-      Object.keys(manifest.locales || {}),
-      navigator.languages || [navigator.language],
-      manifest.defaultLanguage || 'en'
-    );
-    this.data.locale = bundle.locale || {};
-    const npcs = bundle.npcs || {};
-    // Same normalization the fetch path applies so the merchant store and
-    // validation only ever see carriedItems in { item, amount } form.
-    normalizeCarriedItems(npcs);
-    const rules = bundle.rules || null;
-    // Skip character creation in preview so authors land straight on their
-    // content: give the player a placeholder name when the rules leave it blank,
-    // which satisfies init()'s new-game gate. The bundle is a postMessage copy,
-    // so this never mutates Studio's data.
-    if (rules?.playerDefaults && !rules.playerDefaults.name) rules.playerDefaults.name = 'Preview';
-    this.data = {
-      items: bundle.items || {},
-      npcs,
-      scenes: bundle.scenes || {},
-      missions: bundle.missions || {},
-      tables: bundle.tables || {},
-      regions: manifest.regions || {},
-      worldMapSize: manifest.worldMapSize || DEFAULT_WORLD_MAP_SIZE,
-      locale: this.data.locale,
-      rules,
-      flags: bundle.flags || {},
-    };
-    return manifest;
   }
 
   /**
@@ -656,21 +599,5 @@ class RPGEngine {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  // Studio live-preview mode (index.html?preview=1): don't boot immediately.
-  // Announce readiness to the parent window, then boot the engine against the
-  // in-memory data bundle it posts back. See studio/js/complex/preview.js.
-  // Bundles are accepted only from a same-origin parent (Studio serves the
-  // game from its own origin): scene descriptions render via innerHTML, so a
-  // foreign page embedding a deployed game must never be able to inject one.
-  if (new URLSearchParams(location.search).get('preview') === '1') {
-    window.addEventListener('message', (e) => {
-      if (e.origin !== location.origin || e.source !== window.parent) return;
-      const msg = e.data;
-      if (!msg || msg.type !== 'gravity:bundle' || window.gameEngine) return;
-      window.gameEngine = new RPGEngine(msg.bundle);
-    });
-    window.parent.postMessage({ type: 'gravity:preview-ready' }, location.origin);
-    return;
-  }
   window.gameEngine = new RPGEngine();
 });

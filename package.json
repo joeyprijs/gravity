@@ -1,7 +1,7 @@
 {
   "name": "gravity-rpg",
   "version": "1.0.0",
-  "description": "A browser-native, zero-dependency, data-driven text RPG engine and visual creator suite. Define entire worlds in JSON, no scripting required.",
+  "description": "A browser-native, zero-dependency, data-driven text RPG engine. Define entire worlds in JSON, no scripting required.",
   "license": "Unlicense",
   "type": "module",
   "homepage": "https://joeyprijs.github.io/gravity/",

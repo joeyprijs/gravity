@@ -13,14 +13,13 @@ A browser-native, zero-dependency data-driven text RPG engine and creator suite.
 
 > [!NOTE]
 > **🤖 100% AI-Generated Codebase**
-> This entire codebase (the browser-based text RPG engine, the reactive state manager, the full-screen world map, the visual Creator Studio, and all companion unit tests) was fully researched, architected, written, documented, and optimized by Artificial Intelligence (specifically **Claude** and **Gemini**). A human served as the Project Manager, providing direction and structural reviews, but did not write a single line of the code. It is released as completely free and unencumbered public domain code.
+> This entire codebase (the browser-based text RPG engine, the reactive state manager, the full-screen world map, and all companion unit tests) was fully researched, architected, written, documented, and optimized by Artificial Intelligence (specifically **Claude** and **Gemini**). A human served as the Project Manager, providing direction and structural reviews, but did not write a single line of the code. It is released as completely free and unencumbered public domain code.
 
 ---
 
 ## Table of Contents
 
 - [Core Features](#core-features)
-- [Gravity Studio IDE](#gravity-studio-ide)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
 - [Running Locally](#running-locally)
@@ -55,28 +54,6 @@ A browser-native, zero-dependency data-driven text RPG engine and creator suite.
 
 ---
 
-## Gravity Studio IDE
-
-Gravity comes paired with **Gravity Studio** (located in `/studio`), a browser-native game creation suite. It uses the native browser **File System Access API** to directly edit your local Gravity project folder with zero backend dependencies.
-
-```mermaid
-graph TD
-    Root[Local Project Directory] -->|Auth window.showDirectoryPicker| Studio[Gravity Studio SPA]
-    Studio -->|Visual Graphs| Nodes[Dialogue Graph: Bézier svg lines]
-    Studio -->|2D Canvas| MapEditor[Visual World Map: 5px snapping]
-    Studio -->|Dynamic Forms| Forms[Rules, Items, Flag Lists Editor]
-    Studio -->|AST Selectors| ConditionBuilder[Condition Compiler]
-    Nodes & MapEditor & Forms & ConditionBuilder -->|Direct Save| Root
-```
-
-### Visual Subsystems:
-1.  **Dialogue Connection Node Graph:** A fully visual node-graph screenplay editor. dialogue nodes are positioned automatically on load using a custom BFS (Breadth-First Search) column-allocation layout. Options are connected to nodes by dragging from anchor dots, drawing smooth SVG curved Bézier lines.
-2.  **Grid-Snapped World Map Editor:** Projects room cards absolutely in 2D space. Authors can drag-and-drop rooms snapped to a coordinate grid (`5px`) to dynamically configure the world map.
-3.  **AST Logic Condition Builder:** An elegant visual tree editor for building complex condition gates (`and`, `or`, `not` nodes, gold, levels, item counts) without typing syntax.
-4.  **Local Project Integrations:** Creates, renames, search-filters, and deletes files directly within the local workspace directory, maintaining active dirty tracking (`dirtyFiles` Set) with quick batch saves (`Ctrl/Cmd + S`).
-
----
-
 ## Tech Stack
 
 | Component | Choice |
@@ -85,7 +62,6 @@ graph TD
 | **Markup & Layout** | HTML5 (Dynamic layout viewports) |
 | **Styles (CSS)** | Plain CSS3 (Custom properties, CSS variables) |
 | **Testing Frame** | Node.js native test runner (zero external dependencies) |
-| **Local I/O (Studio)** | Native File System Access API |
 
 ---
 
@@ -143,10 +119,6 @@ gravity/
 │   ├── item.schema.json
 │   ├── scene.schema.json
 │   └── npc.schema.json
-├── studio/                  # Gravity Studio IDE
-│   ├── index.html           # Studio HTML entry
-│   ├── css/                 # Studio custom styles
-│   └── js/                  # Form builders, nodes, logic trees compiler
 └── data/                    # Game story directories (scenes, items, etc.)
 ```
 
@@ -165,7 +137,6 @@ npx serve .
 ```
 
 *   **Play the Game:** Open `http://localhost:3000` in your browser.
-*   **Open the Studio:** Open `http://localhost:3000/studio` in your browser.
 *   **Executing Unit Tests:** Run the synchronous Node unit test runner:
     ```bash
     npm test

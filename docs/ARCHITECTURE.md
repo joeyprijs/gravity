@@ -11,7 +11,7 @@ This document explains how the engine boots, how the modules fit together, and �
 
 ## Boot Flow
 
-`index.html` loads a single entry point, `src/core/engine.js`. In normal play it constructs `RPGEngine` on `DOMContentLoaded` (for the Studio live-preview path, see below):
+`index.html` loads a single entry point, `src/core/engine.js`. It constructs `RPGEngine` on `DOMContentLoaded`:
 
 1. **Construct subsystems** — combat, dialogue, quests, narrative log, scene renderer, UI manager. Each receives the engine instance.
 2. **`init()`** registers the built-in actions, then loads `data/index.json` (the manifest), resolves the active language (see *Localisation*), and fetches every registered asset in parallel. NPC `carriedItems` are normalized at load to `{ item, amount }` objects (`amount: null` = unlimited), so data files may use the string shorthand but consumers only ever see one shape.
@@ -21,19 +21,13 @@ This document explains how the engine boots, how the modules fit together, and �
 6. **UI setup + subscription** — `gameState.subscribe((_, hint) => ui.update(hint))` makes every state change reactively re-render the relevant UI region.
 7. **Character creation** is shown for a fresh state; otherwise the starting scene renders.
 
-### Studio live-preview boot (`?preview=1`)
-
-The Phase-1 workbench adds a second boot path. With `?preview=1` in the URL the engine does **not** boot on `DOMContentLoaded`: it posts `gravity:preview-ready` to the parent window and waits for a `gravity:bundle` message, then constructs `RPGEngine(bundle)` — the constructor takes an optional `previewBundle`. Bundles are accepted only from a **same-origin parent** (scene descriptions render via `innerHTML`, so a foreign page embedding a deployed game must never be able to inject one).
-
-With a bundle present, `loadData()` branches into `_loadFromBundle()` instead of fetching: it assembles the same loaded-data shape from the in-memory bundle (`{ manifest, rules, locale, items, npcs, scenes, missions, tables, flags }`), applying the same `carriedItems` normalization as the fetch path. Preview additionally deep-links to the scene being edited (`bundle.preview.startScene` wins over `rules.startingScene`) and skips character creation by giving the player a placeholder name. Studio's half of the handshake lives in `studio/js/complex/preview.js`; everything downstream of `loadData()` — validation, state init, rendering, plugins — is identical in both modes.
-
 ## Module Graph
 
 ```
 engine.js (orchestrator, delegate API, event bus, registries)
 ├── core/state.js      gameState singleton, listeners, save/load + migrations
 ├── core/config.js     CSS/EL registries, ACTIONS, FLAG_KEYS, constants
-├── core/validate.js   load-time game-data validation (Studio reuses it via studio/js/validate-workspace.js)
+├── core/validate.js   load-time game-data validation
 ├── core/i18n.js       language resolution (pure)
 ├── core/utils.js      DOM helpers (createElement, resetOptionsPanel, …)
 ├── systems/
@@ -171,4 +165,4 @@ At boot the engine matches `navigator.languages` against the declared codes — 
 
 ## Testing
 
-`npm test` runs `node --test tests/*.test.js` — synchronous unit tests against the real modules, no DOM required. Sixteen suites cover the engine's logic surface: state, combat math, the condition AST, dice, the action registry, scene and dialogue logic, displays and reputation (curator), character creation, i18n resolution, the validator itself, and a data-integrity suite that checks the shipped demo content. Studio has two suites of its own: pure editor logic, and IO integration tests against a mocked File System Access API. The DOM-rendering layer (`ui/`, the narrative log, the map) remains untested — the working policy is to keep rendering thin and the logic behind it in testable modules.
+`npm test` runs `node --test tests/*.test.js` — synchronous unit tests against the real modules, no DOM required. Sixteen suites cover the engine's logic surface: state, combat math, the condition AST, dice, the action registry, scene and dialogue logic, displays and reputation (curator), character creation, i18n resolution, the validator itself, and a data-integrity suite that checks the shipped demo content. The DOM-rendering layer (`ui/`, the narrative log, the map) remains untested — the working policy is to keep rendering thin and the logic behind it in testable modules.

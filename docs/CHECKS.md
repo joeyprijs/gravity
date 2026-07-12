@@ -42,7 +42,7 @@ Pass/fail checks (scene and dialogue) resolve against margin-based tiers:
 - `margin` on `critical`: beat the DC by at least this much (default 5).
 - `margin` on `partial`: miss the DC by at most this much (default 3).
 - `critical` and `partial` exist **only when authored**. A `critical` without its own pipeline runs the success actions — the best roll never does less than a plain success.
-- `outcomes` is the one authoring shape. The legacy fields (`actions` = success pipeline, `onFailure` = failure pipeline) are still read for older data, but Studio migrates them on edit and the validator nags when both shapes define the same tier.
+- `outcomes` is the one authoring shape. The legacy fields (`actions` = success pipeline, `onFailure` = failure pipeline) are still read for older data, and the validator nags when both shapes define the same tier.
 - **`partial` is the fail-forward tier**: the player gets the thing, with a catch (took damage, made noise, annoyed the trader). Partial still counts as a failed attempt for retry purposes — it just isn't *empty* failure.
 - Each tier's `text` logs as narration when it lands, after the locale-driven roll line (`actions.skillCritical` / `skillSuccess` / `skillPartial` / `skillFail`).
 
@@ -153,4 +153,4 @@ Rolled silently on the player's **first** entry, once per game, writing pass/fai
 
 ## Validation
 
-`validateGameData` (and Studio's Validate button) checks all of it: leftover `increment` and removed luck-subsystem fields, unknown outcome tiers, doubly-defined tier pipelines, `resolveOnce`+`maxAttempts` redundancy, inert `onExhausted`, unsafe timer actions, unknown segments, day/segment conditions without their backing config, malformed `defaultCosts`, missing segment locale keys, and passive checks missing `flag` or `skillCheck`.
+`validateGameData` checks all of it: leftover `increment` and removed luck-subsystem fields, unknown outcome tiers, doubly-defined tier pipelines, `resolveOnce`+`maxAttempts` redundancy, inert `onExhausted`, unsafe timer actions, unknown segments, day/segment conditions without their backing config, malformed `defaultCosts`, missing segment locale keys, and passive checks missing `flag` or `skillCheck`.
