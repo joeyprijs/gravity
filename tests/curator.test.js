@@ -34,6 +34,7 @@ const TEST_ITEMS = {
 function makeEngine() {
   const registry = new Map();
   const decorators = [];
+  const sheetRows = [];
   const calls = { logs: [], customUI: [] };
   const engine = {
     data: { items: TEST_ITEMS, scenes: {}, rules: null },
@@ -41,22 +42,24 @@ function makeEngine() {
     log: (type, message, variant) => calls.logs.push({ type, message, variant }),
     registerAction: (name, fn) => registry.set(name, fn),
     registerSceneDecorator: (decorator) => decorators.push(decorator),
+    registerSheetRow: (row) => sheetRows.push(row),
     setCustomUIOpen: (open) => calls.customUI.push(open),
     scene: { handleOption: () => {} },
   };
-  return { engine, registry, decorators, calls };
+  return { engine, registry, decorators, sheetRows, calls };
 }
 
 beforeEach(() => gameState.init(TEST_RULES, TEST_ITEMS));
 
-test('plugin registers its scene decorator and action handlers', () => {
-  const { engine, registry, decorators } = makeEngine();
+test('plugin registers its scene decorator, action handlers, and sheet row', () => {
+  const { engine, registry, decorators, sheetRows } = makeEngine();
   curatorPlugin(engine);
   assert.equal(decorators.length, 1);
   assert.equal(typeof decorators[0].description, 'function');
   assert.equal(typeof decorators[0].options, 'function');
   assert.ok(registry.has(ACTIONS.MANAGE_EXHIBITS));
   assert.ok(registry.has(ACTIONS.ADD_DISPLAY));
+  assert.deepEqual(sheetRows, [{ label: 'plugin.curator.reputationLabel', bind: 'attributes.reputation' }]);
 });
 
 test('exhibits decorator: scenes without displays get no table', () => {

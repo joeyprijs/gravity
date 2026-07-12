@@ -1,5 +1,5 @@
 import { gameState } from "../core/state.js";
-import { attrRowHtml, createElement, buildOptionButton, escapeHtml, getItemLabel, resetOptionsPanel } from "../core/utils.js";
+import { createElement, buildOptionButton, escapeHtml, getItemLabel, resetOptionsPanel } from "../core/utils.js";
 import { ACTIONS, CSS, LOG } from "../core/config.js";
 
 // The curator's reputation model: a permanent score (state.museumReputation,
@@ -126,34 +126,6 @@ function buildExhibitsTable(engine, sceneId) {
   return `<div class="exhibits-table-container"><table class="exhibits-table">${header}<tbody>${rows}</tbody></table></div>`;
 }
 
-// Whether the sheet row has been injected — checked before touching the DOM
-// so the subscribe callback below costs a boolean once injection is done.
-let sheetRowInjected = false;
-
-// Injects a reputation row into the sheet tab's character list (the
-// attributes widget), after the gold row.
-function injectReputationSheetRow(engine) {
-  if (sheetRowInjected) return;
-  const list = document.querySelector('.attr-list--character');
-  if (!list) return;
-  // Same row shape as the sheet's own rows (see attrRowHtml) — parsed via a
-  // template element because this row is inserted into an existing list.
-  const tpl = document.createElement('template');
-  tpl.innerHTML = attrRowHtml(
-    engine.t('plugin.curator.reputationLabel'),
-    '<span data-stat-bind="attributes.reputation"></span>',
-    'attr-list__row--reputation'
-  );
-  const row = tpl.content.firstElementChild;
-  // The stats update loop only fills binds on 'stats' notifications; seed the
-  // value here so the row isn't blank when injected by a non-stats one.
-  row.querySelector('[data-stat-bind]').textContent = getMuseumReputation();
-  const goldRow = list.querySelector('[data-stat-bind="resources.gold"]')?.closest('.attr-list__row');
-  if (goldRow) goldRow.insertAdjacentElement('afterend', row);
-  else list.appendChild(row);
-  sheetRowInjected = true;
-}
-
 export default function curatorPlugin(engine) {
   // 1. Register state integrations (stat handler, mutation hooks, migration)
   registerCuratorState(engine.data.items);
@@ -195,11 +167,11 @@ export default function curatorPlugin(engine) {
     engine.log(LOG.SYSTEM, engine.t('plugin.curator.displayAddedLog', { name: displayName }));
   });
 
-  // 4. Inject the reputation row into the sheet tab. The sheet panel doesn't
-  // exist yet at plugin-load time (ui.setup runs later), so injection rides
-  // the state notifications and retries until the panel appears.
-  gameState.subscribe(() => {
-    injectReputationSheetRow(engine);
+  // 4. Surface the reputation stat as a sheet row — rendered by the sheet
+  // build itself (see engine.registerSheetRow), so no DOM injection here.
+  engine.registerSheetRow({
+    label: engine.t('plugin.curator.reputationLabel'),
+    bind: 'attributes.reputation',
   });
 
   // Tabs are fully data-driven, so a game can configure the reputation stat

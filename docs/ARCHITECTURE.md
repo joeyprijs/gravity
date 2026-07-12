@@ -108,6 +108,7 @@ Two mechanisms let dynamic content reach scene rendering:
 
 - **Description hooks** (`engine.registerDescriptionHook(name, fn)`) — *per-scene, opt-in*: a scene declares `"descriptionHook": "name"` in its JSON and the hook's return value (an HTML string) is appended to that scene's description.
 - **Scene decorators** (`engine.registerSceneDecorator({ description?, options? })`) — *global*: invoked for every rendered scene. `description(scene, sceneId, engine)` returns HTML appended to the description; `options(scene, optionsContainer, engine)` may append extra option buttons. The curator plugin uses this to render its exhibits table and "Museum Curator Panel" button on any scene that has display cases.
+- **Sheet rows** (`engine.registerSheetRow({ label, bind })`) — adds a row to the sheet tab's character section, filled by the same `data-stat-bind` loop as the built-in stats. Plugins load before the UI builds, so registered rows render as part of the sheet itself — no DOM injection or timing games. The curator plugin surfaces `attributes.reputation` this way; the row simply doesn't render in games whose tabs omit the attributes widget.
 
 ## Plugins
 

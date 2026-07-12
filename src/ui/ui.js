@@ -141,6 +141,7 @@ export class UIManager {
           attrRowHtml(this.engine.t('ui.statAp'), `${bindSpan('resources.ap.current')}/${bindSpan('resources.ap.max')}`),
           attrRowHtml(this.engine.t('ui.statInitiative'), bindSpan('attributes.initiative')),
           attrRowHtml(this.engine.t('ui.statGold'), bindSpan('resources.gold')),
+          ...this.engine.sheetRows.map(row => attrRowHtml(row.label, bindSpan(row.bind))),
           ...this._headerResourceEntries().map(([label, valueHtml]) => attrRowHtml(label, valueHtml)),
         ].join('');
         const items = (rules.customAttributes ?? []).map(attr =>
@@ -160,7 +161,7 @@ export class UIManager {
         // with points to spend sees the cue even while Skills is collapsed.
         panel.innerHTML = `<div class="${CSS.PANEL_SECTION}">
           ${sectionHeading('character', this.engine.t('ui.sheetCharacterTitle'))}
-          <div class="attr-list attr-list--character" data-section-body="character">${characterRows}</div>
+          <div class="attr-list" data-section-body="character">${characterRows}</div>
         </div>
         <div class="${CSS.PANEL_SECTION}">
           ${sectionHeading('skills', this.engine.t('ui.attributesTitle'))}${canSpend ? `

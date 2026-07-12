@@ -35,6 +35,7 @@ class RPGEngine {
     this._actionRegistry = new Map();
     this._descriptionHooks = new Map();
     this._sceneDecorators = [];
+    this._sheetRows = [];
     this._events = new Map();
 
     this.narrative = new NarrativeLog(this.t.bind(this));
@@ -596,6 +597,25 @@ class RPGEngine {
   }
 
   get sceneDecorators() { return this._sceneDecorators; }
+
+  /**
+   * Registers an extra row for the sheet tab's character section — the way a
+   * plugin surfaces a custom stat (e.g. the curator's reputation). Plugins
+   * load before the UI builds, so registered rows render as part of the
+   * sheet itself: right after the built-in stats, before the
+   * rules.headerResources rows, filled by the same data-stat-bind loop as
+   * every other row. No-op for games whose tabs omit the attributes widget.
+   *
+   * @param {object} row
+   * @param {string} row.label - Display label (plain text).
+   * @param {string} row.bind - data-stat-bind path on the player (e.g.
+   *   'attributes.reputation').
+   */
+  registerSheetRow(row) {
+    this._sheetRows.push(row);
+  }
+
+  get sheetRows() { return this._sheetRows; }
 }
 
 window.addEventListener('DOMContentLoaded', () => {
