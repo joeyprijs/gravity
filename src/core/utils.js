@@ -79,6 +79,52 @@ export function escapeHtml(str) {
 }
 
 /**
+ * Collapse/expand wiring for section-toggle headings, with the collapsed-key
+ * set persisted under one localStorage key — a UI preference, not game
+ * state. `defaultCollapsed` applies only while nothing is stored yet: an
+ * explicitly stored empty set means the player expanded everything, and
+ * wins. Collapsing hides the body element in place — no re-render, so its
+ * bindings and buttons survive. Used by the inventory panel and the sheet
+ * tab, each with its own storage key.
+ *
+ * @param {string} storageKey - localStorage key holding the collapsed keys.
+ * @param {string[]} [defaultCollapsed] - Keys collapsed on first run.
+ * @returns {{wire: function(HTMLElement, HTMLElement, string): void}}
+ */
+export function createSectionToggles(storageKey, defaultCollapsed = []) {
+  let collapsed;
+  try {
+    const stored = globalThis.localStorage?.getItem(storageKey);
+    collapsed = new Set(stored ? JSON.parse(stored) : defaultCollapsed);
+  } catch {
+    collapsed = new Set(defaultCollapsed);
+  }
+  const save = () => {
+    try {
+      globalThis.localStorage?.setItem(storageKey, JSON.stringify([...collapsed]));
+    } catch { /* storage unavailable (private mode) — state stays per-session */ }
+  };
+  return {
+    // Applies the current state to a heading/body pair and flips it
+    // (persisting) on heading clicks. onclick, not addEventListener, so
+    // re-wiring after a re-render replaces the handler instead of stacking.
+    wire(heading, body, key) {
+      const applyState = (isCollapsed) => {
+        body.hidden = isCollapsed;
+        heading.classList.toggle(CSS.SECTION_TOGGLE_COLLAPSED, isCollapsed);
+      };
+      applyState(collapsed.has(key));
+      heading.onclick = () => {
+        const nowCollapsed = !collapsed.delete(key);
+        if (nowCollapsed) collapsed.add(key);
+        applyState(nowCollapsed);
+        save();
+      };
+    },
+  };
+}
+
+/**
 * Clears all child elements from a parent DOM element.
 * @param {HTMLElement|string} elementOrId - The element or its ID.
 */
@@ -290,6 +336,24 @@ export function buildSceneDescription(title, body = null, t = null) {
     div.appendChild(p);
   }
   return div;
+}
+
+/**
+ * One sheet attribute row — the label/value line the sheet tab's sections
+ * are made of, shared so plugin rows injected into them (e.g. the curator's
+ * reputation) can't drift from the sheet's markup. The label is escaped;
+ * valueHtml is engine-authored markup (data-stat-bind spans).
+ *
+ * @param {string} label - Display label (plain text).
+ * @param {string} valueHtml - HTML for the value cell.
+ * @param {string} [extraClasses] - Extra classes on the row element.
+ * @returns {string} HTML for one .attr-list__row.
+ */
+export function attrRowHtml(label, valueHtml, extraClasses = '') {
+  return `<div class="attr-list__row${extraClasses ? ` ${extraClasses}` : ''}">
+    <span class="attr-list__label">${escapeHtml(label)}</span>
+    <span class="attr-list__value">${valueHtml}</span>
+  </div>`;
 }
 
 /**

@@ -1,5 +1,5 @@
 import { gameState } from "../core/state.js";
-import { createElement, buildOptionButton, escapeHtml, getItemLabel, resetOptionsPanel } from "../core/utils.js";
+import { attrRowHtml, createElement, buildOptionButton, escapeHtml, getItemLabel, resetOptionsPanel } from "../core/utils.js";
 import { ACTIONS, CSS, LOG } from "../core/config.js";
 
 // The curator's reputation model: a permanent score (state.museumReputation,
@@ -136,12 +136,15 @@ function injectReputationSheetRow(engine) {
   if (sheetRowInjected) return;
   const list = document.querySelector('.attr-list--character');
   if (!list) return;
-  const row = document.createElement('div');
-  row.className = 'attr-list__row attr-list__row--reputation';
-  row.innerHTML = `
-    <span class="attr-list__label">${escapeHtml(engine.t('plugin.curator.reputationLabel'))}</span>
-    <span class="attr-list__value" data-stat-bind="attributes.reputation"></span>
-  `;
+  // Same row shape as the sheet's own rows (see attrRowHtml) — parsed via a
+  // template element because this row is inserted into an existing list.
+  const tpl = document.createElement('template');
+  tpl.innerHTML = attrRowHtml(
+    engine.t('plugin.curator.reputationLabel'),
+    '<span data-stat-bind="attributes.reputation"></span>',
+    'attr-list__row--reputation'
+  );
+  const row = tpl.content.firstElementChild;
   // The stats update loop only fills binds on 'stats' notifications; seed the
   // value here so the row isn't blank when injected by a non-stats one.
   row.querySelector('[data-stat-bind]').textContent = getMuseumReputation();
@@ -198,6 +201,13 @@ export default function curatorPlugin(engine) {
   gameState.subscribe(() => {
     injectReputationSheetRow(engine);
   });
+
+  // Tabs are fully data-driven, so a game can configure the reputation stat
+  // into invisibility — warn like validate.js does for a missing options tab
+  // (validation itself stays plugin-agnostic).
+  const tabs = engine.data.rules?.tabs;
+  if (tabs && !tabs.some(t => t?.widget === 'attributes'))
+    console.warn('[Gravity] curator: no tab with widget "attributes" — the reputation stat renders nowhere');
 }
 
 // standalone CuratorUI dashboard logic

@@ -1,5 +1,5 @@
 import { gameState } from "../core/state.js";
-import { clearElement, createElement, escapeHtml, getByPath } from "../core/utils.js";
+import { attrRowHtml, clearElement, createElement, createSectionToggles, escapeHtml, getByPath } from "../core/utils.js";
 import { EL, CSS, LOG } from "../core/config.js";
 import { getDay, getSegment } from "../systems/time.js";
 import { skillLabel } from "../systems/skill-checks.js";
@@ -133,20 +133,15 @@ export class UIManager {
       if (tab.widget === 'attributes') {
         const canSpend = (rules.levelUp?.statPoints ?? 0) > 0;
         // The data-stat-bind spans ride the existing stats update loop.
-        const statRow = (label, valueHtml) =>
-          `<div class="attr-list__row">
-            <span class="attr-list__label">${escapeHtml(label)}</span>
-            <span class="attr-list__value">${valueHtml}</span>
-          </div>`;
         const characterRows = [
-          statRow(this.engine.t('ui.statName'), bindSpan('name')),
-          statRow(this.engine.t('ui.statLevel'), bindSpan('level')),
-          statRow(this.engine.t('ui.statHp'), `${bindSpan('resources.hp.current')}/${bindSpan('resources.hp.max')}`),
-          statRow(this.engine.t('ui.statAc'), bindSpan('attributes.ac')),
-          statRow(this.engine.t('ui.statAp'), `${bindSpan('resources.ap.current')}/${bindSpan('resources.ap.max')}`),
-          statRow(this.engine.t('ui.statInitiative'), bindSpan('attributes.initiative')),
-          statRow(this.engine.t('ui.statGold'), bindSpan('resources.gold')),
-          ...this._headerResourceEntries().map(([label, valueHtml]) => statRow(label, valueHtml)),
+          attrRowHtml(this.engine.t('ui.statName'), bindSpan('name')),
+          attrRowHtml(this.engine.t('ui.statLevel'), bindSpan('level')),
+          attrRowHtml(this.engine.t('ui.statHp'), `${bindSpan('resources.hp.current')}/${bindSpan('resources.hp.max')}`),
+          attrRowHtml(this.engine.t('ui.statAc'), bindSpan('attributes.ac')),
+          attrRowHtml(this.engine.t('ui.statAp'), `${bindSpan('resources.ap.current')}/${bindSpan('resources.ap.max')}`),
+          attrRowHtml(this.engine.t('ui.statInitiative'), bindSpan('attributes.initiative')),
+          attrRowHtml(this.engine.t('ui.statGold'), bindSpan('resources.gold')),
+          ...this._headerResourceEntries().map(([label, valueHtml]) => attrRowHtml(label, valueHtml)),
         ].join('');
         const items = (rules.customAttributes ?? []).map(attr =>
           `<div class="attr-list__row">
@@ -206,37 +201,15 @@ export class UIManager {
     });
   }
 
-  // Wires the sheet's section headings as collapse toggles — same behavior
-  // as the inventory sections (see InventoryUI._buildSection): the body hides
-  // in place, so bindings and buttons survive, and the state persists.
+  // Wires the sheet's section headings as collapse toggles — the same
+  // shared machinery as the inventory sections (see createSectionToggles).
   _bindSheetToggles(panel) {
-    const toggles = panel.querySelectorAll(`.${CSS.SECTION_TOGGLE}`);
-    // Sections start collapsed; the stored set (even an empty one) only
-    // exists once the player has toggled something, and wins from then on.
-    const allKeys = () => new Set([...toggles].map(btn => btn.dataset.section));
-    let collapsed;
-    try {
-      const stored = globalThis.localStorage?.getItem(SHEET_COLLAPSED_KEY);
-      collapsed = stored ? new Set(JSON.parse(stored)) : allKeys();
-    } catch {
-      collapsed = allKeys();
-    }
+    const toggles = [...panel.querySelectorAll(`.${CSS.SECTION_TOGGLE}`)];
+    // Sections start collapsed until the player toggles something.
+    const sections = createSectionToggles(SHEET_COLLAPSED_KEY, toggles.map(btn => btn.dataset.section));
     toggles.forEach(btn => {
       const key = btn.dataset.section;
-      const body = panel.querySelector(`[data-section-body="${key}"]`);
-      const applyState = (isCollapsed) => {
-        body.hidden = isCollapsed;
-        btn.classList.toggle(CSS.SECTION_TOGGLE_COLLAPSED, isCollapsed);
-      };
-      applyState(collapsed.has(key));
-      btn.onclick = () => {
-        const isCollapsed = !collapsed.delete(key);
-        if (isCollapsed) collapsed.add(key);
-        applyState(isCollapsed);
-        try {
-          globalThis.localStorage?.setItem(SHEET_COLLAPSED_KEY, JSON.stringify([...collapsed]));
-        } catch { /* storage unavailable (private mode) — collapse state stays per-session */ }
-      };
+      sections.wire(btn, panel.querySelector(`[data-section-body="${key}"]`), key);
     });
   }
 

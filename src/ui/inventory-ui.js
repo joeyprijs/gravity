@@ -1,4 +1,4 @@
-import { createElement, buildCard, getItemLabel, itemStatLines } from "../core/utils.js";
+import { createElement, buildCard, createSectionToggles, getItemLabel, itemStatLines } from "../core/utils.js";
 import { EL, CSS, WEAPON_SLOTS } from "../core/config.js";
 import { gameState } from "../core/state.js";
 
@@ -12,7 +12,7 @@ const COLLAPSED_KEY = 'gravity:inventory-collapsed';
 export class InventoryUI {
   constructor(engine) {
     this.engine = engine;
-    this._collapsed = new Set(this._loadCollapsed());
+    this._toggles = createSectionToggles(COLLAPSED_KEY);
   }
 
   renderInventory(player) {
@@ -119,44 +119,19 @@ export class InventoryUI {
   }
 
   // Builds a collapsible section (heading toggle + card list) and returns
-  // the list element. Collapsing hides the list in place — no re-render, so
-  // the action buttons keep their bindings. The muted count tells the player
-  // what a collapsed section holds without opening it.
+  // the list element. The muted count tells the player what a collapsed
+  // section holds without opening it.
   _buildSection(panel, key, labelText, count) {
     const section = createElement('div', CSS.PANEL_SECTION);
     const heading = createElement('button', [CSS.SECTION_HEADING, CSS.SECTION_TOGGLE]);
     heading.appendChild(createElement('span', CSS.SECTION_TOGGLE_LABEL, labelText));
     if (count !== undefined) heading.appendChild(createElement('span', CSS.SECTION_TOGGLE_COUNT, String(count)));
     const ul = createElement('ul', CSS.CARD_LIST);
-    const applyState = (collapsed) => {
-      ul.hidden = collapsed;
-      heading.classList.toggle(CSS.SECTION_TOGGLE_COLLAPSED, collapsed);
-    };
-    applyState(this._collapsed.has(key));
-    heading.onclick = () => {
-      const collapsed = !this._collapsed.delete(key);
-      if (collapsed) this._collapsed.add(key);
-      applyState(collapsed);
-      this._saveCollapsed();
-    };
+    this._toggles.wire(heading, ul, key);
     section.appendChild(heading);
     section.appendChild(ul);
     panel.appendChild(section);
     return ul;
-  }
-
-  _loadCollapsed() {
-    try {
-      return JSON.parse(globalThis.localStorage?.getItem(COLLAPSED_KEY) || '[]');
-    } catch {
-      return [];
-    }
-  }
-
-  _saveCollapsed() {
-    try {
-      globalThis.localStorage?.setItem(COLLAPSED_KEY, JSON.stringify([...this._collapsed]));
-    } catch { /* storage unavailable (private mode) — collapse state stays per-session */ }
   }
 
   // The card's accent stat lines — same lines as the combat attack buttons
