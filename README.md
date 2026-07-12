@@ -5,7 +5,7 @@
 [![Platform: Browser](https://img.shields.io/badge/Platform-Browser--Native-cyan.svg)](#running-locally)
 [![Tests: Node Native](https://img.shields.io/badge/Tests-Node--Native-emerald.svg)](#running-locally)
 
-A browser-native, zero-dependency data-driven text RPG engine and creator suite. Define your entire world—scenes, branch screenplays, characters, quests, items, rules, and maps—entirely in JSON with no scripting required.
+A browser-native, zero-dependency, data-driven text RPG engine. Define your entire world — scenes, branching dialogue, characters, quests, items, rules, and maps — in JSON, with no scripting required.
 
 **[Play the Live Demo](https://joeyprijs.github.io/gravity/)**
 
@@ -23,7 +23,8 @@ A browser-native, zero-dependency data-driven text RPG engine and creator suite.
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
 - [Running Locally](#running-locally)
-- [Core Concepts](#core-concepts) — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full engine internals
+- [Core Concepts](#core-concepts)
+- [The Player UI](#the-player-ui)
 - [Content Authoring Reference](#content-authoring-reference)
   - [Manifest — `data/index.json`](#manifest--dataindexjson)
   - [Rules — `data/rules.json`](#rules--datarulesjson)
@@ -34,23 +35,27 @@ A browser-native, zero-dependency data-driven text RPG engine and creator suite.
   - [Items](#items)
   - [Loot Tables](#loot-tables)
   - [Missions & Quests](#missions--quests)
-- [Extensible Plugin API](#extensible-plugin-api)
+- [Validation](#validation)
+- [Plugin API](#plugin-api)
+- [Further Documentation](#further-documentation)
 - [License](#license)
 
 ---
 
 ## Core Features
 
-*   **Zero-Dependency Vanilla JS** — Runs natively in any modern web browser via ES Modules with zero bundlers, loaders, or compilations.
-*   **Data-Driven Engine** — 100% of game assets (scenes, items, enemies, dialogues, quests, rules) are defined in static JSON; no JS coding is required to author a game.
-*   **D&D-Style Turn-Based Combat** — Round-robin combat utilizing d20 checks, initiatives, HP, Armor Class (AC), and Action Point (AP) budgets. Supports multi-enemy encounters and auto-combat scene entries.
-*   **Branching Screenplay Dialogues** — Branching conversation nodes with skill checks, item rewards, quest triggers, and stateful merchants supporting custom discounts.
-*   **Outcome-Tiered Skill Checks** — d20 checks with margin-based tiers (critical / success / partial / failure), one-shot fail-forward gambles, attempt budgets with authored exhaustion routes, passive checks, and free narrative beats. See [`docs/CHECKS.md`](docs/CHECKS.md).
-*   **A World Clock (opt-in)** — Player actions advance a deterministic tick counter; days and segments derive from rules, timers fire quiet pipelines, and conditions can read `time` / `day` / `segment`. No wall-clock, fully save-safe.
-*   **Interactive Maps HUD** — A dynamic scaled minimap projection in the sidebar and a full-screen scrollable coordinate map centered on the player.
-*   **Dynamic Sidebar Tab Panels** — Layout-driven tab generation compiled dynamically from rules definitions, supporting custom widgets (attributes, maps).
-*   **Character Creation Point-Buy** — Custom pre-game stat budgeting mapping dot-paths to player properties.
-*   **Robust Schema Migration** — Base64-encoded JSON session save files carrying forward-compatible migrations to keep older saves playable on newer engine updates.
+*   **Zero-Dependency Vanilla JS** — Runs natively in any modern browser via ES Modules. No bundlers, no compilers, no npm install.
+*   **Data-Driven Everything** — Scenes, items, enemies, dialogue, quests, rules, even the sidebar tabs are defined in static JSON. Authoring a game requires no JavaScript.
+*   **One Resolution Mechanic** — d20 + attribute modifier vs DC, everywhere: scene checks, dialogue persuasion, combat attacks. No parallel dice systems.
+*   **Outcome-Tiered Skill Checks** — Margin-based tiers (critical / success / partial / failure), one-shot fail-forward gambles, attempt budgets with authored exhaustion routes, passive checks, retry costs, and free narrative beats. The full authoring guide is [`docs/CHECKS.md`](docs/CHECKS.md).
+*   **Turn-Based Combat** — Initiative order, HP / Armor Class / Action Point budgets, multi-enemy encounters, auto-combat scene entries, and a configurable AP economy (`rules.apEconomy`).
+*   **Character Progression** — Pre-game point-buy character creation, XP levels that bank spendable stat points, weapons governed by a wielder attribute (`attackAttribute`), and equipment that raises any attribute (`attributeBonuses`).
+*   **Branching Dialogue & Merchants** — Conversation trees with skill-checked responses, item and quest rewards, and stateful merchant stock with per-NPC pricing.
+*   **A World Clock (opt-in)** — Player actions advance a deterministic tick counter; days and named segments derive from rules, timers fire quiet action pipelines, and conditions can read `time` / `day` / `segment`. No wall clock, fully save-safe.
+*   **Interactive World Map** — A scaled minimap in the sidebar tab plus a full-screen scrollable coordinate map centered on the player.
+*   **Localisation** — Every player-facing string resolves through locale files; games can ship multiple languages and the engine matches the browser's preference.
+*   **Load-Time Validation** — The engine validates all game data on boot and prints authoring mistakes (dangling IDs, missing locale keys, unreachable UI) to the console, grouped per entity.
+*   **Robust Save Migration** — Saves are versioned, Base64-encoded state snapshots downloaded as files; a migration chain keeps older saves playable on newer engine versions.
 
 ---
 
@@ -58,10 +63,10 @@ A browser-native, zero-dependency data-driven text RPG engine and creator suite.
 
 | Component | Choice |
 | :--- | :--- |
-| **Language** | Vanilla JavaScript (ESModules) |
-| **Markup & Layout** | HTML5 (Dynamic layout viewports) |
-| **Styles (CSS)** | Plain CSS3 (Custom properties, CSS variables) |
-| **Testing Frame** | Node.js native test runner (zero external dependencies) |
+| **Language** | Vanilla JavaScript (ES Modules) |
+| **Markup & Layout** | HTML5 |
+| **Styles** | Plain CSS3 (custom properties) |
+| **Testing** | Node.js native test runner (`node --test`) |
 
 ---
 
@@ -69,181 +74,176 @@ A browser-native, zero-dependency data-driven text RPG engine and creator suite.
 
 ```
 gravity/
-├── index.html               # Main game HTML entry
+├── index.html               # The game's single HTML entry point
 ├── css/
-│   └── styles.css           # Premium gaming styles & properties
+│   └── styles.css           # All styling, one file
 ├── src/
 │   ├── core/
-│   │   ├── engine.js        # Subsystem orchestrator & startup validator
-│   │   ├── state.js         # Reactive StateManager & base64 serializer
-│   │   ├── config.js        # Global elements, action keys, and enums
-│   │   ├── i18n.js          # Language resolution for manifest locales
-│   │   ├── validate.js      # Load-time game data validation
-│   │   └── utils.js         # DOM helpers & dot-path traversal utilities
+│   │   ├── engine.js        # Orchestrator: boot, registries, delegate API, event bus
+│   │   ├── state.js         # Reactive StateManager singleton + save/load & migrations
+│   │   ├── config.js        # CSS/element registries, action names, flag key builders
+│   │   ├── i18n.js          # Browser-language resolution for manifest locales
+│   │   ├── validate.js      # Load-time game-data validation
+│   │   └── utils.js         # DOM builders (cards, rows, toggles) & shared helpers
 │   ├── systems/
-│   │   ├── actions.js       # Composable action pipeline handlers
-│   │   ├── combat.js        # D&D turn-based combat & game-over loops
-│   │   ├── condition.js     # Recursive AST logical evaluation compiler
-│   │   ├── dialogue.js      # NPC branch screenplays & merchant trade panels
-│   │   ├── dice.js          # roll() and NdF[+/-M] damage roll parsers
-│   │   ├── narrative.js     # Chronological log & scroll manager
-│   │   ├── quests.js        # Mission lifecycle and reward processor
-│   │   └── scene.js         # Room renderer, skill checks, and outcome tiers
+│   │   ├── scene.js         # Scene rendering, options, item discovery
+│   │   ├── combat.js        # Turn-based combat + its renderer
+│   │   ├── dialogue.js      # Conversation trees & merchant trade
+│   │   ├── skill-checks.js  # d20 checks, outcome tiers, attempt bookkeeping (pure)
+│   │   ├── condition.js     # Condition AST evaluator (pure)
+│   │   ├── dice.js          # roll() and NdF±M damage parsing (pure)
+│   │   ├── time.js          # World-clock ticks, segments, timers
+│   │   ├── actions.js       # Built-in action pipeline handlers
+│   │   ├── quests.js        # Mission lifecycle
+│   │   └── narrative.js     # The chronological story log
 │   ├── ui/
-│   │   ├── ui.js            # Reactive view controller & tab nav constructor
-│   │   ├── inventory-ui.js  # Inventory item lists & equipped slots
-│   │   ├── quest-ui.js      # Active & Completed quest log panels
-│   │   └── chest-ui.js      # Chest vault deposit/withdraw interfaces
+│   │   ├── ui.js            # UIManager: tab construction, sheet, top bar, save/load
+│   │   ├── inventory-ui.js  # Inventory & equipped sections
+│   │   ├── quest-ui.js      # Active & completed quest panels
+│   │   └── chest-ui.js      # Chest deposit/withdraw panel
 │   ├── world/
-│   │   └── map.js           # Minimap scaling & centering scroll world map
+│   │   └── map.js           # Minimap + full-screen world map
 │   ├── screens/
-│   │   └── char-creation.js # Character allocation pre-game point-buy
+│   │   └── char-creation.js # Pre-game point-buy screen
 │   └── plugins/
-│       ├── curator.js       # Museum curation & reputation plugin
-│       └── curator/locales/ # Plugin locale namespaces
-├── tests/                   # Synchronous Node unit tests (npm test)
-│   ├── actions.test.js
-│   ├── char-creation.test.js
-│   ├── combat.test.js
-│   ├── condition.test.js
-│   ├── curator.test.js
-│   ├── dialogue.test.js
-│   ├── dice.test.js
-│   ├── display.test.js
-│   ├── i18n.test.js
-│   ├── reputation.test.js
-│   ├── scene.test.js
-│   ├── state.test.js
-│   └── validate.test.js
-├── schemas/                 # Project JSON Schema validation files
-│   ├── item.schema.json
-│   ├── scene.schema.json
-│   └── npc.schema.json
-└── data/                    # Game story directories (scenes, items, etc.)
+│       ├── curator.js       # Museum curation & reputation (reference plugin)
+│       └── curator/locales/ # Plugin locale files
+├── tests/                   # Node unit tests, one suite per module (npm test)
+├── schemas/                 # JSON Schemas for items, scenes, and NPCs
+└── data/                    # The shipped demo game: scenes, items, NPCs, rules, locales
 ```
 
 ---
 
 ## Running Locally
 
-Gravity requires **no compile, build, or npm installation steps**. To resolve ES Module CORS restrictions, serve the directory using any lightweight server:
+No compile, build, or install steps. ES Modules need an HTTP origin, so serve the directory with any static server:
 
 ```bash
-# Option A: Python server
+# Option A: Python
 python3 -m http.server 3000
 
-# Option B: Node serve
+# Option B: Node
 npx serve .
 ```
 
-*   **Play the Game:** Open `http://localhost:3000` in your browser.
-*   **Executing Unit Tests:** Run the synchronous Node unit test runner:
-    ```bash
-    npm test
-    ```
+*   **Play:** open `http://localhost:3000`.
+*   **Test:** `npm test` (runs Node's native test runner; no dependencies).
 
 ---
 
 ## Core Concepts
 
-The engine operates on a unidirectional, event-driven loop driven by the **Trinity**:
+The engine runs on a unidirectional loop of three ideas:
 
 ```
-[ Conditions (Gates) ] ➔ Allow/Deny ➔ [ Options / Scenes ] ➔ Trigger ➔ [ Actions (Mutations) ] ➔ Modify ➔ [ Flags / State ] ➔ Updates [ Conditions ]
+[ Conditions (Gates) ] ➔ show/hide ➔ [ Options & Scenes ] ➔ trigger ➔ [ Actions (Mutations) ] ➔ write ➔ [ Flags & State ] ➔ feed [ Conditions ]
 ```
 
-*   **Flags (State):** Persisted key-value states inside `gameState` that record what the player has accomplished (e.g. `door_unlocked: true`).
-*   **Conditions (Gates):** Logic trees that evaluate the flags, items, gold, level, or skills to show or hide scene options, dialogue paths, and room texts.
-*   **Actions (Mutations):** Pipelines of changes executed when a choice is made (loot, combat, dialogue, set_flag, navigate).
+*   **Flags (State):** persisted key-value facts about what the player has done (`door_unlocked: true`).
+*   **Conditions (Gates):** logic trees over flags, items, gold, level, attributes, quests, and time that show or hide options, dialogue paths, and description variants.
+*   **Actions (Mutations):** ordered pipelines executed when a choice lands — loot, combat, navigation, flag writes, timers.
+
+For boot flow, module boundaries, state contracts, events, and the full plugin surface, read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+---
+
+## The Player UI
+
+The game renders as three panels, each with one job:
+
+*   **Left — the player.** Tabs generated from `rules.tabs`: the character **Sheet** (stats and skills as collapsible sections), **Inventory**, **Quests**, **Map**, and **Options** (save / load / restart).
+*   **Center — the story.** The narrative log, with a pinned status bar on top showing HP / AC / AP / Gold, any `headerResources`, and the world clock.
+*   **Right — the interactions.** The current scene's options, skill checks, dialogue responses, or combat controls.
+
+Tabs are data-driven: each entry names a locale key and optionally a `widget` (`attributes`, `map`, or `options`). **The save/load/restart buttons only exist inside an `options` widget tab** — omit it and players cannot save (the validator warns).
 
 ---
 
 ## Content Authoring Reference
 
+The shipped demo under `data/` exercises every feature and is the best reference; the shapes below are the essentials.
+
 ### Manifest — `data/index.json`
-The central project registry. Every asset must be registered here:
+
+The central registry. Every asset a game uses must be listed here:
 
 ```json
 {
   "worldMapSize": { "width": 3000, "height": 2000 },
   "rules": "data/rules.json",
-  "flags": {
-    "dungeon": "data/flags/dungeon.json"
-  },
-  "scenes": {
-    "dungeon_start": "data/scenes/dungeon/start.json"
-  },
-  "items": {
-    "rusty_sword": "data/items/rusty_sword.json"
-  },
-  "npcs": {
-    "goblin_guard": "data/npcs/goblin_guard.json"
-  },
-  "missions": {
-    "escape_dungeon": "data/missions/escape_dungeon.json"
-  },
-  "tables": {
-    "basic_loot": "data/tables/basic_loot.json"
-  }
+  "flags":    { "dungeon":        "data/flags/dungeon.json" },
+  "scenes":   { "dungeon_start":  "data/scenes/dungeon/start.json" },
+  "items":    { "rusty_sword":    "data/items/rusty_sword.json" },
+  "npcs":     { "goblin_guard":   "data/npcs/goblin_guard.json" },
+  "missions": { "escape_dungeon": "data/missions/escape_dungeon.json" },
+  "tables":   { "basic_loot":     "data/tables/basic_loot.json" }
 }
 ```
 
----
+It may also declare `locales` + `defaultLanguage` (localisation) and `plugins` (see [Plugin API](#plugin-api)).
 
 ### Rules — `data/rules.json`
-Configures character values, inventory orders, pre-game budgets, and sidebar panels:
+
+Player defaults, attributes, progression, economy, and the UI tabs:
 
 ```json
 {
   "startingScene": "dungeon_start",
-  "merchantSellRatio": 0.5,
-  "unequipApCost": 1,
-  "restHealAmount": 10,
-  "snackHealAmount": 2,
-  "levelUpHpBonus": 5,
   "xpPerLevel": 100,
-  "fallbackWeapons": {
-    "player": "unarmed_strike",
-    "enemy": "enemy_claw"
-  },
-  "itemTypeOrder": {
-    "Weapon": 0, "Spell": 1, "Armor": 2, "Consumable": 3, "Flavour": 4
-  },
+  "levelUpHpBonus": 5,
+  "levelUp": { "statPoints": 1 },
+  "merchantSellRatio": 0.5,
+  "fallbackWeapons": { "player": "unarmed_strike", "enemy": "enemy_claw" },
+
   "playerDefaults": {
     "name": "", "level": 1, "xp": 0,
     "resources": {
       "hp": { "current": 10, "max": 10 },
       "ap": { "current": 3, "max": 3 },
-      "gold": 10
+      "gold": 0,
+      "luckPoints": { "current": 3, "max": 3 }
     },
     "attributes": { "ac": 10, "initiative": 0 },
     "inventory": [],
     "equipment": { "Head": null, "Torso": null, "Left Hand": null, "Right Hand": null }
   },
+
   "customAttributes": [
-    { "id": "perception", "default": 0 },
-    { "id": "stealth", "default": 0 }
+    { "id": "perception", "default": 0, "max": 5 },
+    { "id": "stealth",    "default": 0, "max": 5 }
   ],
+
   "charCreation": {
     "pointBudget": 3,
     "stats": [
-      { "id": "resources.hp.max", "localeKey": "maxHp", "bonusPerPoint": 2, "min": 0 },
+      { "id": "resources.hp.max",     "localeKey": "maxHp",      "bonusPerPoint": 2, "min": 0 },
       { "id": "attributes.perception", "localeKey": "perception", "bonusPerPoint": 1, "min": 0 }
     ]
   },
+
   "tabs": [
-    { "id": "inventory-tab", "localeKey": "ui.tabInventory", "default": true },
-    { "id": "quests-tab", "localeKey": "ui.tabQuests" },
-    { "id": "attributes-tab", "localeKey": "ui.tabAttributes", "widget": "attributes" },
-    { "id": "map-tab", "localeKey": "ui.tabMap", "widget": "map" }
-  ]
+    { "id": "attributes-tab", "localeKey": "ui.tabAttributes", "widget": "attributes", "default": true },
+    { "id": "inventory-tab",  "localeKey": "ui.tabInventory" },
+    { "id": "quests-tab",     "localeKey": "ui.tabQuests" },
+    { "id": "map-tab",        "localeKey": "ui.tabMap",     "widget": "map" },
+    { "id": "options-tab",    "localeKey": "ui.tabOptions", "widget": "options" }
+  ],
+
+  "skillRetry": { "resource": "luckPoints", "cost": 1, "restRestore": 3 },
+  "headerResources": ["luckPoints"]
 }
 ```
 
----
+Notes:
+
+*   `customAttributes` become skills: rollable in checks, readable in conditions, point-buyable at creation, and (with `levelUp.statPoints`) improvable on level-up from the Sheet, capped by `max`.
+*   `skillRetry` makes retrying a failed check cost a resource; `headerResources` surfaces custom resources in the status bar and the Sheet. Both optional — see [`docs/CHECKS.md`](docs/CHECKS.md).
+*   `rules.time` (opt-in) enables the world clock, and `rules.apEconomy` tunes AP refill/spend behavior; both are documented in [`docs/CHECKS.md`](docs/CHECKS.md).
 
 ### Flags — `data/flags/`
-Declared inside area files and merged into a single flat key namespace at boot:
+
+Declared per area, merged into one flat namespace at boot:
 
 ```json
 {
@@ -252,10 +252,9 @@ Declared inside area files and merged into a single flat key namespace at boot:
 }
 ```
 
----
-
 ### Conditions (Logic Gates)
-Boolean nodes evaluated inside option, dialogue, description, or skill blocks:
+
+Boolean trees usable on options, dialogue responses, description variants, and auto-combat. Combinators `and` / `or` / `not` nest arbitrarily:
 
 ```json
 {
@@ -266,41 +265,34 @@ Boolean nodes evaluated inside option, dialogue, description, or skill blocks:
 }
 ```
 
-*   **Leaf Shapes:**
-    *   `{ "flag": "name", "value": true }` — Matches boolean flag states.
-    *   `{ "item": "potion", "count": 2 }` — Evaluates if player inventory count is met.
-    *   `{ "gold": 50 }` or `{ "gold": { "less_than": 10 } }` — Evaluates gold count.
-    *   `{ "level": 3 }` — Evaluates player level.
-    *   `{ "mission": "escape", "status": "active" }` — Matches quest lifecycle.
-    *   `{ "stealth": 2 }` — Matches player skill attribute thresholds.
-    *   `{ "time": { "at_least": 120 } }` — Absolute elapsed world-clock ticks.
-    *   `{ "day": { "at_least": 3 } }` / `{ "segment": "night" }` — Derived day and day-segment (requires `rules.time`).
+Leaf shapes:
 
----
+| Shape | Meaning |
+|---|---|
+| `{ "flag": "name", "value": true }` | Flag equals value |
+| `{ "item": "id", "count": 2 }` | Inventory holds ≥ count (count optional) |
+| `{ "gold": 50 }` / `{ "gold": { "less_than": 10 } }` | Gold comparison |
+| `{ "level": 3 }` | Player level |
+| `{ "mission": "id", "status": "active" }` | Quest status (`not_started` / `active` / `complete`) |
+| `{ "stealth": 2 }` | Any declared attribute threshold |
+| `{ "time": { "at_least": 120 } }` | Elapsed world-clock ticks |
+| `{ "day": { "at_least": 3 } }` / `{ "segment": "night" }` | Derived day / segment (requires `rules.time`) |
+
+Numeric leaves accept a bare number (*at least*) or an operator object: `at_least`, `more_than`, `at_most`, `less_than`, `is`.
 
 ### Scenes
-A location the player can visit, supporting conditional text blocks, option grids, and skill checks:
+
+A location: conditional description blocks, options, skill checks, and map placement:
 
 ```json
 {
   "title": "Cellar room",
   "region": "dungeon",
-  "mapDefinitions": {
-    "top": 245, "left": 175, "width": 50, "height": 60, "background": "rgba(60,40,20,0.9)"
-  },
-  "descriptionHook": "museumChestContents",
-  "supportsExhibits": true,
-  "displays": [
-    { "id": "cellar_pedestal", "name": "Old Altar Pedestal", "item": "rusty_sword" }
-  ],
+  "mapDefinitions": { "top": 245, "left": 175, "width": 50, "height": 60 },
   "description": [
-    {
-      "text": "The wooden door stands wide open to the north.",
-      "condition": { "flag": "door_unlocked", "value": true }
-    },
-    {
-      "text": "A heavy wooden door stands locked to the north."
-    }
+    { "text": "The wooden door stands wide open to the north.",
+      "condition": { "flag": "door_unlocked", "value": true } },
+    { "text": "A heavy wooden door stands locked to the north." }
   ],
   "options": [
     {
@@ -320,9 +312,7 @@ A location the player can visit, supporting conditional text blocks, option grid
       "retryText": "Search the cellar again.",
       "skillCheck": "perception",
       "maxAttempts": 4,
-      "onExhausted": [
-        { "type": "set_flag", "flag": "search_exhausted", "value": true }
-      ],
+      "onExhausted": [ { "type": "set_flag", "flag": "search_exhausted", "value": true } ],
       "items": [
         { "item": "cellar_key", "amount": 1, "dc": 10 },
         { "table": "basic_loot", "dc": 14, "itemDrops": 2 }
@@ -347,35 +337,28 @@ A location the player can visit, supporting conditional text blocks, option grid
 }
 ```
 
-Skill checks resolve through margin-based **outcome tiers** — `critical`, `success`, `partial` (fail-forward), `failure` — plus `resolveOnce` one-shots, `maxAttempts` budgets with an authored `onExhausted` way out, and optional `timeCost`. The full authoring guide is [`docs/CHECKS.md`](docs/CHECKS.md).
-
----
+Checks resolve through margin-based **outcome tiers** (`critical` / `success` / `partial` / `failure`) with `resolveOnce` one-shots, `maxAttempts` budgets, retry costs, and time costs — the full guide is [`docs/CHECKS.md`](docs/CHECKS.md).
 
 ### NPCs & Enemies
-NPCs define aggressive monsters to fight, branching conversations, or shop merchants:
+
+One shape covers monsters, conversation partners, and merchants:
 
 ```json
 {
   "name": "Goblin Guard",
   "description": "A snarling creature wearing rusted scale armor.",
   "isMerchant": true,
-  "storeExitText": "Be gone, traveler.",
-  "carriedItems": [
-    { "item": "healing_potion", "amount": 3 }
-  ],
+  "carriedItems": [ { "item": "healing_potion", "amount": 3 } ],
   "attributes": {
-    "healthPoints": 8,
-    "armorClass": 8,
-    "actionPoints": 3,
-    "initiative": 1,
-    "xpReward": 50
+    "healthPoints": 8, "armorClass": 8, "actionPoints": 3,
+    "initiative": 1, "xpReward": 50
   },
   "equipment": { "Right Hand": "rusty_sword" },
   "conversations": {
     "start": {
       "npcText": "Stop right there! Who goes there?",
       "responses": [
-        { 
+        {
           "text": "[Persuade] I mean no harm.",
           "skillCheck": "charisma", "dc": 12, "resolveOnce": true,
           "outcomes": {
@@ -383,14 +366,13 @@ NPCs define aggressive monsters to fight, branching conversations, or shop merch
             "failure": { "actions": [ { "type": "goToConversation", "node": "hostile" } ] }
           }
         },
-        { "text": "[Attack] Prepare to fight!", "actions": [ { "type": "leave" }, { "type": "combat", "enemies": ["goblin_guard"] } ] }
+        { "text": "[Attack] Prepare to fight!",
+          "actions": [ { "type": "leave" }, { "type": "combat", "enemies": ["goblin_guard"] } ] }
       ]
     },
     "friendly": {
       "npcText": "Fine. Let's see what you have.",
-      "responses": [
-        { "text": "Let's trade.", "actions": [ { "type": "trade" } ] }
-      ]
+      "responses": [ { "text": "Let's trade.", "actions": [ { "type": "trade" } ] } ]
     },
     "hostile": {
       "npcText": "Die, human!",
@@ -400,29 +382,34 @@ NPCs define aggressive monsters to fight, branching conversations, or shop merch
 }
 ```
 
----
+Loot does not live on NPCs — drops are authored on the combat action's `onVictory` pipeline, keeping NPC definitions reusable.
 
 ### Items
-Items define weapons, shields, spells, armor protections, or consumables:
+
+Weapons, spells, armor, and consumables. All mechanical stats live inside `attributes`:
 
 ```json
 {
-  "name": "Healing Potion",
-  "type": "Consumable",
-  "description": "A glowing red fluid in a glass vial.",
-  "value": 10,
-  "actionPoints": 1,
+  "name": "Rusty Sword",
+  "type": "Weapon",
+  "slot": "Right Hand",
+  "description": "An old, chipped blade. Better than nothing.",
+  "value": 5,
   "attributes": {
-    "healingAmount": "1d8+2",
-    "teleportScene": "dungeon_sanctuary"
+    "damageRoll": "1d6",
+    "attackAttribute": "strength",
+    "actionPoints": 1
   }
 }
 ```
 
----
+*   `attackAttribute` names the attribute whose modifier the wielder adds to attack rolls — accuracy belongs to the character, not the weapon.
+*   Armor and relics use `attributes.attributeBonuses` (e.g. `{ "perception": 1 }`) and/or `armorClassBonus` to raise attributes while worn.
+*   Consumables use `attributes.healingAmount` (dice notation) or `attributes.teleportScene`.
 
 ### Loot Tables
-Loot tables support probability-weighted random item drops. Each entry's `dropWeight` is its relative likelihood (higher = more common; defaults to 1) — it is *not* item carry weight:
+
+Probability-weighted drops. `dropWeight` is relative likelihood (default 1), not carry weight:
 
 ```json
 {
@@ -434,53 +421,66 @@ Loot tables support probability-weighted random item drops. Each entry's `dropWe
 }
 ```
 
----
-
 ### Missions & Quests
-Missions register rewards, descriptions, and statuses tracked by the quest system:
 
 ```json
 {
   "name": "Escape the Dungeon",
-  "description": "Unlock the gates and find a way back to the surface.",
-  "missionRewards": {
-    "xp": 100,
-    "gold": 50
-  }
+  "description": "Find a way out of the underground complex and reach the surface.",
+  "missionRewards": { "xp": 100, "gold": 50 }
 }
 ```
+
+Missions are started via `questTrigger` (on scenes or dialogue) and complete through the quest system's lifecycle events.
 
 ---
 
-## Extensible Plugin API
+## Validation
 
-Gravity includes a runtime plugin framework. Add custom JS modules to the `plugins` array in `data/index.json`. The engine loads them dynamically upon initialization:
+On every boot the engine validates the loaded game data and prints issues to the console, grouped per entity — dangling item/scene/NPC/table references, unknown action types and skill names, enemies missing combat attributes, missing locale keys, deprecated authoring shapes, and UI-reachability problems (like a `tabs` list without an `options` widget, which would leave players unable to save). Validation never blocks the game; it is fail-fast feedback for authors. The same checks are unit-tested, and a data-integrity suite runs them against the shipped demo on every `npm test`.
 
-```javascript
-// data/index.json
-"plugins": ["plugins/custom_teleport.js"]
+---
+
+## Plugin API
+
+Plugins are trusted ES modules declared in the manifest, loaded at boot with full engine access:
+
+```json
+"plugins": [
+  {
+    "id": "curator",
+    "src": "./src/plugins/curator.js",
+    "locales": { "en": "./src/plugins/curator/locales/en.json" }
+  }
+]
 ```
 
-Plugins expose a default function receiving the active `RPGEngine` instance, allowing them to register custom actions and dynamic narrative description hooks:
+The default export receives the engine instance:
 
 ```javascript
-// plugins/custom_teleport.js
-export default function(engine) {
-  // 1. Register a custom action pipeline node
+export default function (engine) {
+  // A custom action usable in any JSON action pipeline
   engine.registerAction('teleport_home', (action, engine) => {
-    engine.log('System', 'A magical energy sweeps you away...', 'loot');
+    engine.log('System', engine.t('plugin.myplugin.whoosh'), 'loot');
     engine.renderScene('home_bedroom');
   });
 
-  // 2. Register a description hook callback
-  engine.registerDescriptionHook('myCustomText', (engine) => {
-    return ' The air feels damp and strange here.';
-  });
+  // A custom stat row on the character sheet
+  engine.registerSheetRow({ label: engine.t('plugin.myplugin.karma'), bind: 'attributes.karma' });
 }
 ```
+
+Further extension points — scene decorators, description hooks, engine events, state-mutation observers, custom stat handlers, and save migrations — are documented in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). The shipped curator plugin (museum displays + a derived reputation stat) is the reference implementation.
+
+---
+
+## Further Documentation
+
+*   [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — boot flow, module graph, state contracts, events, hooks, the full plugin surface, localisation, and testing policy.
+*   [`docs/CHECKS.md`](docs/CHECKS.md) — the authoring guide for skill checks, outcome tiers, attempt budgets, retry currency, and the world clock.
 
 ---
 
 ## License
 
-This is free and unencumbered software released into the public domain. For more details, see the [LICENSE](LICENSE) file.
+This is free and unencumbered software released into the public domain. For details, see [LICENSE](LICENSE).

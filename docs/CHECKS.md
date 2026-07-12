@@ -19,7 +19,7 @@ A scene's `skills` array (and an NPC's dialogue `responses`) supports five check
 | **Item discovery** | `skillCheck` + `items` | One roll vs every still-hidden item's own DC; found items persist. |
 | **Passive** | scene-level `passiveChecks` | Auto-rolled silently on first entry, once per game, into an author-named flag. |
 
-Check buttons always show the player what they're weighing: the DC **and their modifier** (`actions.skillBadge.*` locale strings take a `{mod}` param). Informed decisions are the point — hidden math is a slot machine.
+Check buttons always show the player what they're weighing: their modifier ("Bonus: Perception +2", from the `actions.skillBadge.*` locale strings) and the DC on its own line (`actions.skillBadgeDc`). Informed decisions are the point — hidden math is a slot machine.
 
 ## Outcome tiers
 
@@ -81,9 +81,9 @@ Failing a check is free the first time; *retrying* it can cost a scarce resource
 "headerResources": ["luckPoints"]
 ```
 
-- **First attempt always free**; each retry of a failed pass/fail or discovery check (and dialogue checks) spends `cost` of the resource. The badge shows it (`— retry: 1 Luck`); when the player can't afford it the button renders disabled, like an unmet item requirement.
+- **First attempt always free**; each retry of a failed pass/fail or discovery check (and dialogue checks) spends `cost` of the resource. The badge shows it as its own line ("Retry: 1 Luck Point", from `actions.badgeRetryCost`); when the player can't afford it the button renders disabled, like an unmet item requirement.
 - **`restRestore`** refills the resource on `full_rest` (clamped to max) — the cozy counterweight: spend do-overs while out, recover them sleeping at home.
-- **`headerResources`** lists resources to surface as header chips (label from `ui.resources.<id>`); it's general — any declared `{ current, max }` resource can appear, and any can be spent/restored by name through actions.
+- **`headerResources`** lists resources to surface in the story panel's status bar and the character sheet (label from `ui.resources.<id>`); it's general — any declared `{ current, max }` resource can appear, and any can be spent/restored by name through actions.
 - The resource is tone-neutral: name it "Luck", "Grit", "Focus", whatever fits. It doesn't touch how checks *resolve* (still d20 + modifier vs DC) — it only gates retries.
 
 *(A depleting resource is opt-in. Omit `skillRetry` and retries are unlimited and free.)*
@@ -110,7 +110,7 @@ Without `rules.time` the system is dormant: no HUD chip, no default costs (expli
 - **Actions.** `{ "type": "advance_time", "amount": 8 }`, or `{ "type": "advance_time", "until": "morning" }` for sleep-until-morning (never 0 ticks — in the morning it sleeps to tomorrow's).
 - **Reading time.** Condition leaves work everywhere conditions do: `{ "time": { "at_least": 120 } }`, `{ "day": { "at_least": 3 } }`, `{ "segment": "night" }`.
 - **Timers.** `{ "type": "set_timer", "id": "alarm", "afterTicks": 12, "actions": [ ... ] }` (or `atTick`); `cancel_timer` disarms. Timer pipelines are restricted to **quiet actions** (`set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`) — the world changes through flags, which scene re-renders and conditions already read, so a timer firing mid-anything is always safe. Re-arming an id replaces the old deadline.
-- **HUD.** With `ticksPerDay` set, a "Day 2 — Evening" chip appears in the header (`ui.timeChipDay` / `ui.timeChipSegment` + `time.segments.*` locale keys).
+- **HUD.** With `ticksPerDay` set, the story panel's status bar shows the clock ("Day 2: Evening" — `ui.timeChipDay` for the day text, `time.segments.*` for the segment names). Games without segments show just the day.
 
 Combat does not advance the clock by default; author an `advance_time` in `onVictory` if a fight should cost time.
 

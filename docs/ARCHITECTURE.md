@@ -40,7 +40,7 @@ engine.js (orchestrator, delegate API, event bus, registries)
 │   ├── condition.js   condition AST evaluator (pure)
 │   ├── skill-checks.js d20 checks, outcome tiers, attempt/resolution bookkeeping
 │   └── dice.js        roll() and damage parsing (pure)
-├── ui/                UIManager + tab panels (inventory, quests, chests)
+├── ui/                UIManager (tabs, sheet, top bar, save/load) + inventory/quest/chest panels
 ├── world/map.js       minimap + full-screen world map
 ├── screens/char-creation.js
 └── plugins/           optional modules loaded via the manifest
@@ -160,10 +160,15 @@ At boot the engine matches `navigator.languages` against the declared codes — 
 
 ## UI Layer
 
-- `UIManager.update(hint)` re-renders the hinted region; `[data-stat-bind="path"]` elements are bound to player state by dot-path.
-- The scene options panel (option buttons, injected sections, skills container, location reminder) is reset through `resetOptionsPanel()` in `core/utils.js` — every system that takes over the panel (scene, combat, dialogue, store, chest, curator) goes through it.
+The game is three panels — player (left), story (center), interactions (right) — a deliberate layout: each panel maps onto one future mobile drawer.
+
+- **Player panel:** tabs generated from `rules.tabs`. Each entry names a locale key and an optional `widget` — `attributes` (the character sheet: stat and skill sections as collapsible label/value rows), `map` (the minimap), or `options` (the save/load/restart buttons, which exist *only* here; `validate.js` warns when a tabs list omits the widget). Collapse state persists per section via `createSectionToggles` in `core/utils.js`, shared with the inventory panel's groups.
+- **Story panel:** the narrative log, with a pinned top bar (`scene__topbar`) showing HP/AC/AP/Gold, every `rules.headerResources` entry, and the world clock. The bar never scrolls — the log is the panel's internal scroll container.
+- **Interactions panel:** the scene options, skill checks, dialogue responses, or combat controls. It is reset through `resetOptionsPanel()` in `core/utils.js` — every system that takes over the panel (scene, combat, dialogue, store, chest, curator) goes through it.
+- **Reactive updates:** `UIManager.update(hint)` re-renders the hinted region (`'stats'`, `'inventory'`, `'quests'`, `'map'`); `[data-stat-bind="path"]` elements anywhere in the document are filled from player state by dot-path on every stats change. The sheet, the top bar, and plugin-registered sheet rows all ride this one loop.
+- **Shared DOM vocabulary:** `buildCard` in `core/utils.js` is the single builder for every titled box (options, checks, attacks, inventory items, quests, chest rows); `attrRowHtml` is the single builder for sheet rows. Restyle `.card` and `.attr-list__row` and the whole game follows.
 - **Text vs HTML policy:** `createElement(tag, class, text)` sets `textContent` — game data is always treated as plain text. The only sanctioned HTML channels are scene description bodies (`buildSceneDescription`) and engine-authored structural templates; any dynamic value embedded in those must pass through `escapeHtml()`.
 
 ## Testing
 
-`npm test` runs `node --test tests/*.test.js` — synchronous unit tests against the real modules, no DOM required. Sixteen suites cover the engine's logic surface: state, combat math, the condition AST, dice, the action registry, scene and dialogue logic, displays and reputation (curator), character creation, i18n resolution, the validator itself, and a data-integrity suite that checks the shipped demo content. The DOM-rendering layer (`ui/`, the narrative log, the map) remains untested — the working policy is to keep rendering thin and the logic behind it in testable modules.
+`npm test` runs `node --test tests/*.test.js` — synchronous unit tests against the real modules, no DOM required. One suite per logic module covers the engine's surface: state, combat math, the condition AST, dice, the action registry, scene and dialogue logic, skill checks, the world clock, displays and reputation (curator), character creation, i18n resolution, the validator itself, and a data-integrity suite that checks the shipped demo content. The DOM-rendering layer (`ui/`, the narrative log, the map) remains untested — the working policy is to keep rendering thin and the logic behind it in testable modules.
