@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <!-- Everything (engine fetches, plugin imports, stylesheet) resolves
+       against the repo root, exactly as it does for index.html. -->
+  <base href="../">
+  <title>Gravity smoke test</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    /* The results panel floats above the live game so a failing step can be
+       inspected in place. */
+    #smoke-results {
+      position: fixed;
+      right: 12px;
+      bottom: 12px;
+      z-index: 9999;
+      max-width: 420px;
+      max-height: 60vh;
+      overflow-y: auto;
+      padding: 12px 16px;
+      background: rgba(10, 10, 12, 0.95);
+      border: 1px solid #444;
+      font: 12px/1.5 monospace;
+      color: #ddd;
+      white-space: pre-wrap;
+    }
+
+    #smoke-results .pass { color: #7dd87d; }
+    #smoke-results .fail { color: #ff7d7d; font-weight: bold; }
+  </style>
+</head>
+
+<body>
+  <div id="smoke-results">smoke: booting…</div>
+
+  <script type="module">
+    // Gravity UI smoke test — zero dependencies, runs in a real browser.
+    //
+    //   python3 -m http.server 3000   →   open /tests/smoke.html
+    //
+    // It boots the real engine against the shipped demo data, drives the UI
+    // like a player, and asserts the surfaces the Node tests can't reach
+    // (they have no DOM). Results render in the corner panel;
+    // `window.__SMOKE__` and the document title carry the verdict for
+    // automation.
+    import { RPGEngine } from './src/core/engine.js';
+
+    // Set synchronously, before any await: the engine's DOMContentLoaded
+    // listener may fire mid-module (the event doesn't wait for top-level
+    // await), and it must not boot an engine against the not-yet-injected
+    // skeleton.
+    window.GRAVITY_MANUAL_BOOT = true;
+
+    // ── Harness ────────────────────────────────────────────────────────────
+    const results = [];
+    const errors = [];
+    window.addEventListener('error', (e) => errors.push(e.message));
+    window.addEventListener('unhandledrejection', (e) => errors.push(String(e.reason)));
+
+    const assert = (cond, message) => {
+      if (!cond) throw new Error(message);
+    };
+    const until = (cond, what, timeout = 5000) => new Promise((resolve, reject) => {
+      const t0 = performance.now();
+      (function poll() {
+        let value;
+        try { value = cond(); } catch { /* not ready yet */ }
+        if (value) return resolve(value);
+        if (performance.now() - t0 > timeout) return reject(new Error(`timed out waiting for ${what}`));
+        setTimeout(poll, 50);
+      })();
+    });
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => [...document.querySelectorAll(sel)];
+    const text = (el) => (el?.textContent ?? '').replace(/\s+/g, ' ').trim();
+
+    async function step(name, fn) {
+      try {
+        await fn();
+        results.push({ name, ok: true });
+      } catch (err) {
+        results.push({ name, ok: false, error: err.message });
+      }
+      report(false);
+    }
+
+    function report(done) {
+      const failed = results.filter(r => !r.ok);
+      const panel = document.getElementById('smoke-results');
+      panel.innerHTML = results.map(r =>
+        `<div class="${r.ok ? 'pass' : 'fail'}">${r.ok ? '✓' : '✗'} ${r.name}${r.ok ? '' : ` — ${r.error}`}</div>`
+      ).join('') + (done ? `<div class="${failed.length ? 'fail' : 'pass'}">— ${results.length - failed.length}/${results.length} passed —</div>` : '');
+      if (done) {
+        document.title = failed.length ? `SMOKE: FAIL (${failed.length})` : `SMOKE: PASS (${results.length})`;
+        window.__SMOKE__ = { done: true, passed: results.length - failed.length, failed: failed.length, results };
+      }
+    }
+
+    // ── Boot the real game ─────────────────────────────────────────────────
+    // Deterministic UI prefs: the sheet must show its first-run defaults.
+    localStorage.removeItem('gravity:sheet-collapsed');
+    localStorage.removeItem('gravity:inventory-collapsed');
+
+    // The DOM skeleton comes from index.html itself — one source of truth,
+    // so this page can't drift from the markup the engine actually targets.
+    const indexHtml = await fetch('index.html').then(r => r.text());
+    const indexDoc = new DOMParser().parseFromString(indexHtml, 'text/html');
+    for (const id of ['char-creation', 'file-upload', 'game-container']) {
+      const node = indexDoc.getElementById(id);
+      assert(node, `index.html is missing #${id}`);
+      document.body.appendChild(document.importNode(node, true));
+    }
+
+    // Construct the engine directly — the skeleton above was injected after
+    // DOMContentLoaded, so the production boot listener can't fire here (it
+    // guards against double-boot for exactly this case).
+    window.gameEngine = new RPGEngine();
+
+    // ── The suite ──────────────────────────────────────────────────────────
+    queueMicrotask(async () => {
+      await step('engine boots to character creation', async () => {
+        await until(() => window.gameEngine, 'engine construction');
+        await until(() => !$('#char-creation').hidden && $('#char-creation').children.length, 'char-creation screen');
+      });
+
+      await step('character creation confirms into the game', async () => {
+        const nameInput = $('#char-creation input[type="text"]');
+        assert(nameInput, 'name input exists');
+        nameInput.value = 'Smoke Tester';
+        const confirm = $('.char-creation__confirm-btn');
+        assert(confirm, 'confirm button exists');
+        confirm.click();
+        await until(() => !$('#game-container').hidden, 'game container to show');
+      });
+
+      await step('tabs build from rules with the sheet active', () => {
+        const tabs = $$('.tabs__nav button');
+        assert(tabs.length === 5, `expected 5 tabs, got ${tabs.length}`);
+        assert(text(tabs[0]) === 'Sheet', `first tab is "${text(tabs[0])}", expected "Sheet"`);
+        assert(tabs[0].classList.contains('tabs__btn--active'), 'sheet tab starts active');
+        assert(!$('#attributes-tab').hidden, 'sheet panel visible');
+        assert($('#inventory-tab').hidden, 'inventory panel hidden');
+      });
+
+      await step('sheet sections start collapsed', () => {
+        assert($('[data-section-body="character"]').hidden, 'character body hidden');
+        assert($('[data-section-body="skills"]').hidden, 'skills body hidden');
+      });
+
+      await step('character section: rows, plugin row, bound values', () => {
+        $('[data-section="character"]').click();
+        assert(!$('[data-section-body="character"]').hidden, 'character body visible after toggle');
+        const rows = $$('[data-section-body="character"] .attr-list__row');
+        const labels = rows.map(r => text(r.querySelector('.attr-list__label')));
+        const expected = ['Name', 'Level', 'Hit Points', 'Armor Class', 'Initiative', 'Action Points', 'Luck Points', 'Gold', 'Reputation'];
+        assert(JSON.stringify(labels) === JSON.stringify(expected),
+          `row labels ${JSON.stringify(labels)}`);
+        const value = (label) => text(rows[labels.indexOf(label)].querySelector('.attr-list__value'));
+        assert(value('Name') === 'Smoke Tester', `name row shows "${value('Name')}"`);
+        assert(value('Hit Points') === '10/10', `HP row shows "${value('Hit Points')}"`);
+        assert(value('Reputation') === '0', `reputation row shows "${value('Reputation')}"`);
+        // Level-up point-buy covers the char-creation stats: HP and AC rows
+        // carry spend buttons (hidden until points are banked).
+        assert($('[data-spend-attr="resources.hp.max"]'), 'HP row has a spend button');
+        assert($('[data-spend-attr="attributes.ac"]'), 'AC row has a spend button');
+      });
+
+      await step('skills section lists the custom attributes', () => {
+        $('[data-section="skills"]').click();
+        const labels = $$('[data-section-body="skills"] .attr-list__row .attr-list__label').map(text);
+        assert(JSON.stringify(labels) === JSON.stringify(['Strength', 'Intelligence', 'Perception', 'Stealth', 'Charisma', 'Luck']),
+          `skill labels ${JSON.stringify(labels)}`);
+      });
+
+      await step('collapse state persists to localStorage', () => {
+        const stored = JSON.parse(localStorage.getItem('gravity:sheet-collapsed'));
+        assert(Array.isArray(stored) && stored.length === 0, `stored ${JSON.stringify(stored)} after expanding both`);
+      });
+
+      await step('top bar shows stats and the world clock', () => {
+        const bar = text($('.scene__topbar'));
+        for (const part of ['HP: 10/10', 'AC: 10', 'AP: 3/3', 'Gold: 0', 'Luck Points: 3/3', 'Day 1:']) {
+          assert(bar.includes(part), `top bar "${bar}" missing "${part}"`);
+        }
+      });
+
+      await step('scene renders narrative, options, and a skill check', () => {
+        assert($('#scene-narrative .scene'), 'a scene block rendered');
+        assert($$('#scene-options .card').length >= 1, 'at least one option card');
+        const badge = text($('#scene-options-skills .card .card__stats'));
+        assert(badge.includes('Bonus:'), `skill badge "${badge}" shows the modifier`);
+        assert(badge.includes('Difficulty Check'), `skill badge "${badge}" shows the DC`);
+      });
+
+      await step('inventory renders list cards with valid markup', () => {
+        $('[data-tab="inventory-tab"]').click();
+        assert(!$('#inventory-tab').hidden, 'inventory panel visible');
+        assert($$('#inventory-tab .card').length >= 3, 'inventory cards rendered');
+        assert($('#inventory-tab ul.card__stats li'), 'container-card stats are real lists');
+        assert(!$('button ul'), 'no <ul> inside any <button> (content-model invariant)');
+      });
+
+      await step('options tab holds save/load/restart', () => {
+        $('[data-tab="options-tab"]').click();
+        for (const id of ['btn-save', 'btn-load', 'btn-restart']) {
+          assert($(`#options-tab #${id}`), `#${id} present in options tab`);
+        }
+      });
+
+      await step('clicking a skill check advances the story', async () => {
+        const logCount = $$('#scene-narrative .scene__log').length;
+        $('#scene-options-skills .card').click();
+        await until(() => $$('#scene-narrative .scene__log').length > logCount, 'narrative log to grow');
+      });
+
+      await step('no uncaught errors during the run', () => {
+        assert(errors.length === 0, `caught: ${errors.join(' | ')}`);
+      });
+
+      report(true);
+    });
+  </script>
+</body>
+
+</html>

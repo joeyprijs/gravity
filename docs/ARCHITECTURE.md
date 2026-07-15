@@ -32,7 +32,7 @@ engine.js (orchestrator, delegate API, event bus, registries)
 ├── core/utils.js      DOM helpers (createElement, resetOptionsPanel, …)
 ├── systems/
 │   ├── scene.js       scene rendering, options, item discovery
-│   ├── combat.js      initiative-based turn combat + combat renderer
+│   ├── combat.js      initiative-based turn combat (renderer in ui/combat-ui.js)
 │   ├── dialogue.js    conversation trees, merchant shops
 │   ├── quests.js      mission lifecycle (listens to scene:entered)
 │   ├── narrative.js   scrollable narrative log
@@ -40,7 +40,7 @@ engine.js (orchestrator, delegate API, event bus, registries)
 │   ├── condition.js   condition AST evaluator (pure)
 │   ├── skill-checks.js d20 checks, outcome tiers, attempt/resolution bookkeeping
 │   └── dice.js        roll() and damage parsing (pure)
-├── ui/                UIManager (tabs, sheet, top bar, save/load) + inventory/quest/chest panels
+├── ui/                UIManager (tabs, sheet, top bar, save/load) + inventory/quest/chest/combat panels
 ├── world/map.js       minimap + full-screen world map
 ├── screens/char-creation.js
 └── plugins/           optional modules loaded via the manifest
@@ -171,4 +171,6 @@ The game is three panels — player (left), story (center), interactions (right)
 
 ## Testing
 
-`npm test` runs `node --test tests/*.test.js` — synchronous unit tests against the real modules, no DOM required. One suite per logic module covers the engine's surface: state, combat math, the condition AST, dice, the action registry, scene and dialogue logic, skill checks, the world clock, displays and reputation (curator), character creation, i18n resolution, the validator itself, and a data-integrity suite that checks the shipped demo content. The DOM-rendering layer (`ui/`, the narrative log, the map) remains untested — the working policy is to keep rendering thin and the logic behind it in testable modules.
+`npm test` runs `node --test tests/*.test.js` — synchronous unit tests against the real modules, no DOM required. One suite per logic module covers the engine's surface: state, combat math, the condition AST, dice, the action registry, scene and dialogue logic, skill checks, the world clock, displays and reputation (curator), character creation, i18n resolution, the validator itself, and a data-integrity suite that checks the shipped demo content.
+
+The DOM-rendering layer is covered by a browser smoke test, `tests/smoke.html` (serve the repo, open the page): it injects the real skeleton from `index.html`, boots the engine against the shipped demo through `new RPGEngine()` (setting `window.GRAVITY_MANUAL_BOOT` so the production `DOMContentLoaded` boot stands down), then drives the UI like a player — character creation, tabs, the sheet's sections and bound values, the top bar, inventory markup invariants, the options tab, and a skill-check click. Results render on the page; `window.__SMOKE__` and the document title (`SMOKE: PASS/FAIL`) carry the verdict for automation. Zero dependencies, like everything else. Run it after UI-layer changes — the working policy stays "keep rendering thin and the logic in testable modules", with the smoke page catching what the Node suites structurally can't.

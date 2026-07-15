@@ -22,7 +22,7 @@ const DEFAULT_LOCALE_PATH = 'data/locales.json';
 // RPGEngine is the central orchestrator. It owns all subsystems, loads game
 // data from JSON, and exposes a thin delegate API so subsystems can call each
 // other without importing each other directly (avoiding circular deps).
-class RPGEngine {
+export class RPGEngine {
   constructor() {
     // Populated by loadData(). Kept as an empty shell here so subsystems
     // constructed below can safely reference this.engine.data without null checks.
@@ -619,5 +619,7 @@ class RPGEngine {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  window.gameEngine = new RPGEngine();
+  // A harness that constructs the engine itself (see tests/smoke.html) sets
+  // GRAVITY_MANUAL_BOOT synchronously at startup — don't boot over it.
+  if (!window.GRAVITY_MANUAL_BOOT && !window.gameEngine) window.gameEngine = new RPGEngine();
 });

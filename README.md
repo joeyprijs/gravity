@@ -100,7 +100,8 @@ gravity/
 │   │   ├── ui.js            # UIManager: tab construction, sheet, top bar, save/load
 │   │   ├── inventory-ui.js  # Inventory & equipped sections
 │   │   ├── quest-ui.js      # Active & completed quest panels
-│   │   └── chest-ui.js      # Chest deposit/withdraw panel
+│   │   ├── chest-ui.js      # Chest deposit/withdraw panel
+│   │   └── combat-ui.js     # Combat attack/end-turn controls & game-over screen
 │   ├── world/
 │   │   └── map.js           # Minimap + full-screen world map
 │   ├── screens/
@@ -108,7 +109,7 @@ gravity/
 │   └── plugins/
 │       ├── curator.js       # Museum curation & reputation (reference plugin)
 │       └── curator/locales/ # Plugin locale files
-├── tests/                   # Node unit tests, one suite per module (npm test)
+├── tests/                   # Node unit tests (npm test) + smoke.html (browser UI test)
 ├── schemas/                 # JSON Schemas for items, scenes, and NPCs
 └── data/                    # The shipped demo game: scenes, items, NPCs, rules, locales
 ```
@@ -128,7 +129,8 @@ npx serve .
 ```
 
 *   **Play:** open `http://localhost:3000`.
-*   **Test:** `npm test` (runs Node's native test runner; no dependencies).
+*   **Test:** `npm test` (Node's native test runner; no dependencies).
+*   **UI smoke test:** open `http://localhost:3000/tests/smoke.html` — boots the real game in the browser and drives the UI through ~a dozen assertions (the title reports `SMOKE: PASS/FAIL`).
 
 ---
 
