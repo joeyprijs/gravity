@@ -25,14 +25,14 @@
       }
     },
     {
-      "text": "The corridor is quiet now, lit by a single guttering torch. The scuffle brought a spill of rubble down along the wall — and wedged beneath it, something catches the torchlight with a faint glint. The path north leads to the stone hallway.",
+      "text": "The corridor is quiet now, lit by a single guttering torch. The scuffle brought a spill of rubble down along the wall. Wedged beneath it, something catches the torchlight with a faint glint. The path north leads to the stone hallway.",
       "condition": {
         "flag": "wanderer_defeated",
         "value": true
       }
     },
     {
-      "text": "A narrow corridor stretches north toward the stone hallway. A disheveled figure lurches out of the shadows — hollow-eyed, wild with fear. They raise a blade before you can say a word."
+      "text": "A narrow corridor stretches north toward the stone hallway. A disheveled figure lurches out of the shadows: hollow-eyed, wild with fear. They raise a blade before you can say a word."
     }
   ],
   "autoAttack": {
@@ -129,7 +129,7 @@
         },
         "failure": {
           "text": [
-            "The rubble shifts but holds — the glint winks at you from just out of reach.",
+            "The rubble shifts but holds. The glint winks at you from just out of reach.",
             "Stone grinds on stone; your fingers come away raw and empty.",
             "With a final grind the pile settles, sealing whatever it was away for good."
           ]

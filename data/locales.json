@@ -4,8 +4,8 @@
     "nameLabel": "Character Name",
     "namePlaceholder": "Enter your name…",
     "statPoints": "Stat Points ",
-    "pointsRemainingOne": "— 1 point remaining",
-    "pointsRemainingMany": "— {remaining} points remaining",
+    "pointsRemainingOne": "(1 point remaining)",
+    "pointsRemainingMany": "({remaining} points remaining)",
     "confirmBtn": "Begin Adventure",
     "loadSaveBtn": "Load Save",
     "stats": {
@@ -31,11 +31,11 @@
       },
       "strength": {
         "label": "Strength",
-        "description": "+1 Strength per point — added to melee attacks"
+        "description": "+1 Strength per point, added to melee attacks"
       },
       "intelligence": {
         "label": "Intelligence",
-        "description": "+1 Intelligence per point — added to spell attacks"
+        "description": "+1 Intelligence per point, added to spell attacks"
       },
       "luck": {
         "label": "Luck",
@@ -86,6 +86,9 @@
     "statHp": "HP",
     "statAc": "AC",
     "statAp": "AP",
+    "sheetHp": "Hit Points",
+    "sheetAc": "Armor Class",
+    "sheetAp": "Action Points",
     "statInitiative": "Initiative",
     "statGold": "Gold",
     "statPoints": "Points to spend:",
@@ -116,7 +119,7 @@
       "evening": "Evening",
       "night": "Night"
     },
-    "dayBreaks": "Day {day} — {segment}.",
+    "dayBreaks": "Day {day}: {segment}.",
     "dayBreaksPlain": "Day {day}.",
     "segmentChanges": "It is now {segment}."
   },
@@ -183,12 +186,12 @@
       "intelligence": "Intelligence",
       "luck": "Luck"
     },
-    "skillCritical": "{skill} check: {breakdown} = {roll} vs DC {dc}, a triumph!",
-    "skillSuccess": "{skill} check: {breakdown} = {roll} vs DC {dc}, success!",
-    "skillPartial": "{skill} check: {breakdown} = {roll} vs DC {dc}, almost… but not quite.",
-    "skillFail": "{skill} check: {breakdown} = {roll} vs DC {dc}, failure.",
+    "skillCritical": "{skill} check: {roll} ({breakdown}) vs DC {dc}, a triumph!",
+    "skillSuccess": "{skill} check: {roll} ({breakdown}) vs DC {dc}, success!",
+    "skillPartial": "{skill} check: {roll} ({breakdown}) vs DC {dc}, almost… but not quite.",
+    "skillFail": "{skill} check: {roll} ({breakdown}) vs DC {dc}, failure.",
     "lookAroundEmpty": "You look around carefully. Nothing catches your eye.",
-    "lookAroundRoll": "You search the area: {breakdown} = {roll} vs DC {dc}.",
+    "lookAroundRoll": "You search the area: {roll} ({breakdown}) vs DC {dc}.",
     "lookAroundFound": "Your keen eye spots something!",
     "lookAroundFoundMore": "Your keen eye spots something, though you sense the area still holds more.",
     "lookAroundFail": "Nothing reveals itself, yet you sense there's something you're missing.",
@@ -209,28 +212,28 @@
     "rollSuffix": " ({dice}: {roll})",
     "teleported": "You gripped the {name} and vanished into thin air...",
     "alreadyHere": "You are already here.",
-    "notEnoughAP": "You're too spent for that — it takes {cost} AP.",
+    "notEnoughAP": "You're too spent for that. It takes {cost} AP.",
     "noCombatSave": "Cannot save during combat.",
     "noCombatTeleport": "There's no slipping away like that mid-fight!"
   },
   "combat": {
-    "fightingTitle": "Fighting: {names}",
+    "fightingTitle": "Combat: {names}",
     "started": "Combat started with {names}!",
-    "initiative": "Initiative: You rolled ({playerBreakdown} = {playerRoll}). {enemyRolls}.",
+    "initiative": "Initiative: You rolled {playerRoll} ({playerBreakdown}). {enemyRolls}.",
     "turnOrder": "Turn order: {turnOrder}.",
-    "initiativeEnemy": "{name} rolled ({breakdown} = {roll})",
+    "initiativeEnemy": "{name} rolled {roll} ({breakdown})",
     "initiativeYou": "You",
     "initiativeLabel": "Initiative",
     "enemyStats": "{name}: {hp} HP / AC {ac}",
     "attackTarget": "Attack with {name}",
     "endTurn": "End Turn",
-    "attackHit": "You attack with {weapon}: {breakdown} = {roll} vs AC {ac}, hit!",
-    "attackMiss": "You attack with {weapon}: {breakdown} = {roll} vs AC {ac}, miss!",
+    "attackHit": "You attack with {weapon}: {roll} ({breakdown}) vs AC {ac}, hit!",
+    "attackMiss": "You attack with {weapon}: {roll} ({breakdown}) vs AC {ac}, miss!",
     "enemyTakesDamage": "{target} takes {damage} damage ({dice}: {rollStr}).",
     "enemyAttack": "{name} attacks with {weapon} {times}, {parts}.",
     "enemyAttackHits": "{count} hit{s}: {rolls}",
     "enemyAttackMisses": "{count} miss{es}: {rolls}",
-    "enemyAttackRoll": "({breakdown} = {roll} vs AC {ac})",
+    "enemyAttackRoll": "{roll} ({breakdown}) vs AC {ac}",
     "playerTakesDamage": "You take {damage} damage ({dice}: {rolls})!",
     "playerTakesNoDamage": "You take 0 damage.",
     "enemyDefeated": "{name} has been defeated!",

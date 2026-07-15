@@ -120,6 +120,7 @@ export const CSS = {
   CC_LABEL:               'char-creation__label',
   CC_NAME_INPUT:          'char-creation__name-input',
   CC_POINTS:              'char-creation__points-remaining',
+  CC_STAT_GRID:           'char-creation__stat-grid',
   CC_STAT_ROW:            'char-creation__stat-row',
   CC_STAT_INFO:           'char-creation__stat-info',
   CC_STAT_LABEL:          'char-creation__stat-label',

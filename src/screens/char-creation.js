@@ -91,8 +91,11 @@ export class CharCreationScreen {
     this._updatePointsDisplay();
     statsTitle.appendChild(this.pointsEl);
 
+    const grid = document.createElement('div');
+    grid.className = CSS.CC_STAT_GRID;
     const stats = this.rules.charCreation?.stats || [];
-    stats.forEach(stat => statsSection.appendChild(this._buildStatRow(stat)));
+    stats.forEach(stat => grid.appendChild(this._buildStatRow(stat)));
+    statsSection.appendChild(grid);
     return statsSection;
   }
 

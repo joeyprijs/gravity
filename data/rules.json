@@ -96,12 +96,17 @@
   },
   "customAttributes": [
     {
-      "id": "perception",
+      "id": "strength",
       "default": 0,
       "max": 5
     },
     {
-      "id": "charisma",
+      "id": "intelligence",
+      "default": 0,
+      "max": 5
+    },
+    {
+      "id": "perception",
       "default": 0,
       "max": 5
     },
@@ -111,12 +116,7 @@
       "max": 5
     },
     {
-      "id": "strength",
-      "default": 0,
-      "max": 5
-    },
-    {
-      "id": "intelligence",
+      "id": "charisma",
       "default": 0,
       "max": 5
     },
@@ -142,14 +142,20 @@
         "min": 0
       },
       {
-        "id": "attributes.perception",
-        "localeKey": "perception",
+        "id": "attributes.strength",
+        "localeKey": "strength",
         "bonusPerPoint": 1,
         "min": 0
       },
       {
-        "id": "attributes.charisma",
-        "localeKey": "charisma",
+        "id": "attributes.intelligence",
+        "localeKey": "intelligence",
+        "bonusPerPoint": 1,
+        "min": 0
+      },
+      {
+        "id": "attributes.perception",
+        "localeKey": "perception",
         "bonusPerPoint": 1,
         "min": 0
       },
@@ -160,14 +166,8 @@
         "min": 0
       },
       {
-        "id": "attributes.strength",
-        "localeKey": "strength",
-        "bonusPerPoint": 1,
-        "min": 0
-      },
-      {
-        "id": "attributes.intelligence",
-        "localeKey": "intelligence",
+        "id": "attributes.charisma",
+        "localeKey": "charisma",
         "bonusPerPoint": 1,
         "min": 0
       },

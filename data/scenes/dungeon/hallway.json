@@ -24,7 +24,7 @@
       }
     },
     {
-      "text": "The hallway is lined with flickering torches. A goblin guard and its scraggly grunt companion spot you and draw their weapons — and from somewhere above, you hear horns and hurried boots. The dungeon knows you're loose.",
+      "text": "The hallway is lined with flickering torches. A goblin guard and its scraggly grunt companion spot you and draw their weapons, and from somewhere above you hear horns and hurried boots. The dungeon knows you're loose.",
       "condition": {
         "flag": "dungeon_alarm",
         "value": true
@@ -192,7 +192,7 @@
           ]
         },
         "partial": {
-          "text": "You make it through — but a loose stone turns under your boot, and a thrown dagger grazes your shoulder as you sprint the last stretch.",
+          "text": "You make it through, but a loose stone turns under your boot, and a thrown dagger grazes your shoulder as you sprint the last stretch.",
           "actions": [
             {
               "type": "set_flag",
@@ -261,7 +261,7 @@
     {
       "text": "Easy. I mean no harm. Let's not do this.",
       "retryText": [
-        "Easy! Again — I mean no harm. I really don't want to do this!",
+        "Easy! Again, I mean no harm. I really don't want to do this!",
         "Please. Lower the blades. Nobody has to bleed today."
       ],
       "skillCheck": "charisma",

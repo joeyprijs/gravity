@@ -457,18 +457,23 @@ button.section-toggle--collapsed .section-toggle__label::before {
   font-weight: 700;
 }
 
-/* Level-up point-buy controls (shown only while points are banked). */
+/* Level-up point-buy cue at the top of the sheet (shown only while points
+   are banked). The bottom margin matches the panel-section gap so the
+   Character section sits at the same rhythm below it. */
 .attr-list__points {
   font-size: var(--font-sm);
   color: var(--accent-color);
-  padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 0.5) 0;
+  padding: 0 calc(var(--spacing) * 0.5);
+  margin-bottom: calc(var(--spacing) * 3);
 }
 
+/* A small square; the .button flex centering keeps the + glyph centered. */
 .attr-list__spend {
   margin-left: calc(var(--spacing) * 1.5);
-  padding: 0 calc(var(--spacing) * 1.25);
+  width: calc(var(--spacing) * 3.5);
+  height: calc(var(--spacing) * 3.5);
+  padding: 0;
   font-size: var(--font-sm);
-  line-height: 1.6;
 }
 
 /* .button sets display:flex, which outranks the UA stylesheet's [hidden]
@@ -530,7 +535,7 @@ button.section-toggle--collapsed .section-toggle__label::before {
   flex-shrink: 0;
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   margin: calc(var(--spacing) * -4) calc(var(--spacing) * -4) calc(var(--spacing) * 3);
   padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 4);
   background: var(--list-item-bg);
@@ -540,11 +545,23 @@ button.section-toggle--collapsed .section-toggle__label::before {
 .scene__topbar-stats {
   display: flex;
   flex-flow: row wrap;
-  gap: calc(var(--spacing) * 3);
+  gap: calc(var(--spacing) * 2.5);
+}
+
+/* Each stat stacks its label over its value; the label text node and the
+   value span become the two flex lines. */
+.scene__topbar-stat {
+  display: flex;
+  flex-direction: column;
+  white-space: nowrap;
 }
 
 .scene__topbar-stat-value {
   font-weight: 700;
+}
+
+.scene__topbar-time {
+  white-space: nowrap;
 }
 
 .scene__narrative {
@@ -899,7 +916,7 @@ button.section-toggle--collapsed .section-toggle__label::before {
 }
 
 .char-creation__panel {
-  width: min(480px, 90vw);
+  width: min(960px, 92vw);
   display: flex;
   flex-direction: column;
   gap: calc(var(--spacing) * 3);
@@ -945,11 +962,22 @@ button.section-toggle--collapsed .section-toggle__label::before {
   border-color: var(--accent-color);
 }
 
+/* Stat rows flow into as many ~340px columns as the panel fits (two at full
+   width), collapsing back to a single column on narrow viewports. */
+.char-creation__stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: calc(var(--spacing) * 1.5);
+}
+
 .char-creation__stat-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: var(--spacing);
+  background: var(--list-item-bg);
+  border: 1px solid var(--panel-border);
+  padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2);
 }
 
 .char-creation__stat-info {
@@ -979,7 +1007,7 @@ button.section-toggle--collapsed .section-toggle__label::before {
 }
 
 .char-creation__stat-value {
-  min-width: calc(var(--spacing) * 10);
+  min-width: calc(var(--spacing) * 5);
   text-align: center;
   color: var(--accent-color);
   font-weight: 600;
@@ -987,13 +1015,14 @@ button.section-toggle--collapsed .section-toggle__label::before {
 
 .char-creation__actions {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: calc(var(--spacing) * 1.5);
 }
 
-.char-creation__confirm-btn { }
-
-.char-creation__load-btn { }
+.char-creation__confirm-btn,
+.char-creation__load-btn {
+  flex: 1 1 160px;
+}
 
 /* ==========================================================================
  CURATOR PLUGIN — EXHIBITS TABLE

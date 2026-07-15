@@ -37,7 +37,7 @@
           },
           "outcomes": {
             "critical": {
-              "text": "The stranger laughs so hard he has to steady himself on his pack. \"Oh, I LIKE you. Here — and don't tell a soul what I charge you.\"",
+              "text": "The stranger laughs so hard he has to steady himself on his pack. \"Oh, I LIKE you. Here, and don't tell a soul what I charge you.\"",
               "actions": [
                 {
                   "type": "loot",
@@ -57,7 +57,7 @@
               ]
             },
             "failure": {
-              "text": "The stranger's smile doesn't move, but something behind it shuts. \"A discount. Of course. For you — special prices.\"",
+              "text": "The stranger's smile doesn't move, but something behind it shuts. \"A discount. Of course. For you, special prices.\"",
               "actions": [
                 {
                   "type": "set_flag",

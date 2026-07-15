@@ -10,7 +10,7 @@
   },
   "description": [
     {
-      "text": "You enter a grand chamber. Sunlight streams in from a crack in the ceiling. A mysterious stranger stands near the exit — and now that you've noticed it, you can't unsee the faint shimmer of something lodged high in the ceiling crack.",
+      "text": "You enter a grand chamber. Sunlight streams in from a crack in the ceiling. A mysterious stranger stands near the exit, and now that you've noticed it, you can't unsee the faint shimmer of something lodged high in the ceiling crack.",
       "condition": {
         "flag": "chamber_noticed_shimmer",
         "value": true
@@ -25,7 +25,7 @@
       "skillCheck": "perception",
       "dc": 13,
       "flag": "chamber_noticed_shimmer",
-      "text": "Something up in the ceiling crack catches the light — just for a heartbeat."
+      "text": "Something up in the ceiling crack catches the light, just for a heartbeat."
     }
   ],
   "questTrigger": {
@@ -108,7 +108,7 @@
           ]
         },
         "failure": {
-          "text": "You get a hand on it — then your grip goes. You land hard, but your fist stays closed around the prize.",
+          "text": "You get a hand on it. Then your grip goes. You land hard, but your fist stays closed around the prize.",
           "actions": [
             {
               "type": "heal",

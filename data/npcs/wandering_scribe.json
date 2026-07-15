@@ -3,7 +3,7 @@
   "isMerchant": false,
   "conversations": {
     "start": {
-      "npcText": "Oh — a new face. I'm always looking for stories, and you look like you have a few.",
+      "npcText": "Oh, a new face. I'm always looking for stories, and you look like you have a few.",
       "responses": [
         { "text": "Who are you?", "actions": [{ "type": "goToConversation", "node": "who_are_you" }] },
         {
@@ -16,7 +16,7 @@
       ]
     },
     "who_are_you": {
-      "npcText": "Sera. I collect stories — battles, strange places, things people would rather forget. I write them down so they aren't lost. This waystation has some good ones.",
+      "npcText": "Sera. I collect stories: battles, strange places, things people would rather forget. I write them down so they aren't lost. This waystation has some good ones.",
       "responses": [
         { "text": "What kind of stories?", "actions": [{ "type": "goToConversation", "node": "kind_of_stories" }] },
         { "text": "Sounds like a life.", "actions": [{ "type": "goToConversation", "node": "start" }] },
