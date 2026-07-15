@@ -1,5 +1,5 @@
 import { MISSION_STATUS } from "./config.js";
-import { equipmentAttributeBonuses } from "./utils.js";
+import { equipmentAttributeBonuses, getByPath, setByPath } from "./utils.js";
 
 const MAX_LOG_ENTRIES = 200;
 
@@ -450,25 +450,41 @@ class StateManager {
   }
 
   /**
-   * Spends one banked level-up stat point on an attribute: +1 to the
-   * attribute, -1 from the bank. Refused (returns false) when no points are
-   * banked, the attribute isn't declared, or its BASE value (worn bonuses
-   * excluded — see playerBaseAttribute) already sits at the optional
-   * per-attribute cap (customAttributes[].max).
+   * Spends one banked level-up stat point. Two target forms:
+   * - A declared attribute id (e.g. 'perception'): +1 to the attribute,
+   *   refused when its BASE value (worn bonuses excluded — see
+   *   playerBaseAttribute) already sits at the optional per-attribute cap
+   *   (customAttributes[].max).
+   * - A dotted rules.charCreation.stats id (e.g. 'resources.hp.max'): applies
+   *   that entry's bonusPerPoint with char creation's semantics — raising a
+   *   resource cap raises the resource itself by the same amount. This keeps
+   *   level-up point-buy covering the same stats as character creation.
+   * Always refused when no points are banked or the target isn't declared.
    *
-   * @param {string} attrId - A declared attribute id (e.g. 'perception').
+   * @param {string} target - A declared attribute id or charCreation.stats id.
    * @returns {boolean} Whether the point was spent.
    */
-  spendStatPoint(attrId) {
+  spendStatPoint(target) {
     const p = this.state.player;
     if ((p.statPoints ?? 0) <= 0) return false;
-    if (!(p.attributes && attrId in p.attributes)) return false;
-    const decl = (this._rules.customAttributes ?? []).find(a => a.id === attrId);
-    if (decl?.max !== undefined && this.playerBaseAttribute(attrId) >= decl.max) return false;
-    p.attributes[attrId] += 1;
+    if (target.includes('.')) {
+      const decl = (this._rules.charCreation?.stats ?? []).find(s => s.id === target);
+      if (!decl) return false;
+      const bonus = decl.bonusPerPoint ?? 1;
+      setByPath(p, target, (getByPath(p, target) ?? 0) + bonus);
+      const resource = target.match(/^resources\.(\w+)\.max$/)?.[1];
+      if (resource && p.resources[resource]?.current !== undefined) {
+        p.resources[resource].current += bonus;
+      }
+    } else {
+      if (!(p.attributes && target in p.attributes)) return false;
+      const decl = (this._rules.customAttributes ?? []).find(a => a.id === target);
+      if (decl?.max !== undefined && this.playerBaseAttribute(target) >= decl.max) return false;
+      p.attributes[target] += 1;
+    }
     p.statPoints -= 1;
     this.notifyListeners('stats');
-    this._emitMutation('spendStatPoint', { attrId });
+    this._emitMutation('spendStatPoint', { attrId: target });
     return true;
   }
 

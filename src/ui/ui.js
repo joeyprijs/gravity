@@ -132,17 +132,26 @@ export class UIManager {
       // banked (see _updateStatPointControls).
       if (tab.widget === 'attributes') {
         const canSpend = (rules.levelUp?.statPoints ?? 0) > 0;
+        // Level-up point-buy covers the same stats as character creation —
+        // charCreation.stats entries that aren't skills (HP, AC) grow a spend
+        // button on their character row, resolved by gameState.spendStatPoint.
+        const creationIds = new Set((rules.charCreation?.stats ?? []).map(s => s.id));
+        const spendBtnHtml = (target) => canSpend && creationIds.has(target)
+          ? `<button class="${CSS.BTN} attr-list__spend" data-spend-attr="${escapeHtml(target)}" title="${escapeHtml(this.engine.t('ui.spendStatPoint'))}" hidden>+</button>`
+          : '';
         // The data-stat-bind spans ride the existing stats update loop.
+        // Row order groups by meaning: identity, combat, spendable pools,
+        // then wealth/standing (plugin sheetRows land in the last group).
         const characterRows = [
           attrRowHtml(this.engine.t('ui.statName'), bindSpan('name')),
           attrRowHtml(this.engine.t('ui.statLevel'), bindSpan('level')),
-          attrRowHtml(this.engine.t('ui.statHp'), `${bindSpan('resources.hp.current')}/${bindSpan('resources.hp.max')}`),
-          attrRowHtml(this.engine.t('ui.statAc'), bindSpan('attributes.ac')),
-          attrRowHtml(this.engine.t('ui.statAp'), `${bindSpan('resources.ap.current')}/${bindSpan('resources.ap.max')}`),
+          attrRowHtml(this.engine.t('ui.sheetHp'), `${bindSpan('resources.hp.current')}/${bindSpan('resources.hp.max')}`, '', spendBtnHtml('resources.hp.max')),
+          attrRowHtml(this.engine.t('ui.sheetAc'), bindSpan('attributes.ac'), '', spendBtnHtml('attributes.ac')),
           attrRowHtml(this.engine.t('ui.statInitiative'), bindSpan('attributes.initiative')),
+          attrRowHtml(this.engine.t('ui.sheetAp'), `${bindSpan('resources.ap.current')}/${bindSpan('resources.ap.max')}`),
+          ...this._headerResourceEntries().map(({ label, valueHtml }) => attrRowHtml(label, valueHtml)),
           attrRowHtml(this.engine.t('ui.statGold'), bindSpan('resources.gold')),
           ...this.engine.sheetRows.map(row => attrRowHtml(row.label, bindSpan(row.bind))),
-          ...this._headerResourceEntries().map(([label, valueHtml]) => attrRowHtml(label, valueHtml)),
         ].join('');
         const items = (rules.customAttributes ?? []).map(attr =>
           `<div class="attr-list__row">
@@ -157,15 +166,17 @@ export class UIManager {
           </button>`;
         // One panel-section wrapper per section, like the inventory panel —
         // the adjacent-sibling margin is what spaces the sections apart. The
-        // banked-points line sits outside the collapsible body so a player
-        // with points to spend sees the cue even while Skills is collapsed.
-        panel.innerHTML = `<div class="${CSS.PANEL_SECTION}">
+        // banked-points line tops the whole sheet (both sections hold
+        // spendable rows) and sits outside the collapsible bodies so a player
+        // with points to spend always sees the cue.
+        panel.innerHTML = `${canSpend ? `
+        <div class="attr-list__points" hidden>${escapeHtml(this.engine.t('ui.statPoints'))} <span data-stat-bind="statPoints"></span></div>` : ''}
+        <div class="${CSS.PANEL_SECTION}">
           ${sectionHeading('character', this.engine.t('ui.sheetCharacterTitle'))}
           <div class="attr-list" data-section-body="character">${characterRows}</div>
         </div>
         <div class="${CSS.PANEL_SECTION}">
-          ${sectionHeading('skills', this.engine.t('ui.attributesTitle'))}${canSpend ? `
-          <div class="attr-list__points" hidden>${escapeHtml(this.engine.t('ui.statPoints'))} <span data-stat-bind="statPoints"></span></div>` : ''}
+          ${sectionHeading('skills', this.engine.t('ui.attributesTitle'))}
           <div data-section-body="skills">
           <div class="attr-list">${items}</div>
           </div>
@@ -231,12 +242,13 @@ export class UIManager {
       item.innerHTML = `${escapeHtml(label)}: <span class="scene__topbar-stat-value">${valueHtml}</span>`;
       return item;
     };
+    // Same grouping as the sheet's character section: combat, pools, wealth.
     stats.append(
       stat(this.engine.t('ui.statHp'), `${bindSpan('resources.hp.current')}/${bindSpan('resources.hp.max')}`),
       stat(this.engine.t('ui.statAc'), bindSpan('attributes.ac')),
       stat(this.engine.t('ui.statAp'), `${bindSpan('resources.ap.current')}/${bindSpan('resources.ap.max')}`),
+      ...this._headerResourceEntries().map(({ label, valueHtml }) => stat(label, valueHtml)),
       stat(this.engine.t('ui.statGold'), bindSpan('resources.gold')),
-      ...this._headerResourceEntries().map(([label, valueHtml]) => stat(label, valueHtml)),
     );
     bar.appendChild(stats);
 
@@ -252,15 +264,15 @@ export class UIManager {
   // The rules.headerResources entries that render as a label plus a bound
   // current/max value — shared by the sheet's character section and the
   // scene top bar so the two surfaces can't drift apart.
-  // @returns {Array<[string, string]>} [label, valueHtml] pairs.
+  // @returns {Array<{label: string, valueHtml: string}>}
   _headerResourceEntries() {
     const player = gameState.getPlayer();
     return (this.engine.data.rules?.headerResources || [])
       .filter(id => { const r = player.resources?.[id]; return r && typeof r === 'object' && 'current' in r; })
-      .map(id => [
-        this.engine.t(`ui.resources.${id}`),
-        `${bindSpan(`resources.${id}.current`)}/${bindSpan(`resources.${id}.max`)}`,
-      ]);
+      .map(id => ({
+        label: this.engine.t(`ui.resources.${id}`),
+        valueHtml: `${bindSpan(`resources.${id}.current`)}/${bindSpan(`resources.${id}.max`)}`,
+      }));
   }
 
   // Renders "Day 1: Morning" as one plain string — or just "Day 1" for
@@ -388,8 +400,9 @@ export class UIManager {
     clearElement(EL.SCENE_NARRATIVE);
     this.engine.currentSceneEl = null;
     this.engine.resetScene();
-    this.engine.log(LOG.SYSTEM, this.engine.t('system.loaded'), 'system', false);
     const lastDesc = this.engine.narrative.restore(gameState.getLog());
+    // Logged after the restored history so it reads as the newest entry.
+    this.engine.log(LOG.SYSTEM, this.engine.t('system.loaded'), 'system', false);
     this.engine.restoreScene(gameState.getCurrentSceneId(), lastDesc);
     return true;
   }

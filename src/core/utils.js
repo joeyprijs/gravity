@@ -349,10 +349,10 @@ export function buildSceneDescription(title, body = null, t = null) {
  * @param {string} [extraClasses] - Extra classes on the row element.
  * @returns {string} HTML for one .attr-list__row.
  */
-export function attrRowHtml(label, valueHtml, extraClasses = '') {
+export function attrRowHtml(label, valueHtml, extraClasses = '', trailingHtml = '') {
   return `<div class="attr-list__row${extraClasses ? ` ${extraClasses}` : ''}">
     <span class="attr-list__label">${escapeHtml(label)}</span>
-    <span class="attr-list__value">${valueHtml}</span>
+    <span class="attr-list__value">${valueHtml}</span>${trailingHtml}
   </div>`;
 }
 

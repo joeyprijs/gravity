@@ -361,3 +361,31 @@ test('spendStatPoint: the cap compares base values, not gear-inflated ones', () 
   assert.equal(gameState.spendStatPoint('perception'), true);  // base 0 < cap 1 — gear must not block
   assert.equal(gameState.spendStatPoint('perception'), false); // base now 1 = cap — gear must not extend
 });
+
+test('spendStatPoint: charCreation.stats targets apply bonusPerPoint with creation semantics', () => {
+  gameState.init({
+    ...TEST_RULES,
+    levelUp: { statPoints: 1 },
+    charCreation: {
+      pointBudget: 3,
+      stats: [
+        { id: 'resources.hp.max', localeKey: 'maxHp', bonusPerPoint: 2, min: 0 },
+        { id: 'attributes.ac', localeKey: 'ac', bonusPerPoint: 1, min: 0 },
+      ],
+    },
+  });
+  const p = gameState.getPlayer();
+  gameState.addXP(300); // two level-ups: banks 2 points, maxHp 10 + 2×5 = 20
+
+  // Raising the HP cap raises current HP by the same amount, like creation.
+  assert.equal(gameState.spendStatPoint('resources.hp.max'), true);
+  assert.equal(maxHp(), 22);
+  assert.equal(hp(), 22);
+
+  assert.equal(gameState.spendStatPoint('attributes.ac'), true);
+  assert.equal(p.attributes.ac, 11);
+
+  // A dotted id that char creation doesn't declare is refused (and free).
+  assert.equal(gameState.spendStatPoint('resources.ap.max'), false);
+  assert.equal(p.statPoints, 0);
+});
