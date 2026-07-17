@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { validateGameData, normalizeCarriedItems } from '../src/core/validate.js';
-import { ACTIONS } from '../src/core/config.js';
+import { ACTIONS, ITEM_TYPES } from '../src/core/config.js';
 
 // Integration coverage for the *shipped* example game. The unit tests in
 // validate.test.js exercise synthetic fixtures; these load the real data/
@@ -85,4 +85,11 @@ test('every shipped NPC conforms to npc.schema.json at the top level', () => {
   for (const [id, npc] of Object.entries(data.npcs)) {
     assert.deepEqual(topLevelSchemaIssues(npcSchema, npc), [], `npc "${id}"`);
   }
+});
+
+test('config.ITEM_TYPES matches the item.schema.json type enum', () => {
+  const schema = readJson('../schemas/item.schema.json');
+  const schemaTypes = new Set(schema.properties.type.enum);
+  assert.deepEqual(new Set(ITEM_TYPES), schemaTypes,
+    'config.ITEM_TYPES and schemas/item.schema.json disagree — update whichever is wrong');
 });

@@ -90,18 +90,14 @@ Numeric leaves accept a bare number (meaning *at least*) or an operator object: 
 
 ## Actions
 
-Actions are the mutation pipeline: an array of `{ "type": ..., ...params }` objects executed in order by `engine.runActions()`. Handlers live in a registry; built-ins are registered from `systems/actions.js` under the names in `config.js` `ACTIONS`:
+Actions are the mutation pipeline: an array of `{ "type": ..., ...params }` objects executed in order by `engine.runActions()`. Every type — built-in or plugin — lives in one registry keyed by the strings in `config.js` `ACTIONS`; the built-ins are registered from `systems/actions.js`, the dialogue actions by `DialogueSystem` in its constructor. The **complete catalogue with parameters is in the README** ([Actions](../README.md#actions-mutations)); this section is the mechanism a contributor needs.
 
-`loot`, `combat`, `dialogue`, `navigate`, `return`, `full_rest`, `heal`, `set_flag`, `log`, `manage_chest` — plus plugin-registered actions (the curator plugin adds `manage_exhibits` and `add_display`).
+- A handler receives `(action, engine)` and owns exactly one side effect. Navigation is its own `navigate` action, never a hidden consequence — this is what keeps pipelines composable and `snapshotNavigation` meaningful.
+- The conversation-bound actions (`goToConversation`, `trade`, `makeFriendly`) warn and no-op when no dialogue is active; they share the global registry so scene options and conversation nodes extend through one mechanism.
+- `action.log` is a shared convention, not a per-handler feature: `false` silences the default message, a string replaces it.
+- Timer pipelines are filtered to the `TIMER_SAFE_ACTIONS` allowlist (`config.js`) before running, so a timer can't navigate or start combat from inside `advanceTime`.
 
-The dialogue actions (`goToConversation`, `trade`, `leave`, `makeFriendly`, `questTrigger`) live in the same registry; `DialogueSystem` registers them in its constructor. The conversation-bound ones (`goToConversation`, `trade`, `makeFriendly`) warn and no-op when no dialogue is active.
-
-Conventions:
-- Handlers receive `(action, engine)` and own only their side effect; navigation is its own `navigate` action.
-- `action.log` controls output: `false` silences it, a string overrides the default message.
-- On `loot` actions, `"received": true` marks the item/gold as handed over (NPC gift or reward) rather than found — it switches the log message from the `loot.foundItem`/`loot.foundGold` locale keys to `loot.receivedItem`/`loot.receivedGold`.
-
-Register a custom action from a plugin: `engine.registerAction('my_action', (action, engine) => { ... })`.
+Register a custom action from a plugin: `engine.registerAction('my_action', (action, engine) => { ... })`. A registered name overwrites an existing one with a console warning; unknown types warn at `runActions` time. `validateGameData` flags unknown action types at boot against the registry's current keys.
 
 ## Events
 

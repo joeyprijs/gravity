@@ -1,4 +1,4 @@
-import { GOLD_ITEM_ID, TIMER_SAFE_ACTIONS } from "./config.js";
+import { GOLD_ITEM_ID, ITEM_TYPES, TIMER_SAFE_ACTIONS } from "./config.js";
 
 // Load-time validation of all game data. Pure functions over the loaded data
 // object — no DOM, no engine — so authors get fail-fast feedback on boot and
@@ -78,12 +78,23 @@ export function validateGameData(data, knownActionTypes) {
   return issues;
 }
 
-// Items: attribute references must name declared attributes (playerDefaults
-// attributes or customAttributes) — a typo'd attackAttribute silently rolls
-// +0 and a typo'd attributeBonuses key silently does nothing on equip.
+// Items: type must name a known item type; slot must name a declared
+// equipment slot; attribute references must name declared attributes
+// (playerDefaults attributes or customAttributes) — a typo'd type silently
+// makes the item unequippable, a typo'd slot equips into a nonexistent slot,
+// a typo'd attackAttribute silently rolls +0, and a typo'd attributeBonuses
+// key silently does nothing on equip.
 function validateItems(ctx) {
+  // Equipment slots are game-defined (rules.playerDefaults.equipment) — only
+  // the hand slots are engine-fixed. Validate authored slots against what the
+  // game actually declares, not a hardcoded list.
+  const declaredSlots = new Set(Object.keys(ctx.rules?.playerDefaults?.equipment ?? {}));
   for (const [id, item] of Object.entries(ctx.items ?? {})) {
     const group = `Item "${id}"`;
+    if (item.type !== undefined && !ITEM_TYPES.has(item.type))
+      ctx.add(group, `type "${item.type}" is not a known item type (${[...ITEM_TYPES].join(', ')})`);
+    if (item.slot !== undefined && declaredSlots.size && !declaredSlots.has(item.slot))
+      ctx.add(group, `slot "${item.slot}" is not a declared equipment slot (playerDefaults.equipment: ${[...declaredSlots].join(', ') || 'none'})`);
     const attackAttr = item.attributes?.attackAttribute;
     if (attackAttr && !ctx.knownSkills.has(attackAttr))
       ctx.add(group, `attributes.attackAttribute "${attackAttr}" is not a declared attribute (playerDefaults.attributes or customAttributes)`);

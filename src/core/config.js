@@ -214,6 +214,12 @@ export const MAP_PADDING = 40;
 // to identify attackable items without hardcoding slot names in logic code.
 export const WEAPON_SLOTS = ['Left Hand', 'Right Hand'];
 
+// The item `type` vocabulary the engine branches on (equip flow, combat,
+// inventory grouping). Data may omit type (treated as Flavour); a declared
+// type outside this set is an authoring typo — validateGameData flags it.
+// Keep in sync with the enum in schemas/item.schema.json (a test cross-checks).
+export const ITEM_TYPES = new Set(['Weapon', 'Spell', 'Armor', 'Consumable', 'Flavour']);
+
 // Fallback item ID used when an enemy has no weapon equipped. Must match an
 // entry in data/items/ and data/index.json. Overridable via rules.fallbackWeapons.enemy.
 export const ENEMY_CLAW_ID = 'enemy_claw';

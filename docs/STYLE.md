@@ -28,7 +28,8 @@ The test for every rule here: it must describe what the codebase actually does. 
 ### Naming
 
 - `PascalCase` classes, `camelCase` functions and methods, `UPPER_SNAKE_CASE` module constants, `_underscorePrefix` for private methods and fields. The underscore *is* the visibility marker — nothing else (no `#`, no `@private`).
-- Registry constants live in `core/config.js` and are the only way to spell their strings in JS: CSS classes (`CSS`), element ids (`EL`), action types (`ACTIONS`), flag keys (`FLAG_KEYS`), check-state keys (`CHECK_KEYS`), log labels (`LOG`), mission statuses (`MISSION_STATUS`). An inline `'scene-options'` or `'skill_dc_' + x` in a module is a defect: a typo would silently mint a new key.
+- Registry constants live in `core/config.js` and are the only way to spell their strings in JS: CSS classes (`CSS`), element ids (`EL`), action types (`ACTIONS`), flag keys (`FLAG_KEYS`), check-state keys (`CHECK_KEYS`), log labels (`LOG`), mission statuses (`MISSION_STATUS`), item types (`ITEM_TYPES`). An inline `'scene-options'` or `'skill_dc_' + x` in a module is a defect: a typo would silently mint a new key.
+- Author-facing vocabularies that also appear in game data (action types, item types, equipment slots) get a *validation* safety net in `validateGameData`, not just a constant — data files can't import constants, so a boot-time check is what catches an author's typo. Adding a new such vocabulary means adding its check.
 
 ### Architecture rules
 

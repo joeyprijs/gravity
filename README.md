@@ -26,6 +26,7 @@ A browser-native, zero-dependency, data-driven text RPG engine. Define your enti
 - [Authoring Reference](#authoring-reference)
   - [Rules — `data/rules.json`](#rules--datarulesjson)
   - [Conditions (Logic Gates)](#conditions-logic-gates)
+  - [Actions (Mutations)](#actions-mutations)
   - [Scenes](#scenes)
   - [NPCs & Enemies](#npcs--enemies)
   - [Items](#items)
@@ -276,6 +277,42 @@ Leaf shapes:
 
 Numeric leaves accept a bare number (*at least*) or an operator object: `at_least`, `more_than`, `at_most`, `less_than`, `is`.
 
+### Actions (Mutations)
+
+Actions are the pipeline a chosen option, dialogue response, or `onVictory` runs — an array of `{ "type": ..., ...params }` executed in order. Each handler owns exactly one side effect; navigation is always its own `navigate` action, never a hidden consequence of another. Every action type is validated at boot, so a typo surfaces as a grouped `[Gravity]` warning rather than a silent no-op.
+
+Available everywhere (scene options, `onVictory`, dialogue responses):
+
+| Action | Parameters | Effect |
+|---|---|---|
+| `loot` | `item`, `amount?`, `received?`, `xpReward?` | Give an item — or gold, with `"item": "gold"` — to the player. `received: true` reads as "handed over" rather than "found". |
+| `combat` | `enemies`, `onVictory?` | Start a fight; `onVictory` runs on win. Enemies marked friendly are skipped. |
+| `dialogue` | `npc` | Open a conversation. |
+| `navigate` | `destination` | Move to a scene. |
+| `return` | — | Return to the scene the player teleported from, else the starting scene. |
+| `heal` | `amount?` | Change HP by `amount` (default `rules.snackHealAmount`; negative damages). |
+| `full_rest` | — | Restore HP, AP, and the retry currency per `rules.apEconomy`. |
+| `modify_ap` | `amount?` | Move AP: a number, negative to drain, or `"full"`/omitted to top up. |
+| `modify_resource` | `resource`, `amount?` | The same, for any declared `{ current, max }` resource. |
+| `set_flag` | `flag`, `value` | Write a flag. |
+| `log` | `message` | Print a narrator line. |
+| `manage_chest` | `chest` | Open a chest's deposit/withdraw panel. |
+| `advance_time` | `amount` **or** `until` | Advance the world clock by ticks, or to the next start of a named segment (needs `rules.time`). |
+| `set_timer` | `id`, `afterTicks?` / `atTick?`, `actions` | Arm a timer; its pipeline fires at the deadline. Re-arming an `id` replaces it. |
+| `cancel_timer` | `id` | Disarm a timer. |
+
+Valid only inside conversation nodes:
+
+| Action | Parameters | Effect |
+|---|---|---|
+| `goToConversation` | `node` | Render another node of the current conversation. |
+| `trade` | `tradeDiscount?`, `persistDiscount?` | Open the merchant store, optionally repriced. |
+| `leave` | — | Leave the conversation, back to the scene. |
+| `makeFriendly` | — | Mark the active NPC friendly — future `combat` actions skip it. |
+| `questTrigger` | `mission`, `status` | Start (`"active"`) or complete (`"complete"`) a mission. |
+
+Every side-effect action takes an optional `log`: `false` silences its default message, a string replaces it. Timer pipelines are restricted to *quiet* actions (`set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`) — a timer changes the world through flags, never by navigating or starting combat. Plugins register their own types (the curator plugin adds `manage_exhibits` and `add_display`) — see the [Plugin API](#plugin-api).
+
 ### Scenes
 
 A location: conditional description blocks, options, skill checks, and map placement. The top-level `id` is the scene's manifest key:
@@ -524,6 +561,10 @@ Weapons, spells, armor, and consumables. All mechanical stats live inside `attri
   }
 }
 ```
+
+Item `type` is one of `Weapon`, `Spell`, `Armor`, `Consumable`, or `Flavour` (the default when omitted — keepsakes and key items). The type drives behavior: weapons and spells equip to a hand and attack; armor equips to its `slot`; consumables get a "Use" button; flavour items just sit in the pack.
+
+Equipment `slot` names are **game-defined** — whatever keys appear in `rules.playerDefaults.equipment` (the demo uses `Head`, `Amulet`, `Torso`, `Left Hand`, `Right Hand`, `Legs`). Only the two hand slots are engine-fixed, because combat reads weapons from them. Both `type` and `slot` are validated at boot.
 
 *   `attackAttribute` names the attribute whose modifier the wielder adds to attack rolls — accuracy belongs to the character, not the weapon.
 *   Armor and relics use `attributes.attributeBonuses` (e.g. `{ "perception": 1 }`) and/or `armorClassBonus` to raise attributes while worn.

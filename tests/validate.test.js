@@ -493,3 +493,25 @@ test('flags fractional levelUp.statPoints', () => {
   data.rules.levelUp = { statPoints: 0.5 };
   assert.ok(issuesFor(data).some(m => m.includes('levelUp.statPoints must be a non-negative integer')));
 });
+
+test('flags an unknown item type and an undeclared equipment slot', () => {
+  const data = makeToolkitData();
+  data.rules.playerDefaults.equipment = { 'Head': null, 'Right Hand': null };
+  data.items.gizmo = { name: 'Gizmo', type: 'Widget' };            // unknown type
+  data.items.hat = { name: 'Hat', type: 'Armor', slot: 'Face' };   // undeclared slot
+  data.items.helm = { name: 'Helm', type: 'Armor', slot: 'Head' }; // declared — clean
+  const messages = issuesFor(data);
+  assert.ok(messages.some(m => m.includes('type "Widget" is not a known item type')));
+  assert.ok(messages.some(m => m.includes('slot "Face" is not a declared equipment slot')));
+  assert.ok(!messages.some(m => m.includes('slot "Head"')));       // a declared slot is clean
+});
+
+test('item type and slot: valid values and omitted fields pass', () => {
+  const data = makeToolkitData();
+  data.rules.playerDefaults.equipment = { 'Right Hand': null };
+  data.items.blade = { name: 'Blade', type: 'Weapon', slot: 'Right Hand' };
+  data.items.trinket = { name: 'Trinket' };  // no type, no slot — a Flavour keepsake
+  const messages = issuesFor(data);
+  assert.ok(!messages.some(m => m.includes('is not a known item type')));
+  assert.ok(!messages.some(m => m.includes('is not a declared equipment slot')));
+});
