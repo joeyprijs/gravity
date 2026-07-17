@@ -279,7 +279,7 @@ Numeric leaves accept a bare number (*at least*) or an operator object: `at_leas
 
 ### Actions (Mutations)
 
-Actions are the pipeline a chosen option, dialogue response, or `onVictory` runs — an array of `{ "type": ..., ...params }` executed in order. Each handler owns exactly one side effect; navigation is always its own `navigate` action, never a hidden consequence of another. Every action type is validated at boot, so a typo surfaces as a grouped `[Gravity]` warning rather than a silent no-op.
+Actions are the pipeline a chosen option, dialogue response, or `onVictory` runs — an array of `{ "type": ..., ...params }` executed in order. Each handler owns exactly one side effect; navigation is always its own `navigate` action, never a hidden consequence of another. Every action type is validated at boot, so a typo surfaces as a grouped `[Gravity]` warning rather than a silent no-op. The tables below are the catalogue; **[`docs/ACTIONS.md`](docs/ACTIONS.md) is the full parameter reference** — every field's type, default, and behavior.
 
 Available everywhere (scene options, `onVictory`, dialogue responses):
 
@@ -311,7 +311,7 @@ Valid only inside conversation nodes:
 | `makeFriendly` | — | Mark the active NPC friendly — future `combat` actions skip it. |
 | `questTrigger` | `mission`, `status` | Start (`"active"`) or complete (`"complete"`) a mission. |
 
-Every side-effect action takes an optional `log`: `false` silences its default message, a string replaces it. Timer pipelines are restricted to *quiet* actions (`set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`) — a timer changes the world through flags, never by navigating or starting combat. Plugins register their own types (the curator plugin adds `manage_exhibits` and `add_display`) — see the [Plugin API](#plugin-api).
+The state-changing actions (`loot`, `heal`, `full_rest`, `modify_ap`, `modify_resource`, `advance_time`) take an optional `log`: `false` silences the default message, a string replaces it. Timer pipelines are restricted to *quiet* actions (`set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`) — a timer changes the world through flags, never by navigating or starting combat. Plugins register their own types (the curator plugin adds `manage_exhibits` and `add_display`) — see the [Plugin API](#plugin-api). Every parameter above is documented in full in [`docs/ACTIONS.md`](docs/ACTIONS.md).
 
 ### Scenes
 

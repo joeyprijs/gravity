@@ -47,7 +47,8 @@ function handleCombat(action, engine) {
     engine.log(LOG.SYSTEM, engine.t('combat.avoided'), 'system');
     return;
   }
-  // action carries optional on-victory .setFlag and .destination for endCombat
+  // The action's onVictory pipeline (if any) runs on the win — the whole
+  // action is passed through as originOption for endCombat to read it from.
   engine.combatSystem.startCombat(enemies, action);
 }
 

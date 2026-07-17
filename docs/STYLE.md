@@ -103,8 +103,9 @@ Check design (tiers, budgets, retry costs, the clock) has its own guide: [`CHECK
 - `README.md` — orientation and the authoring essentials. The map, not the territory.
 - `docs/ARCHITECTURE.md` — contributor contracts: boot flow, state, the mode machine, events, hooks, the plugin surface.
 - `docs/CHECKS.md` — the check-authoring guide.
+- `docs/ACTIONS.md` — the action-pipeline reference.
 - `docs/STYLE.md` — this file.
-- Nothing else. No roadmaps, no changelogs, no archives — git history is the record, and docs describe only what exists today.
+- Authoring and reference guides may be added as the surface grows (a vocabulary deep enough to need its own page earns one — `CHECKS.md` and `ACTIONS.md` did). But **no roadmaps, changelogs, or archives**: git history is the record, and docs describe only what exists today.
 
 ### Writing rules
 
