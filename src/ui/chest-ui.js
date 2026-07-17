@@ -1,6 +1,9 @@
 import { createElement, buildOptionButton, getItemLabel, resetOptionsPanel } from "../core/utils.js";
 import { CSS, LOG } from "../core/config.js";
 
+// ChestUI renders the deposit/withdraw panel for a chest (opened by the
+// manage_chest action): the chest's contents and the player's inventory as
+// two sections, one button per stack.
 export class ChestUI {
   constructor(engine, chestId) {
     this.engine = engine;

@@ -138,7 +138,7 @@ function handleHeal(action, engine) {
   }
 }
 
-// --- Pipeline utility actions ---
+// ── Pipeline utility actions ──────────────────────────────────────────────
 
 function handleNavigate(action, engine) {
   engine.renderScene(action.destination);
@@ -157,7 +157,7 @@ function handleManageChest(action, engine) {
   engine.ui.renderChestUI(action.chest);
 }
 
-// --- Time actions ---
+// ── Time actions ──────────────────────────────────────────────────────────
 
 // { type: "advance_time", amount: 8 } — advance the clock by a fixed amount.
 // { type: "advance_time", until: "morning" } — sleep to the next segment start

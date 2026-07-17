@@ -77,10 +77,10 @@ const LEGACY_CHECK_PREFIXES = ['skill_dc_', 'dialogue_dc_', 'dialogue_resolved_'
 
 // StateManager is the single source of truth for all mutable game data.
 // All writes go through its methods, which call notifyListeners() so the UI
-// stays in sync automatically. The state object is serialised for save files.
+// stays in sync automatically. The state object is serialized for save files.
 class StateManager {
   constructor() {
-    // Minimal skeleton state. Properly initialised by init(rules) once
+    // Minimal skeleton state. Properly initialized by init(rules) once
     // rules.json is loaded. This skeleton is sufficient for registerMissions()
     // and registerSceneFlags() which are called during data loading.
     this.state = {
@@ -106,7 +106,7 @@ class StateManager {
     this._statHandlers = {};
   }
 
-  // --- Plugin lifecycle hooks ---
+  // ── Plugin lifecycle hooks ──────────────────────────────────────────────
   // The formal alternative to wrapping StateManager methods on the live
   // singleton: plugins observe mutations and intercept custom stats through
   // these registrations instead.
@@ -136,7 +136,7 @@ class StateManager {
 
   /**
    * Registers an interceptor for modifyPlayerStat(stat, amount). When a
-   * handler exists for the stat it fully replaces the default behaviour,
+   * handler exists for the stat it fully replaces the default behavior,
    * including listener notification. Used by plugins that derive a stat
    * instead of storing it directly (e.g. the curator plugin's reputation).
    *
@@ -198,7 +198,7 @@ class StateManager {
   }
 
   /**
-   * Returns the state serialised as a base64-encoded save string. The
+   * Returns the state serialized as a base64-encoded save string. The
    * download mechanics (Blob, anchor click) live in the UI layer so this
    * module stays headless — see UIManager's save handler.
    *
@@ -401,7 +401,7 @@ class StateManager {
    *   refill idiom at combat boundaries and rest.
    */
   modifyPlayerStat(stat, amount) {
-    // A registered stat handler fully replaces the default behaviour.
+    // A registered stat handler fully replaces the default behavior.
     const handler = this._statHandlers[stat];
     if (handler) {
       handler(amount);
@@ -791,7 +791,7 @@ class StateManager {
   addDisplayToScene(sceneId, displayConfig) {
     if (!this.state.displays) this.state.displays = {};
     if (!this.state.displays[sceneId]) this.state.displays[sceneId] = [];
-    
+
     // Sequence suffix guarantees uniqueness even when two displays are added
     // within the same millisecond (Date.now() alone would collide).
     this._displaySeq = (this._displaySeq ?? 0) + 1;
@@ -802,7 +802,7 @@ class StateManager {
       item: displayConfig.item || null,
       allowedTypes: displayConfig.allowedTypes || null
     };
-    
+
     this.state.displays[sceneId].push(newDisplay);
     this.notifyListeners('displays');
     return id;
@@ -820,9 +820,9 @@ class StateManager {
     const displays = this.getDisplaysForScene(sceneId);
     const display = displays.find(d => d.id === displayId);
     if (!display) return false;
-    
+
     if (this.countPlayerItem(itemId, { includeEquipped: false }) <= 0) return false;
-    
+
     display.item = itemId;
     this.removeFromInventory(itemId, 1, { silent: true });
     this.notifyListeners('inventory');
@@ -841,7 +841,7 @@ class StateManager {
     const displays = this.getDisplaysForScene(sceneId);
     const display = displays.find(d => d.id === displayId);
     if (!display || !display.item) return null;
-    
+
     const itemId = display.item;
     display.item = null;
     this.addToInventory(itemId, 1, { silent: true });

@@ -1,25 +1,19 @@
 import { createElement, buildSceneDescription, buildOptionButton, resetOptionsPanel, itemStatLines } from "../core/utils.js";
 import { EL, CSS, WEAPON_SLOTS } from "../core/config.js";
 
-/**
- * CombatRenderer owns all DOM manipulation and controls injection for the combat UI.
- * Highly decoupled — holds no state and reads directly from the CombatSystem on render.
- */
+// CombatRenderer owns the combat UI: the attack/end-turn controls and the
+// game-over screen. It holds no state of its own — every render reads live
+// from the CombatSystem, so a re-render can never show stale HP or AP.
 export class CombatRenderer {
-  /**
-   * Constructs the CombatRenderer.
-   * 
-   * @param {object} combatSystem - The parent CombatSystem instance.
-   */
   constructor(combatSystem) {
     this.cs = combatSystem;
   }
 
   /**
-   * Gathers all available attacks for the player based on their equipped hand items.
-   * Falls back to rules.fallbackWeapons.player (Unarmed Strike) if hands are empty.
-   * 
-   * @returns {object[]} Array of Weapon/Spell item configuration schemas.
+   * The attacks the player can make: the Weapon/Spell items in their hand
+   * slots, or rules.fallbackWeapons.player (unarmed) when both are empty.
+   *
+   * @returns {object[]} Item definitions, in slot order.
    */
   getAvailableAttacks() {
     const player = this.cs.engine.state.getPlayer();
@@ -37,7 +31,6 @@ export class CombatRenderer {
       }
     });
 
-    // Unarmed fallback execution
     if (!hasWeapon) {
       const fallbackId = this.cs.engine.data.rules?.fallbackWeapons?.player;
       const unarmed = fallbackId ? this.cs.engine.data.items[fallbackId] : null;
@@ -46,9 +39,8 @@ export class CombatRenderer {
     return attacks;
   }
 
-  /**
-   * Renders the Game Over scenario inside the narrative log and wires standard restart triggers.
-   */
+  // Renders the game-over screen: the death notice in the narrative log and
+  // the recovery controls in the options panel.
   renderGameOver() {
     this.cs.engine.openScene();
     const desc = buildSceneDescription(
@@ -59,7 +51,6 @@ export class CombatRenderer {
     desc.querySelector('h2').classList.add(CSS.SCENE_TITLE_GAME_OVER);
     this.cs.engine.currentSceneEl.appendChild(desc);
 
-    // Clear panel areas to focus strictly on recovery controls
     const { container } = resetOptionsPanel();
 
     // The recovery controls delegate to the options-tab buttons, which only
@@ -79,13 +70,12 @@ export class CombatRenderer {
       container.appendChild(restartBtn);
     }
 
-    // Disable sidebar actions to prevent post-death items activation
+    // Dead characters don't drink potions — the sidebar item buttons go dark.
     document.querySelectorAll(`.${CSS.BTN_ITEM}`).forEach(btn => { btn.disabled = true; });
   }
 
-  /**
-   * Rebuilds the action options panels to render attack, items, and end-turn buttons.
-   */
+  // Rebuilds the combat controls: End Turn on top, then one section per
+  // living enemy with an attack button for each available weapon.
   render() {
     const livingEnemies = this.cs.enemies.filter(e => e.attributes.healthPoints > 0);
 
@@ -93,25 +83,25 @@ export class CombatRenderer {
 
     const attacks = this.getAvailableAttacks();
 
-    // End Turn button placed at the top of options for fast accessibility
+    // End Turn sits first so the most-reached-for control never moves as
+    // enemy sections come and go.
     const endBtn = buildOptionButton(this.cs.engine.t('combat.endTurn'));
     endBtn.onclick = () => this.cs.enemyTurn('after');
     container.appendChild(endBtn);
 
-    // Render individual combat sections for each active opponent
     livingEnemies.forEach(target => {
       const section = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
       section.appendChild(createElement('div', CSS.SECTION_HEADING,
         this.cs.engine.t('combat.enemyStats', { name: target.name, hp: target.attributes.healthPoints, ac: target.attributes.armorClass })
       ));
-      
+
       attacks.forEach(att => {
         const btn = buildOptionButton(
           this.cs.engine.t('combat.attackTarget', { name: att.name }),
           itemStatLines(this.cs.engine.t.bind(this.cs.engine), att, this.cs.engine.state.getPlayer().attributes));
-        
-        // Disable attack controls that exceed the remaining turn budget
-        // (current AP, capped by rules.apEconomy.maxPerTurn).
+
+        // Attacks the turn budget can't cover render disabled (current AP,
+        // further capped by rules.apEconomy.maxPerTurn).
         if (this.cs.remainingTurnBudget() < (att.attributes?.actionPoints ?? 0)) {
           btn.disabled = true;
         }

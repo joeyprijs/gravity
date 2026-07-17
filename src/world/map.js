@@ -7,7 +7,7 @@ import { MINIMAP_SIZE, MAP_PADDING, MAP_NODE_DEFAULT_BG, CSS, EL } from "../core
 export class MapManager {
   constructor(engine) {
     this.engine = engine;
-    
+
     // Cached scene ID to skip rebuilding coordinates if the player hasn't moved.
     // Initialized to null to guarantee a render on the first boot update.
     // The scene ID is a sufficient cache key by design: mapDefinitions are
@@ -22,13 +22,13 @@ export class MapManager {
   setup() {
     document.getElementById(EL.MINIMAP).addEventListener('click', () => this.openFullMap());
     document.getElementById(EL.FULLMAP_CLOSE).addEventListener('click', () => this.closeFullMap());
-    
+
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !document.getElementById(EL.FULLMAP_OVERLAY).hidden) {
         this.closeFullMap();
       }
     });
-    
+
     // Click outside panel (backdrop area) closes the overlay
     document.getElementById(EL.FULLMAP_OVERLAY).addEventListener('click', (e) => {
       if (e.target === e.currentTarget) this.closeFullMap();
@@ -67,7 +67,7 @@ export class MapManager {
     const scale = size / Math.max(bboxW, bboxH);
 
     // Safari layout bug prevention: Rebuilding the canvas wrapper and swapping it
-    // into the DOM via replaceWith() forces the browser engine to completely flush 
+    // into the DOM via replaceWith() forces the browser engine to completely flush
     // its compositor layers cache, preventing rendering glitches during fast moves.
     const fresh = document.createElement('div');
     fresh.id = EL.MINIMAP_CANVAS;
@@ -124,26 +124,17 @@ export class MapManager {
     }
   }
 
-  /**
-   * Hides the full-screen world map overlay.
-   */
   closeFullMap() {
     document.getElementById(EL.FULLMAP_OVERLAY).hidden = true;
   }
 
-  /**
-   * Invalidate the minimap cache, forcing a complete redraw on the next update call.
-   */
+  // Forces a full minimap redraw on the next renderMinimap call — for changes
+  // that alter the map without moving the player (see the cache-key note above).
   invalidateMinimap() {
     this._minimapCacheKey = null;
   }
 
-  /**
-   * Resolves and returns all visited scene structures containing map definitions.
-   * 
-   * @private
-   * @returns {object[]} Array of filtered map nodes.
-   */
+  // Every visited scene that has mapDefinitions, as { id, scene } pairs.
   _getAllVisitedMapScenes() {
     const visited = new Set(this.engine.state.getVisitedScenes());
     return Object.entries(this.engine.data.scenes)
@@ -151,13 +142,7 @@ export class MapManager {
       .map(([id, scene]) => ({ id, scene }));
   }
 
-  /**
-   * Resolves visited scene structures restricted to a specific region folder.
-   * 
-   * @private
-   * @param {string} regionId - The region category string.
-   * @returns {object[]} Array of region-specific map nodes.
-   */
+  // The visited, mappable scenes of one region — what the minimap shows.
   _getVisitedScenesForRegion(regionId) {
     if (!regionId) return [];
     const visited = new Set(this.engine.state.getVisitedScenes());
@@ -166,36 +151,22 @@ export class MapManager {
       .map(([id, scene]) => ({ id, scene }));
   }
 
-  /**
-   * Creates a styled, absolutely positioned div element representing a map node.
-   * The caller is responsible for setting dimensional top/left bounds on the returned element.
-   * 
-   * @private
-   * @param {string} id - The scene identifier.
-   * @param {object} scene - The scene configuration schema.
-   * @param {boolean} isCurrentScene - True if the player is currently in this room.
-   * @returns {HTMLElement} The styled map node DOM element.
-   */
+  // Builds one labeled map-node element. The caller positions and sizes it —
+  // the minimap scales coordinates, the full map uses them as authored.
   _buildMapNode(id, scene, isCurrentScene) {
     const node = document.createElement('div');
     node.className = isCurrentScene ? `${CSS.MAP_NODE} ${CSS.MAP_NODE_CURRENT}` : CSS.MAP_NODE;
-    
+
     const label = document.createElement('span');
     label.className = CSS.MAP_NODE_LABEL;
     label.textContent = scene.title || scene.name || id;
     node.appendChild(label);
-    
+
     return node;
   }
 
-  /**
-   * Computes the axis-aligned bounding box (AABB) enclosing a set of map scenes.
-   * Used to establish the minimal coordinate box containing all rendered rooms.
-   * 
-   * @private
-   * @param {object[]} scenes - Array of scene objects with definitions.
-   * @returns {{minLeft: number, minTop: number, maxRight: number, maxBottom: number}} Bbox.
-   */
+  // The bounding box enclosing the given scenes' mapDefinitions — what the
+  // minimap scales to fit its square.
   _computeBbox(scenes) {
     let minLeft = Infinity, minTop = Infinity, maxRight = -Infinity, maxBottom = -Infinity;
     for (const { scene } of scenes) {
@@ -208,14 +179,8 @@ export class MapManager {
     return { minLeft, minTop, maxRight, maxBottom };
   }
 
-  /**
-   * Projects and appends scene nodes onto the full-screen canvas layout.
-   * 
-   * @private
-   * @param {HTMLElement} canvasEl - The target canvas wrapper.
-   * @param {object[]} scenes - Array of all visited scenes.
-   * @param {string} currentSceneId - Active player scene ID.
-   */
+  // Fills the full-map canvas: one node per scene at its authored
+  // mapDefinitions coordinates, unscaled.
   _renderSceneNodes(canvasEl, scenes, currentSceneId) {
     clearElement(canvasEl);
     for (const { id, scene } of scenes) {
@@ -228,7 +193,7 @@ export class MapManager {
         height: height + 'px',
         background: background || MAP_NODE_DEFAULT_BG
       });
-      
+
       canvasEl.appendChild(node);
     }
   }

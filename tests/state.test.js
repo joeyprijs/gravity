@@ -161,7 +161,7 @@ test('getFlag: stored falsy non-boolean value is preserved (not coerced to false
   assert.notEqual(gameState.getFlag('count'), false);
 });
 
-test('registerSceneFlags: initialises flags not yet in state', () => {
+test('registerSceneFlags: initializes flags not yet in state', () => {
   gameState.registerSceneFlags({ door_open: false, boss_killed: false });
   assert.equal(gameState.getFlag('door_open'), false);
   assert.equal(gameState.getFlag('boss_killed'), false);
@@ -229,14 +229,14 @@ test('placeItemInDisplay: fails if item is not in inventory', () => {
 test('countPlayerItem: correctly counts and filters equipped vs unequipped items', () => {
   // Reset and initialize with starting items
   gameState.init(TEST_RULES);
-  
+
   // 'healing_potion' starts with amount: 2 in inventory, none equipped
   assert.equal(gameState.countPlayerItem('healing_potion'), 2);
   assert.equal(gameState.countPlayerItem('healing_potion', { includeEquipped: false }), 2);
 
   // Equip 'rusty_sword' (starts at 1 in inventory)
   gameState.equipItem('Right Hand', 'rusty_sword');
-  
+
   // Total count should still be 1 (equipped)
   assert.equal(gameState.countPlayerItem('rusty_sword'), 1);
   // Unequipped inventory count should be 0

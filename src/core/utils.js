@@ -34,19 +34,19 @@ export function setByPath(obj, path, value) {
 }
 
 /**
-* Creates a new DOM element.
-*
-* Content is set via textContent — game data (item names, descriptions,
-* locale strings) is always treated as plain text, never HTML. The only
-* sanctioned HTML channels are scene description bodies (see
-* buildSceneDescription) and engine-authored structural templates; dynamic
-* values embedded in those must go through escapeHtml().
-*
-* @param {string} tag - The HTML tag name.
-* @param {string|string[]} [className] - Optional CSS class names.
-* @param {string} [textContent] - Optional plain-text content.
-* @returns {HTMLElement} The constructed DOM element.
-*/
+ * Creates a new DOM element.
+ *
+ * Content is set via textContent — game data (item names, descriptions,
+ * locale strings) is always treated as plain text, never HTML. The only
+ * sanctioned HTML channels are scene description bodies (see
+ * buildSceneDescription) and engine-authored structural templates; dynamic
+ * values embedded in those must go through escapeHtml().
+ *
+ * @param {string} tag - The HTML tag name.
+ * @param {string|string[]} [className] - Optional CSS class names.
+ * @param {string} [textContent] - Optional plain-text content.
+ * @returns {HTMLElement} The constructed DOM element.
+ */
 export function createElement(tag, className = "", textContent = "") {
   const el = document.createElement(tag);
   if (className) {
@@ -125,9 +125,9 @@ export function createSectionToggles(storageKey, defaultCollapsed = []) {
 }
 
 /**
-* Clears all child elements from a parent DOM element.
-* @param {HTMLElement|string} elementOrId - The element or its ID.
-*/
+ * Clears all child elements from a parent DOM element.
+ * @param {HTMLElement|string} elementOrId - The element or its ID.
+ */
 export function clearElement(elementOrId) {
   const el = typeof elementOrId === 'string' ? document.getElementById(elementOrId) : elementOrId;
   if (el) {

@@ -12,15 +12,10 @@ import {
 // current node's options on top of the new panel.
 const DIALOGUE_NAV_ACTIONS = new Set([ACTIONS.GO_TO_CONVERSATION, ACTIONS.TRADE, ACTIONS.LEAVE]);
 
-/**
- * DialogueSystem manages NPC dialogue trees, branching conversations, 
- * skill checks, and merchant store interfaces (buy/sell loops).
- * 
- * Data Design:
- * - Dialogue branches are loaded as Node Graphs from NPC JSON files.
- * - All conversational state changes, merchant stocks, and DC escalations 
- *   are stored in persistent `gameState` flags to guarantee save safety.
- */
+// DialogueSystem manages NPC conversation trees — branching nodes with
+// skill-checked responses — and the merchant store (buy/sell). All
+// conversation bookkeeping lives in state (checkState for attempt maps,
+// flags for merchant stock and discounts), so it survives save/load.
 export class DialogueSystem {
   constructor(engine) {
     this.engine = engine;
@@ -44,13 +39,9 @@ export class DialogueSystem {
     this.currentNPCId = null;
   }
 
-  /**
-   * Registers the dialogue actions on the engine's global action registry so
-   * conversation nodes and scene options share one extension mechanism.
-   * The conversation-bound actions warn and no-op outside an active dialogue.
-   *
-   * @private
-   */
+  // Registers the dialogue actions on the engine's global action registry so
+  // conversation nodes and scene options share one extension mechanism. The
+  // conversation-bound actions warn and no-op outside an active dialogue.
   _registerActions() {
     const requireNPC = (type, fn) => (action, engine) => {
       if (!this.currentNPC) {
@@ -97,7 +88,7 @@ export class DialogueSystem {
 
   /**
    * Initiates a conversation branch with a specific NPC.
-   * 
+   *
    * @param {string} npcId - The NPC database identifier to talk to.
    */
   startDialogue(npcId) {
@@ -118,7 +109,7 @@ export class DialogueSystem {
     // exhaustion) when starting fresh. Permanently resolved responses live in
     // a separate map (CHECK_KEYS.dialogueResolved) and survive this reset.
     this.engine.state.setCheckState(CHECK_KEYS.dialogueDc(npcId), {});
-    
+
     if (npc.conversations) {
       this.renderDialogue("start");
     } else {
@@ -126,14 +117,10 @@ export class DialogueSystem {
     }
   }
 
-  /**
-   * Runs a conversation node's action pipeline through the global action
-   * registry (dialogue actions are registered there too — see _registerActions).
-   *
-   * @private
-   * @param {object[]} actions - Array of actions to run.
-   * @returns {boolean} True if navigation occurred (dialogue closed, new node, or trade opened).
-   */
+  // Runs a conversation node's action pipeline through the global action
+  // registry. Returns true when navigation occurred — the dialogue closed,
+  // a new node rendered, or the store opened — so callers skip re-rendering
+  // the current node's options over the new panel.
   _runActions(actions) {
     let navigated = false;
     for (const action of (actions || [])) {
@@ -153,7 +140,7 @@ export class DialogueSystem {
   /**
    * Renders the conversation interface for a specific dialogue node.
    * Compiles player reply choices and checks dynamic skill check gates.
-   * 
+   *
    * @param {string} [nodeId="start"] - The node key inside the NPC's conversation tree.
    * @param {string|null} [overrideText=null] - Text override (e.g. store farewell
    *   lines). An override means the node is being re-shown, not entered, so its
@@ -163,9 +150,9 @@ export class DialogueSystem {
    */
   renderDialogue(nodeId = "start", overrideText = null, optionsOnly = false) {
     const node = this.currentNPC.conversations[nodeId];
-    if (!node) { 
-      console.warn(`[Gravity] renderDialogue: unknown conversation node "${nodeId}" on NPC "${this.currentNPC.name}"`); 
-      return; 
+    if (!node) {
+      console.warn(`[Gravity] renderDialogue: unknown conversation node "${nodeId}" on NPC "${this.currentNPC.name}"`);
+      return;
     }
 
     if (!optionsOnly) {
@@ -300,19 +287,13 @@ export class DialogueSystem {
       this.engine.renderScene(this.engine.state.getCurrentSceneId());
     };
     container.appendChild(leaveBtn);
-    
+
     this.engine.scrollNarrativeToBottom();
   }
 
-  /**
-   * Retrieves an item's current stock count from a merchant.
-   * Reads from persistent session flags to avoid mutating static files.
-   * 
-   * @private
-   * @param {string} itemId - The item identifier.
-   * @param {number|null} npcAmount - Stock count configured in NPC file (null = unlimited).
-   * @returns {number|null} Current stock count remaining, or null for unlimited.
-   */
+  // The merchant's remaining stock for an item: the persisted flag when a
+  // sale has happened, else the NPC-configured amount (null = unlimited).
+  // Stock lives in flags so the static NPC file is never mutated.
   _getStock(itemId, npcAmount) {
     if (npcAmount === null) return null;
     const flagVal = this.engine.state.getFlag(FLAG_KEYS.merchantStock(this.currentNPCId, itemId));
@@ -321,7 +302,7 @@ export class DialogueSystem {
 
   /**
    * Renders the interactive Merchant Shop UI, listing buy/sell items and dynamic prices.
-   * 
+   *
    * @param {boolean} [isUpdate=false] - If true, skips appending narrative text blocks.
    */
   renderStore(isUpdate = false) {
@@ -379,14 +360,8 @@ export class DialogueSystem {
     this.engine.scrollNarrativeToBottom();
   }
 
-  /**
-   * Builds the merchant "Buy" section: one button per in-stock carried item,
-   * with discount-adjusted prices and stock bookkeeping in persistent flags.
-   *
-   * @private
-   * @param {HTMLElement} panel - The scene options panel.
-   * @param {HTMLElement} skillsContainer - Insertion anchor for option sections.
-   */
+  // Builds the merchant "Buy" section: one button per in-stock carried item,
+  // with discount-adjusted prices and stock bookkeeping in persistent flags.
   _buildBuySection(panel, skillsContainer) {
     // carriedItems entries are normalized to { item, amount } at load.
     const buyItems = (this.currentNPC.carriedItems || [])
@@ -427,14 +402,8 @@ export class DialogueSystem {
     panel.insertBefore(buySection, skillsContainer);
   }
 
-  /**
-   * Builds the merchant "Sell" section: one button per sellable inventory item.
-   * Sell value = floor(itemValue * rules.merchantSellRatio).
-   *
-   * @private
-   * @param {HTMLElement} panel - The scene options panel.
-   * @param {HTMLElement} skillsContainer - Insertion anchor for option sections.
-   */
+  // Builds the merchant "Sell" section: one button per sellable inventory
+  // item, priced at floor(itemValue * rules.merchantSellRatio).
   _buildSellSection(panel, skillsContainer) {
     const player = this.engine.state.getPlayer();
     const sellRatio = this.engine.data.rules?.merchantSellRatio ?? 0.5;

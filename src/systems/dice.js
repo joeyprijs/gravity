@@ -1,8 +1,6 @@
-/**
- * Pure dice mathematics module for Gravity.
- * This file is completely independent of the DOM, state manager, and engine core,
- * allowing it to be imported directly and run synchronously inside unit test runners.
- */
+// Pure dice math: rolls, damage-notation parsing, and weighted tables.
+// Like condition.js and time.js, this module is DOM- and engine-free so it
+// runs directly in node:test.
 
 /**
  * Generates a pseudo-random integer between min and max (both inclusive).
@@ -36,9 +34,9 @@ export function rollTable(table) {
 
 /**
  * Parses dynamic damage notations and rolls the appropriate physical dice.
- * Supports standard table-top RPG notation (e.g., "1d6", "2d4+2", "1d8-1") 
+ * Supports standard table-top RPG notation (e.g., "1d6", "2d4+2", "1d8-1")
  * and fallback range syntax (e.g., "1-4").
- * 
+ *
  * @param {string} dmgString - The mathematical notation to evaluate.
  * @returns {{total: number, string: string}} An object containing:
  *   - total: The grand sum of all dice rolls + modifiers (clamped to >= 0).

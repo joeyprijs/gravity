@@ -74,7 +74,7 @@ test('exhibiting relics: dynamically updates museum reputation', () => {
   // First, obtain relics to get permanent reputation
   gameState.addToInventory('relic_crown', 1); // +25 permanent
   gameState.addToInventory('relic_shard', 1); // +10 permanent
-  
+
   assert.equal(gameState.getPlayer().attributes.reputation, 35);
   assert.equal(getMuseumReputation(), 35); // permanent 35 + 0 display = 35
 

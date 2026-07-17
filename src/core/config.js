@@ -6,7 +6,7 @@ export const MAX_D20_ROLL = 20;
 export const GOLD_ITEM_ID = 'gold';
 
 // Builders for the dynamic state-flag keys used by the engine and built-in
-// plugins. Centralised so each key format is defined exactly once — an inline
+// plugins. Centralized so each key format is defined exactly once — an inline
 // typo'd key would silently create a brand-new flag. These are scalar world
 // state: authored conditions may read them (e.g. gating on a sold-out stock).
 export const FLAG_KEYS = {
@@ -59,7 +59,7 @@ export const ACTIONS = {
   QUEST_TRIGGER:      'questTrigger',
 };
 
-// CSS class names referenced from JavaScript. Centralised here so that renaming
+// CSS class names referenced from JavaScript. Centralized here so that renaming
 // a class only requires a change in this file, not a grep across all JS files.
 // Dynamic variant suffixes (e.g. scene__log--${variant}) are built by
 // appending to the base constant: `${CSS.SCENE_LOG}--${variant}`.

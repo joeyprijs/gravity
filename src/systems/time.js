@@ -1,20 +1,18 @@
-/**
- * Pure time mathematics for Gravity's world clock.
- *
- * The clock itself is a single monotonic tick counter in state
- * (gameState.advanceTime). Everything here — days, day segments, "ticks until
- * morning" — is presentation derived from rules.time, never stored:
- *
- *   "time": {
- *     "ticksPerDay": 24,
- *     "startTick": 8,
- *     "segments": [ { "id": "morning", "from": 6 }, … ],
- *     "defaultCosts": { "navigate": 1, "skillAttempt": 1, "fullRest": 8 }
- *   }
- *
- * Like dice.js, this module is DOM- and engine-free so it runs directly in
- * node:test.
- */
+// Pure time math for the world clock.
+//
+// The clock itself is a single monotonic tick counter in state
+// (StateManager.advanceTime). Everything here — days, day segments, "ticks
+// until morning" — is presentation derived from rules.time, never stored:
+//
+//   "time": {
+//     "ticksPerDay": 24,
+//     "startTick": 8,
+//     "segments": [ { "id": "morning", "from": 6 }, … ],
+//     "defaultCosts": { "navigate": 1, "skillAttempt": 1, "fullRest": 8 }
+//   }
+//
+// Like dice.js, this module is DOM- and engine-free so it runs directly in
+// node:test.
 
 /**
  * The tick-of-day for an absolute tick count (0 … ticksPerDay-1).

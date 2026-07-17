@@ -5,17 +5,15 @@ import { rollBreakdown, skillLabel } from "./skill-checks.js";
 import { formatList, isOne } from "../core/i18n.js";
 import { CombatRenderer } from "../ui/combat-ui.js";
 
-/**
- * CombatSystem manages the full lifecycle of a turn-based combat encounter.
- * 
- * Flow:
- * 1. startCombat() rolls initiative for all combatants and constructs a sorted round timeline.
- * 2. High-initiative enemies act immediately during the "before" phase.
- * 3. The player acts, spending Action Points (AP) on attacks or item usage.
- * 4. Ending the player's turn triggers low-initiative enemies during the "after" phase.
- * 5. Player AP is restored, and high-initiative enemies trigger the next round.
- * 6. Health points are checked after every attack to resolve Victory or Defeat.
- */
+// CombatSystem manages the full lifecycle of a turn-based encounter:
+//
+// 1. startCombat() rolls initiative for every combatant.
+// 2. Enemies that out-rolled the player act first (the "before" phase).
+// 3. The player acts, spending Action Points on attacks or item use.
+// 4. Ending the player's turn triggers the slower enemies (the "after" phase).
+// 5. The round closes: AP recharges per rules.apEconomy, and fast enemies
+//    open the next round.
+// 6. HP is checked after every attack to resolve victory or defeat.
 export class CombatSystem {
   constructor(engine) {
     this.engine = engine;
@@ -56,7 +54,7 @@ export class CombatSystem {
 
   /**
    * Initializes a combat encounter, rolls initiatives, and launches the first round.
-   * 
+   *
    * @param {string[]} enemyIds - Array of NPC identifiers to fight (e.g. ["goblin_guard"]).
    * @param {object} originOption - The action pipeline node that triggered this combat.
    */
@@ -64,9 +62,9 @@ export class CombatSystem {
     // Clone enemy templates so battles never mutate the loaded base data.
     const enemyDataList = enemyIds.map(id => {
       const data = this.engine.data.npcs[id];
-      if (!data) { 
-        console.warn(`[Gravity] startCombat: unknown enemy template ID "${id}"`); 
-        return null; 
+      if (!data) {
+        console.warn(`[Gravity] startCombat: unknown enemy template ID "${id}"`);
+        return null;
       }
       const clone = structuredClone(data);
       clone.id = id;
@@ -126,7 +124,7 @@ export class CombatSystem {
     const enemyRolls = this.enemies
       .map(e => this.engine.t('combat.initiativeEnemy', { name: e.name, roll: e.initiativeRoll, breakdown: e.initiativeBreakdown }))
       .join(', ');
-    
+
     const allCombatants = [
       { name: this.engine.t('combat.initiativeYou'), roll: this.playerInit },
       ...this.enemies.map(e => ({ name: e.name, roll: e.initiativeRoll ?? 0 }))
@@ -145,7 +143,7 @@ export class CombatSystem {
 
   /**
    * Executes a player attack using an equipped weapon/spell against a target enemy.
-   * 
+   *
    * @param {object} weapon - The item object being used (Weapon/Spell type).
    * @param {object} targetEnemy - The cloned NPC object being attacked.
    */
@@ -214,11 +212,11 @@ export class CombatSystem {
 
   /**
    * Executes enemy attacks in a round-robin phase.
-   * 
+   *
    * Round phases:
    * - 'before': Handles enemies who out-rolled the player's initiative.
    * - 'after' : Handles enemies who rolled lower initiative than the player.
-   * 
+   *
    * @param {'before'|'after'} phase - The initiative grouping acting this turn.
    */
   enemyTurn(phase = 'after') {
@@ -236,11 +234,11 @@ export class CombatSystem {
 
     for (const enemy of enemiesToAct) {
       const eWeapon = this._resolveEnemyWeapon(enemy);
-      if (!eWeapon) { 
-        console.warn(`[Gravity] enemyTurn: no weapon resolved for "${enemy.name}", skipping.`); 
-        continue; 
+      if (!eWeapon) {
+        console.warn(`[Gravity] enemyTurn: no weapon resolved for "${enemy.name}", skipping.`);
+        continue;
       }
-      
+
       const result = this._resolveEnemyAttacks(eWeapon, enemy.attributes.actionPoints, enemy);
       if (result.attackCount > 0) this._narrateEnemyResult(enemy, eWeapon, result);
 
@@ -312,15 +310,9 @@ export class CombatSystem {
     this.apSpentThisTurn = 0;
   }
 
-  /**
-   * Resolves which weapon an enemy attacks with.
-   * Returns the item in their Right Hand slot, falling back to rules.fallbackWeapons.enemy
-   * or the core claw fallback.
-   * 
-   * @private
-   * @param {object} enemy - The NPC database entity object.
-   * @returns {object|null} The resolved weapon configuration, or null if loading fails.
-   */
+  // The weapon an enemy attacks with: their Right Hand item, falling back to
+  // rules.fallbackWeapons.enemy (the core claw by default). Null when neither
+  // resolves to a loaded item.
   _resolveEnemyWeapon(enemy) {
     const equipped = enemy.equipment?.[WEAPON_SLOTS[1]]; // Right Hand
     const item = equipped ? this.engine.data.items[equipped] : null;
@@ -328,17 +320,10 @@ export class CombatSystem {
     return item || this.engine.data.items[fallbackId] || null;
   }
 
-  /**
-   * Simulates a single enemy's turn attacks based on their Action Point budget.
-   * Attacks repeatedly until their AP is exhausted, or the player/enemy drops.
-   * 
-   * @private
-   * @param {object} eWeapon - The weapon being swung/cast.
-   * @param {number} eAP - The enemy's active AP pool for this round.
-   * @param {object} enemy - The attacking NPC entity object.
-   * @returns {object} A combat simulation results package containing:
-   *   - attackCount, hits, misses, totalDamage, and breakdowns of rolls.
-   */
+  // Resolves one enemy's attacks for the turn: swings until its AP budget
+  // can't cover another attack or someone drops. Returns the tallies and
+  // roll breakdowns ({ attackCount, hits, misses, totalDamage, hitRolls,
+  // missRolls, damageRolls }) for _narrateEnemyResult.
   _resolveEnemyAttacks(eWeapon, eAP, enemy) {
     if (!eWeapon.attributes?.actionPoints) {
       return { attackCount: 0, hits: 0, misses: 0, totalDamage: 0, hitRolls: [], missRolls: [], damageRolls: [] };
@@ -363,7 +348,7 @@ export class CombatSystem {
       if (hitRoll >= player.attributes.ac) {
         hits++;
         hitRolls.push(this.engine.t('combat.enemyAttackRoll', { roll: hitRoll, breakdown, ac: player.attributes.ac }));
-        
+
         const dmgResult = parseDamage(eWeapon.attributes.damageRoll);
         totalDamage += dmgResult.total;
         damageRolls.push(dmgResult.string);

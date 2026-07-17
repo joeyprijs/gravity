@@ -2,7 +2,7 @@ import { LOG, MISSION_STATUS } from "../core/config.js";
 
 // QuestSystem processes quest triggers that are embedded in scene JSON and
 // fires the appropriate state transitions (not_started → active → complete).
-// All quest progress is stored in gameState; this class holds no state of its own.
+// All quest progress lives in the StateManager; this class holds none of its own.
 export class QuestSystem {
   constructor(engine) {
     this.engine = engine;

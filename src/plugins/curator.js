@@ -238,7 +238,7 @@ export class CuratorUI {
     const repVal = getMuseumReputation();
     const repText = createElement('div', [CSS.CARD_STATS, 'curator-panel__rep-value'], this.engine.t('plugin.curator.museumReputationValue', { value: repVal }));
     repSection.appendChild(repText);
-    
+
     panel.insertBefore(repSection, skillsContainer);
 
     // 2. Exhibits Section
@@ -271,7 +271,7 @@ export class CuratorUI {
     const installCost = this.engine.data.rules?.curator?.installCost ?? 50;
     const p = this.engine.state.getPlayer();
     const canInstall = p.resources.gold >= installCost;
-    
+
     const installSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
     const installBtn = buildOptionButton(
       this.engine.t('plugin.curator.curatorInstall', { cost: installCost }),
@@ -328,7 +328,7 @@ export class CuratorUI {
     if (itemData?.description) {
       infoContainer.appendChild(createElement('p', CSS.CARD_BODY, itemData.description));
     }
-    
+
     if (itemData?.value !== undefined || itemData?.attributes?.actionPoints !== undefined) {
       let stats = this.engine.t('plugin.curator.inspectValue', { value: itemData.value ?? 0 });
       if (itemData.attributes?.actionPoints) stats += ` | ${this.engine.t('plugin.curator.inspectApCost', { ap: itemData.attributes.actionPoints })}`;
@@ -370,7 +370,7 @@ export class CuratorUI {
     // Get eligible player inventory items
     const player = this.engine.state.getPlayer();
     const isEquipped = (itemId) => Object.values(player.equipment).includes(itemId);
-    
+
     // Filter inventory to show all non-equipped items
     let eligibleItems = player.inventory.filter(invItem => {
       if (isEquipped(invItem.item)) return false;

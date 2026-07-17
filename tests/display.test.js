@@ -32,7 +32,7 @@ test('addDisplayToScene: registers new display case and returns unique ID', () =
   const displayId = gameState.addDisplayToScene('home_museum', {
     name: 'Glass Pedestal'
   });
-  
+
   assert.ok(displayId, 'Expected a generated display ID');
   const displays = gameState.getDisplaysForScene('home_museum');
   assert.equal(displays.length, 1);
@@ -48,7 +48,7 @@ test('addDisplayToScene: respects pre-defined display ID and attributes', () => 
     item: 'relic_crown',
     allowedTypes: ['Flavour']
   });
-  
+
   assert.equal(displayId, 'custom_display_1');
   const displays = gameState.getDisplaysForScene('home_museum');
   assert.equal(displays.length, 1);
@@ -59,14 +59,14 @@ test('addDisplayToScene: respects pre-defined display ID and attributes', () => 
 
 test('placeItemInDisplay: puts inventory item in display case, removing it from player inventory', () => {
   const displayId = gameState.addDisplayToScene('home_museum', { name: 'Main Stand' });
-  
+
   // rusty_sword starts with amount: 1
   const success = gameState.placeItemInDisplay('home_museum', displayId, 'rusty_sword');
   assert.equal(success, true);
-  
+
   const displays = gameState.getDisplaysForScene('home_museum');
   assert.equal(displays[0].item, 'rusty_sword');
-  
+
   const invEntry = gameState.getPlayer().inventory.find(i => i.item === 'rusty_sword');
   assert.equal(invEntry, undefined, 'Expected sword to be removed from player inventory');
 });
@@ -79,14 +79,14 @@ test('placeItemInDisplay: returns false for invalid display cases', () => {
 test('takeItemFromDisplay: retrieves item from display case, adding it back to player inventory', () => {
   const displayId = gameState.addDisplayToScene('home_museum', { name: 'Main Stand' });
   gameState.placeItemInDisplay('home_museum', displayId, 'rusty_sword');
-  
+
   // Withdraw
   const retrievedId = gameState.takeItemFromDisplay('home_museum', displayId);
   assert.equal(retrievedId, 'rusty_sword');
-  
+
   const displays = gameState.getDisplaysForScene('home_museum');
   assert.equal(displays[0].item, null);
-  
+
   const invEntry = gameState.getPlayer().inventory.find(i => i.item === 'rusty_sword');
   assert.ok(invEntry);
   assert.equal(invEntry.amount, 1);
@@ -120,7 +120,7 @@ test('migration: v2 save file dynamically adds displays object', () => {
   };
 
   gameState.loadFromObject(oldSave);
-  
+
   const displays = gameState.getDisplaysForScene('dungeon_start');
   assert.deepEqual(displays, []);
   assert.ok(gameState.state.displays, 'Migration should define displays object in state');

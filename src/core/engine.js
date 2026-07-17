@@ -120,7 +120,7 @@ export class RPGEngine {
 
     this._validateData();
 
-    // Initialise state from rules, then register missions and flags on it.
+    // Initialize state from rules, then register missions and flags on it.
     this.state.init(this.data.rules, this.data.items);
     this.state.registerMissions(this.data.missions);
     this.state.registerSceneFlags(this.data.flags);
@@ -271,7 +271,7 @@ export class RPGEngine {
     }
   }
 
-  // --- Item action methods ---
+  // ── Item action methods ─────────────────────────────────────────────────
   // Thin delegates into systems/items.js — the UI buttons call these; the
   // AP-cost checks and effect handling live in that module.
 
@@ -295,7 +295,7 @@ export class RPGEngine {
     return true;
   }
 
-  // --- Mode machine ---
+  // ── Mode machine ────────────────────────────────────────────────────────
   // Exactly one surface owns the options panel at a time (see this.mode).
 
   /** @param {'scene'|'combat'|'dialogue'|'store'|'customUI'|'gameover'} mode */
@@ -326,7 +326,7 @@ export class RPGEngine {
     return () => this.state.getCurrentSceneId() !== sceneId || this.mode !== mode;
   }
 
-  // --- Delegate API ---
+  // ── Delegate API ────────────────────────────────────────────────────────
   // Subsystems (combat, dialogue, quests) call these on `this.engine`.
   // They forward to the appropriate module so subsystems need no knowledge
   // of the internal structure.
@@ -414,7 +414,7 @@ export class RPGEngine {
   handleQuestTrigger(trigger) { return this.questSystem.handleTrigger(trigger); }
   scrollNarrativeToBottom() { return this.narrative.scrollToBottom(); }
 
-  // --- Event system ---
+  // ── Event system ────────────────────────────────────────────────────────
   // Minimal pub/sub. Subsystems subscribe in their constructors; emitters need
   // no knowledge of who is listening. Use for cross-system notifications where
   // a direct call would create unwanted coupling.
