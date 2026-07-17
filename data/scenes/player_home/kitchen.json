@@ -1,4 +1,5 @@
 {
+  "id": "home_kitchen",
   "name": "Kitchen",
   "region": "player_home",
   "mapDefinitions": {

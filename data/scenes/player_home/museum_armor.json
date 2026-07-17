@@ -1,4 +1,5 @@
 {
+  "id": "home_museum_armor",
   "name": "Museum Armor Room",
   "region": "player_home",
   "mapDefinitions": {

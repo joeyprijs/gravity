@@ -2,8 +2,9 @@ import { test, beforeEach, afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { gameState } from '../src/core/state.js';
 import { SceneRenderer } from '../src/systems/scene.js';
-import { FLAG_KEYS } from '../src/core/config.js';
+import { CHECK_KEYS, FLAG_KEYS } from '../src/core/config.js';
 import { getAttempts, recordAttempt } from '../src/systems/skill-checks.js';
+import { rollTable } from '../src/systems/dice.js';
 
 // Minimal DOM stand-in — just enough for createElement/buildOptionButton to run
 // headless. Elements are only built by the code under test, never queried back.
@@ -46,6 +47,7 @@ function makeEngine({ items = TEST_ITEMS, scenes = {}, tables = {}, hooks = {}, 
   const calls = { logs: [], renderedScenes: [], combat: [], emitted: [] };
   const engine = {
     data: { items, scenes, tables, npcs: {}, rules: null },
+    state: gameState,
     t: (key) => key,
     log: (type, message, variant) => calls.logs.push({ type, message, variant }),
     emit: (event, data) => calls.emitted.push({ event, data }),
@@ -60,7 +62,14 @@ function makeEngine({ items = TEST_ITEMS, scenes = {}, tables = {}, hooks = {}, 
     inCombat: false,
     inDialogue: false,
     inCustomUI: false,
-    isGameStart: false,
+    isGameOver: false,
+    // Mirrors engine.snapshotNavigation over this mock's plain boolean fields,
+    // so tests can simulate navigation by flipping them.
+    snapshotNavigation() {
+      const sceneId = gameState.getCurrentSceneId();
+      return () => gameState.getCurrentSceneId() !== sceneId ||
+        engine.inCombat || engine.inDialogue || engine.inCustomUI || engine.isGameOver;
+    },
   };
   return { engine, calls };
 }
@@ -115,59 +124,65 @@ test('_resolveDescription: scene decorators append to every scene', () => {
   assert.equal(sr._resolveDescription({ description: 'Bare walls.' }), 'Bare walls.<aside>cell</aside>');
 });
 
-// ── _rollTable ────────────────────────────────────────────────────────────────
+// ── rollTable (dice.js — exercised here against loot-shaped tables) ──────────
 
-test('_rollTable: unknown or empty tables return null', () => {
-  const { sr } = makeSR({ tables: { empty: { entries: [] } } });
-  assert.equal(sr._rollTable('missing'), null);
-  assert.equal(sr._rollTable('empty'), null);
+test('rollTable: missing or empty tables return null', () => {
+  assert.equal(rollTable(undefined), null);
+  assert.equal(rollTable({ entries: [] }), null);
 });
 
-test('_rollTable: weighted picks honour entry weights', () => {
-  const entries = [{ item: 'common', weight: 3 }, { item: 'rare', weight: 1 }];
-  const { sr } = makeSR({ tables: { loot: { entries } } });
+test('rollTable: weighted picks honour entry dropWeights', () => {
+  const table = { entries: [{ item: 'common', dropWeight: 3 }, { item: 'rare', dropWeight: 1 }] };
   // Total weight 4: r in (0,3] → common, r in (3,4] → rare.
   mock.method(Math, 'random', () => 0.5); // r = 2
-  assert.equal(sr._rollTable('loot').item, 'common');
+  assert.equal(rollTable(table).item, 'common');
   mock.method(Math, 'random', () => 0.9); // r = 3.6
-  assert.equal(sr._rollTable('loot').item, 'rare');
+  assert.equal(rollTable(table).item, 'rare');
 });
 
-test('_rollTable: weight defaults to 1 per entry', () => {
-  const entries = [{ item: 'a' }, { item: 'b' }];
-  const { sr } = makeSR({ tables: { loot: { entries } } });
+test('rollTable: dropWeight defaults to 1 per entry', () => {
+  const table = { entries: [{ item: 'a' }, { item: 'b' }] };
   mock.method(Math, 'random', () => 0.99); // r = 1.98 → second entry
-  assert.equal(sr._rollTable('loot').item, 'b');
+  assert.equal(rollTable(table).item, 'b');
 });
 
 // ── _awardDiscoveredLoot ──────────────────────────────────────────────────────
+// The summary line is t('loot.foundItems', { list }) with the list joined by
+// Intl.ListFormat — the tests assert on the key and its list param.
+
+const paramEchoT = (k, p) => p ? `${k}:${JSON.stringify(p)}` : k;
 
 test('_awardDiscoveredLoot: single item is added and logged by name', () => {
-  const { sr, calls } = makeSR();
+  const { sr, engine, calls } = makeSR();
+  engine.t = paramEchoT;
   sr._awardDiscoveredLoot([{ item: 'healing_potion' }]);
   assert.equal(gameState.getPlayer().inventory.find(i => i.item === 'healing_potion').amount, 1);
-  assert.equal(calls.logs[0].message, 'Found Healing Potion.');
+  assert.equal(calls.logs[0].message, 'loot.foundItems:{"list":"Healing Potion"}');
 });
 
 test('_awardDiscoveredLoot: gold goes to the gold resource', () => {
-  const { sr, calls } = makeSR();
+  const { sr, engine, calls } = makeSR();
+  engine.t = paramEchoT;
   sr._awardDiscoveredLoot([{ item: 'gold', amount: 7 }]);
   assert.equal(gameState.getPlayer().resources.gold, 7);
   assert.equal(gameState.getPlayer().inventory.length, 0);
-  assert.equal(calls.logs[0].message, 'Found 7 loot.gold.');
+  assert.equal(calls.logs[0].message, 'loot.foundItems:{"list":"7 loot.gold"}');
 });
 
 test('_awardDiscoveredLoot: duplicate drops aggregate into one stack and label', () => {
-  const { sr, calls } = makeSR();
+  const { sr, engine, calls } = makeSR();
+  engine.t = paramEchoT;
   sr._awardDiscoveredLoot([{ item: 'healing_potion' }, { item: 'healing_potion', amount: 2 }]);
   assert.equal(gameState.getPlayer().inventory.find(i => i.item === 'healing_potion').amount, 3);
-  assert.equal(calls.logs[0].message, 'Found Healing Potion (x3).');
+  assert.equal(calls.logs[0].message, 'loot.foundItems:{"list":"Healing Potion (x3)"}');
 });
 
-test('_awardDiscoveredLoot: two kinds of loot join with "and"', () => {
-  const { sr, calls } = makeSR();
+test('_awardDiscoveredLoot: multiple kinds join through Intl.ListFormat', () => {
+  const { sr, engine, calls } = makeSR();
+  engine.t = paramEchoT;
+  engine.language = 'en';
   sr._awardDiscoveredLoot([{ item: 'healing_potion' }, { item: 'rusty_sword' }]);
-  assert.equal(calls.logs[0].message, 'Found Healing Potion and Rusty Sword.');
+  assert.equal(calls.logs[0].message, 'loot.foundItems:{"list":"Healing Potion and Rusty Sword"}');
 });
 
 test('_awardDiscoveredLoot: table entries roll concrete drops', () => {
@@ -190,12 +205,12 @@ test('_resolveDiscovery: hits mark items found, misses stay at their base DC', (
   gameState.setCurrentSceneId('cell');
   const opt = { skillCheck: 'perception', items: [{ item: 'healing_potion', dc: 5 }, { item: 'rusty_sword', dc: 15 }] };
   const state = { found: [false, false] };
-  const skillKey = FLAG_KEYS.skillDc('perception', 'cell');
+  const skillKey = CHECK_KEYS.skillDc('perception', 'cell');
 
   mock.method(Math, 'random', () => 0.45); // roll(1,20) = 10: ≥5 hits, <15 misses
   sr._resolveDiscovery(opt, 0, state, skillKey, {});
 
-  const saved = gameState.getFlag(skillKey).disc_0;
+  const saved = gameState.getCheckState(skillKey).disc_0;
   assert.deepEqual(saved.found, [true, false]);
   assert.equal(saved.tries, 1);
   assert.ok(!saved.resolved);
@@ -214,15 +229,15 @@ test('_resolveDiscovery: maxAttempts exhaustion retires the check and runs onExh
     onExhausted: [{ type: 'set_flag', flag: 'gave_up', value: true }],
     items: [{ item: 'rusty_sword', dc: 25 }],
   };
-  const skillKey = FLAG_KEYS.skillDc('perception', 'cell');
+  const skillKey = CHECK_KEYS.skillDc('perception', 'cell');
 
   mock.method(Math, 'random', () => 0); // roll 1: never finds anything
   sr._resolveDiscovery(opt, 0, { found: [false] }, skillKey, {});
-  assert.ok(!gameState.getFlag(skillKey).disc_0.resolved);
+  assert.ok(!gameState.getCheckState(skillKey).disc_0.resolved);
   assert.equal(ranPipelines.length, 0);
 
-  sr._resolveDiscovery(opt, 0, gameState.getFlag(skillKey).disc_0, skillKey, {});
-  assert.ok(gameState.getFlag(skillKey).disc_0.resolved);
+  sr._resolveDiscovery(opt, 0, gameState.getCheckState(skillKey).disc_0, skillKey, {});
+  assert.ok(gameState.getCheckState(skillKey).disc_0.resolved);
   assert.deepEqual(ranPipelines, [opt.onExhausted]);
 });
 
@@ -230,11 +245,11 @@ test('_resolveDiscovery: resolveOnce retires the check after a single roll', () 
   const { sr } = makeSR();
   gameState.setCurrentSceneId('cell');
   const opt = { skillCheck: 'perception', resolveOnce: true, items: [{ item: 'rusty_sword', dc: 25 }] };
-  const skillKey = FLAG_KEYS.skillDc('perception', 'cell');
+  const skillKey = CHECK_KEYS.skillDc('perception', 'cell');
 
   mock.method(Math, 'random', () => 0); // roll 1: nothing found
   sr._resolveDiscovery(opt, 0, { found: [false] }, skillKey, {});
-  assert.ok(gameState.getFlag(skillKey).disc_0.resolved);
+  assert.ok(gameState.getCheckState(skillKey).disc_0.resolved);
   // A retired check no longer renders a button.
   assert.equal(sr._buildItemDiscoveryButton(opt, 0, 'cell', {}), null);
 });
@@ -242,7 +257,7 @@ test('_resolveDiscovery: resolveOnce retires the check after a single roll', () 
 test('_resolveDiscovery: log key reflects found / found-more / fail', () => {
   const { sr, calls } = makeSR();
   const opt = { skillCheck: 'perception', items: [{ item: 'healing_potion', dc: 5 }, { item: 'rusty_sword', dc: 15 }] };
-  const skillKey = FLAG_KEYS.skillDc('perception', 'cell');
+  const skillKey = CHECK_KEYS.skillDc('perception', 'cell');
 
   // Each discovery logs the roll line, then the outcome narration as its own
   // entry, then the found-loot summary.
@@ -283,25 +298,25 @@ test('_registerInitialDisplays: leaves save-restored displays untouched', () => 
 
 test('_resetSkillAttempts: clears attempt counters but keeps resolution markers', () => {
   const { sr } = makeSR();
-  const key = FLAG_KEYS.skillDc('lockpick', 'cell');
-  gameState.setFlag(key, { tries_0: 2, resolved_1: true });
+  const key = CHECK_KEYS.skillDc('lockpick', 'cell');
+  gameState.setCheckState(key, { tries_0: 2, resolved_1: true });
   sr._resetSkillAttempts({ skills: [{ skillCheck: 'lockpick', dc: 10 }] }, 'cell');
-  assert.deepEqual(gameState.getFlag(key), { resolved_1: true });
+  assert.deepEqual(gameState.getCheckState(key), { resolved_1: true });
 });
 
 test('_resetSkillAttempts: discovery keeps found items and resolution, drops tries', () => {
   const { sr } = makeSR();
-  const key = FLAG_KEYS.skillDc('perception', 'cell');
-  gameState.setFlag(key, { found: [true, false], tries: 3, resolved: true });
+  const key = CHECK_KEYS.skillDc('perception', 'cell');
+  gameState.setCheckState(key, { found: [true, false], tries: 3, resolved: true });
   sr._resetSkillAttempts({ skills: [{ skillCheck: 'perception', items: [{ dc: 5 }, { dc: 15 }] }] }, 'cell');
-  assert.deepEqual(gameState.getFlag(key), { found: [true, false], resolved: true });
+  assert.deepEqual(gameState.getCheckState(key), { found: [true, false], resolved: true });
 });
 
 test('_resetSkillAttempts: checks never attempted are left alone', () => {
   const { sr } = makeSR();
-  const key = FLAG_KEYS.skillDc('perception', 'cell');
+  const key = CHECK_KEYS.skillDc('perception', 'cell');
   sr._resetSkillAttempts({ skills: [{ skillCheck: 'perception', items: [{ dc: 5 }] }] }, 'cell');
-  assert.equal(gameState.getFlag(key), false);
+  assert.equal(gameState.getCheckState(key), undefined, 'no entry is ever created by a reset');
 });
 
 // ── _maybeStartAutoAttack ─────────────────────────────────────────────────────
@@ -433,7 +448,7 @@ test('_buildPassFailButton: partial tier runs its pipeline and still counts an a
   mock.method(Math, 'random', () => 0.5); // roll 11 vs DC 12 → margin -1 → partial
   btn.onclick();
   assert.deepEqual(ran, [partialActions]);
-  assert.equal(getAttempts(FLAG_KEYS.skillDc('perception', 'cell'), 0), 1);
+  assert.equal(getAttempts(gameState, CHECK_KEYS.skillDc('perception', 'cell'), 0), 1);
 });
 
 test('_buildPassFailButton: resolveOnce retires the check after a single roll', () => {
@@ -568,7 +583,7 @@ test('a discovery attempt narrates the roll and loot before time is charged', ()
   const opt = { skillCheck: 'perception', items: [{ item: 'healing_potion', dc: 5 }] };
 
   mock.method(Math, 'random', () => 0.45); // roll 10 ≥ 5 — found
-  sr._resolveDiscovery(opt, 0, { found: [false] }, FLAG_KEYS.skillDc('perception', 'cell'), {});
+  sr._resolveDiscovery(opt, 0, { found: [false] }, CHECK_KEYS.skillDc('perception', 'cell'), {});
 
   const messages = calls.logs.map(l => l.message);
   const timeAt = messages.indexOf('timePassed');
@@ -602,7 +617,7 @@ test('discovery state is namespaced: a search never revives a resolved sibling c
   // one-shot check (and its reward) repeat forever.
   const { sr } = makeSR();
   gameState.setCurrentSceneId('chamber');
-  const skillKey = FLAG_KEYS.skillDc('perception', 'chamber');
+  const skillKey = CHECK_KEYS.skillDc('perception', 'chamber');
   const climb = { text: 'Climb', skillCheck: 'perception', dc: 12, resolveOnce: true };
   const search = { text: 'Look Around', skillCheck: 'perception', items: [{ item: 'rusty_sword', dc: 25 }] };
 
@@ -616,14 +631,14 @@ test('discovery state is namespaced: a search never revives a resolved sibling c
 
   // The climb must STAY resolved, and the discovery state lives alongside it.
   assert.equal(sr._buildPassFailButton(climb, 1, 'chamber', {}), null);
-  assert.deepEqual(gameState.getFlag(skillKey).disc_0.found, [false]);
+  assert.deepEqual(gameState.getCheckState(skillKey).disc_0.found, [false]);
 });
 
 test('discovery adopts legacy top-level state from older saves', () => {
   const { sr } = makeSR();
   gameState.setCurrentSceneId('cell');
-  const skillKey = FLAG_KEYS.skillDc('perception', 'cell');
-  gameState.setFlag(skillKey, { dcs: [5], found: [true], tries: 2 });
+  const skillKey = CHECK_KEYS.skillDc('perception', 'cell');
+  gameState.setCheckState(skillKey, { dcs: [5], found: [true], tries: 2 });
   const opt = { text: 'Look', skillCheck: 'perception', items: [{ item: 'rusty_sword', dc: 5 }] };
 
   // Everything already found in the legacy state → no button.

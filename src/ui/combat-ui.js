@@ -1,4 +1,3 @@
-import { gameState } from "../core/state.js";
 import { createElement, buildSceneDescription, buildOptionButton, resetOptionsPanel, itemStatLines } from "../core/utils.js";
 import { EL, CSS, WEAPON_SLOTS } from "../core/config.js";
 
@@ -23,7 +22,7 @@ export class CombatRenderer {
    * @returns {object[]} Array of Weapon/Spell item configuration schemas.
    */
   getAvailableAttacks() {
-    const player = gameState.getPlayer();
+    const player = this.cs.engine.state.getPlayer();
     const attacks = [];
 
     let hasWeapon = false;
@@ -109,7 +108,7 @@ export class CombatRenderer {
       attacks.forEach(att => {
         const btn = buildOptionButton(
           this.cs.engine.t('combat.attackTarget', { name: att.name }),
-          itemStatLines(this.cs.engine.t.bind(this.cs.engine), att, gameState.getPlayer().attributes));
+          itemStatLines(this.cs.engine.t.bind(this.cs.engine), att, this.cs.engine.state.getPlayer().attributes));
         
         // Disable attack controls that exceed the remaining turn budget
         // (current AP, capped by rules.apEconomy.maxPerTurn).

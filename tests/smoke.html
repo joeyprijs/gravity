@@ -161,10 +161,11 @@
         assert(value('Name') === 'Smoke Tester', `name row shows "${value('Name')}"`);
         assert(value('Hit Points') === '10/10', `HP row shows "${value('Hit Points')}"`);
         assert(value('Reputation') === '0', `reputation row shows "${value('Reputation')}"`);
-        // Level-up point-buy covers the char-creation stats: HP and AC rows
-        // carry spend buttons (hidden until points are banked).
+        // Level-up point-buy covers the char-creation stats: HP, AC, and
+        // Initiative rows carry spend buttons (hidden until points are banked).
         assert($('[data-spend-attr="resources.hp.max"]'), 'HP row has a spend button');
         assert($('[data-spend-attr="attributes.ac"]'), 'AC row has a spend button');
+        assert($('[data-spend-attr="attributes.initiative"]'), 'Initiative row has a spend button');
       });
 
       await step('skills section lists the custom attributes', () => {

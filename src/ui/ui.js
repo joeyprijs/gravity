@@ -1,4 +1,3 @@
-import { gameState } from "../core/state.js";
 import { attrRowHtml, clearElement, createElement, createSectionToggles, escapeHtml, getByPath } from "../core/utils.js";
 import { EL, CSS, LOG } from "../core/config.js";
 import { getDay, getSegment } from "../systems/time.js";
@@ -23,12 +22,30 @@ export class UIManager {
     this.map = new MapManager(engine);
     this.questUI = new QuestUI(engine);
     this.inventoryUI = new InventoryUI(engine);
+
+    // The built-in tab widgets. Registered on the engine so plugins share the
+    // same mechanism for contributing whole sidebar tabs (rules.tabs[].widget).
+    engine.registerTabWidget('map', (panel, ui) => ui._buildMapWidget(panel));
+    engine.registerTabWidget('options', (panel, ui) => ui._buildOptionsWidget(panel));
+    engine.registerTabWidget('attributes', (panel, ui) => ui._buildSheetWidget(panel));
   }
 
   setup() {
     this._buildTabs();
     this._buildTopBar();
     this.map.setup();
+
+    // One delegated listener covers every inventory item button, present and
+    // future — no per-render rebinding. Buttons call engine game-logic
+    // methods; the UI layer owns no game logic here.
+    document.getElementById(EL.PLAYER_PANEL).addEventListener('click', (e) => {
+      const btn = e.target.closest(`.${CSS.BTN_ITEM}`);
+      if (!btn || btn.disabled) return;
+      const { action, item: itemId, slot } = btn.dataset;
+      if (action === 'consume') this.engine.useItem(itemId);
+      else if (action === 'equip') this.engine.equipItem(slot, itemId);
+      else if (action === 'unequip') this.engine.unequipItem(slot);
+    });
 
     // Save/load/restart buttons live in the options tab (the 'options'
     // widget, built by _buildTabs above) — absent in games without one.
@@ -37,7 +54,7 @@ export class UIManager {
         this.engine.log(LOG.SYSTEM, this.engine.t('player.noCombatSave'));
         return;
       }
-      this._downloadSave(gameState.getSaveString());
+      this._downloadSave(this.engine.state.getSaveString());
       this.engine.log(LOG.SYSTEM, this.engine.t('system.saved'));
     });
 
@@ -51,7 +68,7 @@ export class UIManager {
       reader.onload = (ev) => {
         try {
           let raw = ev.target.result;
-          // Decode the base64+UTF-8 encoding written by gameState.getSaveString().
+          // Decode the base64+UTF-8 encoding written by this.engine.state.getSaveString().
           // TextDecoder is the modern replacement for the deprecated escape() approach.
           try {
             const binary = atob(raw);
@@ -72,7 +89,7 @@ export class UIManager {
 
     // Restart
     document.getElementById(EL.BTN_RESTART)?.addEventListener('click', () => {
-      gameState.reset();
+      this.engine.state.reset();
       window.location.reload();
     });
   }
@@ -107,92 +124,13 @@ export class UIManager {
       panel.id = tab.id;
       if (!tab.default) panel.hidden = true;
 
-      // Map widget: inject minimap structure so MapManager.setup() can find it
-      if (tab.widget === 'map') {
-        panel.innerHTML = `<div class="${CSS.PANEL_SECTION}"><div class="minimap" id="minimap" title="Click to open full map" hidden><div class="minimap__canvas" id="minimap-canvas"></div></div></div>`;
-      }
-
-      // Options widget: the save/load/restart buttons. The click handlers
-      // bind in setup() right after the tabs are built.
-      if (tab.widget === 'options') {
-        panel.innerHTML = `<div class="${CSS.PANEL_SECTION}">
-          <div class="options-actions">
-            <button class="${CSS.BTN}" id="${EL.BTN_SAVE}">${escapeHtml(this.engine.t('ui.btnSave'))}</button>
-            <button class="${CSS.BTN}" id="${EL.BTN_LOAD}">${escapeHtml(this.engine.t('ui.btnLoad'))}</button>
-            <button class="${CSS.BTN}" id="${EL.BTN_RESTART}">${escapeHtml(this.engine.t('ui.btnRestart'))}</button>
-          </div>
-        </div>`;
-      }
-
-      // Attributes widget: the character sheet. A character section (same
-      // stats as the scene top bar, plus name/level/initiative) above the
-      // custom-attribute list, both as label/value rows. With
-      // rules.levelUp.statPoints configured, each attribute row grows a
-      // spend button and a banked-points line, shown only while points are
-      // banked (see _updateStatPointControls).
-      if (tab.widget === 'attributes') {
-        const canSpend = (rules.levelUp?.statPoints ?? 0) > 0;
-        // Level-up point-buy covers the same stats as character creation —
-        // charCreation.stats entries that aren't skills (HP, AC) grow a spend
-        // button on their character row, resolved by gameState.spendStatPoint.
-        const creationIds = new Set((rules.charCreation?.stats ?? []).map(s => s.id));
-        const spendBtnHtml = (target) => canSpend && creationIds.has(target)
-          ? `<button class="${CSS.BTN} attr-list__spend" data-spend-attr="${escapeHtml(target)}" title="${escapeHtml(this.engine.t('ui.spendStatPoint'))}" hidden>+</button>`
-          : '';
-        // The data-stat-bind spans ride the existing stats update loop.
-        // Row order groups by meaning: identity, combat, spendable pools,
-        // then wealth/standing (plugin sheetRows land in the last group).
-        const characterRows = [
-          attrRowHtml(this.engine.t('ui.statName'), bindSpan('name')),
-          attrRowHtml(this.engine.t('ui.statLevel'), bindSpan('level')),
-          attrRowHtml(this.engine.t('ui.sheetHp'), `${bindSpan('resources.hp.current')}/${bindSpan('resources.hp.max')}`, '', spendBtnHtml('resources.hp.max')),
-          attrRowHtml(this.engine.t('ui.sheetAc'), bindSpan('attributes.ac'), '', spendBtnHtml('attributes.ac')),
-          attrRowHtml(this.engine.t('ui.statInitiative'), bindSpan('attributes.initiative')),
-          attrRowHtml(this.engine.t('ui.sheetAp'), `${bindSpan('resources.ap.current')}/${bindSpan('resources.ap.max')}`),
-          ...this._headerResourceEntries().map(({ label, valueHtml }) => attrRowHtml(label, valueHtml)),
-          attrRowHtml(this.engine.t('ui.statGold'), bindSpan('resources.gold')),
-          ...this.engine.sheetRows.map(row => attrRowHtml(row.label, bindSpan(row.bind))),
-        ].join('');
-        const items = (rules.customAttributes ?? []).map(attr =>
-          `<div class="attr-list__row">
-            <span class="attr-list__label">${escapeHtml(skillLabel(this.engine, attr.id))}</span>
-            <span class="attr-list__value" data-stat-bind="attributes.${escapeHtml(attr.id)}"></span>${canSpend ? `
-            <button class="${CSS.BTN} attr-list__spend" data-spend-attr="${escapeHtml(attr.id)}" title="${escapeHtml(this.engine.t('ui.spendStatPoint'))}" hidden>+</button>` : ''}
-          </div>`
-        ).join('');
-        const sectionHeading = (key, labelText) =>
-          `<button class="${CSS.SECTION_HEADING} ${CSS.SECTION_TOGGLE}" data-section="${key}">
-            <span class="${CSS.SECTION_TOGGLE_LABEL}">${escapeHtml(labelText)}</span>
-          </button>`;
-        // One panel-section wrapper per section, like the inventory panel —
-        // the adjacent-sibling margin is what spaces the sections apart. The
-        // banked-points line tops the whole sheet (both sections hold
-        // spendable rows) and sits outside the collapsible bodies so a player
-        // with points to spend always sees the cue.
-        panel.innerHTML = `${canSpend ? `
-        <div class="attr-list__points" hidden>${escapeHtml(this.engine.t('ui.statPoints'))} <span data-stat-bind="statPoints"></span></div>` : ''}
-        <div class="${CSS.PANEL_SECTION}">
-          ${sectionHeading('character', this.engine.t('ui.sheetCharacterTitle'))}
-          <div class="attr-list" data-section-body="character">${characterRows}</div>
-        </div>
-        <div class="${CSS.PANEL_SECTION}">
-          ${sectionHeading('skills', this.engine.t('ui.attributesTitle'))}
-          <div data-section-body="skills">
-          <div class="attr-list">${items}</div>
-          </div>
-        </div>`;
-        this._bindSheetToggles(panel);
-        if (canSpend) {
-          panel.addEventListener('click', (e) => {
-            const attrId = e.target?.dataset?.spendAttr;
-            if (!attrId || this.engine.isGameOver) return; // dead characters don't grow
-            // Mid-combat the stats update skips panel rebuilds, so refresh the
-            // combat controls here — the attack buttons show hit modifiers.
-            if (gameState.spendStatPoint(attrId) && this.engine.inCombat) {
-              this.engine.combatSystem.renderer.render();
-            }
-          });
-        }
+      // A tab with a widget is filled by its registered builder (built-in or
+      // plugin — see engine.registerTabWidget). Widget-less tabs (inventory,
+      // quests) are rendered into by their own UI classes via the panel id.
+      if (tab.widget) {
+        const build = this.engine.getTabWidget(tab.widget);
+        if (build) build(panel, this);
+        else console.warn(`[Gravity] tabs: no widget registered for "${tab.widget}"`);
       }
 
       playerPanel.appendChild(panel);
@@ -211,6 +149,95 @@ export class UIManager {
         }
       });
     });
+  }
+
+  // Map widget: the minimap structure MapManager.setup() wires up.
+  _buildMapWidget(panel) {
+    panel.innerHTML = `<div class="${CSS.PANEL_SECTION}"><div class="minimap" id="minimap" title="Click to open full map" hidden><div class="minimap__canvas" id="minimap-canvas"></div></div></div>`;
+  }
+
+  // Options widget: the save/load/restart buttons. The click handlers bind in
+  // setup() right after the tabs are built.
+  _buildOptionsWidget(panel) {
+    panel.innerHTML = `<div class="${CSS.PANEL_SECTION}">
+      <div class="options-actions">
+        <button class="${CSS.BTN}" id="${EL.BTN_SAVE}">${escapeHtml(this.engine.t('ui.btnSave'))}</button>
+        <button class="${CSS.BTN}" id="${EL.BTN_LOAD}">${escapeHtml(this.engine.t('ui.btnLoad'))}</button>
+        <button class="${CSS.BTN}" id="${EL.BTN_RESTART}">${escapeHtml(this.engine.t('ui.btnRestart'))}</button>
+      </div>
+    </div>`;
+  }
+
+  // Attributes widget: the character sheet. A character section (same stats
+  // as the scene top bar, plus name/level/initiative) above the
+  // custom-attribute list, both as label/value rows. With
+  // rules.levelUp.statPoints configured, each attribute row grows a spend
+  // button and a banked-points line, shown only while points are banked
+  // (see _updateStatPointControls).
+  _buildSheetWidget(panel) {
+    const rules = this.engine.data.rules;
+    const canSpend = (rules.levelUp?.statPoints ?? 0) > 0;
+    // Level-up point-buy covers the same stats as character creation —
+    // charCreation.stats entries that aren't skills (HP, AC) grow a spend
+    // button on their character row, resolved by this.engine.state.spendStatPoint.
+    const creationIds = new Set((rules.charCreation?.stats ?? []).map(s => s.id));
+    const spendBtnHtml = (target) => canSpend && creationIds.has(target)
+      ? `<button class="${CSS.BTN} attr-list__spend" data-spend-attr="${escapeHtml(target)}" title="${escapeHtml(this.engine.t('ui.spendStatPoint'))}" hidden>+</button>`
+      : '';
+    // The data-stat-bind spans ride the existing stats update loop.
+    // Row order groups by meaning: identity, combat, spendable pools,
+    // then wealth/standing (plugin sheetRows land in the last group).
+    const characterRows = [
+      attrRowHtml(this.engine.t('ui.statName'), bindSpan('name')),
+      attrRowHtml(this.engine.t('ui.statLevel'), bindSpan('level')),
+      attrRowHtml(this.engine.t('ui.sheetHp'), `${bindSpan('resources.hp.current')}/${bindSpan('resources.hp.max')}`, '', spendBtnHtml('resources.hp.max')),
+      attrRowHtml(this.engine.t('ui.sheetAc'), bindSpan('attributes.ac'), '', spendBtnHtml('attributes.ac')),
+      attrRowHtml(this.engine.t('ui.statInitiative'), bindSpan('attributes.initiative'), '', spendBtnHtml('attributes.initiative')),
+      attrRowHtml(this.engine.t('ui.sheetAp'), `${bindSpan('resources.ap.current')}/${bindSpan('resources.ap.max')}`),
+      ...this._headerResourceEntries().map(({ label, valueHtml }) => attrRowHtml(label, valueHtml)),
+      attrRowHtml(this.engine.t('ui.statGold'), bindSpan('resources.gold')),
+      ...this.engine.sheetRows.map(row => attrRowHtml(row.label, bindSpan(row.bind))),
+    ].join('');
+    const items = (rules.customAttributes ?? []).map(attr =>
+      `<div class="attr-list__row">
+        <span class="attr-list__label">${escapeHtml(skillLabel(this.engine, attr.id))}</span>
+        <span class="attr-list__value" data-stat-bind="attributes.${escapeHtml(attr.id)}"></span>${canSpend ? `
+        <button class="${CSS.BTN} attr-list__spend" data-spend-attr="${escapeHtml(attr.id)}" title="${escapeHtml(this.engine.t('ui.spendStatPoint'))}" hidden>+</button>` : ''}
+      </div>`
+    ).join('');
+    const sectionHeading = (key, labelText) =>
+      `<button class="${CSS.SECTION_HEADING} ${CSS.SECTION_TOGGLE}" data-section="${key}">
+        <span class="${CSS.SECTION_TOGGLE_LABEL}">${escapeHtml(labelText)}</span>
+      </button>`;
+    // One panel-section wrapper per section, like the inventory panel —
+    // the adjacent-sibling margin is what spaces the sections apart. The
+    // banked-points line tops the whole sheet (both sections hold
+    // spendable rows) and sits outside the collapsible bodies so a player
+    // with points to spend always sees the cue.
+    panel.innerHTML = `${canSpend ? `
+    <div class="attr-list__points" hidden>${escapeHtml(this.engine.t('ui.statPoints'))} <span data-stat-bind="statPoints"></span></div>` : ''}
+    <div class="${CSS.PANEL_SECTION}">
+      ${sectionHeading('character', this.engine.t('ui.sheetCharacterTitle'))}
+      <div class="attr-list" data-section-body="character">${characterRows}</div>
+    </div>
+    <div class="${CSS.PANEL_SECTION}">
+      ${sectionHeading('skills', this.engine.t('ui.attributesTitle'))}
+      <div data-section-body="skills">
+      <div class="attr-list">${items}</div>
+      </div>
+    </div>`;
+    this._bindSheetToggles(panel);
+    if (canSpend) {
+      panel.addEventListener('click', (e) => {
+        const attrId = e.target?.dataset?.spendAttr;
+        if (!attrId || this.engine.isGameOver) return; // dead characters don't grow
+        // Mid-combat the stats update skips panel rebuilds, so refresh the
+        // combat controls here — the attack buttons show hit modifiers.
+        if (this.engine.state.spendStatPoint(attrId) && this.engine.inCombat) {
+          this.engine.combatSystem.renderer.render();
+        }
+      });
+    }
   }
 
   // Wires the sheet's section headings as collapse toggles — the same
@@ -266,7 +293,7 @@ export class UIManager {
   // scene top bar so the two surfaces can't drift apart.
   // @returns {Array<{label: string, valueHtml: string}>}
   _headerResourceEntries() {
-    const player = gameState.getPlayer();
+    const player = this.engine.state.getPlayer();
     return (this.engine.data.rules?.headerResources || [])
       .filter(id => { const r = player.resources?.[id]; return r && typeof r === 'object' && 'current' in r; })
       .map(id => ({
@@ -281,7 +308,7 @@ export class UIManager {
   _updateTimeBar() {
     if (!this._timeBarEl) return;
     const timeRules = this.engine.data.rules.time;
-    const ticks = gameState.getTicks();
+    const ticks = this.engine.state.getTicks();
     const dayText = this.engine.t('ui.timeChipDay', { day: getDay(ticks, timeRules) });
     const segment = getSegment(ticks, timeRules);
     this._timeBarEl.textContent = segment ? `${dayText}: ${this.engine.t(`time.segments.${segment}`)}` : dayText;
@@ -300,12 +327,12 @@ export class UIManager {
       const max = caps.get(btn.dataset.spendAttr);
       btn.hidden = points <= 0;
       // The cap compares base values (worn gear excluded), like spendStatPoint.
-      btn.disabled = max !== undefined && gameState.playerBaseAttribute(btn.dataset.spendAttr) >= max;
+      btn.disabled = max !== undefined && this.engine.state.playerBaseAttribute(btn.dataset.spendAttr) >= max;
     });
   }
 
   update(hint) {
-    const player = gameState.getPlayer();
+    const player = this.engine.state.getPlayer();
 
     if (!hint || hint === 'stats' || hint === 'time') {
       this._updateTimeBar();
@@ -324,7 +351,6 @@ export class UIManager {
     // no reason (the combat attack buttons re-render themselves).
     if (!hint || hint === 'inventory' || (hint === 'stats' && !this.engine.inCombat)) {
       this.inventoryUI.renderInventory(player);
-      this.bindItemActions();
     }
 
     if (!hint || hint === 'quests') {
@@ -336,21 +362,7 @@ export class UIManager {
     }
   }
 
-  // Buttons call engine game-logic methods — UI layer owns no game logic here.
-  bindItemActions() {
-    document.querySelectorAll(`.${CSS.BTN_ITEM}`).forEach(btn => {
-      // Use onclick so re-binding on every update() replaces previous handlers
-      // instead of stacking duplicates.
-      btn.onclick = (e) => {
-        const { action, item: itemId, slot } = e.target.dataset;
-        if (action === "consume") this.engine.useItem(itemId);
-        else if (action === "equip") this.engine.equipItem(slot, itemId);
-        else if (action === "unequip") this.engine.unequipItem(slot);
-      };
-    });
-  }
-
-  // Offers an encoded save string (from gameState.getSaveString()) as a
+  // Offers an encoded save string (from this.engine.state.getSaveString()) as a
   // timestamped file download. Counterpart of the load path above.
   _downloadSave(encoded) {
     const blob = new Blob([encoded], { type: "application/json" });
@@ -378,17 +390,16 @@ export class UIManager {
   _applyLoadedSave(data) {
     // Reject a malformed save before touching the UI, so a bad file leaves the
     // current screen intact instead of showing a half-loaded game.
-    if (!gameState.loadFromObject(data)) {
+    if (!this.engine.state.loadFromObject(data)) {
       this.engine.log(LOG.SYSTEM, this.engine.t('system.loadFailed'));
       return false;
     }
 
     // The loaded save replaces all state, so any combat (or game-over screen)
-    // in progress is over. Without this reset, isGameOver keeps blocking item
-    // use after "Load Last Save", and a mid-combat load leaves inCombat stuck
-    // true, which blocks all scene rendering.
-    this.engine.combatSystem.inCombat = false;
-    this.engine.combatSystem.isGameOver = false;
+    // in progress is over. Without this reset, a gameover mode keeps blocking
+    // item use after "Load Last Save", and a mid-combat load leaves combat
+    // mode stuck, which blocks all scene rendering.
+    this.engine.setMode('scene');
 
     // Ensure the game UI is visible (handles the case where this is called
     // from the char creation screen before the main game has been shown).
@@ -396,14 +407,13 @@ export class UIManager {
     if (charCreation) charCreation.hidden = true;
     document.getElementById('game-container').hidden = false;
 
-    this.engine.isGameStart = true;
     clearElement(EL.SCENE_NARRATIVE);
     this.engine.currentSceneEl = null;
     this.engine.resetScene();
-    const lastDesc = this.engine.narrative.restore(gameState.getLog());
+    const lastDesc = this.engine.narrative.restore(this.engine.state.getLog());
     // Logged after the restored history so it reads as the newest entry.
     this.engine.log(LOG.SYSTEM, this.engine.t('system.loaded'), 'system', false);
-    this.engine.restoreScene(gameState.getCurrentSceneId(), lastDesc);
+    this.engine.restoreScene(this.engine.state.getCurrentSceneId(), lastDesc);
     return true;
   }
 

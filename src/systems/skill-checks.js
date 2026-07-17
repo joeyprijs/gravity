@@ -1,6 +1,5 @@
-import { gameState } from "../core/state.js";
 import { MAX_D20_ROLL, LOG } from "../core/config.js";
-import { apEconomyRules } from "../core/utils.js";
+import { apEconomyRules, attributeLabel } from "../core/utils.js";
 import { roll } from "./dice.js";
 
 // Default tier margins. A roll beating the DC by criticalMargin or more lands
@@ -58,14 +57,13 @@ export function rollBreakdownParts(base, parts) {
 /**
  * The localized display name of a skill (actions.skillBadgeFree.<id>),
  * falling back to the capitalized id when the locale has no entry.
+ * The engine-flavored wrapper over utils.attributeLabel.
  * @param {object} engine - The RPGEngine instance (used for locale).
  * @param {string} skillId - Attribute ID (e.g. "perception").
  * @returns {string}
  */
 export function skillLabel(engine, skillId) {
-  const key = `actions.skillBadgeFree.${skillId}`;
-  const name = engine.t(key);
-  return name !== key ? name : skillId.charAt(0).toUpperCase() + skillId.slice(1);
+  return attributeLabel((key) => engine.t(key), skillId);
 }
 
 /**
@@ -165,7 +163,7 @@ export function pickTier(margin, outcomes) {
  */
 export function performSkillCheck(engine, skillId, dc, outcomes = null, attempts = 0) {
   const tiers = outcomes ?? { success: { actions: [] }, failure: { actions: [] } };
-  const mod = gameState.getPlayer().attributes[skillId] ?? 0;
+  const mod = engine.state.getPlayer().attributes[skillId] ?? 0;
   const base = roll(1, MAX_D20_ROLL);
   const rolled = base + mod;
   const margin = rolled - dc;
@@ -187,6 +185,89 @@ export function performSkillCheck(engine, skillId, dc, outcomes = null, attempts
 }
 
 /**
+ * Runs one rolled check attempt — the machine shared by scene skill options
+ * and dialogue responses: roll → tier → time charge → resolveOnce → tier
+ * pipeline → attempt bookkeeping → exhaustion → re-render. The caller owns
+ * everything BEFORE the roll (gates, spends, choice log) and describes its
+ * surface through the callbacks.
+ *
+ * (Item-discovery checks are a different machine — a one-roll race against
+ * per-item DCs with loot awards — and keep their own resolution in
+ * SceneRenderer._resolveDiscovery; they share checkPresentation only.)
+ *
+ * @param {object} engine - The RPGEngine instance.
+ * @param {object} check - The scene skill option or dialogue response.
+ * @param {object} io
+ * @param {string} io.attemptKey - Flag map holding attempt counts and
+ *   exhaustion retirement.
+ * @param {string} [io.resolvedKey] - Flag map holding resolveOnce retirement.
+ *   Defaults to attemptKey; dialogue keeps them separate so exhaustion resets
+ *   on re-talk while resolveOnce survives across conversations.
+ * @param {string|number} io.entryKey - This check's key inside those maps.
+ * @param {(actions: object[]) => void} io.runActions - Runs a pipeline.
+ * @param {() => boolean} io.didNavigate - Whether any pipeline run so far
+ *   moved the player (scene change, combat, dialogue, custom UI, game over).
+ * @param {() => void} [io.chargeTime] - Charges the attempt's time cost
+ *   (called right after the roll, so time reads as its consequence).
+ * @param {() => void} io.rerender - Re-render after a non-navigating failure.
+ * @param {() => void} [io.rerenderSuccess] - Re-render after a non-navigating
+ *   success (defaults to rerender; scenes re-render fully so description
+ *   variants react to flags the success set).
+ * @returns {{tier: string, success: boolean}}
+ */
+export function runCheckAttempt(engine, check, {
+  attemptKey, resolvedKey = attemptKey, entryKey,
+  runActions, didNavigate, chargeTime,
+  rerender, rerenderSuccess = rerender,
+}) {
+  const attempts = getAttempts(engine.state, attemptKey, entryKey);
+  const outcomes = normalizeOutcomes(check);
+  const { tier, success } = performSkillCheck(engine, check.skillCheck, check.dc, outcomes, attempts);
+  chargeTime?.();
+  if (check.resolveOnce) markResolved(engine.state, resolvedKey, entryKey);
+
+  if (success) {
+    runActions(outcomes[tier].actions);
+  } else {
+    // Partial and failure tiers both count as an attempt: partial is
+    // fail-forward (its pipeline still runs), but the check has not passed.
+    const count = recordAttempt(engine.state, attemptKey, entryKey);
+    runActions(outcomes[tier].actions);
+    if (!check.resolveOnce && check.maxAttempts && count >= check.maxAttempts) {
+      markResolved(engine.state, attemptKey, entryKey);
+      if (check.onExhausted?.length) runActions(check.onExhausted);
+    }
+  }
+  if (!didNavigate()) (success ? rerenderSuccess : rerender)();
+  return { tier, success };
+}
+
+/**
+ * The presentation bundle for a check button: retry/AP gates, retry-aware
+ * display text, and the composed badge lines. Shared by scene skill options,
+ * scene discovery checks, and dialogue responses so the three surfaces
+ * can't drift.
+ *
+ * @param {object} engine - The RPGEngine instance.
+ * @param {object} check - The option/response carrying the check.
+ * @param {number} attempts - Attempts made so far.
+ * @param {number} [dc=check.dc] - The DC the badge advertises (discovery
+ *   passes the easiest still-hidden item's).
+ * @returns {{gate: object, ap: object, displayText: string,
+ *   badge: ?string|string[], blocked: boolean}}
+ */
+export function checkPresentation(engine, check, attempts, dc = check.dc) {
+  const gate = retryGate(engine, attempts);
+  const ap = apGate(engine, skillApCost(engine, check));
+  return {
+    gate, ap,
+    displayText: resolveRetryText(check, attempts),
+    badge: applyRetryGate(engine, gate, applyApGate(engine, ap, skillBadge(engine, check.skillCheck, dc))),
+    blocked: gate.blocked || ap.blocked,
+  };
+}
+
+/**
  * Builds the badge lines for a skill-check button/response: the player's
  * current modifier (resolved through the locale — a badge string without a
  * {mod} placeholder simply doesn't show it), then the DC on its own line.
@@ -196,7 +277,7 @@ export function performSkillCheck(engine, skillId, dc, outcomes = null, attempts
  * @returns {string[]}
  */
 export function skillBadge(engine, skillId, dc) {
-  const mod = gameState.getPlayer().attributes[skillId] ?? 0;
+  const mod = engine.state.getPlayer().attributes[skillId] ?? 0;
   return [
     engine.t(`actions.skillBadge.${skillId}`, { dc, mod: formatMod(mod) }),
     engine.t('actions.skillBadgeDc', { dc }),
@@ -228,7 +309,7 @@ export function retryCost(rules) {
 export function retryGate(engine, attempts) {
   const policy = retryCost(engine.data.rules);
   if (!attempts || !policy) return { cost: 0, blocked: false };
-  const have = gameState.getPlayer().resources?.[policy.resource]?.current ?? 0;
+  const have = engine.state.getPlayer().resources?.[policy.resource]?.current ?? 0;
   return { cost: policy.amount, resource: policy.resource, blocked: have < policy.amount };
 }
 
@@ -260,8 +341,8 @@ export function applyRetryGate(engine, gate, badge) {
  */
 export function spendRetryCost(engine, gate) {
   if (gate.cost <= 0) return;
-  gameState.modifyPlayerStat(gate.resource, -gate.cost);
-  const remaining = gameState.getPlayer().resources?.[gate.resource]?.current ?? 0;
+  engine.state.modifyPlayerStat(gate.resource, -gate.cost);
+  const remaining = engine.state.getPlayer().resources?.[gate.resource]?.current ?? 0;
   const label = engine.t(`ui.resources.${gate.resource}`);
   engine.log(LOG.SYSTEM, engine.t('actions.retrySpent', {
     cost: gate.cost, resource: label, remaining,
@@ -290,7 +371,7 @@ export function skillApCost(engine, opt) {
  */
 export function apGate(engine, cost) {
   if (!(cost > 0)) return { cost: 0, blocked: false };
-  return { cost, blocked: (gameState.getPlayer().resources.ap?.current ?? 0) < cost };
+  return { cost, blocked: (engine.state.getPlayer().resources.ap?.current ?? 0) < cost };
 }
 
 /**
@@ -311,10 +392,11 @@ export function applyApGate(engine, gate, badge) {
 /**
  * Charges an AP gate. Silent — the header resource bar reflects the spend;
  * unlike retries there's no scarce-currency drama to narrate.
+ * @param {object} engine - The RPGEngine instance (reads state).
  * @param {{cost: number}} gate - Result of apGate().
  */
-export function spendAp(gate) {
-  if (gate.cost > 0) gameState.modifyPlayerStat('ap', -gate.cost);
+export function spendAp(engine, gate) {
+  if (gate.cost > 0) engine.state.modifyPlayerStat('ap', -gate.cost);
 }
 
 /**
@@ -322,26 +404,28 @@ export function spendAp(gate) {
  * live in a flag-backed per-scene (or per-NPC) map under a `tries_` key, and
  * reset on scene re-entry / dialogue restart — unlike resolution markers,
  * which persist (see isResolved).
- * @param {string} flagKey - The state flag holding the check-state map.
+ * @param {object} state - The StateManager holding the flag.
+ * @param {string} checkKey - The checkState key holding the check-state map (see CHECK_KEYS).
  * @param {string|number} entryKey - Key of the specific check inside the map.
  * @returns {number}
  */
-export function getAttempts(flagKey, entryKey) {
-  const state = gameState.getFlag(flagKey) || {};
-  return state[`tries_${entryKey}`] || 0;
+export function getAttempts(state, checkKey, entryKey) {
+  const map = state.getCheckState(checkKey) || {};
+  return map[`tries_${entryKey}`] || 0;
 }
 
 /**
  * Records one attempt for a check (see getAttempts).
- * @param {string} flagKey - The state flag holding the check-state map.
+ * @param {object} state - The StateManager holding the flag.
+ * @param {string} checkKey - The checkState key holding the check-state map (see CHECK_KEYS).
  * @param {string|number} entryKey - Key of the specific check inside the map.
  * @returns {number} The updated attempt count.
  */
-export function recordAttempt(flagKey, entryKey) {
-  const state = gameState.getFlag(flagKey) || {};
-  const next = (state[`tries_${entryKey}`] || 0) + 1;
-  state[`tries_${entryKey}`] = next;
-  gameState.setFlag(flagKey, state);
+export function recordAttempt(state, checkKey, entryKey) {
+  const map = state.getCheckState(checkKey) || {};
+  const next = (map[`tries_${entryKey}`] || 0) + 1;
+  map[`tries_${entryKey}`] = next;
+  state.setCheckState(checkKey, map);
   return next;
 }
 
@@ -349,24 +433,26 @@ export function recordAttempt(flagKey, entryKey) {
  * Whether a check has been permanently resolved (a resolveOnce check that has
  * been rolled, or a maxAttempts check whose budget ran out). Resolution
  * markers survive scene re-entry and save/load.
- * @param {string} flagKey - The state flag holding the check-state map.
+ * @param {object} state - The StateManager holding the flag.
+ * @param {string} checkKey - The checkState key holding the check-state map (see CHECK_KEYS).
  * @param {string|number} entryKey - Key of the specific check inside the map.
  * @returns {boolean}
  */
-export function isResolved(flagKey, entryKey) {
-  const state = gameState.getFlag(flagKey) || {};
-  return !!state[`resolved_${entryKey}`];
+export function isResolved(state, checkKey, entryKey) {
+  const map = state.getCheckState(checkKey) || {};
+  return !!map[`resolved_${entryKey}`];
 }
 
 /**
  * Permanently retires a check (see isResolved).
- * @param {string} flagKey - The state flag holding the check-state map.
+ * @param {object} state - The StateManager holding the flag.
+ * @param {string} checkKey - The checkState key holding the check-state map (see CHECK_KEYS).
  * @param {string|number} entryKey - Key of the specific check inside the map.
  */
-export function markResolved(flagKey, entryKey) {
-  const state = gameState.getFlag(flagKey) || {};
-  state[`resolved_${entryKey}`] = true;
-  gameState.setFlag(flagKey, state);
+export function markResolved(state, checkKey, entryKey) {
+  const map = state.getCheckState(checkKey) || {};
+  map[`resolved_${entryKey}`] = true;
+  state.setCheckState(checkKey, map);
 }
 
 /**
@@ -376,21 +462,22 @@ export function markResolved(flagKey, entryKey) {
  * were permanently resolved. Discovery entries (namespaced `disc_<i>`, plus
  * the legacy top-level shape) keep their found/resolved state and only drop
  * their tries counter.
- * @param {string} flagKey - The state flag holding the check-state map.
+ * @param {object} state - The StateManager holding the flag.
+ * @param {string} checkKey - The checkState key holding the check-state map (see CHECK_KEYS).
  */
-export function resetAttempts(flagKey) {
-  const state = gameState.getFlag(flagKey);
-  if (!state || typeof state !== 'object') return;
+export function resetAttempts(state, checkKey) {
+  const map = state.getCheckState(checkKey);
+  if (!map || typeof map !== 'object') return;
   let changed = false;
-  for (const key of Object.keys(state)) {
+  for (const key of Object.keys(map)) {
     if (key.startsWith('tries_') || key === 'tries') {
-      delete state[key];
+      delete map[key];
       changed = true;
     }
-    if (key.startsWith('disc_') && state[key]?.tries !== undefined) {
-      delete state[key].tries;
+    if (key.startsWith('disc_') && map[key]?.tries !== undefined) {
+      delete map[key].tries;
       changed = true;
     }
   }
-  if (changed) gameState.setFlag(flagKey, state);
+  if (changed) state.setCheckState(checkKey, map);
 }

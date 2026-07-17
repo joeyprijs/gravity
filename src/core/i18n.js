@@ -16,6 +16,30 @@
  * @returns {string} The resolved language code: the first preference with an
  *   available match, else the fallback, else the first available language.
  */
+/**
+ * Locale-aware list joining ("A, B, and C" in English, with each language's
+ * own separators and conjunction) — list grammar never lives in code.
+ *
+ * @param {string|undefined} language - The active language code (engine.language).
+ * @param {string[]} items - The list entries.
+ * @returns {string}
+ */
+export function formatList(language, items) {
+  return new Intl.ListFormat(language, { style: 'long', type: 'conjunction' }).format(items);
+}
+
+/**
+ * Whether a count is grammatically singular in the given language —
+ * message keys split into One-variants use this to pick the right one.
+ *
+ * @param {string|undefined} language - The active language code (engine.language).
+ * @param {number} count
+ * @returns {boolean}
+ */
+export function isOne(language, count) {
+  return new Intl.PluralRules(language).select(count) === 'one';
+}
+
 export function resolveLanguage(available = [], preferred = [], fallback = 'en') {
   const norm = (tag) => String(tag).toLowerCase();
   for (const tag of preferred) {

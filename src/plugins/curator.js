@@ -1,38 +1,42 @@
-import { gameState } from "../core/state.js";
 import { createElement, buildOptionButton, escapeHtml, getItemLabel, resetOptionsPanel } from "../core/utils.js";
 import { ACTIONS, CSS, LOG } from "../core/config.js";
 
-// The curator's reputation model: a permanent score (state.museumReputation,
-// earned by acquiring relics for the first time) plus a dynamic bonus from
-// relics currently on display. player.attributes.reputation is the derived sum.
+// The curator's reputation model: a permanent score (earned by acquiring
+// relics for the first time) plus a dynamic bonus from relics currently on
+// display. player.attributes.reputation is the derived sum.
 // Reputation recalculation hangs off the formal StateManager plugin API —
 // mutation hooks, a custom stat handler, and a save migration; no engine or
-// StateManager methods are wrapped. The plugin's own top-level save fields
-// (museumReputation, obtainedItems) are read/written directly on the state
-// object, which is the documented pattern for plugin-owned save data.
+// StateManager methods are wrapped. The plugin's own save data
+// (museumReputation, obtainedItems) lives in the sanctioned plugin bag,
+// state.pluginState('curator').
 
-// Item database reference, set by registerCuratorState(). Module-level because
-// the hook callbacks need it and the engine owns the loaded data.
+// Set by registerCuratorState(). Module-level because the hook callbacks need
+// them: the engine's StateManager and the loaded item database.
+let curatorState = null;
 let curatorItems = {};
 let hooksRegistered = false;
 
+// The curator's save-data bag ({ museumReputation, obtainedItems }).
+const bag = () => curatorState.pluginState('curator');
+
 /** Returns the museum reputation currently shown to the player (permanent + display bonus). */
 export function getMuseumReputation() {
-  return gameState.getPlayer()?.attributes?.reputation ?? 0;
+  return curatorState?.getPlayer()?.attributes?.reputation ?? 0;
 }
 
 // Recomputes the derived reputation attribute from the permanent score plus
 // the reputation of every relic currently on display.
 function updateReputation() {
-  let rep = gameState.state.museumReputation ?? 0;
-  for (const sceneId in (gameState.state.displays ?? {})) {
-    for (const display of gameState.state.displays[sceneId]) {
+  let rep = bag().museumReputation ?? 0;
+  const displays = curatorState.state.displays ?? {};
+  for (const sceneId in displays) {
+    for (const display of displays[sceneId]) {
       if (display.item && curatorItems[display.item]) {
         rep += curatorItems[display.item].attributes?.reputation ?? 0;
       }
     }
   }
-  gameState.setPlayerAttribute('reputation', rep);
+  curatorState.setPlayerAttribute('reputation', rep);
 }
 
 // First-time acquisition of a reputation-bearing item awards its reputation
@@ -40,29 +44,30 @@ function updateReputation() {
 function handleAcquisition(itemId) {
   const itemData = curatorItems[itemId];
   if (!itemData?.attributes?.reputation) return;
-  if (!gameState.state.obtainedItems) gameState.state.obtainedItems = [];
-  if (gameState.state.obtainedItems.includes(itemId)) return;
-  gameState.state.obtainedItems.push(itemId);
-  gameState.modifyPlayerStat('reputation', itemData.attributes.reputation);
+  const obtained = (bag().obtainedItems ??= []);
+  if (obtained.includes(itemId)) return;
+  obtained.push(itemId);
+  curatorState.modifyPlayerStat('reputation', itemData.attributes.reputation);
 }
 
 // Registers the curator's state integrations: the reputation stat handler,
 // the mutation hooks that keep the derived attribute current, and the save
 // migration for the plugin's fields. Idempotent — repeat calls only refresh
-// the item database reference (the test suite re-inits state per test).
-export function registerCuratorState(items = {}) {
+// the state/item references (the test suite re-inits state per test).
+export function registerCuratorState(state, items = {}) {
+  curatorState = state;
   curatorItems = items;
   if (hooksRegistered) return;
   hooksRegistered = true;
 
   // modifyPlayerStat('reputation', delta) adjusts the permanent score; the
   // visible attribute is recomputed (and notified) from updateReputation.
-  gameState.registerStatHandler('reputation', (amount) => {
-    gameState.state.museumReputation = (gameState.state.museumReputation ?? 0) + amount;
+  state.registerStatHandler('reputation', (amount) => {
+    bag().museumReputation = (bag().museumReputation ?? 0) + amount;
     updateReputation();
   });
 
-  gameState.onMutation((method, info) => {
+  state.onMutation((method, info) => {
     switch (method) {
       case 'init':
       case 'loadFromObject':
@@ -79,30 +84,34 @@ export function registerCuratorState(items = {}) {
     }
   });
 
-  // Migration v4: reputation save file additions
-  gameState.registerMigration(4, (data) => {
-    if (!('museumReputation' in data)) {
-      data.museumReputation = 0;
-    }
-    if (!('obtainedItems' in data)) {
-      const currentItems = new Set();
-      if (data.player && data.player.inventory) {
-        data.player.inventory.forEach(i => currentItems.add(i.item));
-      }
-      if (data.player && data.player.equipment) {
-        Object.values(data.player.equipment).forEach(itemId => {
+  // Migration v5: curator save data. v5 because plugin migrations must sit
+  // above the core SAVE_VERSION (4) — registering at a core version would
+  // shadow that core migration (registerMigration throws). Adopts the
+  // pre-bag top-level fields older saves carried, and seeds defaults for
+  // saves that predate the curator entirely.
+  state.registerMigration(5, (data) => {
+    if (!data.plugins) data.plugins = {};
+    const saved = data.plugins.curator ?? (data.plugins.curator = {});
+    saved.museumReputation ??= data.museumReputation ?? 0;
+    if (!saved.obtainedItems) {
+      if (data.obtainedItems) {
+        saved.obtainedItems = data.obtainedItems;
+      } else {
+        // Backfill from everything the player already owns or exhibits, so
+        // pre-curator relics don't re-award reputation on pickup.
+        const currentItems = new Set();
+        (data.player?.inventory ?? []).forEach(i => currentItems.add(i.item));
+        Object.values(data.player?.equipment ?? {}).forEach(itemId => {
           if (itemId) currentItems.add(itemId);
         });
-      }
-      if (data.displays) {
-        for (const sceneId in data.displays) {
-          data.displays[sceneId].forEach(d => {
-            if (d.item) currentItems.add(d.item);
-          });
+        for (const sceneId in (data.displays ?? {})) {
+          data.displays[sceneId].forEach(d => { if (d.item) currentItems.add(d.item); });
         }
+        saved.obtainedItems = Array.from(currentItems);
       }
-      data.obtainedItems = Array.from(currentItems);
     }
+    delete data.museumReputation;
+    delete data.obtainedItems;
   });
 }
 
@@ -110,7 +119,7 @@ export function registerCuratorState(items = {}) {
 // that has display cases. Returns '' for scenes without displays. Display
 // names come from player input (prompt), so all dynamic values are escaped.
 function buildExhibitsTable(engine, sceneId) {
-  const displays = gameState.getDisplaysForScene(sceneId);
+  const displays = engine.state.getDisplaysForScene(sceneId);
   if (!displays.length) return '';
 
   const header = `<thead><tr>`
@@ -128,15 +137,15 @@ function buildExhibitsTable(engine, sceneId) {
 
 export default function curatorPlugin(engine) {
   // 1. Register state integrations (stat handler, mutation hooks, migration)
-  registerCuratorState(engine.data.items);
+  registerCuratorState(engine.state, engine.data.items);
 
   // 2. Decorate every scene that has display cases: exhibits table appended to
   // the description, plus the curator-panel option button.
   engine.registerSceneDecorator({
     description: (scene, sceneId) => buildExhibitsTable(engine, sceneId),
     options: (scene, optionsContainer) => {
-      const sceneId = gameState.getCurrentSceneId();
-      const hasDisplays = gameState.getDisplaysForScene(sceneId).length > 0;
+      const sceneId = engine.state.getCurrentSceneId();
+      const hasDisplays = engine.state.getDisplaysForScene(sceneId).length > 0;
       if (!scene.supportsExhibits && !hasDisplays) return;
       const btn = buildOptionButton(engine.t('plugin.curator.curatorTitle'));
       btn.onclick = () => engine.scene.handleOption({
@@ -154,16 +163,16 @@ export default function curatorPlugin(engine) {
   });
 
   engine.registerAction("add_display", (action, engine) => {
-    const sceneId = action.scene || gameState.getCurrentSceneId();
+    const sceneId = action.scene || engine.state.getCurrentSceneId();
     const cost = action.cost ?? 0;
-    const p = gameState.getPlayer();
+    const p = engine.state.getPlayer();
     if (p.resources.gold < cost) {
       engine.log(LOG.SYSTEM, engine.t('ui.notEnoughGold'));
       return;
     }
-    gameState.modifyPlayerStat('gold', -cost);
+    engine.state.modifyPlayerStat('gold', -cost);
     const displayName = action.name || engine.t('plugin.curator.displayDefaultName');
-    gameState.addDisplayToScene(sceneId, { name: displayName });
+    engine.state.addDisplayToScene(sceneId, { name: displayName });
     engine.log(LOG.SYSTEM, engine.t('plugin.curator.displayAddedLog', { name: displayName }));
   });
 
@@ -189,12 +198,12 @@ export class CuratorUI {
   }
 
   _refreshSceneDesc() {
-    const scene = this.engine.data.scenes[gameState.getCurrentSceneId()];
+    const scene = this.engine.data.scenes[this.engine.state.getCurrentSceneId()];
     if (scene) this.engine.scene.refreshDescription(scene);
   }
 
   render(screen = 'dashboard', context = null) {
-    const sceneId = gameState.getCurrentSceneId();
+    const sceneId = this.engine.state.getCurrentSceneId();
     const scene = this.engine.data.scenes[sceneId];
     if (!scene) return;
 
@@ -236,7 +245,7 @@ export class CuratorUI {
     const exhibitsSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
     exhibitsSection.appendChild(createElement('div', CSS.SECTION_HEADING, this.engine.t('plugin.curator.curatorHeadingExhibits')));
 
-    const displays = gameState.getDisplaysForScene(sceneId);
+    const displays = this.engine.state.getDisplaysForScene(sceneId);
     if (displays.length > 0) {
       displays.forEach(d => {
         const badge = d.item ? getItemLabel(this.engine.data.items, d.item) : this.engine.t('plugin.curator.curatorEmpty');
@@ -260,7 +269,7 @@ export class CuratorUI {
 
     // 3. Purchase Exhibit Case Button
     const installCost = this.engine.data.rules?.curator?.installCost ?? 50;
-    const p = gameState.getPlayer();
+    const p = this.engine.state.getPlayer();
     const canInstall = p.resources.gold >= installCost;
     
     const installSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
@@ -276,8 +285,8 @@ export class CuratorUI {
       if (customName === null) return; // User cancelled
       const name = customName.trim() || defaultName;
 
-      gameState.modifyPlayerStat('gold', -installCost);
-      gameState.addDisplayToScene(sceneId, {
+      this.engine.state.modifyPlayerStat('gold', -installCost);
+      this.engine.state.addDisplayToScene(sceneId, {
         name: name
       });
       this.engine.log(LOG.SYSTEM, this.engine.t('plugin.curator.curatorInstallSuccess', { cost: installCost, name }));
@@ -289,7 +298,7 @@ export class CuratorUI {
   }
 
   _renderInspectDisplay(container, panel, skillsContainer, sceneId, displayId) {
-    const displays = gameState.getDisplaysForScene(sceneId);
+    const displays = this.engine.state.getDisplaysForScene(sceneId);
     const display = displays.find(d => d.id === displayId);
     if (!display || !display.item) {
       this.render('dashboard');
@@ -331,7 +340,7 @@ export class CuratorUI {
     // 3. Take Button
     const takeBtn = buildOptionButton(this.engine.t('plugin.curator.curatorRetrieve'));
     takeBtn.onclick = () => {
-      gameState.takeItemFromDisplay(sceneId, displayId);
+      this.engine.state.takeItemFromDisplay(sceneId, displayId);
       this.engine.log(LOG.SYSTEM, this.engine.t('actions.displayTook', { name, display: display.name }));
       this._refreshSceneDesc();
       this.render('dashboard');
@@ -342,7 +351,7 @@ export class CuratorUI {
   }
 
   _renderSelectArtifact(container, panel, skillsContainer, sceneId, displayId) {
-    const displays = gameState.getDisplaysForScene(sceneId);
+    const displays = this.engine.state.getDisplaysForScene(sceneId);
     const display = displays.find(d => d.id === displayId);
     if (!display) {
       this.render('dashboard');
@@ -359,7 +368,7 @@ export class CuratorUI {
     selectSection.appendChild(createElement('div', CSS.SECTION_HEADING, this.engine.t('plugin.curator.curatorSelectArtifact')));
 
     // Get eligible player inventory items
-    const player = gameState.getPlayer();
+    const player = this.engine.state.getPlayer();
     const isEquipped = (itemId) => Object.values(player.equipment).includes(itemId);
     
     // Filter inventory to show all non-equipped items
@@ -376,7 +385,7 @@ export class CuratorUI {
 
         const btn = buildOptionButton(getItemLabel(this.engine.data.items, invItem.item, invItem.amount), badge);
         btn.onclick = () => {
-          gameState.placeItemInDisplay(sceneId, displayId, invItem.item);
+          this.engine.state.placeItemInDisplay(sceneId, displayId, invItem.item);
           this.engine.log(LOG.SYSTEM, this.engine.t('actions.displayDeposited', { name, display: display.name }));
           this._refreshSceneDesc();
           this.render('dashboard');

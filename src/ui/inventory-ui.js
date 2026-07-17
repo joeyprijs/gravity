@@ -1,6 +1,5 @@
 import { createElement, buildCard, createSectionToggles, getItemLabel, itemStatLines } from "../core/utils.js";
 import { EL, CSS, WEAPON_SLOTS } from "../core/config.js";
-import { gameState } from "../core/state.js";
 
 // Collapse state persists across page loads — it's a UI preference, not game
 // state, so it lives beside the page rather than in the save file.
@@ -93,14 +92,13 @@ export class InventoryUI {
       }
 
       const title = getItemLabel(this.engine.data.items, invItem.item, invItem.amount);
-      // Actionless items (keepsakes, key items) render compact — title and
-      // stats only — so collections don't turn the panel into a scroll.
+      // Actionless items (keepsakes, key items): a standard card, no buttons.
       if (actions.length === 0) {
         currentUl.appendChild(buildCard({
           tag: 'li',
           title,
+          body: itemData.description,
           stats: this._itemStats(itemData),
-          classes: [CSS.CARD_COMPACT],
         }));
         return;
       }
@@ -137,7 +135,7 @@ export class InventoryUI {
   // The card's accent stat lines — same lines as the combat attack buttons
   // (see itemStatLines); the hit line shows the player's current modifier.
   _itemStats(itemData) {
-    const lines = itemStatLines(this.engine.t.bind(this.engine), itemData, gameState.getPlayer().attributes);
+    const lines = itemStatLines(this.engine.t.bind(this.engine), itemData, this.engine.state.getPlayer().attributes);
     return lines.length > 0 ? lines : undefined;
   }
 }

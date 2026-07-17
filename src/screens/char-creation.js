@@ -1,6 +1,5 @@
 import { CSS, EL } from "../core/config.js";
-import { gameState } from "../core/state.js";
-import { getByPath, setByPath } from "../core/utils.js";
+import { getByPath } from "../core/utils.js";
 
 // CharCreationScreen manages the pre-game character creation overlay.
 // It lets the player enter a name and distribute a small point budget across
@@ -15,11 +14,12 @@ export class CharCreationScreen {
   // onComplete: called when the player confirms character creation.
   // The "Load Save" button triggers the shared #file-upload input; its change
   // event is handled by UIManager which reveals the game and applies the save.
-  constructor(onComplete, t, names = [], rules = {}) {
+  constructor(onComplete, t, names = [], rules = {}, state = null) {
     this.onComplete = onComplete;
     this.t = t;
     this.names = names;
     this.rules = rules;
+    this.state = state;
     this.overlay = document.getElementById(EL.CHAR_CREATION);
     const stats = rules.charCreation?.stats || [];
     // Track how many points have been spent on each stat
@@ -213,25 +213,13 @@ export class CharCreationScreen {
     const name = this.nameInput.value.trim();
     if (!name) return;
 
-    const player = gameState.getPlayer();
-    player.name = name;
-
-    // Apply stat bonuses using dotted paths (e.g. 'resources.hp.max')
+    // One sanctioned mutation — StateManager owns the point-buy semantics
+    // (raising a resource cap raises the resource itself; see applyCharCreation).
     const stats = this.rules.charCreation?.stats || [];
-    stats.forEach(stat => {
-      const bonus = this.spent[stat.id] * stat.bonusPerPoint;
-      if (bonus > 0) {
-        const current = getByPath(player, stat.id) ?? 0;
-        setByPath(player, stat.id, current + bonus);
-        // Raising a resource cap raises the resource itself by the same
-        // amount, so invested points are felt immediately — HP starts full
-        // and stays full; luck keeps its authored headroom below the cap.
-        const resource = stat.id.match(/^resources\.(\w+)\.max$/)?.[1];
-        if (resource && player.resources[resource]?.current !== undefined) {
-          player.resources[resource].current += bonus;
-        }
-      }
-    });
+    this.state.applyCharCreation(name, stats.map(stat => ({
+      id: stat.id,
+      bonus: this.spent[stat.id] * stat.bonusPerPoint,
+    })));
 
     this.overlay.hidden = true;
     this.onComplete();

@@ -23,7 +23,7 @@ const TEST_RULES = {
 
 function makeEngine() {
   const logs = [];
-  return { engine: { t: (key) => key, log: (type, message, variant) => logs.push({ type, message, variant }) }, logs };
+  return { engine: { t: (key) => key, log: (type, message, variant) => logs.push({ type, message, variant }), state: gameState }, logs };
 }
 
 beforeEach(() => gameState.init(TEST_RULES));
@@ -146,28 +146,28 @@ test('performSkillCheck: unknown skill rolls with modifier 0', () => {
 // ── Attempt / resolution bookkeeping ─────────────────────────────────────────
 
 test('attempts: recordAttempt counts per entry; resetAttempts clears counters only', () => {
-  assert.equal(getAttempts('map', 0), 0);
-  assert.equal(recordAttempt('map', 0), 1);
-  assert.equal(recordAttempt('map', 0), 2);
-  recordAttempt('map', 1);
-  markResolved('map', 1);
+  assert.equal(getAttempts(gameState, 'map', 0), 0);
+  assert.equal(recordAttempt(gameState, 'map', 0), 1);
+  assert.equal(recordAttempt(gameState, 'map', 0), 2);
+  recordAttempt(gameState, 'map', 1);
+  markResolved(gameState, 'map', 1);
 
-  resetAttempts('map');
-  assert.equal(getAttempts('map', 0), 0);
-  assert.equal(getAttempts('map', 1), 0);
-  assert.equal(isResolved('map', 1), true); // resolution survives the reset
+  resetAttempts(gameState, 'map');
+  assert.equal(getAttempts(gameState, 'map', 0), 0);
+  assert.equal(getAttempts(gameState, 'map', 1), 0);
+  assert.equal(isResolved(gameState, 'map', 1), true); // resolution survives the reset
 });
 
 test('resetAttempts: also clears the discovery-style top-level tries counter', () => {
-  gameState.setFlag('disc', { found: [true, false], tries: 3, resolved: true });
-  resetAttempts('disc');
-  assert.deepEqual(gameState.getFlag('disc'), { found: [true, false], resolved: true });
+  gameState.setCheckState('disc', { found: [true, false], tries: 3, resolved: true });
+  resetAttempts(gameState, 'disc');
+  assert.deepEqual(gameState.getCheckState('disc'), { found: [true, false], resolved: true });
 });
 
 test('resetAttempts: non-object flag values are left alone', () => {
-  gameState.setFlag('bool_flag', true);
-  resetAttempts('bool_flag');
-  assert.equal(gameState.getFlag('bool_flag'), true);
+  gameState.setCheckState('bool_flag', true);
+  resetAttempts(gameState, 'bool_flag');
+  assert.equal(gameState.getCheckState('bool_flag'), true);
 });
 
 // ── Small helpers ─────────────────────────────────────────────────────────────
@@ -220,7 +220,7 @@ const RETRY_RULES = {
 };
 
 function retryEngine(rules) {
-  return { t: (k, p) => p ? `${k}:${JSON.stringify(p)}` : k, data: { rules } };
+  return { t: (k, p) => p ? `${k}:${JSON.stringify(p)}` : k, data: { rules }, state: gameState };
 }
 
 test('retryCost: reads rules.skillRetry; absent or zero cost is free', () => {
@@ -251,6 +251,7 @@ test('spendRetryCost: deducts the resource and logs the spend with the balance l
   const engine = {
     t: (k, p) => p ? `${k}:${JSON.stringify(p)}` : k,
     log: (type, message, variant) => logs.push({ type, message, variant }),
+    state: gameState,
   };
 
   spendRetryCost(engine, { cost: 0, blocked: false });                      // free gate: no-op
@@ -297,7 +298,8 @@ test('performSkillCheck: passes breakdown parameters to translation engine', () 
       loggedParams.push(params);
       return key;
     },
-    log: () => {}
+    log: () => {},
+    state: gameState,
   };
   mock.method(Math, 'random', () => 0.5); // roll(1,20) = 11, +2 perception = 13
   performSkillCheck(engine, 'perception', 12);
@@ -328,10 +330,10 @@ test('apGate/spendAp: blocks unaffordable attempts and deducts on spend', () => 
   assert.deepEqual(apGate(engine, 0), { cost: 0, blocked: false });
   assert.deepEqual(apGate(engine, 2), { cost: 2, blocked: false }); // has 3
 
-  spendAp({ cost: 2 });
+  spendAp(engine, { cost: 2 });
   assert.equal(gameState.getPlayer().resources.ap.current, 1);
   assert.equal(apGate(engine, 2).blocked, true); // can no longer afford
-  spendAp({ cost: 0 }); // free gate is a no-op
+  spendAp(engine, { cost: 0 }); // free gate is a no-op
   assert.equal(gameState.getPlayer().resources.ap.current, 1);
 });
 

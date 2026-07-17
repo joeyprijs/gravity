@@ -1,4 +1,3 @@
-import { gameState } from "../core/state.js";
 import { LOG, MISSION_STATUS } from "../core/config.js";
 
 // QuestSystem processes quest triggers that are embedded in scene JSON and
@@ -25,7 +24,7 @@ export class QuestSystem {
     const mId = triggerData.mission;
     const mData = this.engine.data.missions[mId];
     // Silently skip unknown missions and already-completed ones (completion is one-way).
-    if (!mData || gameState.getMissionStatus(mId) === MISSION_STATUS.COMPLETE) return false;
+    if (!mData || this.engine.state.getMissionStatus(mId) === MISSION_STATUS.COMPLETE) return false;
 
     if (triggerData.status === MISSION_STATUS.COMPLETE) {
       this.completeMission(mId, mData);
@@ -33,8 +32,8 @@ export class QuestSystem {
     }
     // Only activate a mission that hasn't started yet — re-entering a scene
     // should not re-log the quest description.
-    if (triggerData.status === MISSION_STATUS.ACTIVE && gameState.getMissionStatus(mId) === MISSION_STATUS.NOT_STARTED) {
-      gameState.setMissionStatus(mId, MISSION_STATUS.ACTIVE);
+    if (triggerData.status === MISSION_STATUS.ACTIVE && this.engine.state.getMissionStatus(mId) === MISSION_STATUS.NOT_STARTED) {
+      this.engine.state.setMissionStatus(mId, MISSION_STATUS.ACTIVE);
       this.engine.log(LOG.QUEST, this.engine.t('quest.started', { name: mData.name, description: mData.description }), 'quest');
       return true;
     }
@@ -48,17 +47,15 @@ export class QuestSystem {
    * @param {object} mData - The mission definition (name, missionRewards).
    */
   completeMission(mId, mData) {
-    gameState.setMissionStatus(mId, MISSION_STATUS.COMPLETE);
+    this.engine.state.setMissionStatus(mId, MISSION_STATUS.COMPLETE);
     this.engine.log(LOG.QUEST, this.engine.t('quest.completed', { name: mData.name }), 'quest');
     if (mData.missionRewards?.xp) {
-      gameState.addXP(mData.missionRewards.xp);
+      this.engine.state.addXP(mData.missionRewards.xp);
       this.engine.log(LOG.QUEST, this.engine.t('quest.earnedXP', { amount: mData.missionRewards.xp }), 'loot');
     }
     if (mData.missionRewards?.gold) {
-      gameState.modifyPlayerStat('gold', mData.missionRewards.gold);
+      this.engine.state.modifyPlayerStat('gold', mData.missionRewards.gold);
       this.engine.log(LOG.QUEST, this.engine.t('quest.earnedGold', { amount: mData.missionRewards.gold }), 'loot');
     }
-    // forceUpdate() so the quest log panel and stat bars reflect rewards immediately.
-    gameState.forceUpdate();
   }
 }

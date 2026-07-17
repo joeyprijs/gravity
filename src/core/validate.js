@@ -32,7 +32,6 @@ const OUTCOME_TIERS = new Set(['critical', 'success', 'partial', 'failure']);
 // The defaultCosts kinds the engine charges (see systems/time.js).
 const TIME_COST_KINDS = new Set(['navigate', 'skillAttempt', 'fullRest']);
 
-
 /**
  * Normalizes every NPC's carriedItems to the object form
  * { item: string, amount: number|null } (amount null = unlimited stock).

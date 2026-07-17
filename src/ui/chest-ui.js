@@ -1,4 +1,3 @@
-import { gameState } from "../core/state.js";
 import { createElement, buildOptionButton, getItemLabel, resetOptionsPanel } from "../core/utils.js";
 import { CSS, LOG } from "../core/config.js";
 
@@ -23,20 +22,20 @@ export class ChestUI {
   }
 
   _refreshSceneDesc() {
-    const scene = this.engine.data.scenes[gameState.getCurrentSceneId()];
+    const scene = this.engine.data.scenes[this.engine.state.getCurrentSceneId()];
     if (scene) this.engine.scene.refreshDescription(scene);
   }
 
   render() {
-    const chest = gameState.getChest(this.chestId);
-    const pInv = gameState.getPlayer().inventory;
+    const chest = this.engine.state.getChest(this.chestId);
+    const pInv = this.engine.state.getPlayer().inventory;
 
     const { panel, container, skillsContainer } = resetOptionsPanel();
 
     const doneBtn = buildOptionButton(this.tChest('Done'));
     doneBtn.onclick = () => {
       this.engine.setCustomUIOpen(false);
-      const scene = this.engine.data.scenes[gameState.getCurrentSceneId()];
+      const scene = this.engine.data.scenes[this.engine.state.getCurrentSceneId()];
       if (scene) this.engine.scene.renderOptions(scene);
     };
     container.appendChild(doneBtn);
@@ -48,7 +47,7 @@ export class ChestUI {
         const name = getItemLabel(this.engine.data.items, b.item);
         const btn = buildOptionButton(getItemLabel(this.engine.data.items, b.item, b.amount), this.tChest('Withdraw'));
         btn.onclick = () => {
-          gameState.withdrawFromChest(this.chestId, b.item, 1);
+          this.engine.state.withdrawFromChest(this.chestId, b.item, 1);
           this.engine.log(LOG.SYSTEM, this.tAction('Took', { name }));
           this._refreshSceneDesc();
           this.render();
@@ -69,7 +68,7 @@ export class ChestUI {
         const name = getItemLabel(this.engine.data.items, b.item);
         const btn = buildOptionButton(getItemLabel(this.engine.data.items, b.item, b.amount), this.tChest('Deposit'));
         btn.onclick = () => {
-          gameState.depositToChest(this.chestId, b.item, 1);
+          this.engine.state.depositToChest(this.chestId, b.item, 1);
           this.engine.log(LOG.SYSTEM, this.tAction('Deposited', { name }));
           this._refreshSceneDesc();
           this.render();

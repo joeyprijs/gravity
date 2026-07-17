@@ -1,12 +1,10 @@
-import { gameState } from "../core/state.js";
 import { createElement, buildSceneDescription, buildOptionButton, resetOptionsPanel } from "../core/utils.js";
-import { ACTIONS, CSS, FLAG_KEYS, LOG } from "../core/config.js";
+import { ACTIONS, CHECK_KEYS, CSS, FLAG_KEYS, LOG } from "../core/config.js";
 import { evaluateCondition } from "./condition.js";
 import {
-  performSkillCheck, normalizeOutcomes, resolveRetryText,
-  getAttempts, recordAttempt, isResolved, markResolved,
-  skillBadge, retryGate, applyRetryGate, spendRetryCost,
-  skillApCost, apGate, applyApGate, spendAp
+  runCheckAttempt, checkPresentation, normalizeOutcomes,
+  getAttempts, isResolved,
+  spendRetryCost, apGate, applyApGate, spendAp
 } from "./skill-checks.js";
 
 // Actions that move the conversation to a new panel (node, store, or scene).
@@ -24,26 +22,26 @@ const DIALOGUE_NAV_ACTIONS = new Set([ACTIONS.GO_TO_CONVERSATION, ACTIONS.TRADE,
  *   are stored in persistent `gameState` flags to guarantee save safety.
  */
 export class DialogueSystem {
-  /**
-   * Constructs the DialogueSystem.
-   * Binds a listener to the state manager to auto-refresh store values.
-   * 
-   * @param {object} engine - The central RPGEngine coordination instance.
-   */
   constructor(engine) {
     this.engine = engine;
     this.currentNPC = null;
     this.currentNPCId = null;
-    this.storeOpen = false;
     this.activeDiscount = 0;
 
     // Reactively refresh the store UI whenever a state change occurs
     // (e.g. buying/selling changes gold and inventory, which must update instantly).
-    gameState.subscribe(() => {
-      if (this.storeOpen) this.renderStore(true);
+    this.engine.state.subscribe(() => {
+      if (this.engine.mode === 'store') this.renderStore(true);
     });
 
     this._registerActions();
+  }
+
+  // Clears the conversation data when the player leaves dialogue for a scene.
+  // Called by engine.renderScene — the mode transition itself is the engine's.
+  close() {
+    this.currentNPC = null;
+    this.currentNPCId = null;
   }
 
   /**
@@ -79,17 +77,17 @@ export class DialogueSystem {
       // Markups (negative values) persist too — an offended merchant's
       // grudge should outlast the conversation, same as earned goodwill.
       if (action.persistDiscount && pct !== 0) {
-        gameState.setFlag(FLAG_KEYS.tradeDiscount(this.currentNPCId), pct);
+        this.engine.state.setFlag(FLAG_KEYS.tradeDiscount(this.currentNPCId), pct);
       }
       this.renderStore();
     }));
 
     this.engine.registerAction(ACTIONS.LEAVE, (_action, engine) => {
-      engine.renderScene(gameState.getCurrentSceneId());
+      engine.renderScene(this.engine.state.getCurrentSceneId());
     });
 
     this.engine.registerAction(ACTIONS.MAKE_FRIENDLY, requireNPC(ACTIONS.MAKE_FRIENDLY, () => {
-      gameState.setFlag(FLAG_KEYS.friendly(this.currentNPCId), true);
+      this.engine.state.setFlag(FLAG_KEYS.friendly(this.currentNPCId), true);
     }));
 
     this.engine.registerAction(ACTIONS.QUEST_TRIGGER, (action, engine) => {
@@ -103,23 +101,23 @@ export class DialogueSystem {
    * @param {string} npcId - The NPC database identifier to talk to.
    */
   startDialogue(npcId) {
-    this.storeOpen = false;
     this.activeDiscount = 0;
     const npc = this.engine.data.npcs[npcId];
-    
-    if (!npc) { 
-      console.warn(`[Gravity] startDialogue: unknown NPC ID "${npcId}"`); 
-      return; 
+
+    if (!npc) {
+      console.warn(`[Gravity] startDialogue: unknown NPC ID "${npcId}"`);
+      return;
     }
 
     this.engine.resetScene();
+    this.engine.setMode('dialogue');
     this.currentNPC = npc;
     this.currentNPCId = npcId;
 
     // Clear per-conversation check state (attempt counts, in-conversation
     // exhaustion) when starting fresh. Permanently resolved responses live in
-    // a separate flag (FLAG_KEYS.dialogueResolved) and survive this reset.
-    gameState.setFlag(FLAG_KEYS.dialogueDc(npcId), {});
+    // a separate map (CHECK_KEYS.dialogueResolved) and survive this reset.
+    this.engine.state.setCheckState(CHECK_KEYS.dialogueDc(npcId), {});
     
     if (npc.conversations) {
       this.renderDialogue("start");
@@ -193,13 +191,12 @@ export class DialogueSystem {
     // Attempt counts live in a per-conversation flag map (reset by
     // startDialogue); permanent resolution markers live in a separate flag
     // that survives across conversations and saves.
-    const dcStateKey = FLAG_KEYS.dialogueDc(this.currentNPCId);
-    const resolvedKey = FLAG_KEYS.dialogueResolved(this.currentNPCId);
+    const dcStateKey = CHECK_KEYS.dialogueDc(this.currentNPCId);
+    const resolvedKey = CHECK_KEYS.dialogueResolved(this.currentNPCId);
     const skillResponses = [];
 
     (node.responses || []).forEach((res, i) => {
-      // Hide options whose condition requirements are not met
-      if (!evaluateCondition(res.condition ?? null, gameState)) return;
+      if (!evaluateCondition(res.condition ?? null, this.engine.state)) return;
 
       const needsCheck = !!res.skillCheck && res.dc > 0;
       const resKey = `${res.skillCheck}_${nodeId}_${i}`;
@@ -207,22 +204,22 @@ export class DialogueSystem {
       // A resolveOnce response stays retired across conversations; an
       // exhausted maxAttempts budget retires it for the rest of this
       // conversation only (patience resets on re-talk).
-      if (needsCheck && (isResolved(resolvedKey, resKey) || isResolved(dcStateKey, resKey))) return;
+      if (needsCheck && (isResolved(this.engine.state, resolvedKey, resKey) || isResolved(this.engine.state, dcStateKey, resKey))) return;
 
-      const attempts = needsCheck ? getAttempts(dcStateKey, resKey) : 0;
-      const gate = needsCheck ? retryGate(this.engine, attempts) : { cost: 0, blocked: false };
       // Checked responses charge apCost ?? rules default; plain responses stay
       // free unless they set an explicit apCost (like scene narrative beats).
-      const ap = apGate(this.engine, needsCheck ? skillApCost(this.engine, res) : (res.apCost ?? 0));
-      const displayText = needsCheck ? resolveRetryText(res, attempts) : res.text;
-      const badge = needsCheck
-        ? applyRetryGate(this.engine, gate, applyApGate(this.engine, ap, skillBadge(this.engine, res.skillCheck, res.dc)))
-        : applyApGate(this.engine, ap, null);
-      const btn = buildOptionButton(displayText, badge);
-      if (gate.blocked || ap.blocked) btn.disabled = true;
+      let p;
+      if (needsCheck) {
+        p = checkPresentation(this.engine, res, getAttempts(this.engine.state, dcStateKey, resKey));
+      } else {
+        const ap = apGate(this.engine, res.apCost ?? 0);
+        p = { gate: { cost: 0, blocked: false }, ap, displayText: res.text, badge: applyApGate(this.engine, ap, null), blocked: ap.blocked };
+      }
+      const btn = buildOptionButton(p.displayText, p.badge);
+      if (p.blocked) btn.disabled = true;
 
       btn.onclick = () => {
-        this.engine.log(LOG.PLAYER, displayText, 'choice');
+        this.engine.log(LOG.PLAYER, p.displayText, 'choice');
 
         // Dialogue is free by default; an explicit timeCost on a response
         // advances the clock (browsing a store never costs time). Checked
@@ -230,41 +227,27 @@ export class DialogueSystem {
         // reads as a consequence of the attempt; plain responses charge up
         // front, before their pipeline can navigate away.
         if (needsCheck) {
-          spendRetryCost(this.engine, gate);
-          spendAp(ap);
-          const outcomes = normalizeOutcomes(res);
-          const { tier, success } = performSkillCheck(this.engine, res.skillCheck, res.dc, outcomes, attempts);
-          if (res.timeCost > 0) this.engine.advanceTime(res.timeCost);
-          if (res.resolveOnce) markResolved(resolvedKey, resKey);
-
-          if (!success) {
-            // Partial and failure tiers both count as an attempt; partial is
-            // fail-forward, so its pipeline still runs.
-            const attemptCount = recordAttempt(dcStateKey, resKey);
-            const tierActions = outcomes[tier].actions;
-            const failNavigated = tierActions.length ? this._runActions(tierActions) : false;
-            let exhaustNavigated = false;
-            if (!res.resolveOnce && res.maxAttempts && attemptCount >= res.maxAttempts) {
-              markResolved(dcStateKey, resKey);
-              if (res.onExhausted?.length) exhaustNavigated = this._runActions(res.onExhausted);
-            }
-            if (!failNavigated && !exhaustNavigated) this.renderDialogue(nodeId, null, true);
-            return;
-          }
-
-          // Success / critical tier routing. Re-render when the pipeline
-          // didn't navigate (like the failure branch above), so a resolveOnce
-          // response retires from the panel instead of staying clickable.
-          const tierActions = outcomes[tier].actions;
-          const navigated = tierActions.length ? this._runActions(tierActions) : false;
-          if (!navigated) this.renderDialogue(nodeId, null, true);
+          spendRetryCost(this.engine, p.gate);
+          spendAp(this.engine, p.ap);
+          let navigated = false;
+          runCheckAttempt(this.engine, res, {
+            attemptKey: dcStateKey,
+            resolvedKey,
+            entryKey: resKey,
+            runActions: (actions) => { navigated = this._runActions(actions) || navigated; },
+            didNavigate: () => navigated,
+            chargeTime: () => { if (res.timeCost > 0) this.engine.advanceTime(res.timeCost); },
+            // Re-render options-only when nothing navigated, so a resolveOnce
+            // response retires from the panel instead of staying clickable.
+            rerender: () => this.renderDialogue(nodeId, null, true),
+          });
           return;
         }
 
         // Action routing for plain (check-free) responses. Read through
         // normalizeOutcomes so a response authored in the outcomes
         // shape keeps working if its check is later removed.
-        spendAp(ap);
+        spendAp(this.engine, p.ap);
         if (res.timeCost > 0) this.engine.advanceTime(res.timeCost);
         this._runActions(normalizeOutcomes(res).success.actions);
       };
@@ -314,7 +297,7 @@ export class DialogueSystem {
 
     const leaveBtn = buildOptionButton(this.engine.t('dialogue.leave'));
     leaveBtn.onclick = () => {
-      this.engine.renderScene(gameState.getCurrentSceneId());
+      this.engine.renderScene(this.engine.state.getCurrentSceneId());
     };
     container.appendChild(leaveBtn);
     
@@ -332,7 +315,7 @@ export class DialogueSystem {
    */
   _getStock(itemId, npcAmount) {
     if (npcAmount === null) return null;
-    const flagVal = gameState.getFlag(FLAG_KEYS.merchantStock(this.currentNPCId, itemId));
+    const flagVal = this.engine.state.getFlag(FLAG_KEYS.merchantStock(this.currentNPCId, itemId));
     return flagVal !== false ? flagVal : npcAmount;
   }
 
@@ -345,10 +328,10 @@ export class DialogueSystem {
     if (!isUpdate) {
       // Pull saved discounts from previous conversation branches if active
       if (this.activeDiscount === 0) {
-        const saved = gameState.getFlag(FLAG_KEYS.tradeDiscount(this.currentNPCId));
+        const saved = this.engine.state.getFlag(FLAG_KEYS.tradeDiscount(this.currentNPCId));
         if (saved) this.activeDiscount = saved / 100;
       }
-      this.storeOpen = true;
+      this.engine.setMode('store');
       this.engine.openScene(CSS.SCENE_MERCHANT);
       // An active discount or markup is stated with the greeting — repriced
       // wares the player can't recognize as repriced aren't a consequence.
@@ -377,7 +360,7 @@ export class DialogueSystem {
     const neverMind = this.engine.t('dialogue.neverMind');
     const leaveBtn = buildOptionButton(neverMind);
     leaveBtn.onclick = () => {
-      this.storeOpen = false;
+      this.engine.setMode('dialogue');
       this.activeDiscount = 0;
       this.engine.log(LOG.PLAYER, neverMind, 'choice');
 
@@ -420,7 +403,6 @@ export class DialogueSystem {
 
     buyItems.forEach(({ id: itemId, item, stock, npcAmount }) => {
       const displayName = stock !== null ? `${item.name} (x${stock})` : item.name;
-      // Compute custom discount: Math.floor(Value * (1 - Discount)).
       // A negative discount is a markup — an annoyed merchant padding prices.
       const price = this.activeDiscount !== 0 ? Math.floor(item.value * (1 - this.activeDiscount)) : item.value;
       const btn = buildOptionButton(
@@ -428,16 +410,17 @@ export class DialogueSystem {
         this.engine.t('dialogue.buyPrice', { amount: price })
       );
 
-      if (gameState.getPlayer().resources.gold < price) btn.disabled = true;
+      if (this.engine.state.getPlayer().resources.gold < price) btn.disabled = true;
 
+      // No explicit re-render: the store's state subscription re-renders on
+      // the gold/inventory notifications these mutations emit.
       btn.onclick = () => {
         if (npcAmount !== null) {
-          gameState.setFlag(FLAG_KEYS.merchantStock(this.currentNPCId, itemId), stock - 1);
+          this.engine.state.setFlag(FLAG_KEYS.merchantStock(this.currentNPCId, itemId), stock - 1);
         }
-        gameState.modifyPlayerStat('gold', -price);
-        gameState.addToInventory(itemId, 1);
+        this.engine.state.modifyPlayerStat('gold', -price);
+        this.engine.state.addToInventory(itemId, 1);
         this.engine.log(LOG.PLAYER, this.engine.t('dialogue.bought', { name: item.name, price }), 'loot');
-        this.renderStore(true);
       };
       buySection.appendChild(btn);
     });
@@ -453,7 +436,7 @@ export class DialogueSystem {
    * @param {HTMLElement} skillsContainer - Insertion anchor for option sections.
    */
   _buildSellSection(panel, skillsContainer) {
-    const player = gameState.getPlayer();
+    const player = this.engine.state.getPlayer();
     const sellRatio = this.engine.data.rules?.merchantSellRatio ?? 0.5;
     const sellItems = player.inventory.filter(invItem => {
       const item = this.engine.data.items[invItem.item];
@@ -474,10 +457,9 @@ export class DialogueSystem {
       );
 
       btn.onclick = () => {
-        gameState.removeFromInventory(invItem.item, 1);
-        gameState.modifyPlayerStat('gold', sellValue);
+        this.engine.state.removeFromInventory(invItem.item, 1);
+        this.engine.state.modifyPlayerStat('gold', sellValue);
         this.engine.log(LOG.PLAYER, this.engine.t('dialogue.sold', { name: item.name, price: sellValue }), 'loot');
-        this.renderStore(true);
       };
       sellSection.appendChild(btn);
     });

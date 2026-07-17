@@ -1,21 +1,10 @@
-import { gameState } from "../core/state.js";
 import { clearElement } from "../core/utils.js";
 import { MINIMAP_SIZE, MAP_PADDING, MAP_NODE_DEFAULT_BG, CSS, EL } from "../core/config.js";
 
-/**
- * MapManager handles both the minimap HUD in the sidebar and the full-screen world map overlay.
- * 
- * Key Functions:
- * 1. Computes coordinate transformations to scale, fit, and project scene nodes on 2D surfaces.
- * 2. Implements bounding-box scaling to fit arbitrary layout dimensions within the HUD bounds.
- * 3. Handles scroll alignments to dynamically center viewports on the active coordinate set.
- */
+// MapManager handles both the minimap HUD in the sidebar and the full-screen
+// world map overlay: it scales visited scenes' mapDefinitions into the HUD
+// bounds and centers the full map on the player's position.
 export class MapManager {
-  /**
-   * Constructs the MapManager.
-   * 
-   * @param {object} engine - The central RPGEngine coordination instance.
-   */
   constructor(engine) {
     this.engine = engine;
     
@@ -28,10 +17,8 @@ export class MapManager {
     this._minimapCacheKey = null;
   }
 
-  /**
-   * Establishes document-level click, backdrop, and keyboard ESC triggers
-   * to manage opening and closing the full-screen world map overlay.
-   */
+  // Wires the open/close triggers for the full-screen map overlay (minimap
+  // click, close button, ESC, backdrop click).
   setup() {
     document.getElementById(EL.MINIMAP).addEventListener('click', () => this.openFullMap());
     document.getElementById(EL.FULLMAP_CLOSE).addEventListener('click', () => this.closeFullMap());
@@ -57,31 +44,25 @@ export class MapManager {
     const canvasEl = document.getElementById(EL.MINIMAP_CANVAS);
     if (!minimapEl || !canvasEl) return;
 
-    const currentSceneId = gameState.getCurrentSceneId();
+    const currentSceneId = this.engine.state.getCurrentSceneId();
 
-    // Cache guard: Only rebuild DOM elements when the player moves.
-    // Movement resets this key, ensuring discovered rooms are instantly captured.
+    // Only rebuild the DOM when the player moves (see the cache-key note in
+    // the constructor).
     if (currentSceneId === this._minimapCacheKey) return;
 
     const regionId = this.engine.data.scenes[currentSceneId]?.region;
     const regionScenes = this._getVisitedScenesForRegion(regionId);
 
-    // Hide the minimap entirely if the current scene lacks map configurations
     if (regionScenes.length === 0) {
       minimapEl.hidden = true;
       return;
     }
 
-    // ── Bounding Box Scaling Mathematics ────────────────────────────────────
-    // 1. Compute the strict structural bounds containing all active nodes.
+    // Scale the region's padded bounding box to fit the square HUD.
     const bbox = this._computeBbox(regionScenes);
     const padding = MAP_PADDING;
-    
-    // 2. Compute absolute horizontal and vertical footprint sizes.
     const bboxW = (bbox.maxRight - bbox.minLeft) + padding * 2;
     const bboxH = (bbox.maxBottom - bbox.minTop) + padding * 2;
-    
-    // 3. Scale factor calculations: fits the larger dimension within the HUD box width.
     const size = minimapEl.offsetWidth || MINIMAP_SIZE;
     const scale = size / Math.max(bboxW, bboxH);
 
@@ -92,13 +73,9 @@ export class MapManager {
     fresh.id = EL.MINIMAP_CANVAS;
     fresh.className = CSS.MINIMAP_CANVAS;
 
-    // ── Projection Loop ─────────────────────────────────────────────────────
     for (const { id, scene } of regionScenes) {
       const d = scene.mapDefinitions;
       const node = this._buildMapNode(id, scene, id === currentSceneId);
-      
-      // Coordinate conversions mapping absolute pixels to relative minimap bounds.
-      // Arithmetic projection: ((Coordinate - Offset + Buffer) * Scale)px
       node.style.top    = ((d.top    - bbox.minTop  + padding) * scale) + 'px';
       node.style.left   = ((d.left   - bbox.minLeft + padding) * scale) + 'px';
       node.style.width  = (d.width  * scale) + 'px';
@@ -123,7 +100,7 @@ export class MapManager {
     const scrollEl = overlay?.querySelector(`.${CSS.FULLMAP_INNER}`);
     if (!overlay || !canvasEl || !scrollEl) return;
 
-    const currentSceneId = gameState.getCurrentSceneId();
+    const currentSceneId = this.engine.state.getCurrentSceneId();
     const allScenes = this._getAllVisitedMapScenes();
     const { width, height } = this.engine.data.worldMapSize;
 
@@ -134,9 +111,8 @@ export class MapManager {
     this._renderSceneNodes(canvasEl, allScenes, currentSceneId);
     overlay.hidden = false;
 
-    // ── Centering Scroll Calculations ───────────────────────────────────────
-    // Centering formula: TargetCenterCoordinate - ViewportHalfSize
-    // Uses requestAnimationFrame to ensure dimensions are loaded before measuring.
+    // Center the scroll viewport on the player's scene. requestAnimationFrame
+    // so the overlay has laid out before clientWidth/Height are measured.
     const defs = this.engine.data.scenes[currentSceneId]?.mapDefinitions;
     if (defs) {
       requestAnimationFrame(() => {
@@ -169,7 +145,7 @@ export class MapManager {
    * @returns {object[]} Array of filtered map nodes.
    */
   _getAllVisitedMapScenes() {
-    const visited = new Set(gameState.getVisitedScenes());
+    const visited = new Set(this.engine.state.getVisitedScenes());
     return Object.entries(this.engine.data.scenes)
       .filter(([id, scene]) => visited.has(id) && scene.mapDefinitions)
       .map(([id, scene]) => ({ id, scene }));
@@ -184,7 +160,7 @@ export class MapManager {
    */
   _getVisitedScenesForRegion(regionId) {
     if (!regionId) return [];
-    const visited = new Set(gameState.getVisitedScenes());
+    const visited = new Set(this.engine.state.getVisitedScenes());
     return Object.entries(this.engine.data.scenes)
       .filter(([id, scene]) => scene?.region === regionId && visited.has(id) && scene.mapDefinitions)
       .map(([id, scene]) => ({ id, scene }));
@@ -245,8 +221,6 @@ export class MapManager {
     for (const { id, scene } of scenes) {
       const { top, left, width, height, background } = scene.mapDefinitions;
       const node = this._buildMapNode(id, scene, id === currentSceneId);
-      
-      // Apply exact coordinate mappings configured by the developer
       Object.assign(node.style, {
         top: top + 'px',
         left: left + 'px',

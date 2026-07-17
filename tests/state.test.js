@@ -389,3 +389,48 @@ test('spendStatPoint: charCreation.stats targets apply bonusPerPoint with creati
   assert.equal(gameState.spendStatPoint('resources.ap.max'), false);
   assert.equal(p.statPoints, 0);
 });
+
+// ── registerMigration collision guard ─────────────────────────────────────────
+// Registered at the END of this file on purpose: a registered extra migration
+// persists on the singleton and would raise maxVersion for every
+// loadFromObject test that runs after it.
+
+test('registerMigration: rejects core-version collisions and duplicate versions', () => {
+  assert.throws(() => gameState.registerMigration(4, () => {}), /collides with a core migration/);
+  gameState.registerMigration(77, () => {});
+  assert.throws(() => gameState.registerMigration(77, () => {}), /already registered/);
+});
+
+test('loadFromObject: legacy check bookkeeping moves from flags into checkState', () => {
+  const ok = gameState.loadFromObject({
+    saveVersion: 4,
+    player: {
+      name: 'Old Save', level: 1, xp: 0,
+      resources: { hp: { current: 10, max: 10 }, ap: { current: 3, max: 3 }, gold: 0 },
+      attributes: { ac: 10 }, inventory: [], equipment: {},
+    },
+    flags: {
+      cellar_unlocked: true,                                  // authored flag — stays
+      merchant_stock_stranger_potion: 2,                      // scalar world state — stays
+      skill_dc_perception_dungeon_start: { tries_0: 2 },      // check map — moves
+      dialogue_dc_innkeeper: { tries_charm_start_0: 1 },      // check map — moves
+      dialogue_resolved_innkeeper: { resolved_charm_start_0: true }, // check map — moves
+    },
+    missions: {}, chests: {}, displays: {}, visitedScenes: [],
+    time: { ticks: 0 }, timers: [], log: [],
+  });
+
+  assert.equal(ok, true);
+  assert.deepEqual(gameState.state.flags, {
+    cellar_unlocked: true,
+    merchant_stock_stranger_potion: 2,
+  }, 'authored and scalar flags stay in the flag namespace');
+  assert.deepEqual(gameState.getCheckState('skill_dc_perception_dungeon_start'), { tries_0: 2 });
+  assert.deepEqual(gameState.getCheckState('dialogue_dc_innkeeper'), { tries_charm_start_0: 1 });
+  assert.deepEqual(gameState.getCheckState('dialogue_resolved_innkeeper'), { resolved_charm_start_0: true });
+
+  // Idempotent: re-loading the already-normalized save changes nothing.
+  const again = JSON.parse(JSON.stringify(gameState.state));
+  gameState.loadFromObject(again);
+  assert.deepEqual(gameState.getCheckState('skill_dc_perception_dungeon_start'), { tries_0: 2 });
+});

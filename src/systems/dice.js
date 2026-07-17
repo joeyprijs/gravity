@@ -6,14 +6,32 @@
 
 /**
  * Generates a pseudo-random integer between min and max (both inclusive).
- * Uses Math.random() for standard gaming probability distributions.
- * 
+ *
  * @param {number} min - The lower bound (inclusive).
  * @param {number} max - The upper bound (inclusive).
  * @returns {number} A random integer within [min, max].
  */
 export function roll(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+/**
+ * Picks a random entry from a weighted table. Each entry may carry an
+ * optional `dropWeight` (relative likelihood, defaults to 1) — higher means
+ * more common, not item carry weight.
+ *
+ * @param {{entries?: object[]}|null|undefined} table - The table definition.
+ * @returns {object|null} The chosen entry, or null for a missing/empty table.
+ */
+export function rollTable(table) {
+  if (!table?.entries?.length) return null;
+  const totalWeight = table.entries.reduce((sum, e) => sum + (e.dropWeight ?? 1), 0);
+  let r = Math.random() * totalWeight;
+  for (const entry of table.entries) {
+    r -= (entry.dropWeight ?? 1);
+    if (r <= 0) return entry;
+  }
+  return table.entries[table.entries.length - 1];
 }
 
 /**
@@ -27,7 +45,6 @@ export function roll(min, max) {
  *   - string: A human-readable breakdown of individual die rolls (e.g., "4+3+2" or "3-1").
  */
 export function parseDamage(dmgString) {
-  // Safe default fallback in case of null/empty/undefined parameters
   if (!dmgString) return { total: 1, string: "1" };
 
   // Legacy range syntax (e.g., "1-4"). Evaluated first because the standard
@@ -41,11 +58,8 @@ export function parseDamage(dmgString) {
       console.warn(`[Gravity] parseDamage: malformed range "${dmgString}". Defaulting to a flat roll of 1.`);
       return { total: 1, string: "1" };
     }
-    // Sort parameters dynamically to handle descending declarations (e.g., "4-1") safely
-    const actualMin = Math.min(a, b);
-    const actualMax = Math.max(a, b);
-    const rolledValue = roll(actualMin, actualMax);
-    return { total: rolledValue, string: dmgString };
+    // min/max so a descending declaration ("4-1") still rolls a valid range.
+    return { total: roll(Math.min(a, b), Math.max(a, b)), string: dmgString };
   }
 
   // Standard dice notation regex: NdF[+/-M] (e.g. "2d6+3", "1d20-2")
@@ -66,18 +80,15 @@ export function parseDamage(dmgString) {
 
   let totalRoll = 0;
   const rollResults = [];
-
-  // Iterative dice roll simulator accumulating results and storing breakdowns
   for (let i = 0; i < numDice; i++) {
     const r = roll(1, diceFaces);
     totalRoll += r;
     rollResults.push(r);
   }
 
-  // Clamped damage calculation to prevent negative values (which would heal the target)
+  // Clamped to >= 0 — negative damage would heal the target.
   const grandTotal = Math.max(0, totalRoll + modifier);
 
-  // Compile a highly detailed breakdown string for the combat logging timeline
   let rollStr = rollResults.join('+');
   if (modifier > 0) {
     rollStr += `+${modifier}`;

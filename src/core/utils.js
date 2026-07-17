@@ -191,10 +191,16 @@ export function equipmentAttributeBonuses(itemData) {
 // attackAttribute, which gets its own "Uses:" line above the loop.
 const HIDDEN_ITEM_ATTRS = new Set(['teleportScene', 'attackAttribute', 'actionPoints']);
 
-// The display name of an attribute (actions.skillBadgeFree.<id>), falling
-// back to the capitalized id — mirrors skillLabel, but takes the translate
-// function directly so display helpers here don't need an engine reference.
-function attributeLabel(t, attrId) {
+/**
+ * The display name of an attribute (actions.skillBadgeFree.<id>), falling
+ * back to the capitalized id. Takes the translate function directly so
+ * DOM-free helpers can use it; skillLabel (skill-checks.js) is the
+ * engine-flavored wrapper.
+ * @param {function} t - The engine's translate function.
+ * @param {string} attrId - Attribute ID (e.g. "perception").
+ * @returns {string}
+ */
+export function attributeLabel(t, attrId) {
   const key = `actions.skillBadgeFree.${attrId}`;
   const name = t(key);
   return name !== key ? name : attrId.charAt(0).toUpperCase() + attrId.slice(1);
@@ -302,6 +308,25 @@ export function wrapLogPrefix(html) {
 }
 
 /**
+ * Prefixes a description body with the translated "[Narrator]" label, wrapping
+ * the body in a span that scopes ::first-letter styling (drop caps) to
+ * narration. A body that already carries a leading "[label]" (NPC speech)
+ * stays unwrapped on purpose. Shared by buildSceneDescription and the
+ * in-place description refresh so the two can't drift.
+ *
+ * @param {string} body - Authored HTML body.
+ * @param {((key: string) => string)|null} [t=null] - Locale lookup (engine.t);
+ *   plain "Narrator" when omitted or untranslated.
+ * @returns {string}
+ */
+export function narratorLabelHtml(body, t = null) {
+  if (!body || /^\s*\[/.test(body)) return body;
+  const translated = t ? t('log.Narrator') : null;
+  const label = translated && translated !== 'log.Narrator' ? translated : 'Narrator';
+  return `[${label}] <span class="${CSS.SCENE_BODY_TEXT}">${body}</span>`;
+}
+
+/**
  * Builds the standard scene header block:
  *   div.scene__description > h2.scene__title + optional p.scene__body
  *
@@ -324,15 +349,7 @@ export function buildSceneDescription(title, body = null, t = null) {
     // body is trusted HTML authored in game JSON (scene descriptions, NPC text).
     // It intentionally supports inline markup (<br>, <em>, etc.). Never pass
     // user-supplied or save-file-derived content here.
-    let html = body;
-    if (body && !/^\s*\[/.test(body)) {
-      const translated = t ? t('log.Narrator') : null;
-      const label = translated && translated !== 'log.Narrator' ? translated : 'Narrator';
-      // The span scopes ::first-letter styling (drop caps) to narration —
-      // pre-labelled bodies (NPC speech) stay unwrapped on purpose.
-      html = `[${label}] <span class="${CSS.SCENE_BODY_TEXT}">${body}</span>`;
-    }
-    p.innerHTML = wrapLogPrefix(html);
+    p.innerHTML = wrapLogPrefix(narratorLabelHtml(body, t));
     div.appendChild(p);
   }
   return div;

@@ -2,7 +2,7 @@ import { test, beforeEach, afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { gameState } from '../src/core/state.js';
 import { DialogueSystem } from '../src/systems/dialogue.js';
-import { ACTIONS, FLAG_KEYS } from '../src/core/config.js';
+import { ACTIONS, CHECK_KEYS, FLAG_KEYS } from '../src/core/config.js';
 
 // Minimal DOM stand-in — just enough for the real renderDialogue to run
 // headless (createElement/buildSceneDescription/resetOptionsPanel).
@@ -53,6 +53,7 @@ function makeEngine({ npcs = TEST_NPCS, items = {}, rules = TEST_RULES } = {}) {
   const calls = { logs: [], renderedScenes: [], resetScene: 0, questTriggers: [] };
   const engine = {
     data: { npcs, items, rules },
+    state: gameState,
     t: (key) => key,
     log: (type, message, variant) => calls.logs.push({ type, message, variant }),
     registerAction: (name, fn) => registry.set(name, fn),
@@ -63,6 +64,8 @@ function makeEngine({ npcs = TEST_NPCS, items = {}, rules = TEST_RULES } = {}) {
     scrollNarrativeToBottom: () => {},
     openScene: () => {},
     currentSceneEl: { appendChild: () => {} },
+    mode: 'scene',
+    setMode(mode) { this.mode = mode; },
   };
   return { engine, registry, calls };
 }
@@ -102,9 +105,9 @@ test('startDialogue: NPC with conversations starts at the "start" node', () => {
 
 test('startDialogue: clears the NPC\'s escalated conversation DCs', () => {
   const { ds } = makeDS();
-  gameState.setFlag(FLAG_KEYS.dialogueDc('talker'), { charm_start_0: 14 });
+  gameState.setCheckState(CHECK_KEYS.dialogueDc('talker'), { charm_start_0: 14 });
   ds.startDialogue('talker');
-  assert.deepEqual(gameState.getFlag(FLAG_KEYS.dialogueDc('talker')), {});
+  assert.deepEqual(gameState.getCheckState(CHECK_KEYS.dialogueDc('talker')), {});
 });
 
 test('startDialogue: NPC without conversations renders the fallback greeting', () => {
@@ -115,11 +118,11 @@ test('startDialogue: NPC without conversations renders the fallback greeting', (
 });
 
 test('startDialogue: resets store state from a previous conversation', () => {
-  const { ds } = makeDS();
-  ds.storeOpen = true;
+  const { ds, engine } = makeDS();
+  engine.setMode('store');
   ds.activeDiscount = 0.25;
   ds.startDialogue('talker');
-  assert.equal(ds.storeOpen, false);
+  assert.equal(engine.mode, 'dialogue');
   assert.equal(ds.activeDiscount, 0);
 });
 

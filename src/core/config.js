@@ -7,16 +7,25 @@ export const GOLD_ITEM_ID = 'gold';
 
 // Builders for the dynamic state-flag keys used by the engine and built-in
 // plugins. Centralised so each key format is defined exactly once — an inline
-// typo'd key would silently create a brand-new flag.
+// typo'd key would silently create a brand-new flag. These are scalar world
+// state: authored conditions may read them (e.g. gating on a sold-out stock).
 export const FLAG_KEYS = {
-  skillDc:           (skillId, sceneId) => `skill_dc_${skillId}_${sceneId}`,
-  dialogueDc:        (npcId)            => `dialogue_dc_${npcId}`,
-  dialogueResolved:  (npcId)            => `dialogue_resolved_${npcId}`,
-  passiveDone:       (sceneId, index)   => `passive_done_${sceneId}_${index}`,
-  merchantStock: (npcId, itemId)    => `merchant_stock_${npcId}_${itemId}`,
-  tradeDiscount: (npcId)            => `trade_discount_${npcId}`,
-  friendly:      (npcId)            => `friendly_${npcId}`,
-  xpAwarded:     (sceneId)          => `xp_awarded_${sceneId}`,
+  passiveDone:   (sceneId, index) => `passive_done_${sceneId}_${index}`,
+  merchantStock: (npcId, itemId)  => `merchant_stock_${npcId}_${itemId}`,
+  tradeDiscount: (npcId)          => `trade_discount_${npcId}`,
+  friendly:      (npcId)          => `friendly_${npcId}`,
+  xpAwarded:     (sceneId)        => `xp_awarded_${sceneId}`,
+};
+
+// Builders for the keys in state.checkState — the engine-private skill-check
+// bookkeeping maps (attempt counts, resolution markers, discovery progress).
+// A separate namespace from flags: these are object-valued internals that
+// conditions never read, and keeping them out of state.flags keeps the flag
+// namespace a clean, author-facing key→scalar map.
+export const CHECK_KEYS = {
+  skillDc:          (skillId, sceneId) => `skill_dc_${skillId}_${sceneId}`,
+  dialogueDc:       (npcId)            => `dialogue_dc_${npcId}`,
+  dialogueResolved: (npcId)            => `dialogue_resolved_${npcId}`,
 };
 
 // Canonical names for all built-in scene option actions.
@@ -95,7 +104,6 @@ export const CSS = {
   CARD_ACTIONS:           'card__actions',
   CARD_LIST:              'card-list',
   CARD_DONE:              'card--completed',
-  CARD_COMPACT:           'card--compact',
 
   // Collapsible section headings (inventory & sheet panels)
   SECTION_TOGGLE:           'section-toggle',
@@ -187,13 +195,6 @@ export const LOG = {
   COMBAT:   'Combat',
   QUEST:    'Quest',
   NARRATOR: 'Narrator',
-};
-
-// System messages shared across multiple modules, kept here so every consumer
-// references one definition.
-export const MSG = {
-  GAME_LOAD_FAILED: 'Failed to parse save file.',
-  GAME_DATA_ERROR:  'Error loading game data.',
 };
 
 // Default world canvas dimensions used when worldMapSize is absent from index.json

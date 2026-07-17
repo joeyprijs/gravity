@@ -6,11 +6,10 @@ import { NarrativeLog } from "../systems/narrative.js";
 import { UIManager } from "../ui/ui.js";
 import { SceneRenderer } from "../systems/scene.js";
 import { DEFAULT_WORLD_MAP_SIZE, LOG, TIMER_SAFE_ACTIONS } from "./config.js";
-import { equipmentAttributeBonuses } from "./utils.js";
 import { resolveLanguage } from "./i18n.js";
 import { normalizeCarriedItems, validateGameData } from "./validate.js";
 import { registerBuiltinActions } from "../systems/actions.js";
-import { parseDamage } from "../systems/dice.js";
+import * as items from "../systems/items.js";
 import { getDay, getSegment } from "../systems/time.js";
 import { CharCreationScreen } from "../screens/char-creation.js";
 import curatorPlugin from "../plugins/curator.js";
@@ -24,6 +23,11 @@ const DEFAULT_LOCALE_PATH = 'data/locales.json';
 // other without importing each other directly (avoiding circular deps).
 export class RPGEngine {
   constructor() {
+    // The engine owns the state manager; subsystems reach it via
+    // this.engine.state instead of importing the module singleton, so their
+    // state dependency is visible and injectable.
+    this.state = gameState;
+
     // Populated by loadData(). Kept as an empty shell here so subsystems
     // constructed below can safely reference this.engine.data without null checks.
     this.data = { items: {}, npcs: {}, scenes: {}, missions: {}, tables: {}, regions: {}, worldMapSize: DEFAULT_WORLD_MAP_SIZE, locale: {}, rules: null, flags: {} };
@@ -32,13 +36,21 @@ export class RPGEngine {
     // declared locales are known; 'en' until then.
     this.language = 'en';
 
+    // The engine's exclusive UI mode — which surface owns the options panel:
+    // 'scene' | 'combat' | 'dialogue' | 'store' | 'customUI' | 'gameover'.
+    // All transitions go through setMode(); subsystems read it through the
+    // inCombat/inDialogue/inCustomUI/isGameOver facades below, so the mode
+    // can never smear across per-subsystem booleans.
+    this.mode = 'scene';
+
     this._actionRegistry = new Map();
     this._descriptionHooks = new Map();
     this._sceneDecorators = [];
     this._sheetRows = [];
+    this._tabWidgets = new Map();
     this._events = new Map();
 
-    this.narrative = new NarrativeLog(this.t.bind(this));
+    this.narrative = new NarrativeLog(this.t.bind(this), this.state);
     this.combatSystem = new CombatSystem(this);
     this.dialogueSystem = new DialogueSystem(this);
     this.questSystem = new QuestSystem(this);
@@ -49,7 +61,6 @@ export class RPGEngine {
   }
 
   async init() {
-    this.isGameStart = true;
     registerBuiltinActions(this);
     const manifest = await this.loadData();
 
@@ -110,18 +121,18 @@ export class RPGEngine {
     this._validateData();
 
     // Initialise state from rules, then register missions and flags on it.
-    gameState.init(this.data.rules, this.data.items);
-    gameState.registerMissions(this.data.missions);
-    gameState.registerSceneFlags(this.data.flags);
+    this.state.init(this.data.rules, this.data.items);
+    this.state.registerMissions(this.data.missions);
+    this.state.registerSceneFlags(this.data.flags);
 
     this.ui.setup();
     // Every state change triggers a full UI update. Subsystems mutate state
     // and the reactive UI re-renders — no manual refresh calls needed.
-    gameState.subscribe((_state, hint) => this.ui.update(hint));
+    this.state.subscribe((_state, hint) => this.ui.update(hint));
 
-    if (!gameState.getPlayer().name) {
+    if (!this.state.getPlayer().name) {
       // New game — show character creation before revealing the main UI.
-      new CharCreationScreen(() => this._startGame(), this.t.bind(this), this.data.tables.names?.entries || [], this.data.rules);
+      new CharCreationScreen(() => this._startGame(), this.t.bind(this), this.data.tables.names?.entries || [], this.data.rules, this.state);
     } else {
       this._startGame();
     }
@@ -131,7 +142,7 @@ export class RPGEngine {
     document.getElementById('game-container').hidden = false;
     document.getElementById('char-creation').hidden = true;
     this.ui.update();
-    this.renderScene(gameState.getCurrentSceneId());
+    this.renderScene(this.state.getCurrentSceneId());
   }
 
   // Returns the manifest object so init() can read manifest.plugins.
@@ -160,16 +171,27 @@ export class RPGEngine {
         });
       }
 
-      const loadCategory = async (categoryObj) => {
+      const fetchJson = (url, fallback) =>
+        fetch(url, { cache: 'no-cache' }).then(r => r.json()).catch(err => {
+          console.warn(`[Gravity] Failed to load "${url}": ${err.message}`);
+          return fallback;
+        });
+
+      // A manifest category may take three shapes:
+      // - an object map of id → file path (one fetch per entry — the demo),
+      // - a bundle path (string): one JSON object holding id → definition,
+      // - an array of bundle paths, merged in order.
+      // Bundles keep a large game (thousands of scenes) to a handful of
+      // requests at boot; scripts/generate-manifest.js maintains the map form.
+      const loadCategory = async (category) => {
+        if (!category) return {};
+        if (typeof category === 'string') return fetchJson(category, {});
+        if (Array.isArray(category)) {
+          return Object.assign({}, ...await Promise.all(category.map(url => fetchJson(url, {}))));
+        }
         const results = {};
-        const keys = Object.keys(categoryObj);
-        const loadedData = await Promise.all(
-          keys.map(key =>
-            fetch(categoryObj[key], { cache: 'no-cache' })
-              .then(r => r.json())
-              .catch(err => { console.warn(`[Gravity] Failed to load "${key}": ${err.message}`); return null; })
-          )
-        );
+        const keys = Object.keys(category);
+        const loadedData = await Promise.all(keys.map(key => fetchJson(category[key], null)));
         keys.forEach((key, i) => { if (loadedData[i] !== null) results[key] = loadedData[i]; });
         return results;
       };
@@ -179,18 +201,17 @@ export class RPGEngine {
         loadCategory(manifest.npcs),
         loadCategory(manifest.scenes),
         loadCategory(manifest.missions),
-        manifest.tables ? loadCategory(manifest.tables) : Promise.resolve({}),
+        loadCategory(manifest.tables),
+        // Flags differ from the categories above: each fetched file is itself
+        // a flag map, and the maps merge into one namespace.
         manifest.flags
           ? (typeof manifest.flags === 'string'
-            ? fetch(manifest.flags, { cache: 'no-cache' }).then(r => r.json()).catch(() => ({}))
-            : Promise.all(
-                Object.values(manifest.flags).map(url =>
-                  fetch(url, { cache: 'no-cache' }).then(r => r.json()).catch(err => { console.warn(`[Gravity] Failed to load flags from "${url}": ${err.message}`); return {}; })
-                )
-              ).then(results => Object.assign({}, ...results))
+            ? fetchJson(manifest.flags, {})
+            : Promise.all(Object.values(manifest.flags).map(url => fetchJson(url, {})))
+                .then(results => Object.assign({}, ...results))
           )
           : Promise.resolve({}),
-        manifest.rules ? fetch(manifest.rules, { cache: 'no-cache' }).then(r => r.json()).catch(() => null) : Promise.resolve(null)
+        manifest.rules ? fetchJson(manifest.rules, null) : Promise.resolve(null)
       ]);
 
       // Normalize once at load so consumers (merchant store, validation) only
@@ -200,7 +221,7 @@ export class RPGEngine {
       this.data = { items, npcs, scenes, missions, tables, regions: manifest.regions || {}, worldMapSize: manifest.worldMapSize || DEFAULT_WORLD_MAP_SIZE, locale: this.data.locale, rules, flags };
 
       // Note: registerMissions and registerSceneFlags are called by init()
-      // after gameState.init(rules) — they must NOT be called here. Data
+      // after this.state.init(rules) — they must NOT be called here. Data
       // validation also happens in init(), after plugins have registered
       // their action types.
       return manifest;
@@ -251,165 +272,64 @@ export class RPGEngine {
   }
 
   // --- Item action methods ---
-  // These are called by UIManager buttons. They own the AP-cost check and
-  // combat-refresh logic so the UI layer stays free of game logic.
+  // Thin delegates into systems/items.js — the UI buttons call these; the
+  // AP-cost checks and effect handling live in that module.
 
-  useItem(itemId) {
-    if (this.isGameOver) return;
-    const itemData = this.data.items[itemId];
-    if (!itemData) return;
-
-    if (gameState.countPlayerItem(itemId, { includeEquipped: false }) <= 0) return;
-
-    const apCost = itemData.attributes?.actionPoints ?? 0;
-    // The precheck mirrors _spendAP's turn-budget guard exactly — the effect
-    // applies before the spend, so the two must never disagree.
-    if (this.inCombat && this.combatSystem.remainingTurnBudget() < apCost) {
-      this.log(LOG.SYSTEM, this.t('player.notEnoughAP', { cost: apCost }));
-      return;
-    }
-
-    // Consumes one die-notation-or-number attribute: applies it to the named
-    // stat/resource and logs the given locale key. Returns true if the
-    // attribute was present.
-    const consumeStat = (value, stat, msgKey, extraParams = {}) => {
-      if (!value) return false;
-      let amount = value;
-      let rollSuffix = "";
-      if (typeof amount === 'string') {
-        const result = parseDamage(amount);
-        rollSuffix = this.t('player.rollSuffix', { dice: amount, roll: result.string });
-        amount = result.total;
-      }
-      gameState.modifyPlayerStat(stat, amount);
-      this.log(LOG.SYSTEM, this.t(msgKey, { name: itemData.name, amount, rollSuffix, ...extraParams }), 'loot');
-      return true;
-    };
-
-    // Apply effect BEFORE spending AP so the log order is always:
-    // "used potion" → (AP spent) → enemy turn fires. The effects are
-    // independent — an item may carry any mix (apRestore and modifyResource
-    // are the consumable counterparts of the modify_ap/modify_resource actions).
-    const mod = itemData.attributes?.modifyResource;
-    const modLabelKey = `ui.resources.${mod?.resource}`;
-    const consumed = [
-      consumeStat(itemData.attributes?.healingAmount, 'hp', 'player.usedItem'),
-      consumeStat(itemData.attributes?.apRestore, 'ap', 'player.usedItemAp'),
-      mod?.resource && consumeStat(mod.amount, mod.resource, 'player.usedItemResource', {
-        resource: this.t(modLabelKey) !== modLabelKey ? this.t(modLabelKey) : mod.resource,
-      }),
-    ].some(Boolean);
-    if (consumed) {
-      gameState.removeFromInventory(itemId, 1);
-    } else if (itemData.attributes?.teleportScene) {
-      if (this.inCombat) {
-        this.log(LOG.SYSTEM, this.t('player.noCombatTeleport'));
-        return;
-      }
-      const curScene = gameState.getCurrentSceneId();
-      if (curScene !== itemData.attributes.teleportScene) {
-        gameState.setReturnSceneId(curScene);
-        this.log(LOG.SYSTEM, this.t('player.teleported', { name: itemData.name }));
-        this.renderScene(itemData.attributes.teleportScene);
-      } else {
-        this.log(LOG.SYSTEM, this.t('player.alreadyHere'));
-      }
-    }
-
-    this._spendAP(apCost);
-
-    // Out of combat, consuming an item can change what the scene affords
-    // (AP-gated checks, condition-gated options) — rebuild the options so
-    // buttons don't go stale. In combat/dialogue/custom UI the owning panel
-    // refreshes itself.
-    if (!this.inCombat && !this.inDialogue && !this.inCustomUI) {
-      const scene = this.data.scenes[gameState.getCurrentSceneId()];
-      if (scene) this.scene.renderOptions(scene);
-    }
-  }
-
-  equipItem(slot, itemId) {
-    if (this.isGameOver) return;
-    const itemData = this.data.items[itemId];
-    const targetSlot = slot || itemData?.slot;
-    if (!itemData || !targetSlot) return;
-
-    if (gameState.countPlayerItem(itemId, { includeEquipped: false }) <= 0) return;
-
-    const apCost = itemData.attributes?.actionPoints ?? 0;
-    if (this.inCombat && this.combatSystem.remainingTurnBudget() < apCost) {
-      this.log(LOG.SYSTEM, this.t('player.notEnoughAP', { cost: apCost }));
-      return;
-    }
-
-    // Swap the worn attribute bonuses (attributeBonuses + armorClassBonus):
-    // remove the outgoing item's, apply the incoming item's, as one delta.
-    const oldItemId = gameState.getPlayer().equipment[targetSlot];
-    const oldBonuses = equipmentAttributeBonuses(oldItemId ? this.data.items[oldItemId] : null);
-    const newBonuses = equipmentAttributeBonuses(itemData);
-    const success = gameState.equipItem(targetSlot, itemId);
-    if (!success) return;
-    for (const key of new Set([...Object.keys(oldBonuses), ...Object.keys(newBonuses)])) {
-      const delta = (newBonuses[key] ?? 0) - (oldBonuses[key] ?? 0);
-      if (delta !== 0) gameState.modifyPlayerStat(key, delta);
-    }
-    this.log(LOG.PLAYER, this.t('player.equipped', { name: itemData.name, slot: targetSlot }));
-    this._spendAP(apCost);
-  }
-
-  unequipItem(slot) {
-    if (this.isGameOver) return;
-    const itemId = gameState.getPlayer().equipment[slot];
-    if (!itemId) return;
-    const unequipCost = this.data.rules?.unequipApCost ?? 1;
-    if (this.inCombat && this.combatSystem.remainingTurnBudget() < unequipCost) {
-      this.log(LOG.SYSTEM, this.t('player.notEnoughAP', { cost: unequipCost }));
-      return;
-    }
-    const itemName = this.data.items[itemId]?.name || itemId;
-    const bonuses = equipmentAttributeBonuses(this.data.items[itemId]);
-    gameState.equipItem(slot, null);
-    for (const [key, bonus] of Object.entries(bonuses)) {
-      if (bonus !== 0) gameState.modifyPlayerStat(key, -bonus);
-    }
-    this.log(LOG.PLAYER, this.t('player.unequipped', { name: itemName, slot }));
-    this._spendAP(unequipCost);
-  }
+  useItem(itemId)          { return items.useItem(this, itemId); }
+  equipItem(slot, itemId)  { return items.equipItem(this, slot, itemId); }
+  unequipItem(slot)        { return items.unequipItem(this, slot); }
 
   // Deducts AP in combat. Returns false (blocking the action) if the cost
   // exceeds the remaining turn budget (current AP, further capped by
   // rules.apEconomy.maxPerTurn — see CombatSystem.remainingTurnBudget).
-  // Emits player:apSpent so CombatSystem can refresh the UI and hand off to
-  // the enemy when the budget runs out — engine no longer calls combat
-  // methods directly.
+  // The spend is then handed to CombatSystem explicitly — turn handoff is
+  // core control flow, not a notification.
   _spendAP(cost) {
     if (!this.inCombat) return true;
     if (this.combatSystem.remainingTurnBudget() < cost) {
       this.log(LOG.SYSTEM, this.t('player.notEnoughAP', { cost }));
       return false;
     }
-    gameState.modifyPlayerStat('ap', -cost);
-    this.emit('player:apSpent', { remaining: gameState.getPlayer().resources.ap.current, amount: cost });
+    this.state.modifyPlayerStat('ap', -cost);
+    this.combatSystem.notePlayerSpentAP(cost);
     return true;
+  }
+
+  // --- Mode machine ---
+  // Exactly one surface owns the options panel at a time (see this.mode).
+
+  /** @param {'scene'|'combat'|'dialogue'|'store'|'customUI'|'gameover'} mode */
+  setMode(mode) { this.mode = mode; }
+
+  get inCombat()   { return this.mode === 'combat'; }
+  get isGameOver() { return this.mode === 'gameover'; }
+  get inDialogue() { return this.mode === 'dialogue' || this.mode === 'store'; }
+  get inCustomUI() { return this.mode === 'customUI'; }
+
+  // Marks a custom UI panel (chest, curator dashboard, …) as open or closed.
+  // Custom UIs call this when they take over / release the options panel so
+  // scene re-render logic knows not to draw options over them.
+  setCustomUIOpen(open) { this.setMode(open ? 'customUI' : 'scene'); }
+
+  /**
+   * Captures the player's location (scene + mode) and returns a predicate
+   * answering "did anything since move the player?" — a scene change, or any
+   * mode transition (combat, dialogue, store, custom UI, game over). Callers
+   * snapshot before running a pipeline and skip their re-render when it
+   * fires: the new surface owns the options panel now.
+   *
+   * @returns {() => boolean}
+   */
+  snapshotNavigation() {
+    const sceneId = this.state.getCurrentSceneId();
+    const mode = this.mode;
+    return () => this.state.getCurrentSceneId() !== sceneId || this.mode !== mode;
   }
 
   // --- Delegate API ---
   // Subsystems (combat, dialogue, quests) call these on `this.engine`.
   // They forward to the appropriate module so subsystems need no knowledge
   // of the internal structure.
-
-  get inCombat() { return this.combatSystem.inCombat; }
-  get isGameOver() { return this.combatSystem.isGameOver; }
-  get inDialogue() { return !!this.dialogueSystem.currentNPC; }
-  get inCustomUI() { return !!this._customUIOpen; }
-
-  // Marks a custom UI panel (chest, curator dashboard, …) as open or closed.
-  // Custom UIs call this when they take over / release the options panel so
-  // scene re-render logic knows not to draw options over them.
-  setCustomUIOpen(open) { this._customUIOpen = !!open; }
-
-  get isGameStart() { return this.narrative.isGameStart; }
-  set isGameStart(v) { this.narrative.isGameStart = v; }
 
   get currentSceneEl() { return this.narrative.currentSceneEl; }
   set currentSceneEl(v) { this.narrative.currentSceneEl = v; }
@@ -446,8 +366,8 @@ export class RPGEngine {
    * @param {number} amount - Ticks to advance (non-positive is a no-op).
    */
   advanceTime(amount) {
-    const ticksBefore = gameState.getTicks();
-    const fired = gameState.advanceTime(amount);
+    const ticksBefore = this.state.getTicks();
+    const fired = this.state.advanceTime(amount);
     // Narrate the passage of time before any timer fires, so "It is now
     // night." reads ahead of whatever the night set in motion.
     this._logTimePassage(ticksBefore);
@@ -466,7 +386,7 @@ export class RPGEngine {
   // for advances that stay within the current segment.
   _logTimePassage(ticksBefore) {
     const timeRules = this.data.rules?.time;
-    const ticks = gameState.getTicks();
+    const ticks = this.state.getTicks();
     if (ticks === ticksBefore) return;
     const day = getDay(ticks, timeRules);
     const segment = getSegment(ticks, timeRules);
@@ -482,14 +402,16 @@ export class RPGEngine {
   }
 
   renderScene(sceneId, opts) {
-    this.dialogueSystem.storeOpen = false;
-    this.dialogueSystem.currentNPC = null;
-    this.dialogueSystem.currentNPCId = null;
+    // Combat owns the panel: a pipeline that navigates mid-fight is ignored
+    // (matching SceneRenderer.render's own guard) — and must not flip the mode.
+    if (this.inCombat) return;
+    this.dialogueSystem.close();
+    this.setMode('scene');
     return this.scene.render(sceneId, opts);
   }
   restoreScene(sceneId, lastDesc) { return this.scene.restoreFromSave(sceneId, lastDesc); }
   resetScene()                   { return this.scene.reset(); }
-  handleQuestTrigger(trigger, state) { return this.questSystem.handleTrigger(trigger, state); }
+  handleQuestTrigger(trigger) { return this.questSystem.handleTrigger(trigger); }
   scrollNarrativeToBottom() { return this.narrative.scrollToBottom(); }
 
   // --- Event system ---
@@ -500,7 +422,6 @@ export class RPGEngine {
   /**
    * Subscribes a handler to an engine event. Current events:
    *   'scene:entered'  { sceneId, scene } — a questTrigger scene was entered
-   *   'player:apSpent' { remaining }      — the player spent AP in combat
    *
    * @param {string} event - Event name.
    * @param {(data: object) => void} handler
@@ -597,6 +518,28 @@ export class RPGEngine {
   }
 
   get sceneDecorators() { return this._sceneDecorators; }
+
+  /**
+   * Registers a tab widget builder for rules.tabs[].widget. The UI build
+   * consults this registry for every tab that declares a widget, so a plugin
+   * can contribute a whole sidebar tab (register during plugin load — plugins
+   * load before the UI builds).
+   *
+   * @param {string} name - The widget name tabs reference.
+   * @param {(panel: HTMLElement, ui: object) => void} fn - Fills the tab's
+   *   panel element; receives the UIManager for shared helpers.
+   */
+  registerTabWidget(name, fn) {
+    this._tabWidgets.set(name, fn);
+  }
+
+  /**
+   * @param {string} name - The widget name.
+   * @returns {((panel: HTMLElement, ui: object) => void)|null}
+   */
+  getTabWidget(name) {
+    return this._tabWidgets.get(name) || null;
+  }
 
   /**
    * Registers an extra row for the sheet tab's character section — the way a

@@ -1,14 +1,14 @@
-import { gameState } from "../core/state.js";
-import { createElement, buildSceneDescription, buildOptionButton, getItemLabel, resetOptionsPanel, wrapLogPrefix } from "../core/utils.js";
-import { CSS, FLAG_KEYS, GOLD_ITEM_ID, LOG, MAX_D20_ROLL } from "../core/config.js";
+import { createElement, buildSceneDescription, buildOptionButton, getItemLabel, narratorLabelHtml, resetOptionsPanel, wrapLogPrefix } from "../core/utils.js";
+import { CHECK_KEYS, CSS, FLAG_KEYS, GOLD_ITEM_ID, LOG, MAX_D20_ROLL } from "../core/config.js";
 import { evaluateCondition } from "./condition.js";
-import { roll } from "./dice.js";
+import { formatList } from "../core/i18n.js";
+import { roll, rollTable } from "./dice.js";
 import { resolveTimeCost } from "./time.js";
 import {
-  performSkillCheck, normalizeOutcomes, resolveRetryText,
-  getAttempts, recordAttempt, isResolved, markResolved, resetAttempts,
-  skillBadge, retryGate, applyRetryGate, spendRetryCost,
-  skillApCost, apGate, applyApGate, spendAp, rollBreakdown, skillLabel
+  runCheckAttempt, checkPresentation, normalizeOutcomes,
+  getAttempts, isResolved, resetAttempts,
+  spendRetryCost, apGate, applyApGate, spendAp,
+  rollBreakdown, skillLabel
 } from "./skill-checks.js";
 
 // SceneRenderer handles navigating to scenes, resolving their descriptions,
@@ -21,11 +21,16 @@ export class SceneRenderer {
     // entries when re-rendering options without changing the scene body.
     this.lastRenderedSceneId = null;
     this.lastRenderedDesc = null;
+    // The <p> body of the most recently appended description — the in-place
+    // update target for refreshDescription. Cleared on reset so a stale
+    // (detached) node is never written into after a scene teardown.
+    this._lastDescBodyEl = null;
   }
 
   reset() {
     this.lastRenderedSceneId = null;
     this.lastRenderedDesc = null;
+    this._lastDescBodyEl = null;
   }
 
   // Called after a save is loaded. Syncs the cache to the restored state so
@@ -69,18 +74,19 @@ export class SceneRenderer {
     // Attempt counters reset on actual (re-)entry only — a same-scene
     // re-render (e.g. after a successful check) must not rewind other checks'
     // retry wording or refill their maxAttempts budgets mid-visit.
-    const isEntry = gameState.getCurrentSceneId() !== sceneId;
+    const isEntry = this.engine.state.getCurrentSceneId() !== sceneId;
 
     // addVisitedScene must be called BEFORE setCurrentSceneId because
     // setCurrentSceneId triggers notifyListeners → ui.update() → renderMinimap(),
     // which checks visitedScenes. If the order is reversed, the current scene
     // would be absent from visitedScenes when the minimap first renders.
-    gameState.addVisitedScene(sceneId);
-    gameState.setCurrentSceneId(sceneId);
+    this.engine.state.addVisitedScene(sceneId);
+    this.engine.state.setCurrentSceneId(sceneId);
 
     this._appendSceneDescription(scene, sceneId);
     passiveTexts.forEach(text => this.engine.log(LOG.NARRATOR, text));
     if (isEntry) this._resetSkillAttempts(scene, sceneId);
+    this._awardSceneXP(scene, sceneId);
     this.renderOptions(scene);
 
     // Emit scene:entered once per actual entry so quest triggers and other
@@ -98,9 +104,9 @@ export class SceneRenderer {
   // scene already has displays registered in state (e.g. from a loaded save).
   _registerInitialDisplays(scene, sceneId) {
     if (!scene.displays?.length) return;
-    if (gameState.getDisplaysForScene(sceneId).length > 0) return;
+    if (this.engine.state.getDisplaysForScene(sceneId).length > 0) return;
     scene.displays.forEach(d => {
-      gameState.addDisplayToScene(sceneId, {
+      this.engine.state.addDisplayToScene(sceneId, {
         id: d.id,
         name: d.name,
         item: d.item || null,
@@ -122,7 +128,7 @@ export class SceneRenderer {
     const descEl = buildSceneDescription(scene.title || scene.name, currentDesc, this.engine.t.bind(this.engine));
     this._lastDescBodyEl = descEl.querySelector(`.${CSS.SCENE_BODY}`);
     this.engine.currentSceneEl.appendChild(descEl);
-    gameState.appendLog({ type: 'scene', title: scene.title || scene.name, desc: currentDesc });
+    this.engine.state.appendLog({ type: 'scene', title: scene.title || scene.name, desc: currentDesc });
 
     this.lastRenderedSceneId = sceneId;
     this.lastRenderedDesc = currentDesc;
@@ -139,14 +145,26 @@ export class SceneRenderer {
     (scene.passiveChecks || []).forEach((check, i) => {
       if (!check.skillCheck || !check.flag) return;
       const doneKey = FLAG_KEYS.passiveDone(sceneId, i);
-      if (gameState.getFlag(doneKey)) return;
-      gameState.setFlag(doneKey, true);
-      const mod = gameState.getPlayer().attributes[check.skillCheck] ?? 0;
+      if (this.engine.state.getFlag(doneKey)) return;
+      this.engine.state.setFlag(doneKey, true);
+      const mod = this.engine.state.getPlayer().attributes[check.skillCheck] ?? 0;
       const success = roll(1, MAX_D20_ROLL) + mod >= (check.dc ?? 10);
-      gameState.setFlag(check.flag, success);
+      this.engine.state.setFlag(check.flag, success);
       if (success && check.text) texts.push(check.text);
     });
     return texts;
+  }
+
+  // One-time XP reward on first visit. The flag prevents re-awarding on
+  // subsequent visits or after loading a save. Lives in render(), not
+  // renderOptions() — rendering buttons must never mutate progression state.
+  _awardSceneXP(scene, sceneId) {
+    if (!scene.xpReward) return;
+    const xpFlag = FLAG_KEYS.xpAwarded(sceneId);
+    if (this.engine.state.getFlag(xpFlag)) return;
+    this.engine.state.addXP(scene.xpReward);
+    this.engine.state.setFlag(xpFlag, true);
+    this.engine.log(LOG.SYSTEM, this.engine.t('loot.xpGained', { amount: scene.xpReward }), 'loot');
   }
 
   // Resets skill-check attempt counters on scene re-entry so retryText wording
@@ -154,7 +172,7 @@ export class SceneRenderer {
   _resetSkillAttempts(scene, sceneId) {
     (scene.skills || []).forEach(opt => {
       if (!opt.skillCheck) return;
-      resetAttempts(FLAG_KEYS.skillDc(opt.skillCheck, sceneId));
+      resetAttempts(this.engine.state, CHECK_KEYS.skillDc(opt.skillCheck, sceneId));
     });
   }
 
@@ -163,7 +181,7 @@ export class SceneRenderer {
   _maybeStartAutoAttack(scene) {
     if (!scene.autoAttack) return false;
     const cond = scene.autoAttack.condition ?? null;
-    if (cond && !evaluateCondition(cond, gameState)) return false;
+    if (cond && !evaluateCondition(cond, this.engine.state)) return false;
     this.engine.combatSystem.startCombat(scene.autoAttack.enemies, scene.autoAttack);
     return true;
   }
@@ -184,7 +202,7 @@ export class SceneRenderer {
 
     (scene.options || []).forEach(opt => {
       const cond = opt.condition ?? null;
-      if (!evaluateCondition(cond, gameState)) return;
+      if (!evaluateCondition(cond, this.engine.state)) return;
 
       if (isBackOption(opt)) {
         backOpts.push(opt);
@@ -197,7 +215,7 @@ export class SceneRenderer {
       let reqText = null;
       let disabled = false;
       if (opt.requirements?.item) {
-        const totalCount = gameState.countPlayerItem(opt.requirements.item);
+        const totalCount = this.engine.state.countPlayerItem(opt.requirements.item);
         if (totalCount <= 0) {
           disabled = true;
           reqText = this.engine.t('ui.itemRequires', { name: getItemLabel(this.engine.data.items, opt.requirements.item) });
@@ -213,12 +231,12 @@ export class SceneRenderer {
     standardOpts.forEach(renderOptionBtn);
 
     const skillBtns = [];
-    const sceneId = gameState.getCurrentSceneId();
+    const sceneId = this.engine.state.getCurrentSceneId();
 
     (scene.skills || []).forEach((opt, i) => {
       if (!opt.skillCheck) return;
       const cond = opt.condition ?? null;
-      if (!evaluateCondition(cond, gameState)) return;
+      if (!evaluateCondition(cond, this.engine.state)) return;
 
       const items = opt.items || [];
       let btn;
@@ -239,17 +257,6 @@ export class SceneRenderer {
       skillsContainer.removeAttribute('hidden');
     }
 
-    // One-time XP reward on first visit. The flag prevents re-awarding on
-    // subsequent visits or after loading a save.
-    if (scene.xpReward) {
-      const xpFlag = FLAG_KEYS.xpAwarded(gameState.getCurrentSceneId());
-      if (!gameState.getFlag(xpFlag)) {
-        gameState.addXP(scene.xpReward);
-        gameState.setFlag(xpFlag, true);
-        this.engine.log(LOG.SYSTEM, this.engine.t('loot.xpGained', { amount: scene.xpReward }), 'loot');
-      }
-    }
-
     // Plugin-registered decorators may append extra option buttons (e.g. the
     // curator plugin's exhibit-management button).
     for (const decorator of this.engine.sceneDecorators) {
@@ -267,18 +274,17 @@ export class SceneRenderer {
    */
   handleOption(opt) {
     if (this.engine.isGameOver) return; // only Load/Restart act after death
-    this.engine.isGameStart = false;
     if (opt.log !== false) this.engine.log(LOG.PLAYER, opt.text, 'choice');
 
     this._chargeTime(opt, this._optionCostKind(opt));
 
-    const sceneIdBefore = gameState.getCurrentSceneId();
+    const didNavigate = this.engine.snapshotNavigation();
     this.engine.runActions(opt.actions || []);
 
     // Re-render options if nothing caused navigation, so flag changes take
     // effect immediately.
-    if (!this._didNavigate(sceneIdBefore)) {
-      const scene = this.engine.data.scenes[gameState.getCurrentSceneId()];
+    if (!didNavigate()) {
+      const scene = this.engine.data.scenes[this.engine.state.getCurrentSceneId()];
       if (scene) this.renderOptions(scene);
     }
   }
@@ -305,20 +311,7 @@ export class SceneRenderer {
     if (cost > 0) this.engine.advanceTime(cost);
   }
 
-  // Returns true when the last pipeline run moved the player somewhere else —
-  // a scene change, combat, dialogue, a custom UI, or the game-over screen.
-  // Callers skip re-rendering the current scene's options so they don't
-  // clobber the new panel. isGameOver matters for a death during the very
-  // pipeline that started the combat (fast enemies act first): combat is
-  // already over when the stack unwinds, but the game-over panel with its
-  // Load/Restart buttons must survive.
-  _didNavigate(sceneIdBefore) {
-    return gameState.getCurrentSceneId() !== sceneIdBefore ||
-      this.engine.inCombat || this.engine.inDialogue || this.engine.inCustomUI ||
-      this.engine.isGameOver;
-  }
-
-  // Reads one discovery entry's state from the shared per-skill flag map.
+  // Reads one discovery entry's state from the shared per-skill check-state map.
   // The map is shared by every check in the scene that rolls the same skill
   // (pass/fail attempt counters, narrative uses, resolution markers), so
   // discovery state lives NAMESPACED under `disc_<index>` — it must never
@@ -326,7 +319,7 @@ export class SceneRenderer {
   // stored discovery state at the map's top level; that shape is adopted by
   // the first discovery entry that reads it.
   _readDiscoveryState(skillKey, i, items) {
-    const map = gameState.getFlag(skillKey);
+    const map = this.engine.state.getCheckState(skillKey);
     const state = typeof map === 'object' && map !== null ? map[`disc_${i}`] : null;
     if (state?.found) return state;
     if (i === 0 && map?.found) {
@@ -346,41 +339,37 @@ export class SceneRenderer {
   // Persists one discovery entry's state into the shared map, clearing any
   // legacy top-level discovery fields it supersedes.
   _saveDiscoveryState(skillKey, i, state) {
-    const existing = gameState.getFlag(skillKey);
+    const existing = this.engine.state.getCheckState(skillKey);
     const map = typeof existing === 'object' && existing !== null ? existing : {};
     delete map.found;
     delete map.tries;
     delete map.resolved;
     delete map.dcs;
     map[`disc_${i}`] = state;
-    gameState.setFlag(skillKey, map);
+    this.engine.state.setCheckState(skillKey, map);
   }
 
   // Item-discovery skill check: roll against per-item DCs, track found items.
   // Returns a button, or null when everything has been found or the check has
   // been retired (resolveOnce, or an exhausted maxAttempts budget).
   _buildItemDiscoveryButton(opt, i, sceneId, scene) {
-    const skillKey = FLAG_KEYS.skillDc(opt.skillCheck, sceneId);
+    const skillKey = CHECK_KEYS.skillDc(opt.skillCheck, sceneId);
     const items = opt.items;
     const state = this._readDiscoveryState(skillKey, i, items);
     if (state.resolved || state.found.every(f => f)) return null;
 
     const lowestDc = Math.min(...items.map(l => l.dc ?? 10).filter((_, idx) => !state.found[idx]));
-    const displayText = resolveRetryText(opt, state.tries || 0);
-    const gate = retryGate(this.engine, state.tries || 0);
-    const ap = apGate(this.engine, skillApCost(this.engine, opt));
-    const btn = buildOptionButton(displayText,
-      applyRetryGate(this.engine, gate, applyApGate(this.engine, ap, skillBadge(this.engine, opt.skillCheck, lowestDc))));
-    if (gate.blocked || ap.blocked) {
+    const p = checkPresentation(this.engine, opt, state.tries || 0, lowestDc);
+    const btn = buildOptionButton(p.displayText, p.badge);
+    if (p.blocked) {
       btn.disabled = true;
       return btn;
     }
     btn.onclick = () => {
       if (this.engine.isGameOver) return;
-      this.engine.isGameStart = false;
-      this.engine.log(LOG.PLAYER, displayText, 'choice');
-      spendRetryCost(this.engine, gate);
-      spendAp(ap);
+      this.engine.log(LOG.PLAYER, p.displayText, 'choice');
+      spendRetryCost(this.engine, p.gate);
+      spendAp(this.engine, p.ap);
       this._resolveDiscovery(opt, i, state, skillKey, scene);
     };
     return btn;
@@ -392,7 +381,7 @@ export class SceneRenderer {
   // out (or resolveOnce) retires the check; exhaustion runs onExhausted.
   _resolveDiscovery(opt, i, state, skillKey, scene) {
     const items = opt.items;
-    const mod = gameState.getPlayer().attributes[opt.skillCheck] ?? 0;
+    const mod = this.engine.state.getPlayer().attributes[opt.skillCheck] ?? 0;
     const baseRoll = roll(1, MAX_D20_ROLL);
     const hitRoll = baseRoll + mod;
 
@@ -431,9 +420,9 @@ export class SceneRenderer {
     this._saveDiscoveryState(skillKey, i, state);
 
     if (exhausted && opt.onExhausted?.length) {
-      const sceneIdBefore = gameState.getCurrentSceneId();
+      const didNavigate = this.engine.snapshotNavigation();
       this.engine.runActions(opt.onExhausted);
-      if (this._didNavigate(sceneIdBefore)) return;
+      if (didNavigate()) return;
     }
     this.renderOptions(scene);
   }
@@ -446,7 +435,7 @@ export class SceneRenderer {
     newlyFound.forEach(l => {
       if (l.table) {
         for (let i = 0; i < (l.itemDrops ?? 1); i++) {
-          const resolved = this._rollTable(l.table);
+          const resolved = rollTable(this.engine.data.tables[l.table]);
           if (resolved) drops.push(resolved);
         }
       } else {
@@ -464,27 +453,20 @@ export class SceneRenderer {
     const lootItems = [];
     aggregated.forEach(d => {
       if (d.item === GOLD_ITEM_ID) {
-        gameState.modifyPlayerStat('gold', d.amount);
+        this.engine.state.modifyPlayerStat('gold', d.amount);
         lootItems.push(`${d.amount} ${this.engine.t('loot.gold')}`);
       } else {
-        gameState.addToInventory(d.item, d.amount);
+        this.engine.state.addToInventory(d.item, d.amount);
         lootItems.push(getItemLabel(this.engine.data.items, d.item, d.amount));
       }
     });
 
     if (lootItems.length === 0) return;
 
-    let listStr = "";
-    if (lootItems.length === 1) {
-      listStr = lootItems[0];
-    } else if (lootItems.length === 2) {
-      listStr = `${lootItems[0]} and ${lootItems[1]}`;
-    } else {
-      listStr = `${lootItems.slice(0, -1).join(', ')}, and ${lootItems[lootItems.length - 1]}`;
-    }
-    const message = this.engine.t('loot.foundItems', { list: listStr });
-    const fallbackMessage = message !== 'loot.foundItems' ? message : `Found ${listStr}.`;
-    this.engine.log(LOG.SYSTEM, fallbackMessage, 'loot');
+    // Locale-aware list joining ("A, B, and C") — list grammar never lives
+    // in code, and the sentence itself comes from loot.foundItems.
+    const list = formatList(this.engine.language, lootItems);
+    this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundItems', { list }), 'loot');
   }
 
   // Narrative (free) skill check: no roll, no DC — a story beat framed as a
@@ -492,8 +474,8 @@ export class SceneRenderer {
   // and runs an optional action pipeline. Retires after one use unless marked
   // repeatable. Returns a button, or null once retired.
   _buildNarrativeButton(opt, i, sceneId, scene) {
-    const skillKey = FLAG_KEYS.skillDc(opt.skillCheck, sceneId);
-    const state = gameState.getFlag(skillKey);
+    const skillKey = CHECK_KEYS.skillDc(opt.skillCheck, sceneId);
+    const state = this.engine.state.getCheckState(skillKey);
     // Older saves stored a bare `true` at this key for a used flavor check.
     const uses = state === true ? 1 : (state?.[`uses_${i}`] || 0);
     if (uses > 0 && !opt.repeatable) return null;
@@ -513,11 +495,10 @@ export class SceneRenderer {
     }
     btn.onclick = () => {
       if (this.engine.isGameOver) return;
-      this.engine.isGameStart = false;
-      spendAp(ap);
+      spendAp(this.engine, ap);
       const map = typeof state === 'object' && state !== null ? state : {};
       map[`uses_${i}`] = uses + 1;
-      gameState.setFlag(skillKey, map);
+      this.engine.state.setCheckState(skillKey, map);
       this.engine.log(LOG.PLAYER, opt.text, 'choice');
 
       if (opt.resultText) {
@@ -530,75 +511,45 @@ export class SceneRenderer {
       // Narrative beats are free by default — no skillAttempt default cost.
       this._chargeTime(opt, null);
 
-      const sceneIdBefore = gameState.getCurrentSceneId();
+      const didNavigate = this.engine.snapshotNavigation();
       this.engine.runActions(normalizeOutcomes(opt).success.actions);
-      if (!this._didNavigate(sceneIdBefore)) this.renderOptions(scene);
+      if (!didNavigate()) this.renderOptions(scene);
     };
     return btn;
   }
 
   // Pass/fail skill check, resolved against the check's outcome tiers
-  // (critical/success/partial/failure — see normalizeOutcomes). Returns a
-  // button, or null when the check has been retired (resolveOnce, or an
-  // exhausted maxAttempts budget).
+  // (critical/success/partial/failure) by the shared runCheckAttempt machine.
+  // Returns a button, or null when the check has been retired (resolveOnce,
+  // or an exhausted maxAttempts budget).
   _buildPassFailButton(opt, i, sceneId, scene) {
-    const skillKey = FLAG_KEYS.skillDc(opt.skillCheck, sceneId);
-    if (isResolved(skillKey, i)) return null;
-    const attempts = getAttempts(skillKey, i);
-    const displayText = resolveRetryText(opt, attempts);
-    const gate = retryGate(this.engine, attempts);
-    const ap = apGate(this.engine, skillApCost(this.engine, opt));
-    const btn = buildOptionButton(displayText,
-      applyRetryGate(this.engine, gate, applyApGate(this.engine, ap, skillBadge(this.engine, opt.skillCheck, opt.dc))));
-    if (gate.blocked || ap.blocked) {
+    const skillKey = CHECK_KEYS.skillDc(opt.skillCheck, sceneId);
+    if (isResolved(this.engine.state, skillKey, i)) return null;
+    const p = checkPresentation(this.engine, opt, getAttempts(this.engine.state, skillKey, i));
+    const btn = buildOptionButton(p.displayText, p.badge);
+    if (p.blocked) {
       btn.disabled = true;
       return btn;
     }
     btn.onclick = () => {
       if (this.engine.isGameOver) return;
-      this.engine.isGameStart = false;
-      this.engine.log(LOG.PLAYER, displayText, 'choice');
-      spendRetryCost(this.engine, gate);
-      spendAp(ap);
-      const outcomes = normalizeOutcomes(opt);
-      const { tier, success } = performSkillCheck(this.engine, opt.skillCheck, opt.dc, outcomes, attempts);
-      this._chargeTime(opt, 'skillAttempt');
-      if (opt.resolveOnce) markResolved(skillKey, i);
-      const sceneIdBefore = gameState.getCurrentSceneId();
-      if (success) {
-        this.engine.runActions(outcomes[tier].actions);
-        // Like handleOption, the re-render must be skipped when the actions
+      this.engine.log(LOG.PLAYER, p.displayText, 'choice');
+      spendRetryCost(this.engine, p.gate);
+      spendAp(this.engine, p.ap);
+      runCheckAttempt(this.engine, opt, {
+        attemptKey: skillKey,
+        entryKey: i,
+        runActions: (actions) => this.engine.runActions(actions),
+        // Like handleOption, the re-render must be skipped when a pipeline
         // opened a dialogue or custom UI — rendering would clobber it.
-        if (!this._didNavigate(sceneIdBefore)) this.engine.renderScene(gameState.getCurrentSceneId());
-        return;
-      }
-      // Partial and failure tiers both count as an attempt: partial is
-      // fail-forward (its actions grant the something-with-a-catch), but the
-      // check itself has not been passed.
-      const attemptCount = recordAttempt(skillKey, i);
-      this.engine.runActions(outcomes[tier].actions);
-      if (!opt.resolveOnce && opt.maxAttempts && attemptCount >= opt.maxAttempts) {
-        markResolved(skillKey, i);
-        if (opt.onExhausted?.length) this.engine.runActions(opt.onExhausted);
-      }
-      if (!this._didNavigate(sceneIdBefore)) this.renderOptions(scene);
+        didNavigate: this.engine.snapshotNavigation(),
+        chargeTime: () => this._chargeTime(opt, 'skillAttempt'),
+        rerender: () => this.renderOptions(scene),
+        // A success may set flags a description variant reads — re-render fully.
+        rerenderSuccess: () => this.engine.renderScene(this.engine.state.getCurrentSceneId()),
+      });
     };
     return btn;
-  }
-
-  // Picks a random entry from a loot table using weighted probability.
-  // Each entry may carry an optional `dropWeight` field (relative likelihood,
-  // defaults to 1) — higher means more common, not item carry weight.
-  _rollTable(tableId) {
-    const table = this.engine.data.tables[tableId];
-    if (!table?.entries?.length) return null;
-    const totalWeight = table.entries.reduce((sum, e) => sum + (e.dropWeight ?? 1), 0);
-    let r = Math.random() * totalWeight;
-    for (const entry of table.entries) {
-      r -= (entry.dropWeight ?? 1);
-      if (r <= 0) return entry;
-    }
-    return table.entries[table.entries.length - 1];
   }
 
   // Returns the description string to display for a scene.
@@ -614,7 +565,7 @@ export class SceneRenderer {
       desc = scene.description.find(d => !d.condition)?.text || '';
       for (const d of scene.description) {
         const cond = d.condition ?? null;
-        if (cond && evaluateCondition(cond, gameState)) {
+        if (cond && evaluateCondition(cond, this.engine.state)) {
           desc = d.text;
           break;
         }
@@ -628,7 +579,7 @@ export class SceneRenderer {
 
     // Plugin-registered decorators may append dynamic HTML to any scene's
     // description (e.g. the curator plugin's exhibits table).
-    const sceneId = gameState.getCurrentSceneId() || scene.id;
+    const sceneId = this.engine.state.getCurrentSceneId() || scene.id;
     for (const decorator of this.engine.sceneDecorators) {
       if (decorator.description) desc += decorator.description(scene, sceneId, this.engine) || '';
     }
@@ -641,12 +592,9 @@ export class SceneRenderer {
   // a new narrative block.
   refreshDescription(scene) {
     if (!this._lastDescBodyEl) return;
-    let desc = this._resolveDescription(scene);
-    if (desc && !/^\s*\[/.test(desc)) {
-      const translated = this.engine.t('log.Narrator');
-      const label = translated !== 'log.Narrator' ? translated : 'Narrator';
-      desc = `[${label}] ${desc}`;
-    }
-    this._lastDescBodyEl.innerHTML = wrapLogPrefix(desc);
+    const desc = this._resolveDescription(scene);
+    this._lastDescBodyEl.innerHTML = wrapLogPrefix(
+      narratorLabelHtml(desc, this.engine.t.bind(this.engine))
+    );
   }
 }

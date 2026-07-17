@@ -1,4 +1,5 @@
 {
+  "id": "home_museum",
   "name": "Museum Room",
   "region": "player_home",
   "mapDefinitions": {

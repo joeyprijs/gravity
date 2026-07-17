@@ -58,6 +58,7 @@ function makeDefaultState(rules) {
     saveVersion: SAVE_VERSION,
     player,
     flags: {},
+    checkState: {},
     missions: {},
     currentSceneId: rules.startingScene || null,
     returnSceneId: null,
@@ -69,6 +70,10 @@ function makeDefaultState(rules) {
     log: []
   };
 }
+
+// The state.flags prefixes that historically held check bookkeeping — used by
+// loadFromObject to normalize older saves into state.checkState.
+const LEGACY_CHECK_PREFIXES = ['skill_dc_', 'dialogue_dc_', 'dialogue_resolved_'];
 
 // StateManager is the single source of truth for all mutable game data.
 // All writes go through its methods, which call notifyListeners() so the UI
@@ -82,6 +87,7 @@ class StateManager {
       saveVersion: SAVE_VERSION,
       player: {},
       flags: {},
+      checkState: {},
       missions: {},
       currentSceneId: null,
       returnSceneId: null,
@@ -111,9 +117,10 @@ class StateManager {
    * unknown item) do not emit. Hooks may themselves mutate state — but must
    * not call the method they are hooked on.
    *
-   * Emitting methods: init, loadFromObject, reset, modifyPlayerStat, addXP,
+   * Emitting methods: init, loadFromObject, reset, modifyPlayerStat,
+   * modifyPlayerStats, addXP, spendStatPoint, applyCharCreation,
    * addToInventory, removeFromInventory, equipItem, placeItemInDisplay,
-   * takeItemFromDisplay.
+   * takeItemFromDisplay, advanceTime.
    *
    * @param {(method: string, info: object) => void} fn - Receives the
    *   StateManager method name and an info object with its relevant arguments
@@ -173,10 +180,20 @@ class StateManager {
    * Plugin hook: registers a migration for a version above the core SAVE_VERSION.
    * Plugins that change their own save data call this during their register() fn.
    *
+   * Throws on a version collision: a plugin migration registered at (or below)
+   * a core version would silently shadow the core migration in migrate()'s
+   * merge, so saves would skip core steps — fail loudly at registration instead.
+   *
    * @param {number} version - The save version this migration produces.
    * @param {(data: object) => void} fn - Mutates the raw parsed save object in place.
    */
   registerMigration(version, fn) {
+    if (version <= SAVE_VERSION) {
+      throw new Error(`[Gravity] registerMigration: version ${version} collides with a core migration (core SAVE_VERSION is ${SAVE_VERSION}) — use a higher version`);
+    }
+    if (version in this._extraMigrations) {
+      throw new Error(`[Gravity] registerMigration: version ${version} is already registered`);
+    }
     this._extraMigrations[version] = fn;
   }
 
@@ -247,6 +264,19 @@ class StateManager {
     // And the banked stat-point counter (added with rules.levelUp).
     parsedData.player.statPoints ??= 0;
 
+    // Check bookkeeping lives in state.checkState, not state.flags. Older
+    // saves stored it under prefixed flag keys — move those over. Done as an
+    // unconditional, idempotent normalization rather than a numbered
+    // migration: save versions can't distinguish interim builds that stamped
+    // a current version while still writing check state into flags.
+    if (!parsedData.checkState) parsedData.checkState = {};
+    for (const key of Object.keys(parsedData.flags ?? {})) {
+      if (LEGACY_CHECK_PREFIXES.some(p => key.startsWith(p))) {
+        parsedData.checkState[key] ??= parsedData.flags[key];
+        delete parsedData.flags[key];
+      }
+    }
+
     this.state = parsedData;
     this.notifyListeners();
     this._emitMutation('loadFromObject');
@@ -292,6 +322,16 @@ class StateManager {
 
   getFlag(flagName) { return this.state.flags[flagName] ?? false; }
   setFlag(flagName, value) { this.state.flags[flagName] = value; }
+
+  // ── Check bookkeeping ─────────────────────────────────────────────────────
+  // The engine-private skill-check state maps (attempt counts, resolution
+  // markers, discovery progress), keyed by the CHECK_KEYS builders. Like
+  // setFlag, writes deliberately do not notify: check state only surfaces
+  // through re-renders the check flow itself drives.
+
+  /** @returns {*} The stored check-state entry, or undefined. */
+  getCheckState(key) { return this.state.checkState[key]; }
+  setCheckState(key, value) { this.state.checkState[key] = value; }
 
   /** @returns {object|null} The loaded rules object (null before init). */
   getRules() { return this._rules; }
@@ -356,7 +396,9 @@ class StateManager {
    * registered stat handler are delegated to it instead.
    *
    * @param {string} stat - Stat or attribute name.
-   * @param {number} amount - Delta to apply (may be negative).
+   * @param {number|'full'} amount - Delta to apply (may be negative), or
+   *   'full' to top a { current, max } resource up to its cap — the recurring
+   *   refill idiom at combat boundaries and rest.
    */
   modifyPlayerStat(stat, amount) {
     // A registered stat handler fully replaces the default behaviour.
@@ -366,6 +408,46 @@ class StateManager {
       return;
     }
 
+    const p = this.state.player;
+    if (amount === 'full') {
+      const res = p.resources?.[stat];
+      if (!(res && typeof res === 'object' && 'current' in res)) return;
+      amount = res.max - res.current;
+    }
+    this._applyStatDelta(stat, amount);
+    this.notifyListeners('stats');
+    this._emitMutation('modifyPlayerStat', { stat, amount });
+  }
+
+  /**
+   * Applies several stat deltas as one mutation with a single 'stats'
+   * notification — the equip/unequip path applies a whole bonus map at once,
+   * and per-key calls would re-render the UI once per attribute. Zero deltas
+   * are skipped; stats with a registered handler still delegate to it
+   * (handlers notify themselves).
+   *
+   * @param {Object<string, number>} deltas - Stat name → delta.
+   */
+  modifyPlayerStats(deltas) {
+    let changed = false;
+    for (const [stat, amount] of Object.entries(deltas)) {
+      if (!amount) continue;
+      const handler = this._statHandlers[stat];
+      if (handler) {
+        handler(amount);
+        continue;
+      }
+      this._applyStatDelta(stat, amount);
+      changed = true;
+    }
+    if (!changed) return;
+    this.notifyListeners('stats');
+    this._emitMutation('modifyPlayerStats', { deltas });
+  }
+
+  // The delta application shared by modifyPlayerStat and modifyPlayerStats —
+  // no handler dispatch, no notification.
+  _applyStatDelta(stat, amount) {
     const p = this.state.player;
     switch (stat) {
       case 'hp':
@@ -396,8 +478,6 @@ class StateManager {
         break;
       }
     }
-    this.notifyListeners('stats');
-    this._emitMutation('modifyPlayerStat', { stat, amount });
   }
 
   /**
@@ -449,6 +529,51 @@ class StateManager {
     return (p.attributes?.[attrId] ?? 0) - worn;
   }
 
+  // Applies a point-buy bonus to a dotted player path with char creation's
+  // semantics: raising a resource cap raises the resource itself by the same
+  // amount, so invested points are felt immediately. Shared by
+  // applyCharCreation and spendStatPoint so the two can't drift.
+  _applyStatBonus(target, bonus) {
+    const p = this.state.player;
+    setByPath(p, target, (getByPath(p, target) ?? 0) + bonus);
+    const resource = target.match(/^resources\.(\w+)\.max$/)?.[1];
+    if (resource && p.resources[resource]?.current !== undefined) {
+      p.resources[resource].current += bonus;
+    }
+  }
+
+  /**
+   * Applies the character-creation choices as one sanctioned mutation: the
+   * chosen name plus the point-buy bonuses. The creation screen calls this
+   * instead of writing the player object directly.
+   *
+   * @param {string} name - The player's chosen name.
+   * @param {Array<{id: string, bonus: number}>} bonuses - Dotted
+   *   rules.charCreation.stats ids with the total bonus bought for each.
+   */
+  applyCharCreation(name, bonuses) {
+    this.state.player.name = name;
+    for (const { id, bonus } of bonuses) {
+      if (bonus > 0) this._applyStatBonus(id, bonus);
+    }
+    this.notifyListeners('stats');
+    this._emitMutation('applyCharCreation', { name });
+  }
+
+  /**
+   * A named bag for plugin-owned save data, stored under state.plugins.<id>
+   * and serialized with the save. The sanctioned alternative to plugins
+   * writing top-level state fields directly.
+   *
+   * @param {string} id - The plugin id (e.g. 'curator').
+   * @returns {object} The plugin's mutable bag (created on first access).
+   */
+  pluginState(id) {
+    if (!this.state.plugins) this.state.plugins = {};
+    if (!this.state.plugins[id]) this.state.plugins[id] = {};
+    return this.state.plugins[id];
+  }
+
   /**
    * Spends one banked level-up stat point. Two target forms:
    * - A declared attribute id (e.g. 'perception'): +1 to the attribute,
@@ -456,9 +581,9 @@ class StateManager {
    *   playerBaseAttribute) already sits at the optional per-attribute cap
    *   (customAttributes[].max).
    * - A dotted rules.charCreation.stats id (e.g. 'resources.hp.max'): applies
-   *   that entry's bonusPerPoint with char creation's semantics — raising a
-   *   resource cap raises the resource itself by the same amount. This keeps
-   *   level-up point-buy covering the same stats as character creation.
+   *   that entry's bonusPerPoint with char creation's semantics (see
+   *   _applyStatBonus). This keeps level-up point-buy covering the same
+   *   stats as character creation.
    * Always refused when no points are banked or the target isn't declared.
    *
    * @param {string} target - A declared attribute id or charCreation.stats id.
@@ -470,12 +595,7 @@ class StateManager {
     if (target.includes('.')) {
       const decl = (this._rules.charCreation?.stats ?? []).find(s => s.id === target);
       if (!decl) return false;
-      const bonus = decl.bonusPerPoint ?? 1;
-      setByPath(p, target, (getByPath(p, target) ?? 0) + bonus);
-      const resource = target.match(/^resources\.(\w+)\.max$/)?.[1];
-      if (resource && p.resources[resource]?.current !== undefined) {
-        p.resources[resource].current += bonus;
-      }
+      this._applyStatBonus(target, decl.bonusPerPoint ?? 1);
     } else {
       if (!(p.attributes && target in p.attributes)) return false;
       const decl = (this._rules.customAttributes ?? []).find(a => a.id === target);
@@ -604,18 +724,6 @@ class StateManager {
       : 0;
     return invCount + equipCount;
   }
-
-  /**
-   * Returns the total quantity of the item in the player's possession
-   * (includes both unequipped inventory stacks and equipped slots).
-   *
-   * @param {string} itemId - The item identifier.
-   * @returns {number} The total count.
-   */
-  getPlayerItemCount(itemId) {
-    return this.countPlayerItem(itemId);
-  }
-
 
   /**
    * @param {string} chestId - The chest identifier (from a manage_chest action).
@@ -753,7 +861,6 @@ class StateManager {
    */
   subscribe(callback) { this.listeners.push(callback); }
   notifyListeners(hint) { this.listeners.forEach(cb => cb(this.state, hint)); }
-  forceUpdate(hint) { this.notifyListeners(hint); }
 }
 
 export const gameState = new StateManager();

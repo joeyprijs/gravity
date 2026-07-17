@@ -3,6 +3,10 @@
   "title": "Gravity Scene Definition",
   "type": "object",
   "properties": {
+    "id": {
+      "type": "string",
+      "description": "The scene's manifest key. scripts/generate-manifest.js indexes the file under this id (falling back to the filename stem when absent)."
+    },
     "title": {
       "type": "string",
       "description": "Visual header name of the scene. Takes precedence over 'name'."

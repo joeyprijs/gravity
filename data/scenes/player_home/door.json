@@ -1,4 +1,5 @@
 {
+  "id": "home_door",
   "name": "Front Door",
   "region": "player_home",
   "mapDefinitions": {

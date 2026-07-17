@@ -285,7 +285,7 @@ body {
   font-weight: 400;
   line-height: 22px;
   text-align: left;
-  padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2);
+  padding: calc(var(--spacing) * 2);
   transition: all 0.3s ease;
 }
 
@@ -359,12 +359,6 @@ button.card:disabled {
 
 .card--completed {
   opacity: 0.8;
-}
-
-/* Compact card — actionless items (keepsakes, key items): title and stats
-   only, slimmer padding, so collections stay scannable. */
-.card--compact {
-  padding: var(--spacing) calc(var(--spacing) * 2);
 }
 
 /* Collapsible section headings: the whole heading is the toggle. Restates
@@ -461,7 +455,6 @@ button.section-toggle--collapsed .section-toggle__label::before {
    are banked). The bottom margin matches the panel-section gap so the
    Character section sits at the same rhythm below it. */
 .attr-list__points {
-  font-size: var(--font-sm);
   color: var(--accent-color);
   padding: 0 calc(var(--spacing) * 0.5);
   margin-bottom: calc(var(--spacing) * 3);
@@ -596,11 +589,13 @@ button.section-toggle--collapsed .section-toggle__label::before {
   margin-inline: auto;
 }
 
-/* Let the opening of the tale breathe instead of hugging the panel edge.
+/* Let the opening of the tale breathe instead of hugging the panel edge —
+   fluidly: the gap tracks the viewport height so small windows don't spend
+   half their narrative space on air, capped at the roomy full-screen value.
    Margin, not padding: the scene--new accent rail spans the scene's box,
    and must start at the title, not in the empty space above it. */
 .scene:first-child {
-  margin-top: calc(var(--spacing) * 5);
+  margin-top: clamp(var(--spacing), 4vh, calc(var(--spacing) * 5));
 }
 
 /* Everything that appeared since the player's last action carries a slim

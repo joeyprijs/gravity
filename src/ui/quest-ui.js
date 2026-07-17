@@ -1,4 +1,3 @@
-import { gameState } from "../core/state.js";
 import { createElement, buildCard } from "../core/utils.js";
 import { CSS, EL, MISSION_STATUS } from "../core/config.js";
 
@@ -24,7 +23,7 @@ export class QuestUI {
     });
 
     for (const [mId, mData] of Object.entries(this.engine.data.missions)) {
-      const status = gameState.getMissionStatus(mId);
+      const status = this.engine.state.getMissionStatus(mId);
       if (status === MISSION_STATUS.ACTIVE) {
         activeList.push(buildQuestItem(mData));
       } else if (status === MISSION_STATUS.COMPLETE) {

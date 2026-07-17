@@ -1,4 +1,5 @@
 {
+  "id": "home_living_room",
   "name": "Living Room",
   "region": "player_home",
   "mapDefinitions": {

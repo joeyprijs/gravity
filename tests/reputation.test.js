@@ -40,7 +40,7 @@ const TEST_ITEMS = {
 };
 
 beforeEach(() => {
-  registerCuratorState(TEST_ITEMS);
+  registerCuratorState(gameState, TEST_ITEMS);
   gameState.init(TEST_RULES, TEST_ITEMS);
 });
 
@@ -53,7 +53,7 @@ test('first-time acquisition: awards reputation to player and museum', () => {
 
   assert.equal(gameState.getPlayer().attributes.reputation, 25);
   assert.equal(getMuseumReputation(), 25); // museumReputation permanent = 25, display = 0
-  assert.deepEqual(gameState.state.obtainedItems, ['relic_crown']);
+  assert.deepEqual(gameState.pluginState('curator').obtainedItems, ['relic_crown']);
 });
 
 test('subsequent acquisitions: does not award duplicate reputation', () => {
@@ -93,7 +93,7 @@ test('exhibiting relics: dynamically updates museum reputation', () => {
   assert.equal(getMuseumReputation(), 35);
 });
 
-test('migration v3 to v4: initializes stats and populates obtainedItems from existing items', () => {
+test('migration: a v3 save gains the core clock (v4) and curator fields (v5)', () => {
   const legacySave = {
     saveVersion: 3,
     player: {
@@ -125,12 +125,17 @@ test('migration v3 to v4: initializes stats and populates obtainedItems from exi
 
   gameState.loadFromObject(legacySave);
 
-  assert.equal(gameState.state.saveVersion, 4);
-  assert.equal(gameState.state.museumReputation, 0);
-  
+  assert.equal(gameState.state.saveVersion, 5);
+  assert.equal(gameState.pluginState('curator').museumReputation, 0);
+
+  // The core v4 migration must run too — before the collision guard, the
+  // curator's migration (then also registered at 4) silently shadowed it.
+  assert.deepEqual(gameState.state.time, { ticks: 0 });
+  assert.deepEqual(gameState.state.timers, []);
+
   // Should have populated obtainedItems from legacy inventory, equipment, and displays
-  assert.ok(gameState.state.obtainedItems.includes('relic_shard'));
-  assert.ok(gameState.state.obtainedItems.includes('rusty_sword'));
-  assert.ok(gameState.state.obtainedItems.includes('relic_crown'));
-  assert.equal(gameState.state.obtainedItems.length, 3);
+  assert.ok(gameState.pluginState('curator').obtainedItems.includes('relic_shard'));
+  assert.ok(gameState.pluginState('curator').obtainedItems.includes('rusty_sword'));
+  assert.ok(gameState.pluginState('curator').obtainedItems.includes('relic_crown'));
+  assert.equal(gameState.pluginState('curator').obtainedItems.length, 3);
 });

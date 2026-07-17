@@ -1,4 +1,3 @@
-import { gameState } from "../core/state.js";
 import { createElement, buildSceneDescription } from "../core/utils.js";
 import { EL, CSS } from "../core/config.js";
 
@@ -8,14 +7,14 @@ import { EL, CSS } from "../core/config.js";
 // subsystems can append content to the correct container.
 export class NarrativeLog {
   // t: locale lookup (engine.t) used when rebuilding scene descriptions on
-  // save restore — passed in explicitly so this module never reaches back
-  // into the engine through globals.
-  constructor(t = null) {
+  // save restore; state: the engine's StateManager (persisted log). Both are
+  // passed in explicitly so this module never reaches back through globals.
+  constructor(t = null, state = null) {
     this.t = t;
+    this.state = state;
     this.el = document.getElementById(EL.SCENE_NARRATIVE);
     this.currentSceneEl = null;
     this._lastLogType = null;
-    this.isGameStart = true;
     this._scrollRaf = undefined;
 
     // Flush scene--new from log entries before each interactive card
@@ -76,7 +75,7 @@ export class NarrativeLog {
     this._lastLogType = type;
     this.currentSceneEl.appendChild(p);
     this.scrollToBottom();
-    if (persist) gameState.appendLog({ type, message, variant });
+    if (persist) this.state?.appendLog({ type, message, variant });
   }
 
   /**

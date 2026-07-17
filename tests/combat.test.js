@@ -31,26 +31,29 @@ const ap    = () => gameState.getPlayer().resources.ap.current;
 function makeMockEngine(items = {}) {
   const engine = {
     data: { items, npcs: {} },
+    state: gameState,
     t: (key) => key,
     log: () => {},
-    emit: () => {},
-    on: () => {},
     scene: { reset: () => {} },
     openScene: () => {},
     currentSceneEl: { appendChild: () => {} },
     renderScene: () => {},
+    // Mode machine — mirrors the real engine's facades over this.mode.
+    mode: 'scene',
+    setMode(mode) { this.mode = mode; },
+    get inCombat()   { return this.mode === 'combat'; },
+    get isGameOver() { return this.mode === 'gameover'; },
+    snapshotNavigation() {
+      const sceneId = gameState.getCurrentSceneId();
+      const mode = this.mode;
+      return () => gameState.getCurrentSceneId() !== sceneId || this.mode !== mode;
+    },
     // Minimal runActions: handles set_flag so onVictory pipelines work in tests.
     runActions(actions) {
       for (const a of (actions || [])) {
         if (a.type === 'set_flag') gameState.setFlag(a.flag, a.value);
       }
     },
-  };
-  // _spendAP spends AP and delegates the apSpent event — mirrors engine.js behaviour.
-  engine._spendAP = (cost) => {
-    gameState.modifyPlayerStat('ap', -cost);
-    engine.emit('player:apSpent', { remaining: gameState.getPlayer().resources.ap.current });
-    return true;
   };
   return engine;
 }
@@ -74,7 +77,13 @@ function makeEnemy({ hp = 50, ac = 5, ap = 3, initRoll = 0 } = {}) {
 function makeCS(items = {}) {
   const engine = makeMockEngine(items);
   const cs = new CombatSystem(engine);
-  cs.renderer = { render: () => {} };
+  cs.renderer = { render: () => {}, renderGameOver: () => {} };
+  // Mirrors engine.js _spendAP: spend, then hand the spend to the combat system.
+  engine._spendAP = (cost) => {
+    gameState.modifyPlayerStat('ap', -cost);
+    cs.notePlayerSpentAP(cost);
+    return true;
+  };
   return cs;
 }
 
@@ -206,7 +215,7 @@ test('playerAttack: hit reduces enemy HP and costs AP', () => {
   Math.random = () => 0.9999;
 
   const cs = makeCS();
-  cs.inCombat = true;
+  cs.engine.setMode('combat');
   const enemy = makeEnemy({ hp: 100, ac: 5 });
   cs.enemies = [enemy];
 
@@ -227,7 +236,7 @@ test('playerAttack: miss leaves enemy HP unchanged, still costs AP', () => {
   Math.random = () => 0;
 
   const cs = makeCS();
-  cs.inCombat = true;
+  cs.engine.setMode('combat');
   const enemy = makeEnemy({ hp: 50, ac: 100 });
   cs.enemies = [enemy];
 
@@ -247,7 +256,7 @@ test('playerAttack: calls endCombat when last enemy is defeated', () => {
   Math.random = () => 0.9999; // always hit
 
   const cs = makeCS();
-  cs.inCombat = true;
+  cs.engine.setMode('combat');
   const enemy = makeEnemy({ hp: 1, ac: 1 }); // 1 HP, dies on first hit
   cs.enemies = [enemy];
 
@@ -269,7 +278,7 @@ test('enemyTurn: phase "after" — enemy with lower init than player attacks', (
   Math.random = () => 0.9999; // always hit
 
   const cs = makeCS();
-  cs.inCombat = true;
+  cs.engine.setMode('combat');
   cs.playerInit = 15;
 
   const weapon = makeWeapon({ actionPoints: 1, damageRoll: '1d4' });
@@ -288,7 +297,7 @@ test('enemyTurn: phase "after" — enemy with lower init than player attacks', (
 
 test('enemyTurn: phase "after" — enemy with higher init than player does NOT attack', () => {
   const cs = makeCS();
-  cs.inCombat = true;
+  cs.engine.setMode('combat');
   cs.playerInit = 5;
 
   const enemy = makeEnemy({ hp: 10, ac: 1, ap: 1, initRoll: 15 }); // initRoll(15) > playerInit(5)
@@ -305,7 +314,7 @@ test('enemyTurn: phase "before" — enemy with higher init than player attacks',
   Math.random = () => 0.9999;
 
   const cs = makeCS();
-  cs.inCombat = true;
+  cs.engine.setMode('combat');
   cs.playerInit = 5;
 
   const weapon = makeWeapon({ actionPoints: 1, damageRoll: '1d4' });
@@ -324,7 +333,7 @@ test('enemyTurn: phase "before" — enemy with higher init than player attacks',
 
 test('enemyTurn: dead enemy is skipped even if phase matches', () => {
   const cs = makeCS();
-  cs.inCombat = true;
+  cs.engine.setMode('combat');
   cs.playerInit = 15;
 
   const enemy = makeEnemy({ hp: 0, ac: 1, ap: 3, initRoll: 5 }); // dead
@@ -340,7 +349,7 @@ test('enemyTurn: dead enemy is skipped even if phase matches', () => {
 
 test('endCombat: runs onVictory action pipeline on victory', () => {
   const cs = makeCS();
-  cs.inCombat = true;
+  cs.engine.setMode('combat');
   cs.enemies = [makeEnemy({ hp: 0 })]; // already defeated
   cs.originOption = { onVictory: [{ type: 'set_flag', flag: 'boss_defeated', value: true }] };
 
@@ -350,25 +359,17 @@ test('endCombat: runs onVictory action pipeline on victory', () => {
   assert.equal(gameState.getFlag('boss_defeated'), true, 'onVictory actions should run after winning');
 });
 
-test('endCombat: inCombat is false and isGameOver is true after defeat', () => {
-  // Full endCombat(false) requires a DOM (game-over screen render) — we verify
-  // the state transitions here and rely on the code structure for the setFlag
-  // check: it lives inside `if (isVictory)` so the defeat branch never reaches it.
+test('endCombat: defeat transitions the mode machine to gameover', () => {
   const cs = makeCS();
-  cs.inCombat = true;
+  cs.engine.setMode('combat');
   cs.enemies = [makeEnemy()];
   cs.originOption = {};
 
-  // Replace endCombat with a thin shim that exercises only the state logic
-  const original = CombatSystem.prototype.endCombat;
-  cs.endCombat = function(isVictory) {
-    this.inCombat = false;
-    if (!isVictory) this.isGameOver = true;
-  };
   cs.endCombat(false);
 
   assert.equal(cs.inCombat, false);
   assert.equal(cs.isGameOver, true);
+  assert.equal(cs.engine.mode, 'gameover');
 });
 
 test('enemyTurn: calls endCombat(false) when player HP hits 0', () => {
@@ -379,7 +380,7 @@ test('enemyTurn: calls endCombat(false) when player HP hits 0', () => {
   gameState.modifyPlayerStat('hp', -(maxHp() - 1));
 
   const cs = makeCS();
-  cs.inCombat = true;
+  cs.engine.setMode('combat');
   cs.playerInit = 15;
 
   const weapon = makeWeapon({ actionPoints: 1, damageRoll: '1d4' });
@@ -405,7 +406,7 @@ test('endCombat: victory re-render skips the scene autoAttack', () => {
   const rendered = [];
   cs.engine.renderScene = (sceneId, opts) => rendered.push({ sceneId, opts });
   gameState.setCurrentSceneId('corridor');
-  cs.inCombat = true;
+  cs.engine.setMode('combat');
   cs.enemies = [makeEnemy({ hp: 0 })];
   cs.originOption = { onVictory: [] };
 
@@ -419,9 +420,9 @@ test('endCombat: no re-render when onVictory opened a dialogue', () => {
   const cs = makeCS();
   let rendered = 0;
   cs.engine.renderScene = () => rendered++;
-  cs.engine.runActions = () => { cs.engine.inDialogue = true; };
+  cs.engine.runActions = () => { cs.engine.setMode('dialogue'); };
   gameState.setCurrentSceneId('corridor');
-  cs.inCombat = true;
+  cs.engine.setMode('combat');
   cs.enemies = [makeEnemy({ hp: 0 })];
   cs.originOption = { onVictory: [{ type: 'dialogue', npc: 'stranger' }] };
 
@@ -445,7 +446,7 @@ test('remainingTurnBudget: uncapped budget is current AP; maxPerTurn caps the tu
 
 test('round end: default economy fully recharges the pool (classic behavior)', () => {
   const cs = makeCS();
-  cs.inCombat = true;
+  cs.engine.setMode('combat');
   cs.enemies = [];
   gameState.modifyPlayerStat('ap', -2);
   cs.enemyTurn('after');
@@ -454,7 +455,7 @@ test('round end: default economy fully recharges the pool (classic behavior)', (
 
 test('round end: refillPerRound number recharges partially, 0 not at all, minPerTurn floors', () => {
   const cs = makeCS();
-  cs.inCombat = true;
+  cs.engine.setMode('combat');
   cs.enemies = [];
 
   gameState.modifyPlayerStat('ap', -3); // drained to 0
@@ -474,7 +475,7 @@ test('round end: refillPerRound number recharges partially, 0 not at all, minPer
 
 test('round end resets the turn budget for the new turn', () => {
   const cs = makeCS();
-  cs.inCombat = true;
+  cs.engine.setMode('combat');
   cs.enemies = [];
   cs.engine.data.rules = { apEconomy: { maxPerTurn: 2 } };
   cs.apSpentThisTurn = 2;
@@ -485,7 +486,7 @@ test('round end resets the turn budget for the new turn', () => {
 
 test('endCombat victory: classic economy restores AP to max at the boundary', () => {
   const cs = makeCS();
-  cs.inCombat = true;
+  cs.engine.setMode('combat');
   cs.enemies = [makeEnemy({ hp: 0 })];
   gameState.modifyPlayerStat('ap', -2);
   cs.endCombat(true);
@@ -495,7 +496,7 @@ test('endCombat victory: classic economy restores AP to max at the boundary', ()
 test('endCombat victory: refillOnCombatStart false carries the spent pool out', () => {
   const cs = makeCS();
   cs.engine.data.rules = { apEconomy: { refillOnCombatStart: false } };
-  cs.inCombat = true;
+  cs.engine.setMode('combat');
   cs.enemies = [makeEnemy({ hp: 0 })];
   gameState.modifyPlayerStat('ap', -2);
   cs.endCombat(true);
@@ -517,7 +518,7 @@ test('playerAttack: the weapon\'s attackAttribute joins the hit roll and breakdo
   });
   const cs = makeCS();
   cs.engine.t = (key, p) => p ? `${key}:${JSON.stringify(p)}` : key;
-  cs.inCombat = true;
+  cs.engine.setMode('combat');
   const enemy = makeEnemy();
   cs.enemies = [enemy];
 

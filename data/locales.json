@@ -17,6 +17,10 @@
         "label": "Armor Class (AC)",
         "description": "+1 AC per point"
       },
+      "initiative": {
+        "label": "Initiative",
+        "description": "+1 Initiative per point, acts earlier in combat"
+      },
       "perception": {
         "label": "Perception",
         "description": "+1 Perception per point"
@@ -131,12 +135,12 @@
     "Flavour": "Flavour"
   },
   "itemStats": {
-    "actionPoints": "AP: {value}",
+    "actionPoints": "Action Points: {value}",
     "hit": "Bonus: {attribute} {value}",
     "damageRoll": "Damage: {value}",
     "healingAmount": "Healing: {value}",
-    "apRestore": "Restores AP: {value}",
-    "armorClassBonus": "Armor: +{value}",
+    "apRestore": "Restores Action Points: {value}",
+    "armorClassBonus": "Armor Class: +{value}",
     "reputation": "Reputation: {value}",
     "attributeBonus": "{attribute}: {value}",
     "modifyResource": "{resource}: {value}"
@@ -231,8 +235,10 @@
     "attackMiss": "You attack with {weapon}: {roll} ({breakdown}) vs AC {ac}, miss!",
     "enemyTakesDamage": "{target} takes {damage} damage ({dice}: {rollStr}).",
     "enemyAttack": "{name} attacks with {weapon} {times}, {parts}.",
-    "enemyAttackHits": "{count} hit{s}: {rolls}",
-    "enemyAttackMisses": "{count} miss{es}: {rolls}",
+    "enemyAttackHits": "{count} hits: {rolls}",
+    "enemyAttackHitsOne": "{count} hit: {rolls}",
+    "enemyAttackMisses": "{count} misses: {rolls}",
+    "enemyAttackMissesOne": "{count} miss: {rolls}",
     "enemyAttackRoll": "{roll} ({breakdown}) vs AC {ac}",
     "playerTakesDamage": "You take {damage} damage ({dice}: {rolls})!",
     "playerTakesNoDamage": "You take 0 damage.",

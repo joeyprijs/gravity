@@ -1,9 +1,9 @@
 # Gravity
 
+[![CI](https://github.com/joeyprijs/gravity/actions/workflows/test.yml/badge.svg)](https://github.com/joeyprijs/gravity/actions/workflows/test.yml)
 [![License: Unlicense](https://img.shields.io/badge/License-Unlicense-blue.svg)](LICENSE)
-[![Dependencies: None](https://img.shields.io/badge/Dependencies-Zero-success.svg)](#tech-stack)
-[![Platform: Browser](https://img.shields.io/badge/Platform-Browser--Native-cyan.svg)](#running-locally)
-[![Tests: Node Native](https://img.shields.io/badge/Tests-Node--Native-emerald.svg)](#running-locally)
+[![Dependencies: None](https://img.shields.io/badge/Dependencies-Zero-success.svg)](#quick-start)
+[![Platform: Browser](https://img.shields.io/badge/Platform-Browser--Native-cyan.svg)](#quick-start)
 
 A browser-native, zero-dependency, data-driven text RPG engine. Define your entire world — scenes, branching dialogue, characters, quests, items, rules, and maps — in JSON, with no scripting required.
 
@@ -13,110 +13,53 @@ A browser-native, zero-dependency, data-driven text RPG engine. Define your enti
 
 > [!NOTE]
 > **🤖 100% AI-Generated Codebase**
-> This entire codebase (the browser-based text RPG engine, the reactive state manager, the full-screen world map, and all companion unit tests) was fully researched, architected, written, documented, and optimized by Artificial Intelligence (specifically **Claude** and **Gemini**). A human served as the Project Manager, providing direction and structural reviews, but did not write a single line of the code. It is released as completely free and unencumbered public domain code.
+> This entire codebase — the engine, the reactive state manager, the world map, the plugin system, the test suites, and every refactor since — was researched, architected, written, documented, and reviewed by Artificial Intelligence (**Claude** and **Gemini**). A human served as the Project Manager, providing direction and structural reviews, but did not write a single line of the code. It is released as completely free and unencumbered public domain code.
 
 ---
 
 ## Table of Contents
 
-- [Core Features](#core-features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Running Locally](#running-locally)
-- [Core Concepts](#core-concepts)
-- [The Player UI](#the-player-ui)
-- [Content Authoring Reference](#content-authoring-reference)
-  - [Manifest — `data/index.json`](#manifest--dataindexjson)
+- [What You Get](#what-you-get)
+- [Quick Start](#quick-start)
+- [How a Game Works](#how-a-game-works)
+- [Adding Content](#adding-content)
+- [Authoring Reference](#authoring-reference)
   - [Rules — `data/rules.json`](#rules--datarulesjson)
-  - [Flags — `data/flags/`](#flags--dataflags)
   - [Conditions (Logic Gates)](#conditions-logic-gates)
   - [Scenes](#scenes)
   - [NPCs & Enemies](#npcs--enemies)
   - [Items](#items)
-  - [Loot Tables](#loot-tables)
-  - [Missions & Quests](#missions--quests)
+  - [Loot Tables, Flags, Missions](#loot-tables-flags-missions)
+- [The Player UI](#the-player-ui)
 - [Validation](#validation)
 - [Plugin API](#plugin-api)
-- [Further Documentation](#further-documentation)
+- [Architecture at a Glance](#architecture-at-a-glance)
+- [Testing](#testing)
 - [License](#license)
 
 ---
 
-## Core Features
+## What You Get
 
-*   **Zero-Dependency Vanilla JS** — Runs natively in any modern browser via ES Modules. No bundlers, no compilers, no npm install.
-*   **Data-Driven Everything** — Scenes, items, enemies, dialogue, quests, rules, even the sidebar tabs are defined in static JSON. Authoring a game requires no JavaScript.
+*   **Zero-Dependency Vanilla JS** — Runs natively in any modern browser via ES Modules. No bundlers, no compilers, no `npm install`.
+*   **Data-Driven Everything** — Scenes, items, enemies, dialogue, quests, rules, even the sidebar tabs are static JSON. Authoring a game requires no JavaScript.
 *   **One Resolution Mechanic** — d20 + attribute modifier vs DC, everywhere: scene checks, dialogue persuasion, combat attacks. No parallel dice systems.
-*   **Outcome-Tiered Skill Checks** — Margin-based tiers (critical / success / partial / failure), one-shot fail-forward gambles, attempt budgets with authored exhaustion routes, passive checks, retry costs, and free narrative beats. The full authoring guide is [`docs/CHECKS.md`](docs/CHECKS.md).
+*   **Outcome-Tiered Skill Checks** — Margin-based tiers (critical / success / partial / failure), one-shot fail-forward gambles, attempt budgets with authored exhaustion routes, passive checks, retry costs, and free narrative beats. Full authoring guide: [`docs/CHECKS.md`](docs/CHECKS.md).
 *   **Turn-Based Combat** — Initiative order, HP / Armor Class / Action Point budgets, multi-enemy encounters, auto-combat scene entries, and a configurable AP economy (`rules.apEconomy`).
-*   **Character Progression** — Pre-game point-buy character creation, XP levels that bank spendable stat points, weapons governed by a wielder attribute (`attackAttribute`), and equipment that raises any attribute (`attributeBonuses`).
+*   **Character Progression** — Point-buy character creation, XP levels that bank spendable stat points, weapons governed by a wielder attribute (`attackAttribute`), and equipment that raises any attribute (`attributeBonuses`).
 *   **Branching Dialogue & Merchants** — Conversation trees with skill-checked responses, item and quest rewards, and stateful merchant stock with per-NPC pricing.
 *   **A World Clock (opt-in)** — Player actions advance a deterministic tick counter; days and named segments derive from rules, timers fire quiet action pipelines, and conditions can read `time` / `day` / `segment`. No wall clock, fully save-safe.
-*   **Interactive World Map** — A scaled minimap in the sidebar tab plus a full-screen scrollable coordinate map centered on the player.
-*   **Localisation** — Every player-facing string resolves through locale files; games can ship multiple languages and the engine matches the browser's preference.
+*   **Interactive World Map** — A scaled minimap in the sidebar plus a full-screen scrollable coordinate map centered on the player.
+*   **Localisation** — Every player-facing string resolves through locale files; the engine matches the browser's language, and list/plural grammar goes through `Intl`, never through code.
 *   **Load-Time Validation** — The engine validates all game data on boot and prints authoring mistakes (dangling IDs, missing locale keys, unreachable UI) to the console, grouped per entity.
-*   **Robust Save Migration** — Saves are versioned, Base64-encoded state snapshots downloaded as files; a migration chain keeps older saves playable on newer engine versions.
+*   **Versioned Saves with Migrations** — Saves are Base64-encoded state snapshots downloaded as files; a guarded migration chain (core + plugin) keeps older saves playable on newer engine versions.
+*   **A Generated Manifest** — Content files register themselves: drop a JSON file in `data/`, run one script, done. CI fails if the manifest drifts from the data tree.
+
+The shipped demo under `data/` is a deliberate kitchen sink — it exercises every feature above and doubles as the reference for all of them.
 
 ---
 
-## Tech Stack
-
-| Component | Choice |
-| :--- | :--- |
-| **Language** | Vanilla JavaScript (ES Modules) |
-| **Markup & Layout** | HTML5 |
-| **Styles** | Plain CSS3 (custom properties) |
-| **Testing** | Node.js native test runner (`node --test`) |
-
----
-
-## Project Structure
-
-```
-gravity/
-├── index.html               # The game's single HTML entry point
-├── css/
-│   └── styles.css           # All styling, one file
-├── src/
-│   ├── core/
-│   │   ├── engine.js        # Orchestrator: boot, registries, delegate API, event bus
-│   │   ├── state.js         # Reactive StateManager singleton + save/load & migrations
-│   │   ├── config.js        # CSS/element registries, action names, flag key builders
-│   │   ├── i18n.js          # Browser-language resolution for manifest locales
-│   │   ├── validate.js      # Load-time game-data validation
-│   │   └── utils.js         # DOM builders (cards, rows, toggles) & shared helpers
-│   ├── systems/
-│   │   ├── scene.js         # Scene rendering, options, item discovery
-│   │   ├── combat.js        # Turn-based combat + its renderer
-│   │   ├── dialogue.js      # Conversation trees & merchant trade
-│   │   ├── skill-checks.js  # d20 checks, outcome tiers, attempt bookkeeping (pure)
-│   │   ├── condition.js     # Condition AST evaluator (pure)
-│   │   ├── dice.js          # roll() and NdF±M damage parsing (pure)
-│   │   ├── time.js          # World-clock ticks, segments, timers
-│   │   ├── actions.js       # Built-in action pipeline handlers
-│   │   ├── quests.js        # Mission lifecycle
-│   │   └── narrative.js     # The chronological story log
-│   ├── ui/
-│   │   ├── ui.js            # UIManager: tab construction, sheet, top bar, save/load
-│   │   ├── inventory-ui.js  # Inventory & equipped sections
-│   │   ├── quest-ui.js      # Active & completed quest panels
-│   │   ├── chest-ui.js      # Chest deposit/withdraw panel
-│   │   └── combat-ui.js     # Combat attack/end-turn controls & game-over screen
-│   ├── world/
-│   │   └── map.js           # Minimap + full-screen world map
-│   ├── screens/
-│   │   └── char-creation.js # Pre-game point-buy screen
-│   └── plugins/
-│       ├── curator.js       # Museum curation & reputation (reference plugin)
-│       └── curator/locales/ # Plugin locale files
-├── tests/                   # Node unit tests (npm test) + smoke.html (browser UI test)
-├── schemas/                 # JSON Schemas for items, scenes, and NPCs
-└── data/                    # The shipped demo game: scenes, items, NPCs, rules, locales
-```
-
----
-
-## Running Locally
+## Quick Start
 
 No compile, build, or install steps. ES Modules need an HTTP origin, so serve the directory with any static server:
 
@@ -129,12 +72,12 @@ npx serve .
 ```
 
 *   **Play:** open `http://localhost:3000`.
-*   **Test:** `npm test` (Node's native test runner; no dependencies).
-*   **UI smoke test:** open `http://localhost:3000/tests/smoke.html` — boots the real game in the browser and drives the UI through ~a dozen assertions (the title reports `SMOKE: PASS/FAIL`).
+*   **Test:** `npm test` — Node's native test runner, no dependencies, 350+ tests.
+*   **UI smoke test:** open `http://localhost:3000/tests/smoke.html` — boots the real game and drives the UI through its assertions; the tab title reports `SMOKE: PASS/FAIL`.
 
 ---
 
-## Core Concepts
+## How a Game Works
 
 The engine runs on a unidirectional loop of three ideas:
 
@@ -142,48 +85,37 @@ The engine runs on a unidirectional loop of three ideas:
 [ Conditions (Gates) ] ➔ show/hide ➔ [ Options & Scenes ] ➔ trigger ➔ [ Actions (Mutations) ] ➔ write ➔ [ Flags & State ] ➔ feed [ Conditions ]
 ```
 
-*   **Flags (State):** persisted key-value facts about what the player has done (`door_unlocked: true`).
+*   **Flags (State):** persisted key→value facts about what the player has done (`door_unlocked: true`).
 *   **Conditions (Gates):** logic trees over flags, items, gold, level, attributes, quests, and time that show or hide options, dialogue paths, and description variants.
 *   **Actions (Mutations):** ordered pipelines executed when a choice lands — loot, combat, navigation, flag writes, timers.
 
-For boot flow, module boundaries, state contracts, events, and the full plugin surface, read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+Everything else — checks, combat, dialogue, the clock — is built from these three. For boot flow, module boundaries, state contracts, and the full plugin surface, read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ---
 
-## The Player UI
+## Adding Content
 
-The game renders as three panels, each with one job:
+Content files live under `data/` and the manifest (`data/index.json`) indexes them. **You never edit the manifest's file maps by hand:**
 
-*   **Left — the player.** Tabs generated from `rules.tabs`: the character **Sheet** (stats and skills as collapsible sections), **Inventory**, **Quests**, **Map**, and **Options** (save / load / restart).
-*   **Center — the story.** The narrative log, with a pinned status bar on top showing HP / AC / AP / Gold, any `headerResources`, and the world clock.
-*   **Right — the interactions.** The current scene's options, skill checks, dialogue responses, or combat controls.
+```bash
+# 1. Drop a new file into the data tree
+$EDITOR data/items/moon_pendant.json
 
-Tabs are data-driven: each entry names a locale key and optionally a `widget` (`attributes`, `map`, or `options`). **The save/load/restart buttons only exist inside an `options` widget tab** — omit it and players cannot save (the validator warns).
-
----
-
-## Content Authoring Reference
-
-The shipped demo under `data/` exercises every feature and is the best reference; the shapes below are the essentials.
-
-### Manifest — `data/index.json`
-
-The central registry. Every asset a game uses must be listed here:
-
-```json
-{
-  "worldMapSize": { "width": 3000, "height": 2000 },
-  "rules": "data/rules.json",
-  "flags":    { "dungeon":        "data/flags/dungeon.json" },
-  "scenes":   { "dungeon_start":  "data/scenes/dungeon/start.json" },
-  "items":    { "rusty_sword":    "data/items/rusty_sword.json" },
-  "npcs":     { "goblin_guard":   "data/npcs/goblin_guard.json" },
-  "missions": { "escape_dungeon": "data/missions/escape_dungeon.json" },
-  "tables":   { "basic_loot":     "data/tables/basic_loot.json" }
-}
+# 2. Regenerate the manifest
+node scripts/generate-manifest.js
 ```
 
-It may also declare `locales` + `defaultLanguage` (localisation) and `plugins` (see [Plugin API](#plugin-api)).
+Each entry's key is the file's top-level `"id"` field when present, otherwise its filename stem (`moon_pendant`). Scenes declare explicit ids (their keys carry region prefixes, like `home_kitchen`). CI runs `generate-manifest.js --check`, so a stale manifest fails the build instead of shipping.
+
+Hand-authored manifest fields — `rules`, `locales`, `plugins`, `regions`, `worldMapSize` — are preserved untouched by the generator.
+
+**Scaling note:** each category also accepts a *bundle* (a single JSON file, or an array of them, holding many `id → definition` entries), so a game with thousands of scenes boots in a handful of requests instead of one per file. The demo uses the per-file form because it diffs better.
+
+---
+
+## Authoring Reference
+
+The shipped demo exercises every feature and is the best reference; JSON Schemas for items, scenes, and NPCs live in [`schemas/`](schemas/). The shapes below are the essentials.
 
 ### Rules — `data/rules.json`
 
@@ -219,7 +151,7 @@ Player defaults, attributes, progression, economy, and the UI tabs:
   "charCreation": {
     "pointBudget": 3,
     "stats": [
-      { "id": "resources.hp.max",     "localeKey": "maxHp",      "bonusPerPoint": 2, "min": 0 },
+      { "id": "resources.hp.max",      "localeKey": "maxHp",      "bonusPerPoint": 2, "min": 0 },
       { "id": "attributes.perception", "localeKey": "perception", "bonusPerPoint": 1, "min": 0 }
     ]
   },
@@ -242,17 +174,6 @@ Notes:
 *   `customAttributes` become skills: rollable in checks, readable in conditions, point-buyable at creation, and (with `levelUp.statPoints`) improvable on level-up from the Sheet, capped by `max`.
 *   `skillRetry` makes retrying a failed check cost a resource; `headerResources` surfaces custom resources in the status bar and the Sheet. Both optional — see [`docs/CHECKS.md`](docs/CHECKS.md).
 *   `rules.time` (opt-in) enables the world clock, and `rules.apEconomy` tunes AP refill/spend behavior; both are documented in [`docs/CHECKS.md`](docs/CHECKS.md).
-
-### Flags — `data/flags/`
-
-Declared per area, merged into one flat namespace at boot:
-
-```json
-{
-  "door_unlocked": false,
-  "defeated_goblin_guard": false
-}
-```
 
 ### Conditions (Logic Gates)
 
@@ -284,10 +205,11 @@ Numeric leaves accept a bare number (*at least*) or an operator object: `at_leas
 
 ### Scenes
 
-A location: conditional description blocks, options, skill checks, and map placement:
+A location: conditional description blocks, options, skill checks, and map placement. The top-level `id` is the scene's manifest key:
 
 ```json
 {
+  "id": "dungeon_cellar",
   "title": "Cellar room",
   "region": "dungeon",
   "mapDefinitions": { "top": 245, "left": 175, "width": 50, "height": 60 },
@@ -384,7 +306,7 @@ One shape covers monsters, conversation partners, and merchants:
 }
 ```
 
-Loot does not live on NPCs — drops are authored on the combat action's `onVictory` pipeline, keeping NPC definitions reusable.
+Loot does not live on NPCs — drops are authored on the combat action's `onVictory` pipeline, keeping NPC definitions reusable across encounters.
 
 ### Items
 
@@ -407,23 +329,27 @@ Weapons, spells, armor, and consumables. All mechanical stats live inside `attri
 
 *   `attackAttribute` names the attribute whose modifier the wielder adds to attack rolls — accuracy belongs to the character, not the weapon.
 *   Armor and relics use `attributes.attributeBonuses` (e.g. `{ "perception": 1 }`) and/or `armorClassBonus` to raise attributes while worn.
-*   Consumables use `attributes.healingAmount` (dice notation) or `attributes.teleportScene`.
+*   Consumable effects are independent and combinable: `healingAmount` (number or dice notation), `apRestore`, and `modifyResource` (any declared resource) consume the item; `teleportScene` makes a reusable travel item.
 
-### Loot Tables
+### Loot Tables, Flags, Missions
 
-Probability-weighted drops. `dropWeight` is relative likelihood (default 1), not carry weight:
+**Loot tables** are probability-weighted drops — `dropWeight` is relative likelihood (default 1), not carry weight:
 
 ```json
-{
-  "entries": [
-    { "item": "gold", "amount": 10, "dropWeight": 5 },
-    { "item": "healing_potion", "dropWeight": 2 },
-    { "item": "rusty_sword", "dropWeight": 1 }
-  ]
-}
+{ "entries": [
+  { "item": "gold", "amount": 10, "dropWeight": 5 },
+  { "item": "healing_potion", "dropWeight": 2 },
+  { "item": "rusty_sword", "dropWeight": 1 }
+] }
 ```
 
-### Missions & Quests
+**Flags** are declared per area under `data/flags/` and merged into one flat namespace at boot:
+
+```json
+{ "door_unlocked": false, "defeated_goblin_guard": false }
+```
+
+**Missions** are simple definitions started via `questTrigger` (on scenes or dialogue) and completed through the quest system's lifecycle:
 
 ```json
 {
@@ -433,7 +359,17 @@ Probability-weighted drops. `dropWeight` is relative likelihood (default 1), not
 }
 ```
 
-Missions are started via `questTrigger` (on scenes or dialogue) and complete through the quest system's lifecycle events.
+---
+
+## The Player UI
+
+The game renders as three panels, each with one job:
+
+*   **Left — the player.** Tabs generated from `rules.tabs`: the character **Sheet** (stats and skills as collapsible sections), **Inventory**, **Quests**, **Map**, and **Options** (save / load / restart).
+*   **Center — the story.** The narrative log, with a pinned status bar showing HP / AC / AP / Gold, any `headerResources`, and the world clock.
+*   **Right — the interactions.** The current scene's options, skill checks, dialogue responses, or combat controls. Exactly one surface owns this panel at a time — the engine's mode machine guarantees it.
+
+Tabs are data-driven: each entry names a locale key and optionally a `widget` (`attributes`, `map`, `options` — or one a plugin registered). **The save/load/restart buttons only exist inside an `options` widget tab** — omit it and players cannot save (the validator warns).
 
 ---
 
@@ -469,17 +405,62 @@ export default function (engine) {
 
   // A custom stat row on the character sheet
   engine.registerSheetRow({ label: engine.t('plugin.myplugin.karma'), bind: 'attributes.karma' });
+
+  // Plugin-owned save data — serialized with the save, migration-friendly
+  const saved = engine.state.pluginState('myplugin');
+  saved.timesTeleported ??= 0;
 }
 ```
 
-Further extension points — scene decorators, description hooks, engine events, state-mutation observers, custom stat handlers, and save migrations — are documented in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). The shipped curator plugin (museum displays + a derived reputation stat) is the reference implementation.
+Further extension points — whole sidebar tabs (`registerTabWidget`), scene decorators, description hooks, engine events, state-mutation observers, custom stat handlers, and save migrations — are documented in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). The shipped curator plugin (museum displays + a derived reputation stat) is the reference implementation.
 
 ---
 
-## Further Documentation
+## Architecture at a Glance
 
-*   [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — boot flow, module graph, state contracts, events, hooks, the full plugin surface, localisation, and testing policy.
-*   [`docs/CHECKS.md`](docs/CHECKS.md) — the authoring guide for skill checks, outcome tiers, attempt budgets, retry currency, and the world clock.
+```
+gravity/
+├── index.html               # The game's single HTML entry point
+├── css/styles.css           # All styling, one file
+├── src/
+│   ├── core/
+│   │   ├── engine.js        # Orchestrator: boot, mode machine, registries, delegate API
+│   │   ├── state.js         # StateManager (engine-owned): reactive state, saves, migrations
+│   │   ├── config.js        # CSS/element registries, action names, flag/check key builders
+│   │   ├── i18n.js          # Language resolution + Intl list/plural formatting (pure)
+│   │   ├── validate.js      # Load-time game-data validation (pure)
+│   │   └── utils.js         # DOM builders (cards, rows, toggles) & shared helpers
+│   ├── systems/
+│   │   ├── scene.js         # Scene rendering, options, item discovery
+│   │   ├── combat.js        # Turn-based combat (renderer in ui/combat-ui.js)
+│   │   ├── dialogue.js      # Conversation trees & merchant trade
+│   │   ├── items.js         # Item use / equip / unequip (consumable-effect table)
+│   │   ├── skill-checks.js  # d20 checks, outcome tiers, the shared attempt machine
+│   │   ├── condition.js     # Condition AST evaluator (pure)
+│   │   ├── dice.js          # roll(), NdF±M damage parsing, weighted tables (pure)
+│   │   ├── time.js          # World-clock ticks, segments, timers (pure)
+│   │   ├── actions.js       # Built-in action pipeline handlers
+│   │   ├── quests.js        # Mission lifecycle
+│   │   └── narrative.js     # The chronological story log
+│   ├── ui/                  # UIManager (tab widgets, sheet, top bar, save/load) + panels
+│   ├── world/map.js         # Minimap + full-screen world map
+│   ├── screens/char-creation.js
+│   └── plugins/curator.js   # Reference plugin (museum curation & reputation)
+├── scripts/generate-manifest.js  # Regenerates data/index.json from the data tree
+├── tests/                   # Node unit tests (npm test) + smoke.html (browser UI test)
+├── schemas/                 # JSON Schemas for items, scenes, and NPCs
+└── data/                    # The shipped demo game: scenes, items, NPCs, rules, locales
+```
+
+The deeper tour — boot flow, the mode machine, state contracts, events, hooks, localisation, and testing policy — lives in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+---
+
+## Testing
+
+*   **`npm test`** — 350+ synchronous unit tests on Node's native runner: state and saves, combat math, the condition AST, dice, checks and their attempt machine, scene and dialogue logic, the world clock, the validator, the curator plugin, and a data-integrity suite over the shipped demo.
+*   **`tests/smoke.html`** — a zero-dependency browser smoke test that boots the real game and drives the UI like a player: character creation, tabs, the sheet, the top bar, inventory markup invariants, and a live skill check.
+*   **CI** — GitHub Actions runs the test suite and verifies the manifest is in sync with the data tree on every push and pull request.
 
 ---
 

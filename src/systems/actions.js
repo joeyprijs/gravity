@@ -1,4 +1,3 @@
-import { gameState } from "../core/state.js";
 import { LOG, ACTIONS, FLAG_KEYS, GOLD_ITEM_ID } from "../core/config.js";
 import { apEconomyRules } from "../core/utils.js";
 import { ticksUntilSegment } from "./time.js";
@@ -19,14 +18,14 @@ import { ticksUntilSegment } from "./time.js";
 function handleLoot(action, engine) {
   const amount = action.amount ?? 1;
   if (action.item === GOLD_ITEM_ID) {
-    gameState.modifyPlayerStat('gold', amount);
+    engine.state.modifyPlayerStat('gold', amount);
     if (action.log !== false) {
       const key = action.received ? 'loot.receivedGold' : 'loot.foundGold';
       const msg = typeof action.log === 'string' ? action.log : engine.t(key, { amount });
       engine.log(LOG.SYSTEM, msg, 'loot');
     }
   } else {
-    gameState.addToInventory(action.item, amount);
+    engine.state.addToInventory(action.item, amount);
     if (action.log !== false) {
       const key = action.received ? 'loot.receivedItem' : 'loot.foundItem';
       const msg = typeof action.log === 'string'
@@ -36,14 +35,14 @@ function handleLoot(action, engine) {
     }
   }
   if (action.xpReward) {
-    gameState.addXP(action.xpReward);
+    engine.state.addXP(action.xpReward);
     engine.log(LOG.SYSTEM, engine.t('loot.xpGained', { amount: action.xpReward }), 'loot');
   }
 }
 
 function handleCombat(action, engine) {
   const allEnemies = action.enemies || [];
-  const enemies = allEnemies.filter(id => !gameState.getFlag(FLAG_KEYS.friendly(id)));
+  const enemies = allEnemies.filter(id => !engine.state.getFlag(FLAG_KEYS.friendly(id)));
   if (enemies.length === 0) {
     engine.log(LOG.SYSTEM, engine.t('combat.avoided'), 'system');
     return;
@@ -58,25 +57,24 @@ function handleDialogue(action, engine) {
 
 function handleReturn(_action, engine) {
   const fallback = engine.data.rules?.startingScene || null;
-  engine.renderScene(gameState.getReturnSceneId() || fallback);
+  engine.renderScene(engine.state.getReturnSceneId() || fallback);
 }
 
 function handleFullRest(action, engine) {
-  const p = gameState.getPlayer();
-  gameState.modifyPlayerStat('hp', p.resources.hp.max - p.resources.hp.current);
+  engine.state.modifyPlayerStat('hp', 'full');
   // AP recovery on rest follows rules.apEconomy.restRestore (classic: full) —
   // the recovery valve for persistent-AP economies.
   const restRestore = apEconomyRules(engine.data.rules).restRestore;
   if (restRestore === 'full') {
-    gameState.modifyPlayerStat('ap', p.resources.ap.max - p.resources.ap.current);
+    engine.state.modifyPlayerStat('ap', 'full');
   } else if (restRestore > 0) {
-    gameState.modifyPlayerStat('ap', restRestore);
+    engine.state.modifyPlayerStat('ap', restRestore);
   }
   // A night's rest also refills the retry currency (rules.skillRetry.restRestore,
   // clamped to max) — the cozy counterweight to spending do-overs while out.
   const retry = engine.data.rules?.skillRetry;
   if (retry?.resource && retry.restRestore > 0) {
-    gameState.modifyPlayerStat(retry.resource, retry.restRestore);
+    engine.state.modifyPlayerStat(retry.resource, retry.restRestore);
   }
   if (action.log !== false) {
     const msg = typeof action.log === 'string' ? action.log : engine.t('actions.fullRest');
@@ -97,9 +95,9 @@ function resourceDelta(res, amount) {
 // the pool to max. The narrative-side valve of rules.apEconomy — scenes,
 // dialogue choices, and victory pipelines hand exertion back or take it.
 function handleModifyAp(action, engine) {
-  const amount = resourceDelta(gameState.getPlayer().resources.ap, action.amount);
+  const amount = resourceDelta(engine.state.getPlayer().resources.ap, action.amount);
   if (amount === 0) return; // already full/empty — nothing to move or narrate
-  gameState.modifyPlayerStat('ap', amount);
+  engine.state.modifyPlayerStat('ap', amount);
   if (action.log !== false) {
     const msg = typeof action.log === 'string'
       ? action.log
@@ -113,14 +111,14 @@ function handleModifyAp(action, engine) {
 // amount: 1 }, negative drains, "full" (also the default) tops it up. The
 // authoring valve for custom currencies (Luck Points, favor, ...).
 function handleModifyResource(action, engine) {
-  const res = gameState.getPlayer().resources[action.resource];
+  const res = engine.state.getPlayer().resources[action.resource];
   if (!res || typeof res !== 'object') {
     console.warn(`[Gravity] modify_resource: "${action.resource}" is not a declared { current, max } resource — skipped`);
     return;
   }
   const amount = resourceDelta(res, action.amount);
   if (amount === 0) return;
-  gameState.modifyPlayerStat(action.resource, amount);
+  engine.state.modifyPlayerStat(action.resource, amount);
   if (action.log !== false) {
     const labelKey = `ui.resources.${action.resource}`;
     const label = engine.t(labelKey) !== labelKey ? engine.t(labelKey) : action.resource;
@@ -133,7 +131,7 @@ function handleModifyResource(action, engine) {
 
 function handleHeal(action, engine) {
   const amount = action.amount ?? engine.data.rules?.snackHealAmount ?? 2;
-  gameState.modifyPlayerStat('hp', amount);
+  engine.state.modifyPlayerStat('hp', amount);
   if (action.log !== false) {
     const msg = typeof action.log === 'string' ? action.log : engine.t('actions.heal', { amount });
     engine.log(LOG.SYSTEM, msg, 'loot');
@@ -146,8 +144,8 @@ function handleNavigate(action, engine) {
   engine.renderScene(action.destination);
 }
 
-function handleSetFlag(action) {
-  gameState.setFlag(action.flag, action.value);
+function handleSetFlag(action, engine) {
+  engine.state.setFlag(action.flag, action.value);
 }
 
 function handleLog(action, engine) {
@@ -167,7 +165,7 @@ function handleManageChest(action, engine) {
 function handleAdvanceTime(action, engine) {
   let amount = action.amount ?? 0;
   if (action.until) {
-    const derived = ticksUntilSegment(gameState.getTicks(), engine.data.rules?.time, action.until);
+    const derived = ticksUntilSegment(engine.state.getTicks(), engine.data.rules?.time, action.until);
     if (derived === null) {
       console.warn(`[Gravity] advance_time: cannot resolve "until": "${action.until}" — check rules.time.segments`);
       return;
@@ -181,17 +179,17 @@ function handleAdvanceTime(action, engine) {
 // { type: "set_timer", id, afterTicks: 12, actions: [...] } — when the clock
 // passes the deadline, the (quiet-only) pipeline runs. atTick sets an
 // absolute deadline instead. Re-arming an id replaces the previous timer.
-function handleSetTimer(action) {
+function handleSetTimer(action, engine) {
   if (!action.id) {
     console.warn('[Gravity] set_timer: missing "id" — ignored');
     return;
   }
-  const deadline = action.atTick ?? (gameState.getTicks() + (action.afterTicks ?? 0));
-  gameState.setTimer({ id: action.id, deadline, actions: action.actions || [] });
+  const deadline = action.atTick ?? (engine.state.getTicks() + (action.afterTicks ?? 0));
+  engine.state.setTimer({ id: action.id, deadline, actions: action.actions || [] });
 }
 
-function handleCancelTimer(action) {
-  gameState.cancelTimer(action.id);
+function handleCancelTimer(action, engine) {
+  engine.state.cancelTimer(action.id);
 }
 
 export function registerBuiltinActions(engine) {

@@ -46,7 +46,8 @@ function compare(actual, operand) {
   if ('at_most'   in operand) return actual <= operand.at_most;
   if ('less_than' in operand) return actual <  operand.less_than;
   if ('is'        in operand) return actual === operand.is;
-  
+
+  console.warn('[Gravity] evaluateCondition: unrecognized comparison operator:', operand);
   return false;
 }
 
@@ -129,8 +130,9 @@ export function evaluateCondition(condition, gameState) {
 
   // Custom attributes (e.g., perception, stealth, charisma) loaded dynamically
   // from rules.json. This lets the author create custom checks without writing code.
-  for (const key of Object.keys(attrs)) {
-    if (key in condition) {
+  // Iterate the condition's own keys, not the player's whole attribute map.
+  for (const key of Object.keys(condition)) {
+    if (key in attrs) {
       return compare(attrs[key], condition[key]);
     }
   }

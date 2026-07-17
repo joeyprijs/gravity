@@ -38,6 +38,7 @@ function makeEngine() {
   const calls = { logs: [], customUI: [] };
   const engine = {
     data: { items: TEST_ITEMS, scenes: {}, rules: null },
+    state: gameState,
     t: (key) => key,
     log: (type, message, variant) => calls.logs.push({ type, message, variant }),
     registerAction: (name, fn) => registry.set(name, fn),
@@ -122,4 +123,30 @@ test('add_display: an explicit target scene overrides the current scene', () => 
 
   assert.equal(gameState.getDisplaysForScene('home_museum').length, 0);
   assert.equal(gameState.getDisplaysForScene('home_museum_armor').length, 1);
+});
+
+test('a pre-time (v3) save with the curator active runs core AND plugin migrations', () => {
+  const { engine } = makeEngine();
+  curatorPlugin(engine); // idempotent — ensures migration 5 is registered
+
+  const ok = gameState.loadFromObject({
+    saveVersion: 3,
+    player: {
+      name: 'Keeper', level: 1, xp: 0,
+      resources: { hp: { current: 10, max: 10 }, ap: { current: 3, max: 3 }, gold: 5 },
+      attributes: { ac: 10, initiative: 0, reputation: 0 },
+      inventory: [{ item: 'relic_crown', amount: 1 }],
+      equipment: {},
+    },
+    flags: {}, missions: {}, chests: {}, displays: {}, visitedScenes: [], log: [],
+  });
+
+  assert.equal(ok, true);
+  // Before the collision guard, the curator's migration shadowed core v4 and
+  // these two seeds were silently skipped.
+  assert.deepEqual(gameState.state.time, { ticks: 0 }, 'core v4 seeded the clock');
+  assert.deepEqual(gameState.state.timers, [], 'core v4 seeded timers');
+  assert.equal(gameState.pluginState('curator').museumReputation, 0, 'curator v5 seeded the permanent score');
+  assert.deepEqual(gameState.pluginState('curator').obtainedItems, ['relic_crown'], 'curator v5 backfilled owned relics');
+  assert.equal(gameState.state.saveVersion, 5);
 });

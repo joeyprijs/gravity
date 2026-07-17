@@ -14,9 +14,6 @@ function makeState({ flags = {}, inventory = [], equipment = {}, level = 1, gold
       const equipCount = Object.values(equipment).filter(id => id === itemId).length;
       return invCount + equipCount;
     },
-    getPlayerItemCount(itemId) {
-      return this.countPlayerItem(itemId);
-    }
   };
 }
 

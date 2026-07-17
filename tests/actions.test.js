@@ -38,6 +38,7 @@ function makeEngine({ rules = TEST_RULES, items = TEST_ITEMS } = {}) {
   const calls = { logs: [], renderedScenes: [], combat: [], dialogue: [], chests: [], customUI: [] };
   const engine = {
     data: { items, rules },
+    state: gameState,
     t: (key) => key,
     log: (type, message, variant) => calls.logs.push({ type, message, variant }),
     registerAction: (name, fn) => registry.set(name, fn),
