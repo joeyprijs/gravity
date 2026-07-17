@@ -444,6 +444,31 @@ A location: conditional description blocks, options, skill checks, and map place
 
 Checks resolve through margin-based **outcome tiers** (`critical` / `success` / `partial` / `failure`) with `resolveOnce` one-shots, `maxAttempts` budgets, retry costs, and time costs — the full guide is [`docs/CHECKS.md`](docs/CHECKS.md).
 
+A scene can also start a fight the moment it's entered with `autoAttack` — an encounter that runs before the player picks anything, sharing the `combat` action's shape (`enemies` plus an optional `onVictory`), with an optional `condition` that gates whether it triggers:
+
+```json
+"autoAttack": {
+  "condition": {
+    "not": {
+      "flag": "ambush_survived",
+      "value": true
+    }
+  },
+  "enemies": [
+    "goblin_guard"
+  ],
+  "onVictory": [
+    {
+      "type": "set_flag",
+      "flag": "ambush_survived",
+      "value": true
+    }
+  ]
+}
+```
+
+Winning re-renders the scene without re-triggering the ambush, so gate it on a flag its own `onVictory` sets (as above) if it should fire only once.
+
 ### NPCs & Enemies
 
 One shape covers monsters, conversation partners, and merchants:
