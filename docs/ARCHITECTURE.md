@@ -113,7 +113,7 @@ Current events:
 |---|---|---|
 | `scene:entered` | `{ sceneId, scene }` | A scene with a `questTrigger` is actually entered (not on option re-renders or save restores) |
 
-Events are notifications, not control flow — the combat turn handoff that used to ride a `player:apSpent` event is now an explicit `notePlayerSpentAP` call (see *The Mode Machine*).
+Events are notifications, not control flow — the combat turn handoff, for example, is an explicit `notePlayerSpentAP` call, not an event (see *The Mode Machine*).
 
 ## Scene Rendering Hooks
 

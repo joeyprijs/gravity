@@ -670,7 +670,7 @@ gravity/
 └── data/                    # The shipped demo game: scenes, items, NPCs, rules, locales
 ```
 
-The deeper tour — boot flow, the mode machine, state contracts, events, hooks, localisation, and testing policy — lives in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+The deeper tour — boot flow, the mode machine, state contracts, events, hooks, localisation, and testing policy — lives in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). The binding conventions for code, comments, game data, and docs are codified in [`docs/STYLE.md`](docs/STYLE.md).
 
 ---
 
