@@ -14,14 +14,21 @@
     {
       "text": "Go Inside",
       "actions": [
-        { "type": "navigate", "destination": "home_living_room" }
+        {
+          "type": "navigate",
+          "destination": "home_living_room"
+        }
       ]
     },
     {
       "text": "Return via Teleport",
-      "requirements": { "item": "home_rune" },
+      "requirements": {
+        "item": "home_rune"
+      },
       "actions": [
-        { "type": "return" }
+        {
+          "type": "return"
+        }
       ]
     }
   ]

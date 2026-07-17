@@ -101,9 +101,12 @@ Content files live under `data/` and the manifest (`data/index.json`) indexes th
 # 1. Drop a new file into the data tree
 $EDITOR data/items/moon_pendant.json
 
-# 2. Regenerate the manifest
+# 2. Normalize formatting and regenerate the manifest
+node scripts/format-data.js
 node scripts/generate-manifest.js
 ```
+
+Data files use canonical expanded JSON — one property per line, nothing inlined — so authored content reads as blocks. `format-data.js` rewrites any file into that form (it never changes content, only whitespace), and CI checks both scripts' output.
 
 Each entry's key is the file's top-level `"id"` field when present, otherwise its filename stem (`moon_pendant`). Scenes declare explicit ids (their keys carry region prefixes, like `home_kitchen`). CI runs `generate-manifest.js --check`, so a stale manifest fails the build instead of shipping.
 
@@ -126,46 +129,108 @@ Player defaults, attributes, progression, economy, and the UI tabs:
   "startingScene": "dungeon_start",
   "xpPerLevel": 100,
   "levelUpHpBonus": 5,
-  "levelUp": { "statPoints": 1 },
-  "merchantSellRatio": 0.5,
-  "fallbackWeapons": { "player": "unarmed_strike", "enemy": "enemy_claw" },
-
-  "playerDefaults": {
-    "name": "", "level": 1, "xp": 0,
-    "resources": {
-      "hp": { "current": 10, "max": 10 },
-      "ap": { "current": 3, "max": 3 },
-      "gold": 0,
-      "luckPoints": { "current": 3, "max": 3 }
-    },
-    "attributes": { "ac": 10, "initiative": 0 },
-    "inventory": [],
-    "equipment": { "Head": null, "Torso": null, "Left Hand": null, "Right Hand": null }
+  "levelUp": {
+    "statPoints": 1
   },
-
+  "merchantSellRatio": 0.5,
+  "fallbackWeapons": {
+    "player": "unarmed_strike",
+    "enemy": "enemy_claw"
+  },
+  "playerDefaults": {
+    "name": "",
+    "level": 1,
+    "xp": 0,
+    "resources": {
+      "hp": {
+        "current": 10,
+        "max": 10
+      },
+      "ap": {
+        "current": 3,
+        "max": 3
+      },
+      "gold": 0,
+      "luckPoints": {
+        "current": 3,
+        "max": 3
+      }
+    },
+    "attributes": {
+      "ac": 10,
+      "initiative": 0
+    },
+    "inventory": [],
+    "equipment": {
+      "Head": null,
+      "Torso": null,
+      "Left Hand": null,
+      "Right Hand": null
+    }
+  },
   "customAttributes": [
-    { "id": "perception", "default": 0, "max": 5 },
-    { "id": "stealth",    "default": 0, "max": 5 }
+    {
+      "id": "perception",
+      "default": 0,
+      "max": 5
+    },
+    {
+      "id": "stealth",
+      "default": 0,
+      "max": 5
+    }
   ],
-
   "charCreation": {
     "pointBudget": 3,
     "stats": [
-      { "id": "resources.hp.max",      "localeKey": "maxHp",      "bonusPerPoint": 2, "min": 0 },
-      { "id": "attributes.perception", "localeKey": "perception", "bonusPerPoint": 1, "min": 0 }
+      {
+        "id": "resources.hp.max",
+        "localeKey": "maxHp",
+        "bonusPerPoint": 2,
+        "min": 0
+      },
+      {
+        "id": "attributes.perception",
+        "localeKey": "perception",
+        "bonusPerPoint": 1,
+        "min": 0
+      }
     ]
   },
-
   "tabs": [
-    { "id": "attributes-tab", "localeKey": "ui.tabAttributes", "widget": "attributes", "default": true },
-    { "id": "inventory-tab",  "localeKey": "ui.tabInventory" },
-    { "id": "quests-tab",     "localeKey": "ui.tabQuests" },
-    { "id": "map-tab",        "localeKey": "ui.tabMap",     "widget": "map" },
-    { "id": "options-tab",    "localeKey": "ui.tabOptions", "widget": "options" }
+    {
+      "id": "attributes-tab",
+      "localeKey": "ui.tabAttributes",
+      "widget": "attributes",
+      "default": true
+    },
+    {
+      "id": "inventory-tab",
+      "localeKey": "ui.tabInventory"
+    },
+    {
+      "id": "quests-tab",
+      "localeKey": "ui.tabQuests"
+    },
+    {
+      "id": "map-tab",
+      "localeKey": "ui.tabMap",
+      "widget": "map"
+    },
+    {
+      "id": "options-tab",
+      "localeKey": "ui.tabOptions",
+      "widget": "options"
+    }
   ],
-
-  "skillRetry": { "resource": "luckPoints", "cost": 1, "restRestore": 3 },
-  "headerResources": ["luckPoints"]
+  "skillRetry": {
+    "resource": "luckPoints",
+    "cost": 1,
+    "restRestore": 3
+  },
+  "headerResources": [
+    "luckPoints"
+  ]
 }
 ```
 
@@ -182,8 +247,16 @@ Boolean trees usable on options, dialogue responses, description variants, and a
 ```json
 {
   "and": [
-    { "flag": "guard_distracted", "value": true },
-    { "not": { "flag": "defeated_goblin_guard", "value": true } }
+    {
+      "flag": "guard_distracted",
+      "value": true
+    },
+    {
+      "not": {
+        "flag": "defeated_goblin_guard",
+        "value": true
+      }
+    }
   ]
 }
 ```
@@ -212,21 +285,45 @@ A location: conditional description blocks, options, skill checks, and map place
   "id": "dungeon_cellar",
   "title": "Cellar room",
   "region": "dungeon",
-  "mapDefinitions": { "top": 245, "left": 175, "width": 50, "height": 60 },
+  "mapDefinitions": {
+    "top": 245,
+    "left": 175,
+    "width": 50,
+    "height": 60
+  },
   "description": [
-    { "text": "The wooden door stands wide open to the north.",
-      "condition": { "flag": "door_unlocked", "value": true } },
-    { "text": "A heavy wooden door stands locked to the north." }
+    {
+      "text": "The wooden door stands wide open to the north.",
+      "condition": {
+        "flag": "door_unlocked",
+        "value": true
+      }
+    },
+    {
+      "text": "A heavy wooden door stands locked to the north."
+    }
   ],
   "options": [
     {
       "text": "Unlock the door",
       "log": "You slide the key into the lock and turn it.",
-      "condition": { "flag": "door_unlocked", "value": false },
-      "requirements": { "item": "cellar_key" },
+      "condition": {
+        "flag": "door_unlocked",
+        "value": false
+      },
+      "requirements": {
+        "item": "cellar_key"
+      },
       "actions": [
-        { "type": "set_flag", "flag": "door_unlocked", "value": true },
-        { "type": "navigate", "destination": "dungeon_corridor" }
+        {
+          "type": "set_flag",
+          "flag": "door_unlocked",
+          "value": true
+        },
+        {
+          "type": "navigate",
+          "destination": "dungeon_corridor"
+        }
       ]
     }
   ],
@@ -236,10 +333,24 @@ A location: conditional description blocks, options, skill checks, and map place
       "retryText": "Search the cellar again.",
       "skillCheck": "perception",
       "maxAttempts": 4,
-      "onExhausted": [ { "type": "set_flag", "flag": "search_exhausted", "value": true } ],
+      "onExhausted": [
+        {
+          "type": "set_flag",
+          "flag": "search_exhausted",
+          "value": true
+        }
+      ],
       "items": [
-        { "item": "cellar_key", "amount": 1, "dc": 10 },
-        { "table": "basic_loot", "dc": 14, "itemDrops": 2 }
+        {
+          "item": "cellar_key",
+          "amount": 1,
+          "dc": 10
+        },
+        {
+          "table": "basic_loot",
+          "dc": 14,
+          "itemDrops": 2
+        }
       ]
     },
     {
@@ -248,15 +359,48 @@ A location: conditional description blocks, options, skill checks, and map place
       "dc": 14,
       "resolveOnce": true,
       "outcomes": {
-        "critical": { "margin": 5, "text": "You scale it without a sound." },
-        "success":  { "actions": [ { "type": "navigate", "destination": "dungeon_corridor" } ] },
-        "partial":  { "margin": 3, "text": "You make it — barely.", "actions": [ { "type": "heal", "amount": -2 } ] },
-        "failure":  { "actions": [ { "type": "combat", "enemies": ["goblin_guard"] } ] }
+        "critical": {
+          "margin": 5,
+          "text": "You scale it without a sound."
+        },
+        "success": {
+          "actions": [
+            {
+              "type": "navigate",
+              "destination": "dungeon_corridor"
+            }
+          ]
+        },
+        "partial": {
+          "margin": 3,
+          "text": "You make it — barely.",
+          "actions": [
+            {
+              "type": "heal",
+              "amount": -2
+            }
+          ]
+        },
+        "failure": {
+          "actions": [
+            {
+              "type": "combat",
+              "enemies": [
+                "goblin_guard"
+              ]
+            }
+          ]
+        }
       }
     }
   ],
   "passiveChecks": [
-    { "skillCheck": "perception", "dc": 13, "flag": "noticed_glint", "text": "Something catches the light." }
+    {
+      "skillCheck": "perception",
+      "dc": 13,
+      "flag": "noticed_glint",
+      "text": "Something catches the light."
+    }
   ]
 }
 ```
@@ -272,35 +416,89 @@ One shape covers monsters, conversation partners, and merchants:
   "name": "Goblin Guard",
   "description": "A snarling creature wearing rusted scale armor.",
   "isMerchant": true,
-  "carriedItems": [ { "item": "healing_potion", "amount": 3 } ],
+  "carriedItems": [
+    {
+      "item": "healing_potion",
+      "amount": 3
+    }
+  ],
   "attributes": {
-    "healthPoints": 8, "armorClass": 8, "actionPoints": 3,
-    "initiative": 1, "xpReward": 50
+    "healthPoints": 8,
+    "armorClass": 8,
+    "actionPoints": 3,
+    "initiative": 1,
+    "xpReward": 50
   },
-  "equipment": { "Right Hand": "rusty_sword" },
+  "equipment": {
+    "Right Hand": "rusty_sword"
+  },
   "conversations": {
     "start": {
       "npcText": "Stop right there! Who goes there?",
       "responses": [
         {
           "text": "[Persuade] I mean no harm.",
-          "skillCheck": "charisma", "dc": 12, "resolveOnce": true,
+          "skillCheck": "charisma",
+          "dc": 12,
+          "resolveOnce": true,
           "outcomes": {
-            "success": { "actions": [ { "type": "goToConversation", "node": "friendly" } ] },
-            "failure": { "actions": [ { "type": "goToConversation", "node": "hostile" } ] }
+            "success": {
+              "actions": [
+                {
+                  "type": "goToConversation",
+                  "node": "friendly"
+                }
+              ]
+            },
+            "failure": {
+              "actions": [
+                {
+                  "type": "goToConversation",
+                  "node": "hostile"
+                }
+              ]
+            }
           }
         },
-        { "text": "[Attack] Prepare to fight!",
-          "actions": [ { "type": "leave" }, { "type": "combat", "enemies": ["goblin_guard"] } ] }
+        {
+          "text": "[Attack] Prepare to fight!",
+          "actions": [
+            {
+              "type": "leave"
+            },
+            {
+              "type": "combat",
+              "enemies": [
+                "goblin_guard"
+              ]
+            }
+          ]
+        }
       ]
     },
     "friendly": {
       "npcText": "Fine. Let's see what you have.",
-      "responses": [ { "text": "Let's trade.", "actions": [ { "type": "trade" } ] } ]
+      "responses": [
+        {
+          "text": "Let's trade.",
+          "actions": [
+            {
+              "type": "trade"
+            }
+          ]
+        }
+      ]
     },
     "hostile": {
       "npcText": "Die, human!",
-      "actions": [ { "type": "combat", "enemies": ["goblin_guard"] } ]
+      "actions": [
+        {
+          "type": "combat",
+          "enemies": [
+            "goblin_guard"
+          ]
+        }
+      ]
     }
   }
 }
@@ -336,17 +534,32 @@ Weapons, spells, armor, and consumables. All mechanical stats live inside `attri
 **Loot tables** are probability-weighted drops — `dropWeight` is relative likelihood (default 1), not carry weight:
 
 ```json
-{ "entries": [
-  { "item": "gold", "amount": 10, "dropWeight": 5 },
-  { "item": "healing_potion", "dropWeight": 2 },
-  { "item": "rusty_sword", "dropWeight": 1 }
-] }
+{
+  "entries": [
+    {
+      "item": "gold",
+      "amount": 10,
+      "dropWeight": 5
+    },
+    {
+      "item": "healing_potion",
+      "dropWeight": 2
+    },
+    {
+      "item": "rusty_sword",
+      "dropWeight": 1
+    }
+  ]
+}
 ```
 
 **Flags** are declared per area under `data/flags/` and merged into one flat namespace at boot:
 
 ```json
-{ "door_unlocked": false, "defeated_goblin_guard": false }
+{
+  "door_unlocked": false,
+  "defeated_goblin_guard": false
+}
 ```
 
 **Missions** are simple definitions started via `questTrigger` (on scenes or dialogue) and completed through the quest system's lifecycle:
@@ -355,7 +568,10 @@ Weapons, spells, armor, and consumables. All mechanical stats live inside `attri
 {
   "name": "Escape the Dungeon",
   "description": "Find a way out of the underground complex and reach the surface.",
-  "missionRewards": { "xp": 100, "gold": 50 }
+  "missionRewards": {
+    "xp": 100,
+    "gold": 50
+  }
 }
 ```
 
@@ -388,7 +604,9 @@ Plugins are trusted ES modules declared in the manifest, loaded at boot with ful
   {
     "id": "curator",
     "src": "./src/plugins/curator.js",
-    "locales": { "en": "./src/plugins/curator/locales/en.json" }
+    "locales": {
+      "en": "./src/plugins/curator/locales/en.json"
+    }
   }
 ]
 ```

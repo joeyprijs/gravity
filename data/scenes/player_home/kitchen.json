@@ -12,7 +12,9 @@
   "description": [
     {
       "text": "The kitchen is dark and quiet at this hour. The banked coals of the cooking fire glow faintly; a covered pot of stew waits for morning.",
-      "condition": { "segment": "night" }
+      "condition": {
+        "segment": "night"
+      }
     },
     {
       "text": "You walk into the kitchen, smelling the rich aroma of roasting meats. You find the servant cooking a stew over an open flame."
@@ -22,14 +24,19 @@
     {
       "text": "Eat a Snack",
       "actions": [
-        { "type": "heal" }
+        {
+          "type": "heal"
+        }
       ]
     },
     {
       "text": "Return to Living Room",
       "isBack": true,
       "actions": [
-        { "type": "navigate", "destination": "home_living_room" }
+        {
+          "type": "navigate",
+          "destination": "home_living_room"
+        }
       ]
     }
   ],
@@ -38,7 +45,11 @@
       "text": "Sneak a taste of the stew",
       "skillCheck": "stealth",
       "repeatable": true,
-      "condition": { "not": { "segment": "night" } },
+      "condition": {
+        "not": {
+          "segment": "night"
+        }
+      },
       "resultText": [
         "You dip a finger in while the servant tends the fire. Needs thyme. You say nothing, because officially you were never here.",
         "Another taste. The servant's shoulders stiffen. They know the stew level is dropping, they just can't prove anything.",

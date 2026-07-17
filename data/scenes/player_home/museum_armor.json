@@ -12,15 +12,19 @@
   "description": "You step into the newly opened Armor Wing of the museum. The scent of wood varnish and metal polish fills the air. Sturdy oak stands and iron wall mounts are positioned under soft lights, ready to safeguard shields and legendary suits of plate.",
   "supportsExhibits": true,
   "displays": [
-    { 
-      "id": "armor_wing_mannequin", 
+    {
+      "id": "armor_wing_mannequin",
       "name": "Heavy Plate Mannequin",
-      "allowedTypes": ["Armor"]
+      "allowedTypes": [
+        "Armor"
+      ]
     },
-    { 
-      "id": "armor_wing_shield_mount", 
+    {
+      "id": "armor_wing_shield_mount",
       "name": "Wall Shield Mount",
-      "allowedTypes": ["Armor"]
+      "allowedTypes": [
+        "Armor"
+      ]
     }
   ],
   "options": [
@@ -28,7 +32,10 @@
       "text": "Go back to Museum Lobby",
       "isBack": true,
       "actions": [
-        { "type": "navigate", "destination": "home_museum" }
+        {
+          "type": "navigate",
+          "destination": "home_museum"
+        }
       ]
     }
   ]

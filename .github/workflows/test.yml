@@ -16,3 +16,5 @@ jobs:
         run: npm test
       - name: Manifest is in sync with the data tree
         run: node scripts/generate-manifest.js --check
+      - name: Data files are in canonical expanded form
+        run: node scripts/format-data.js --check

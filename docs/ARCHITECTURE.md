@@ -132,7 +132,9 @@ Plugins are ES modules declared in `data/index.json`:
   {
     "id": "curator",
     "src": "./src/plugins/curator.js",
-    "locales": { "en": "./src/plugins/curator/locales/en.json" }
+    "locales": {
+      "en": "./src/plugins/curator/locales/en.json"
+    }
   }
 ]
 ```

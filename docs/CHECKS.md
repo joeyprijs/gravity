@@ -31,10 +31,22 @@ Pass/fail checks (scene and dialogue) resolve against margin-based tiers:
   "skillCheck": "stealth",
   "dc": 14,
   "outcomes": {
-    "critical": { "margin": 5, "text": "You move like a rumor.", "actions": [ ... ] },
-    "success":  { "actions": [ ... ] },
-    "partial":  { "margin": 3, "text": "You make it — barely.",  "actions": [ ... ] },
-    "failure":  { "actions": [ ... ] }
+    "critical": {
+      "margin": 5,
+      "text": "You move like a rumor.",
+      "actions": [ ... ]
+    },
+    "success": {
+      "actions": [ ... ]
+    },
+    "partial": {
+      "margin": 3,
+      "text": "You make it — barely.",
+      "actions": [ ... ]
+    },
+    "failure": {
+      "actions": [ ... ]
+    }
   }
 }
 ```
@@ -60,8 +72,15 @@ In dialogue, a resolved response stays gone across conversations.
   "skillCheck": "perception",
   "maxAttempts": 4,
   "onExhausted": [
-    { "type": "set_flag", "flag": "search_exhausted", "value": true },
-    { "type": "log", "message": "Your eyes won't find anything more here." }
+    {
+      "type": "set_flag",
+      "flag": "search_exhausted",
+      "value": true
+    },
+    {
+      "type": "log",
+      "message": "Your eyes won't find anything more here."
+    }
   ],
   "items": [ ... ]
 }
@@ -76,8 +95,22 @@ When the budget runs out without success, the check retires and `onExhausted` ru
 Failing a check is free the first time; *retrying* it can cost a scarce resource — a spend-to-try-again economy that makes "search again?" a real decision instead of free spam. Declare a resource and point the retry policy at it:
 
 ```json
-"playerDefaults": { "resources": { "hp": {...}, "ap": {...}, "gold": 0, "luckPoints": { "current": 3, "max": 3 } } },
-"skillRetry": { "resource": "luckPoints", "cost": 1, "restRestore": 3 },
+"playerDefaults": {
+  "resources": {
+    "hp": { ... },
+    "ap": { ... },
+    "gold": 0,
+    "luckPoints": {
+      "current": 3,
+      "max": 3
+    }
+  }
+},
+"skillRetry": {
+  "resource": "luckPoints",
+  "cost": 1,
+  "restRestore": 3
+},
 "headerResources": ["luckPoints"]
 ```
 
@@ -97,10 +130,28 @@ Time is a single monotonic tick counter in save state. It only moves when the pl
   "ticksPerDay": 24,
   "startTick": 8,
   "segments": [
-    { "id": "morning", "from": 6 }, { "id": "day", "from": 10 },
-    { "id": "evening", "from": 18 }, { "id": "night", "from": 22 }
+    {
+      "id": "morning",
+      "from": 6
+    },
+    {
+      "id": "day",
+      "from": 10
+    },
+    {
+      "id": "evening",
+      "from": 18
+    },
+    {
+      "id": "night",
+      "from": 22
+    }
   ],
-  "defaultCosts": { "navigate": 1, "skillAttempt": 0, "fullRest": 8 }
+  "defaultCosts": {
+    "navigate": 1,
+    "skillAttempt": 0,
+    "fullRest": 8
+  }
 }
 ```
 
@@ -130,8 +181,12 @@ Together they read as one theme — the skill is how good you are at being lucky
 
 ```json
 "passiveChecks": [
-  { "skillCheck": "perception", "dc": 13, "flag": "chamber_noticed_shimmer",
-    "text": "Something up in the crack catches the light." }
+  {
+    "skillCheck": "perception",
+    "dc": 13,
+    "flag": "chamber_noticed_shimmer",
+    "text": "Something up in the crack catches the light."
+  }
 ]
 ```
 

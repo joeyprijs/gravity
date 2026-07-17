@@ -46,8 +46,15 @@
           "id": "dungeon_alarm",
           "afterTicks": 12,
           "actions": [
-            { "type": "set_flag", "flag": "dungeon_alarm", "value": true },
-            { "type": "log", "message": "Somewhere above, a horn sounds: long, low, and answered." }
+            {
+              "type": "set_flag",
+              "flag": "dungeon_alarm",
+              "value": true
+            },
+            {
+              "type": "log",
+              "message": "Somewhere above, a horn sounds: long, low, and answered."
+            }
           ]
         },
         {
@@ -59,7 +66,9 @@
     {
       "text": "Take a closer look at the door",
       "condition": {
-        "not": { "item": "cellar_key" }
+        "not": {
+          "item": "cellar_key"
+        }
       },
       "actions": [
         {
@@ -91,7 +100,10 @@
       "timeCost": 1,
       "maxAttempts": 4,
       "onExhausted": [
-        { "type": "log", "message": "You've turned over every stone and barrel. Whatever else this cellar hides, your eyes won't find it." }
+        {
+          "type": "log",
+          "message": "You've turned over every stone and barrel. Whatever else this cellar hides, your eyes won't find it."
+        }
       ],
       "items": [
         {

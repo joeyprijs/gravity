@@ -14,30 +14,48 @@
     {
       "text": "Sleep (Full Rest)",
       "actions": [
-        { "type": "full_rest" }
+        {
+          "type": "full_rest"
+        }
       ]
     },
     {
       "text": "Sleep until morning",
       "timeCost": 0,
-      "condition": { "not": { "segment": "morning" } },
+      "condition": {
+        "not": {
+          "segment": "morning"
+        }
+      },
       "actions": [
-        { "type": "advance_time", "until": "morning" },
-        { "type": "full_rest", "log": "You sleep deeply and wake with the morning light. Health and Actions fully restored." }
+        {
+          "type": "advance_time",
+          "until": "morning"
+        },
+        {
+          "type": "full_rest",
+          "log": "You sleep deeply and wake with the morning light. Health and Actions fully restored."
+        }
       ]
     },
     {
       "text": "Open Personal Chest",
       "log": false,
       "actions": [
-        { "type": "manage_chest", "chest": "personal" }
+        {
+          "type": "manage_chest",
+          "chest": "personal"
+        }
       ]
     },
     {
       "text": "Return to Living Room",
       "isBack": true,
       "actions": [
-        { "type": "navigate", "destination": "home_living_room" }
+        {
+          "type": "navigate",
+          "destination": "home_living_room"
+        }
       ]
     }
   ]
