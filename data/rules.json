@@ -183,9 +183,6 @@
       }
     ]
   },
-  "curator": {
-    "installCost": 50
-  },
   "tabs": [
     {
       "id": "attributes-tab",

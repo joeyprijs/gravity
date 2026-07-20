@@ -782,6 +782,17 @@ class StateManager {
   }
 
   /**
+   * The whole displays map — every scene's display cases, keyed by scene id.
+   * For consumers that must scan all exhibits at once (the curator's derived
+   * reputation) so they never reach into the raw state object.
+   * @returns {Object<string, Array<{id: string, name: string, item: string|null, allowedTypes: string[]|null}>>}
+   */
+  getAllDisplays() {
+    if (!this.state.displays) this.state.displays = {};
+    return this.state.displays;
+  }
+
+  /**
    * Registers a new display case on a scene.
    *
    * @param {string} sceneId - The scene to add the display to.

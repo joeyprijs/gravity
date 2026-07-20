@@ -2,7 +2,6 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { gameState } from '../src/core/state.js';
 import curatorPlugin from '../src/plugins/curator.js';
-import { ACTIONS } from '../src/core/config.js';
 
 // The plugin's register function injects a reputation header into the page on
 // load. These tests run headless, so a one-method document stub makes that
@@ -31,10 +30,11 @@ const TEST_ITEMS = {
 };
 
 // Minimal engine mock — only the registration surface the plugin touches.
-function makeEngine() {
+function makeEngine(pluginConfigs = {}) {
   const registry = new Map();
   const decorators = [];
   const sheetRows = [];
+  const validators = [];
   const calls = { logs: [], customUI: [] };
   const engine = {
     data: { items: TEST_ITEMS, scenes: {}, rules: null },
@@ -44,10 +44,12 @@ function makeEngine() {
     registerAction: (name, fn) => registry.set(name, fn),
     registerSceneDecorator: (decorator) => decorators.push(decorator),
     registerSheetRow: (row) => sheetRows.push(row),
+    registerValidator: (fn) => validators.push(fn),
+    pluginConfig: (id) => pluginConfigs[id] || {},
     setCustomUIOpen: (open) => calls.customUI.push(open),
     scene: { handleOption: () => {} },
   };
-  return { engine, registry, decorators, sheetRows, calls };
+  return { engine, registry, decorators, sheetRows, validators, calls };
 }
 
 beforeEach(() => gameState.init(TEST_RULES, TEST_ITEMS));
@@ -58,9 +60,25 @@ test('plugin registers its scene decorator, action handlers, and sheet row', () 
   assert.equal(decorators.length, 1);
   assert.equal(typeof decorators[0].description, 'function');
   assert.equal(typeof decorators[0].options, 'function');
-  assert.ok(registry.has(ACTIONS.MANAGE_EXHIBITS));
-  assert.ok(registry.has(ACTIONS.ADD_DISPLAY));
+  assert.ok(registry.has('manage_exhibits'));
+  assert.ok(registry.has('add_display'));
   assert.deepEqual(sheetRows, [{ label: 'plugin.curator.reputationLabel', bind: 'attributes.reputation' }]);
+});
+
+test('plugin registers a validator that flags the deprecated top-level item.reputation', () => {
+  const { engine, validators } = makeEngine();
+  curatorPlugin(engine);
+  assert.equal(validators.length, 1);
+
+  const issues = [];
+  const data = { items: {
+    good: { attributes: { reputation: 10 } },       // correct shape — no issue
+    legacy: { reputation: 10 },                      // deprecated top-level — flagged
+  } };
+  validators[0](data, { add: (group, message) => issues.push({ group, message }) });
+  assert.equal(issues.length, 1);
+  assert.equal(issues[0].group, 'Item "legacy"');
+  assert.match(issues[0].message, /reputation moved into the attributes object/);
 });
 
 test('exhibits decorator: scenes without displays get no table', () => {
@@ -96,7 +114,7 @@ test('add_display: installs a named display and charges the cost', () => {
   const { engine, registry } = makeEngine();
   curatorPlugin(engine);
   gameState.setCurrentSceneId('home_museum');
-  registry.get(ACTIONS.ADD_DISPLAY)({ type: ACTIONS.ADD_DISPLAY, name: 'Oak Pedestal', cost: 40 }, engine);
+  registry.get('add_display')({ type: 'add_display', name: 'Oak Pedestal', cost: 40 }, engine);
 
   const displays = gameState.getDisplaysForScene('home_museum');
   assert.equal(displays.length, 1);
@@ -108,7 +126,7 @@ test('add_display: refuses when the player cannot afford it', () => {
   const { engine, registry, calls } = makeEngine();
   curatorPlugin(engine);
   gameState.setCurrentSceneId('home_museum');
-  registry.get(ACTIONS.ADD_DISPLAY)({ type: ACTIONS.ADD_DISPLAY, cost: 500 }, engine);
+  registry.get('add_display')({ type: 'add_display', cost: 500 }, engine);
 
   assert.equal(gameState.getDisplaysForScene('home_museum').length, 0);
   assert.equal(gameState.getPlayer().resources.gold, 100);
@@ -119,7 +137,7 @@ test('add_display: an explicit target scene overrides the current scene', () => 
   const { engine, registry } = makeEngine();
   curatorPlugin(engine);
   gameState.setCurrentSceneId('home_museum');
-  registry.get(ACTIONS.ADD_DISPLAY)({ type: ACTIONS.ADD_DISPLAY, scene: 'home_museum_armor', cost: 0 }, engine);
+  registry.get('add_display')({ type: 'add_display', scene: 'home_museum_armor', cost: 0 }, engine);
 
   assert.equal(gameState.getDisplaysForScene('home_museum').length, 0);
   assert.equal(gameState.getDisplaysForScene('home_museum_armor').length, 1);

@@ -1,5 +1,5 @@
 import { createElement, buildOptionButton, escapeHtml, getItemLabel, resetOptionsPanel } from "../core/utils.js";
-import { ACTIONS, CSS, LOG } from "../core/config.js";
+import { CSS, LOG } from "../core/config.js";
 
 // The curator's reputation model: a permanent score (earned by acquiring
 // relics for the first time) plus a dynamic bonus from relics currently on
@@ -28,7 +28,7 @@ export function getMuseumReputation() {
 // the reputation of every relic currently on display.
 function updateReputation() {
   let rep = bag().museumReputation ?? 0;
-  const displays = curatorState.state.displays ?? {};
+  const displays = curatorState.getAllDisplays();
   for (const sceneId in displays) {
     for (const display of displays[sceneId]) {
       if (display.item && curatorItems[display.item]) {
@@ -139,6 +139,16 @@ export default function curatorPlugin(engine) {
   // 1. Register state integrations (stat handler, mutation hooks, migration)
   registerCuratorState(engine.state, engine.data.items);
 
+  // Reputation is a curator concept: flag the deprecated top-level item shape
+  // here rather than in the core item validator, so the engine stays unaware
+  // of the plugin's fields.
+  engine.registerValidator((data, { add }) => {
+    for (const [id, item] of Object.entries(data.items ?? {})) {
+      if (item.reputation !== undefined)
+        add(`Item "${id}"`, 'reputation moved into the attributes object — write attributes.reputation');
+    }
+  });
+
   // 2. Decorate every scene that has display cases: exhibits table appended to
   // the description, plus the curator-panel option button.
   engine.registerSceneDecorator({
@@ -150,7 +160,7 @@ export default function curatorPlugin(engine) {
       const btn = buildOptionButton(engine.t('plugin.curator.curatorTitle'));
       btn.onclick = () => engine.scene.handleOption({
         text: engine.t('plugin.curator.curatorTitle'),
-        actions: [{ type: ACTIONS.MANAGE_EXHIBITS }]
+        actions: [{ type: "manage_exhibits" }]
       });
       optionsContainer.appendChild(btn);
     }
@@ -268,7 +278,7 @@ export class CuratorUI {
     panel.insertBefore(exhibitsSection, skillsContainer);
 
     // 3. Purchase Exhibit Case Button
-    const installCost = this.engine.data.rules?.curator?.installCost ?? 50;
+    const installCost = this.engine.pluginConfig('curator').installCost ?? 50;
     const p = this.engine.state.getPlayer();
     const canInstall = p.resources.gold >= installCost;
 

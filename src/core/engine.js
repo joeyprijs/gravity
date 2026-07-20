@@ -47,6 +47,8 @@ export class RPGEngine {
     this._descriptionHooks = new Map();
     this._sceneDecorators = [];
     this._sheetRows = [];
+    this._validators = [];
+    this._pluginConfigs = {};
     this._tabWidgets = new Map();
     this._events = new Map();
 
@@ -72,6 +74,10 @@ export class RPGEngine {
           const url = isObject ? pluginConfig.src : pluginConfig;
           const id = isObject ? pluginConfig.id : null;
           const locales = isObject ? pluginConfig.locales : null;
+
+          // Stash the plugin's manifest config before its module runs, so the
+          // plugin can read it via engine.pluginConfig(id) at any point.
+          if (id) this._pluginConfigs[id] = (isObject && pluginConfig.config) || {};
 
           // Load locales first if declared in manifest. Plugins that don't
           // ship the active language fall back to their English file.
@@ -255,6 +261,13 @@ export class RPGEngine {
   // action types are known.
   _validateData() {
     const issues = validateGameData(this.data, new Set(this._actionRegistry.keys()));
+    // Plugin-registered validators check their own authoring surface, pushing
+    // into the same boot-time report (see registerValidator).
+    const add = (group, message) => issues.push({ group, message });
+    for (const validator of this._validators) {
+      try { validator(this.data, { add }); }
+      catch (e) { console.warn('[Gravity] a plugin validator threw', e); }
+    }
     if (!issues.length) return;
 
     const byGroup = new Map();
@@ -471,6 +484,30 @@ export class RPGEngine {
       console.warn(`[Gravity] registerAction: "${name}" already registered — overwriting`);
     }
     this._actionRegistry.set(name, handlerFn);
+  }
+
+  /**
+   * Registers a plugin data validator, run at boot after the core checks. The
+   * function receives (data, { add }); call add(group, message) for each issue
+   * so a plugin can flag its own authoring mistakes (deprecated item shapes,
+   * missing config, …) in the same report as the built-in validation.
+   *
+   * @param {(data: object, ctx: {add: (group: string, message: string) => void}) => void} fn
+   */
+  registerValidator(fn) {
+    this._validators.push(fn);
+  }
+
+  /**
+   * A plugin's config bag, declared as `config` on its manifest entry
+   * (data/index.json). The sanctioned home for plugin tunables — the plugin's
+   * counterpart to core rules, so plugin knobs don't squat in rules.json.
+   *
+   * @param {string} id - The plugin id (e.g. 'curator').
+   * @returns {object} The plugin's config object ({} when none was declared).
+   */
+  pluginConfig(id) {
+    return this._pluginConfigs[id] || {};
   }
 
   /**

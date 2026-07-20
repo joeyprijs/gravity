@@ -102,8 +102,6 @@ function validateItems(ctx) {
       ctx.add(group, 'attackAttribute moved into the attributes object — write attributes.attackAttribute');
     if (item.actionPoints !== undefined)
       ctx.add(group, 'actionPoints moved into the attributes object — write attributes.actionPoints');
-    if (item.reputation !== undefined)
-      ctx.add(group, 'reputation moved into the attributes object — write attributes.reputation');
     if (item.bonusHitChance !== undefined)
       ctx.add(group, 'bonusHitChance was removed — accuracy comes from the wielder\'s attackAttribute; model an accurate weapon as attributeBonuses on the governing attribute');
     for (const key of Object.keys(item.attributes?.attributeBonuses ?? {})) {

@@ -60,6 +60,7 @@ There are no circular imports. Stateful subsystems reach each other only through
 - **Check bookkeeping lives in `state.checkState`**, not in flags: the object-valued skill-check maps (attempt counts, resolution markers, discovery progress), keyed by the `CHECK_KEYS` builders and accessed via `getCheckState`/`setCheckState`. Engine-private — conditions never read it. Older saves stored these under prefixed flag keys; `loadFromObject` normalizes them over unconditionally (idempotent, version-independent).
 - **Character creation** applies through `applyCharCreation(name, bonuses)` — one sanctioned mutation; nothing outside `StateManager` writes the player object directly.
 - **Saves** are the whole state object, JSON-serialised and Base64-encoded, delivered as a file download (no storage quota applies). Compression is a known deferral: Base64 adds ~33% to a file measured in tens of KB, which isn't worth making the save/load path async (`CompressionStream`) today — revisit if saves ever move into `localStorage` or real campaigns produce multi-MB states. `SAVE_VERSION` gates a chain of migration functions so old saves stay loadable; plugins add their own with `state.registerMigration(version, fn)` using versions **above** the core number — registering at (or duplicating) an existing version throws, because a colliding migration would silently shadow another in the merge.
+- **Core state vs plugin state.** A top-level state field with dedicated `StateManager` accessors is for engine features authors reach through the schema and built-in actions — the player, inventory, flags, `checkState`, **chests** (the built-in `manage_chest` action + core `ChestUI`), and the **`displays`** map (a first-class `scene.displays` schema field the core renderer auto-registers, see *Scene Rendering Hooks*). These living in `state.js` is correct, not a leak — even though a *plugin* (the curator) also builds on `displays`, the feature itself is core. Everything a plugin *owns* goes under `state.plugins.<id>` via `pluginState(id)` (versioned with the plugin's own `registerMigration`) — never a new top-level field, and never by reading the raw `state.state` object. If a plugin needs a read the accessors don't offer (e.g. "every display across all scenes"), add a `StateManager` accessor for it (`getAllDisplays()`) rather than reaching into `state.state`.
 
 ## The Mode Machine
 
@@ -130,14 +131,18 @@ Plugins are ES modules declared in `data/index.json`:
     "src": "./src/plugins/curator.js",
     "locales": {
       "en": "./src/plugins/curator/locales/en.json"
+    },
+    "config": {
+      "installCost": 50
     }
   }
 ]
 ```
 
-The default export receives the engine instance at boot (before state init). Available extension points:
+The optional `config` object holds the plugin's tunables, read back at runtime via `engine.pluginConfig(id)` — plugin config lives here, not in `rules.json`. The default export receives the engine instance at boot (before state init). Available extension points:
 
 - `engine.registerAction(name, fn)` — custom action types
+- `engine.registerValidator(fn)` — a boot-time data validator run after the core checks; `fn(data, { add })` calls `add(group, message)` per issue, so a plugin flags its own authoring mistakes (deprecated shapes, missing config) in the same report as the built-ins
 - `engine.registerDescriptionHook(name, fn)` / `engine.registerSceneDecorator(decorator)` — dynamic scene content
 - `engine.registerTabWidget(name, fn)` / `engine.registerSheetRow({ label, bind })` — contribute a whole sidebar tab (referenced from `rules.tabs[].widget`) or a single sheet row
 - `engine.on(event, fn)` — react to engine events
@@ -147,6 +152,7 @@ The default export receives the engine instance at boot (before state init). Ava
 - `engine.state.setPlayerAttribute(attr, value)` — absolute attribute writes (e.g. for derived stats)
 - `engine.state.registerMigration(version, fn)` — save-format migrations for plugin state (versions above the core `SAVE_VERSION`; collisions throw)
 - `engine.state.pluginState(id)` — the plugin's named save-data bag (`state.plugins.<id>`), serialized with the save. **This is where plugin-owned save data lives** — never write top-level state fields.
+- `engine.pluginConfig(id)` — the plugin's config bag, declared as `config` on its manifest entry (see below). **This is where plugin tunables live** — the plugin's counterpart to core `rules`, so plugin knobs don't squat in `rules.json`.
 - Locales declared in the manifest are exposed under `engine.t('plugin.<id>.<key>')`
 
 Do **not** replace or wrap StateManager/engine methods on the live instances — two plugins doing that will trample each other. The curator's `museumReputation`/`obtainedItems` live in `pluginState('curator')`, introduced via its `registerMigration` (which also adopts the older top-level fields from pre-v5 saves).

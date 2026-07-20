@@ -14,6 +14,9 @@
       "src": "./src/plugins/curator.js",
       "locales": {
         "en": "./src/plugins/curator/locales/en.json"
+      },
+      "config": {
+        "installCost": 50
       }
     }
   ],

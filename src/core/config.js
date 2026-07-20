@@ -42,8 +42,6 @@ export const ACTIONS = {
   SET_FLAG:        'set_flag',
   LOG:             'log',
   MANAGE_CHEST:    'manage_chest',
-  MANAGE_EXHIBITS: 'manage_exhibits',
-  ADD_DISPLAY:     'add_display',
   ADVANCE_TIME:    'advance_time',
   SET_TIMER:       'set_timer',
   CANCEL_TIMER:    'cancel_timer',
