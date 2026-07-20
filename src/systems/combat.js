@@ -1,4 +1,4 @@
-import { buildSceneDescription, apEconomyRules } from "../core/utils.js";
+import { buildSceneDescription } from "../core/utils.js";
 import { MAX_D20_ROLL, CSS, LOG, WEAPON_SLOTS, ENEMY_CLAW_ID } from "../core/config.js";
 import { roll, parseDamage } from "./dice.js";
 import { rollBreakdown, skillLabel } from "./skill-checks.js";
@@ -11,8 +11,8 @@ import { CombatRenderer } from "../ui/combat-ui.js";
 // 2. Enemies that out-rolled the player act first (the "before" phase).
 // 3. The player acts, spending Action Points on attacks or item use.
 // 4. Ending the player's turn triggers the slower enemies (the "after" phase).
-// 5. The round closes: AP recharges per rules.apEconomy, and fast enemies
-//    open the next round.
+// 5. The round closes: AP recharges to full, and fast enemies open the next
+//    round.
 // 6. HP is checked after every attack to resolve victory or defeat.
 export class CombatSystem {
   constructor(engine) {
@@ -23,9 +23,6 @@ export class CombatSystem {
     // On victory, the option's onVictory actions array is executed as a pipeline.
     this.originOption = null;
     this.playerInit = 0;
-    // AP spent since the player's turn began — measured against
-    // rules.apEconomy.maxPerTurn (see remainingTurnBudget).
-    this.apSpentThisTurn = 0;
     this.renderer = new CombatRenderer(this);
   }
 
@@ -35,17 +32,13 @@ export class CombatSystem {
   get isGameOver() { return this.engine.isGameOver; }
 
   /**
-   * Called by engine._spendAP after every combat AP spend. Tracks the turn
-   * budget and hands the turn to the enemies when it runs out (AP exhausted,
-   * or the maxPerTurn cap reached); otherwise refreshes the combat controls.
-   *
-   * @param {number} amount - AP just spent.
+   * Called by engine._spendAP after every combat AP spend. Hands the turn to
+   * the enemies once the player's AP is exhausted; otherwise refreshes the
+   * combat controls.
    */
-  notePlayerSpentAP(amount) {
+  notePlayerSpentAP() {
     if (!this.inCombat) return;
-    this.apSpentThisTurn += amount ?? 0;
-    const remaining = this.engine.state.getPlayer().resources.ap.current;
-    if (remaining <= 0 || this.remainingTurnBudget() <= 0) {
+    if (this.engine.state.getPlayer().resources.ap.current <= 0) {
       this.enemyTurn('after');
     } else {
       this.renderer.render(); // reflect the depleted AP on the attack buttons
@@ -78,17 +71,10 @@ export class CombatSystem {
     this.enemies = enemyDataList;
     this.originOption = originOption;
 
-    // AP at the combat boundary is governed by rules.apEconomy: classic games
-    // (the default) begin fully charged; a persistent economy carries the
-    // pool in, topped up to the minPerTurn floor so the player can always act.
-    const eco = apEconomyRules(this.engine.data.rules);
+    // AP is a per-combat tactical budget: the player always begins a fight
+    // fully charged.
+    this.engine.state.modifyPlayerStat('ap', 'full');
     const player = this.engine.state.getPlayer();
-    if (eco.refillOnCombatStart) {
-      this.engine.state.modifyPlayerStat('ap', 'full');
-    } else if (player.resources.ap.current < eco.minPerTurn) {
-      this.engine.state.modifyPlayerStat('ap', eco.minPerTurn - player.resources.ap.current);
-    }
-    this.apSpentThisTurn = 0;
 
     const names = this.enemies.map(e => e.name).join(' & ');
 
@@ -185,17 +171,13 @@ export class CombatSystem {
   }
 
   /**
-   * AP the player may still spend this turn: current AP, further capped by
-   * rules.apEconomy.maxPerTurn (0 = uncapped). The engine's _spendAP checks
-   * this before any combat action and the renderer disables attacks that
-   * exceed it, so an oversized persistent pool can't inflate a single turn.
+   * AP the player may still spend this turn — their current AP. The engine's
+   * _spendAP checks this before any combat action and the renderer disables
+   * attacks the pool can't afford.
    * @returns {number}
    */
   remainingTurnBudget() {
-    const ap = this.engine.state.getPlayer().resources.ap.current;
-    const { maxPerTurn } = apEconomyRules(this.engine.data.rules);
-    if (maxPerTurn > 0) return Math.min(ap, Math.max(0, maxPerTurn - this.apSpentThisTurn));
-    return ap;
+    return this.engine.state.getPlayer().resources.ap.current;
   }
 
   // Resolves an enemy's (possible) defeat after damage lands. Returns true
@@ -293,21 +275,9 @@ export class CombatSystem {
       : this.engine.t('combat.playerTakesNoDamage'), 'damage');
   }
 
-  // Round boundary: recharge the player's AP pool per rules.apEconomy
-  // (classic: full refill), top up to the minPerTurn floor, and open a fresh
-  // turn budget.
+  // Round boundary: recharge the player's AP pool to full for a fresh turn.
   _refillRoundAp() {
-    const eco = apEconomyRules(this.engine.data.rules);
-    const player = this.engine.state.getPlayer();
-    if (eco.refillPerRound === 'full') {
-      this.engine.state.modifyPlayerStat('ap', 'full');
-    } else if (eco.refillPerRound > 0) {
-      this.engine.state.modifyPlayerStat('ap', eco.refillPerRound);
-    }
-    if (player.resources.ap.current < eco.minPerTurn) {
-      this.engine.state.modifyPlayerStat('ap', eco.minPerTurn - player.resources.ap.current);
-    }
-    this.apSpentThisTurn = 0;
+    this.engine.state.modifyPlayerStat('ap', 'full');
   }
 
   // The weapon an enemy attacks with: their Right Hand item, falling back to
@@ -383,11 +353,9 @@ export class CombatSystem {
       if (totalXp > 0) this.engine.state.addXP(totalXp);
       this.engine.log(LOG.SYSTEM, this.engine.t(totalXp > 0 ? 'combat.victoryXp' : 'combat.victory', { names, xp: totalXp }), 'loot');
 
-      // Classic games restore AP to max at the combat boundary; a persistent
-      // economy (refillOnCombatStart: false) carries the spent pool out.
-      if (apEconomyRules(this.engine.data.rules).refillOnCombatStart) {
-        this.engine.state.modifyPlayerStat('ap', 'full');
-      }
+      // Restore AP to max at the combat boundary so the out-of-combat sheet
+      // reads full and the next fight opens fully charged.
+      this.engine.state.modifyPlayerStat('ap', 'full');
 
       const didNavigate = this.engine.snapshotNavigation();
       this.engine.runActions(this.originOption?.onVictory || []);

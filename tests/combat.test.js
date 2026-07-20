@@ -81,7 +81,7 @@ function makeCS(items = {}) {
   // Mirrors engine.js _spendAP: spend, then hand the spend to the combat system.
   engine._spendAP = (cost) => {
     gameState.modifyPlayerStat('ap', -cost);
-    cs.notePlayerSpentAP(cost);
+    cs.notePlayerSpentAP();
     return true;
   };
   return cs;
@@ -432,19 +432,16 @@ test('endCombat: no re-render when onVictory opened a dialogue', () => {
 });
 
 
-// ─── AP economy (rules.apEconomy) ────────────────────────────────────────────
+// ─── AP (per-combat tactical budget) ─────────────────────────────────────────
 
-test('remainingTurnBudget: uncapped budget is current AP; maxPerTurn caps the turn', () => {
+test('remainingTurnBudget: the player\'s current AP', () => {
   const cs = makeCS();
-  assert.equal(cs.remainingTurnBudget(), 3); // no apEconomy → the whole pool
-
-  cs.engine.data.rules = { apEconomy: { maxPerTurn: 2 } };
-  assert.equal(cs.remainingTurnBudget(), 2);  // capped below the pool
-  cs.apSpentThisTurn = 2;
-  assert.equal(cs.remainingTurnBudget(), 0);  // cap exhausted despite AP left
+  assert.equal(cs.remainingTurnBudget(), 3);
+  gameState.modifyPlayerStat('ap', -2);
+  assert.equal(cs.remainingTurnBudget(), 1);
 });
 
-test('round end: default economy fully recharges the pool (classic behavior)', () => {
+test('round end recharges the AP pool to full', () => {
   const cs = makeCS();
   cs.engine.setMode('combat');
   cs.enemies = [];
@@ -453,54 +450,13 @@ test('round end: default economy fully recharges the pool (classic behavior)', (
   assert.equal(ap(), 3);
 });
 
-test('round end: refillPerRound number recharges partially, 0 not at all, minPerTurn floors', () => {
-  const cs = makeCS();
-  cs.engine.setMode('combat');
-  cs.enemies = [];
-
-  gameState.modifyPlayerStat('ap', -3); // drained to 0
-  cs.engine.data.rules = { apEconomy: { refillPerRound: 2 } };
-  cs.enemyTurn('after');
-  assert.equal(ap(), 2);
-
-  cs.engine.data.rules = { apEconomy: { refillPerRound: 0 } };
-  cs.enemyTurn('after');
-  assert.equal(ap(), 2); // untouched
-
-  gameState.modifyPlayerStat('ap', -2); // back to 0
-  cs.engine.data.rules = { apEconomy: { refillPerRound: 0, minPerTurn: 1 } };
-  cs.enemyTurn('after');
-  assert.equal(ap(), 1); // floored so the player can still act
-});
-
-test('round end resets the turn budget for the new turn', () => {
-  const cs = makeCS();
-  cs.engine.setMode('combat');
-  cs.enemies = [];
-  cs.engine.data.rules = { apEconomy: { maxPerTurn: 2 } };
-  cs.apSpentThisTurn = 2;
-  cs.enemyTurn('after');
-  assert.equal(cs.apSpentThisTurn, 0);
-  assert.equal(cs.remainingTurnBudget(), 2);
-});
-
-test('endCombat victory: classic economy restores AP to max at the boundary', () => {
+test('endCombat victory restores AP to max at the boundary', () => {
   const cs = makeCS();
   cs.engine.setMode('combat');
   cs.enemies = [makeEnemy({ hp: 0 })];
   gameState.modifyPlayerStat('ap', -2);
   cs.endCombat(true);
   assert.equal(ap(), 3);
-});
-
-test('endCombat victory: refillOnCombatStart false carries the spent pool out', () => {
-  const cs = makeCS();
-  cs.engine.data.rules = { apEconomy: { refillOnCombatStart: false } };
-  cs.engine.setMode('combat');
-  cs.enemies = [makeEnemy({ hp: 0 })];
-  gameState.modifyPlayerStat('ap', -2);
-  cs.endCombat(true);
-  assert.equal(ap(), 1); // persistent economy: AP survives the combat boundary
 });
 
 // ─── attackAttribute ─────────────────────────────────────────────────────────

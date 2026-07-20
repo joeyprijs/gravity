@@ -26,7 +26,7 @@ Actions are the mutation half of the engine: the ordered pipeline a scene option
 
 ### The `log` convention
 
-The state-changing actions — `loot`, `heal`, `full_rest`, `modify_ap`, `modify_resource`, and `advance_time` — write a default sentence to the narrative log. Two optional controls, shared by all of them:
+The state-changing actions — `loot`, `heal`, `full_rest`, `modify_resource`, and `advance_time` — write a default sentence to the narrative log. Two optional controls, shared by all of them:
 
 - `"log": false` — silence the default message entirely.
 - `"log": "Some text."` — replace the default with your own line.
@@ -104,23 +104,16 @@ Change the player's HP.
 
 ### `full_rest`
 
-Restore the player at a resting point. Takes no effect parameters. Sets HP to full, restores AP according to `rules.apEconomy.restRestore` (full by default), and refills the retry currency by `rules.skillRetry.restRestore` (clamped to its max) when one is configured.
+Restore the player at a resting point. Takes no effect parameters. Sets HP to full and refills the retry currency by `rules.skillRetry.restRestore` (clamped to its max) when one is configured. AP is not restored here — it is a per-combat budget that resets on its own when the next fight begins.
 
-- `log` — see [The `log` convention](#the-log-convention).
-
-### `modify_ap`
-
-Move Action Points mid-story — the narrative valve of the AP economy.
-
-- `amount` *(number or `"full"`, default `"full"`)* — a number moves AP within `[0, max]`; a negative number drains; `"full"` (or omitting `amount`) tops the pool up to max. If the resolved change is zero (already full, or already empty and draining), the action is silent and does nothing.
 - `log` — see [The `log` convention](#the-log-convention).
 
 ### `modify_resource`
 
-The generic sibling of `modify_ap`: move any declared `{ current, max }` resource (a custom currency like luck points or favor).
+Move any declared `{ current, max }` resource (a custom currency like luck points or favor).
 
 - `resource` *(string, required)* — the resource name. Must be a `{ current, max }` resource declared in `rules.playerDefaults.resources`; an undeclared name warns and does nothing (and is flagged at boot).
-- `amount` *(number or `"full"`, default `"full"`)* — same semantics as `modify_ap`.
+- `amount` *(number or `"full"`, default `"full"`)* — a number moves the resource within `[0, max]`; a negative number drains; `"full"` (or omitting `amount`) tops it up to max. If the resolved change is zero, the action is silent and does nothing.
 - `log` — see [The `log` convention](#the-log-convention). The resource's display name comes from the `ui.resources.<resource>` locale key.
 
 ### `set_flag`

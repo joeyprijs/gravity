@@ -199,10 +199,7 @@
     "lookAroundFound": "Your keen eye spots something!",
     "lookAroundFoundMore": "Your keen eye spots something, though you sense the area still holds more.",
     "lookAroundFail": "Nothing reveals itself, yet you sense there's something you're missing.",
-    "badgeApCost": "AP: {cost}",
     "badgeRetryCost": "Retry: {cost} Luck Point",
-    "restoreAp": "You recover {amount} AP.",
-    "drainAp": "You lose {amount} AP.",
     "resourceGain": "You gain {amount} {resource}.",
     "resourceLoss": "You lose {amount} {resource}.",
     "retrySpent": "You spend {cost} Luck Point to press your luck. ({remaining} remaining)"

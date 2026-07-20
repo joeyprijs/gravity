@@ -4,7 +4,7 @@ import { evaluateCondition } from "./condition.js";
 import {
   runCheckAttempt, checkPresentation, normalizeOutcomes,
   getAttempts, isResolved,
-  spendRetryCost, apGate, applyApGate, spendAp
+  spendRetryCost
 } from "./skill-checks.js";
 
 // Actions that move the conversation to a new panel (node, store, or scene).
@@ -193,14 +193,12 @@ export class DialogueSystem {
       // conversation only (patience resets on re-talk).
       if (needsCheck && (isResolved(this.engine.state, resolvedKey, resKey) || isResolved(this.engine.state, dcStateKey, resKey))) return;
 
-      // Checked responses charge apCost ?? rules default; plain responses stay
-      // free unless they set an explicit apCost (like scene narrative beats).
+      // Checked responses carry a retry badge; plain responses are free.
       let p;
       if (needsCheck) {
         p = checkPresentation(this.engine, res, getAttempts(this.engine.state, dcStateKey, resKey));
       } else {
-        const ap = apGate(this.engine, res.apCost ?? 0);
-        p = { gate: { cost: 0, blocked: false }, ap, displayText: res.text, badge: applyApGate(this.engine, ap, null), blocked: ap.blocked };
+        p = { gate: { cost: 0, blocked: false }, displayText: res.text, badge: null, blocked: false };
       }
       const btn = buildOptionButton(p.displayText, p.badge);
       if (p.blocked) btn.disabled = true;
@@ -215,7 +213,6 @@ export class DialogueSystem {
         // front, before their pipeline can navigate away.
         if (needsCheck) {
           spendRetryCost(this.engine, p.gate);
-          spendAp(this.engine, p.ap);
           let navigated = false;
           runCheckAttempt(this.engine, res, {
             attemptKey: dcStateKey,
@@ -234,7 +231,6 @@ export class DialogueSystem {
         // Action routing for plain (check-free) responses. Read through
         // normalizeOutcomes so a response authored in the outcomes
         // shape keeps working if its check is later removed.
-        spendAp(this.engine, p.ap);
         if (res.timeCost > 0) this.engine.advanceTime(res.timeCost);
         this._runActions(normalizeOutcomes(res).success.actions);
       };

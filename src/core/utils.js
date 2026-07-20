@@ -149,29 +149,6 @@ export function getItemLabel(itemsData, itemId, amount = 1) {
 }
 
 /**
- * Normalizes rules.apEconomy into a complete knob set. Every default
- * reproduces the engine's classic behavior (AP refills fully at combat
- * boundaries, every round, and on rest; skill checks are free; no per-turn
- * floor or cap), so games without the block play exactly as before.
- *
- * @param {object|null} rules - The loaded rules object.
- * @returns {{refillOnCombatStart: boolean, refillPerRound: ('full'|number),
- *   restRestore: ('full'|number), minPerTurn: number, maxPerTurn: number,
- *   skillAttemptCost: number}}
- */
-export function apEconomyRules(rules) {
-  const eco = rules?.apEconomy || {};
-  return {
-    refillOnCombatStart: eco.refillOnCombatStart !== false,
-    refillPerRound: eco.refillPerRound ?? 'full',
-    restRestore: eco.restRestore ?? 'full',
-    minPerTurn: eco.minPerTurn ?? 0,
-    maxPerTurn: eco.maxPerTurn ?? 0,
-    skillAttemptCost: eco.skillAttemptCost ?? 0,
-  };
-}
-
-/**
  * The attribute deltas one equipment piece carries while worn: its
  * attributeBonuses map, plus the legacy armorClassBonus folded into 'ac'.
  * equipItem/unequipItem apply these on swap, so a relic can raise any

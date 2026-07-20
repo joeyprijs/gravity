@@ -192,16 +192,6 @@ test('success via a navigating action skips the options-only re-render', () => {
 
 // ── gates ─────────────────────────────────────────────────────────────────────
 
-test('AP gate: skillAttemptCost charges rolled checks and blocks unaffordable retries', () => {
-  const rules = { ...TEST_RULES, apEconomy: { skillAttemptCost: 2 } };
-  const { ds } = makeHarness([{ text: 'Persuade', skillCheck: 'charm', dc: 25 }], { rules });
-  ds.startDialogue('talker');
-
-  checkButtons()[0].onclick();
-  assert.equal(gameState.getPlayer().resources.ap.current, 1, 'attempt spent 2 AP');
-  assert.equal(checkButtons()[0].disabled, true, '1 AP left < cost 2 — button disabled');
-});
-
 test('retry gate: first attempt free, retry spends the configured resource', () => {
   const rules = { ...TEST_RULES, skillRetry: { resource: 'luckPoints', cost: 1 } };
   const { ds } = makeHarness([{ text: 'Persuade', skillCheck: 'charm', dc: 25 }], { rules });
@@ -216,15 +206,14 @@ test('retry gate: first attempt free, retry spends the configured resource', () 
   assert.equal(checkButtons()[0].disabled, true, 'no currency left — retry blocked');
 });
 
-test('plain response with an explicit apCost spends it and runs its actions', () => {
+test('plain response runs its actions', () => {
   const { ds, calls } = makeHarness([{
-    text: 'Chat', apCost: 1, actions: [{ type: 'spy', tag: 'chatted' }],
+    text: 'Chat', actions: [{ type: 'spy', tag: 'chatted' }],
   }]);
   ds.startDialogue('talker');
 
   // Plain responses land in the main options container.
   plainButtons()[0].onclick();
-  assert.equal(gameState.getPlayer().resources.ap.current, 2);
   assert.deepEqual(calls.actions, ['chatted']);
 });
 

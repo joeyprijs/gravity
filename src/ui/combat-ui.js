@@ -100,8 +100,7 @@ export class CombatRenderer {
           this.cs.engine.t('combat.attackTarget', { name: att.name }),
           itemStatLines(this.cs.engine.t.bind(this.cs.engine), att, this.cs.engine.state.getPlayer().attributes));
 
-        // Attacks the turn budget can't cover render disabled (current AP,
-        // further capped by rules.apEconomy.maxPerTurn).
+        // Attacks the player's remaining AP can't cover render disabled.
         if (this.cs.remainingTurnBudget() < (att.attributes?.actionPoints ?? 0)) {
           btn.disabled = true;
         }

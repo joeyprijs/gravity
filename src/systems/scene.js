@@ -7,7 +7,7 @@ import { resolveTimeCost } from "./time.js";
 import {
   runCheckAttempt, checkPresentation, normalizeOutcomes,
   getAttempts, isResolved, resetAttempts,
-  spendRetryCost, apGate, applyApGate, spendAp,
+  spendRetryCost,
   rollBreakdown, skillLabel
 } from "./skill-checks.js";
 
@@ -369,7 +369,6 @@ export class SceneRenderer {
       if (this.engine.isGameOver) return;
       this.engine.log(LOG.PLAYER, p.displayText, 'choice');
       spendRetryCost(this.engine, p.gate);
-      spendAp(this.engine, p.ap);
       this._resolveDiscovery(opt, i, state, skillKey, scene);
     };
     return btn;
@@ -485,17 +484,10 @@ export class SceneRenderer {
       ? this.engine.t(badgeKey)
       : this.engine.t('actions.lookAroundBadge');
 
-    // Narrative beats are free story moments — only an explicit apCost
-    // charges (the rules-level skillAttemptCost is for rolled checks).
-    const ap = apGate(this.engine, opt.apCost ?? 0);
-    const btn = buildOptionButton(opt.text, applyApGate(this.engine, ap, badge));
-    if (ap.blocked) {
-      btn.disabled = true;
-      return btn;
-    }
+    // Narrative beats are free story moments — no AP, no roll.
+    const btn = buildOptionButton(opt.text, badge);
     btn.onclick = () => {
       if (this.engine.isGameOver) return;
-      spendAp(this.engine, ap);
       const map = typeof state === 'object' && state !== null ? state : {};
       map[`uses_${i}`] = uses + 1;
       this.engine.state.setCheckState(skillKey, map);
@@ -535,7 +527,6 @@ export class SceneRenderer {
       if (this.engine.isGameOver) return;
       this.engine.log(LOG.PLAYER, p.displayText, 'choice');
       spendRetryCost(this.engine, p.gate);
-      spendAp(this.engine, p.ap);
       runCheckAttempt(this.engine, opt, {
         attemptKey: skillKey,
         entryKey: i,

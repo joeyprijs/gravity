@@ -488,34 +488,9 @@ function validateRules(ctx) {
   if (rules?.tabs && !rules.tabs.some(t => t?.widget === 'options'))
     ctx.add(group, 'tabs: no tab with widget "options" — the save/load/restart buttons render nowhere');
 
-  // AP economy: value sanity, plus warnings for the two classic foot-guns —
-  // a player who can never recover AP, and a turn cap no attack fits under.
-  const eco = rules?.apEconomy;
-  const attackItems = Object.values(items ?? {}).filter(i => i.type === 'Weapon' || i.type === 'Spell');
-  if (eco) {
-    const refillLike = (v) => v === undefined || v === 'full' || (typeof v === 'number' && v >= 0);
-    if (!refillLike(eco.refillPerRound))
-      ctx.add(group, 'apEconomy.refillPerRound must be "full" or a non-negative number');
-    if (!refillLike(eco.restRestore))
-      ctx.add(group, 'apEconomy.restRestore must be "full" or a non-negative number');
-    for (const key of ['minPerTurn', 'maxPerTurn', 'skillAttemptCost']) {
-      if (eco[key] !== undefined && !(typeof eco[key] === 'number' && eco[key] >= 0))
-        ctx.add(group, `apEconomy.${key} must be a non-negative number`);
-    }
-
-    // The stranding hazard is per-fight: with no per-round income and no
-    // floor, a player who empties their pool mid-combat can never act again
-    // that fight, whatever the out-of-combat recovery valves are.
-    if (eco.refillPerRound === 0 && !(eco.minPerTurn > 0))
-      ctx.add(group, 'apEconomy: refillPerRound 0 with no minPerTurn floor — a player who empties their AP mid-fight can never act again for the rest of that combat; add a minPerTurn floor or a per-round refill');
-
-    const positiveCosts = attackItems.map(i => i.attributes?.actionPoints ?? 0).filter(c => c > 0);
-    if (eco.maxPerTurn > 0 && positiveCosts.length && Math.min(...positiveCosts) > eco.maxPerTurn)
-      ctx.add(group, `apEconomy.maxPerTurn ${eco.maxPerTurn} is below every weapon/spell AP cost — the player can never act in combat`);
-  }
-
   // Every weapon/spell at 0 AP means combat turns never end on their own —
   // the End Turn button becomes the only handoff. Usually an authoring slip.
+  const attackItems = Object.values(items ?? {}).filter(i => i.type === 'Weapon' || i.type === 'Spell');
   if (attackItems.length && attackItems.every(i => !(i.attributes?.actionPoints > 0)))
     ctx.add(group, 'every Weapon/Spell has an AP cost of 0 — combat turns will never end automatically (End Turn becomes the only handoff)');
 }

@@ -46,7 +46,7 @@ A browser-native, zero-dependency, data-driven text RPG engine. Define your enti
 *   **Data-Driven Everything** — Scenes, items, enemies, dialogue, quests, rules, even the sidebar tabs are static JSON. Authoring a game requires no JavaScript.
 *   **One Resolution Mechanic** — d20 + attribute modifier vs DC, everywhere: scene checks, dialogue persuasion, combat attacks. No parallel dice systems.
 *   **Outcome-Tiered Skill Checks** — Margin-based tiers (critical / success / partial / failure), one-shot fail-forward gambles, attempt budgets with authored exhaustion routes, passive checks, retry costs, and free narrative beats. Full authoring guide: [`docs/CHECKS.md`](docs/CHECKS.md).
-*   **Turn-Based Combat** — Initiative order, HP / Armor Class / Action Point budgets, multi-enemy encounters, auto-combat scene entries, and a configurable AP economy (`rules.apEconomy`).
+*   **Turn-Based Combat** — Initiative order, HP / Armor Class / Action Point budgets, multi-enemy encounters, and auto-combat scene entries. AP is a per-combat tactical budget: full at the start of every fight and refreshed each round.
 *   **Character Progression** — Point-buy character creation, XP levels that bank spendable stat points, weapons governed by a wielder attribute (`attackAttribute`), and equipment that raises any attribute (`attributeBonuses`).
 *   **Branching Dialogue & Merchants** — Conversation trees with skill-checked responses, item and quest rewards, and stateful merchant stock with per-NPC pricing.
 *   **A World Clock (opt-in)** — Player actions advance a deterministic tick counter; days and named segments derive from rules, timers fire quiet action pipelines, and conditions can read `time` / `day` / `segment`. No wall clock, fully save-safe.
@@ -239,7 +239,7 @@ Notes:
 
 *   `customAttributes` become skills: rollable in checks, readable in conditions, point-buyable at creation, and (with `levelUp.statPoints`) improvable on level-up from the Sheet, capped by `max`.
 *   `skillRetry` makes retrying a failed check cost a resource; `headerResources` surfaces custom resources in the status bar and the Sheet. Both optional — see [`docs/CHECKS.md`](docs/CHECKS.md).
-*   `rules.time` (opt-in) enables the world clock, and `rules.apEconomy` tunes AP refill/spend behavior; both are documented in [`docs/CHECKS.md`](docs/CHECKS.md).
+*   `rules.time` (opt-in) enables the world clock; it is documented in [`docs/CHECKS.md`](docs/CHECKS.md).
 
 ### Conditions (Logic Gates)
 
@@ -291,9 +291,8 @@ Available everywhere (scene options, `onVictory`, dialogue responses):
 | `navigate` | `destination` | Move to a scene. |
 | `return` | — | Return to the scene the player teleported from, else the starting scene. |
 | `heal` | `amount?` | Change HP by `amount` (default `rules.snackHealAmount`; negative damages). |
-| `full_rest` | — | Restore HP, AP, and the retry currency per `rules.apEconomy`. |
-| `modify_ap` | `amount?` | Move AP: a number, negative to drain, or `"full"`/omitted to top up. |
-| `modify_resource` | `resource`, `amount?` | The same, for any declared `{ current, max }` resource. |
+| `full_rest` | — | Restore HP and the retry currency (AP is a per-combat budget and resets on its own). |
+| `modify_resource` | `resource`, `amount?` | Move any declared `{ current, max }` resource: a number, negative to drain, or `"full"`/omitted to top up. |
 | `set_flag` | `flag`, `value` | Write a flag. |
 | `log` | `message` | Print a narrator line. |
 | `manage_chest` | `chest` | Open a chest's deposit/withdraw panel. |
@@ -311,7 +310,7 @@ Valid only inside conversation nodes:
 | `makeFriendly` | — | Mark the active NPC friendly — future `combat` actions skip it. |
 | `questTrigger` | `mission`, `status` | Start (`"active"`) or complete (`"complete"`) a mission. |
 
-The state-changing actions (`loot`, `heal`, `full_rest`, `modify_ap`, `modify_resource`, `advance_time`) take an optional `log`: `false` silences the default message, a string replaces it. Timer pipelines are restricted to *quiet* actions (`set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`) — a timer changes the world through flags, never by navigating or starting combat. Plugins register their own types (the curator plugin adds `manage_exhibits` and `add_display`) — see the [Plugin API](#plugin-api). Every parameter above is documented in full in [`docs/ACTIONS.md`](docs/ACTIONS.md).
+The state-changing actions (`loot`, `heal`, `full_rest`, `modify_resource`, `advance_time`) take an optional `log`: `false` silences the default message, a string replaces it. Timer pipelines are restricted to *quiet* actions (`set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`) — a timer changes the world through flags, never by navigating or starting combat. Plugins register their own types (the curator plugin adds `manage_exhibits` and `add_display`) — see the [Plugin API](#plugin-api). Every parameter above is documented in full in [`docs/ACTIONS.md`](docs/ACTIONS.md).
 
 ### Scenes
 

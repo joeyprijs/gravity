@@ -5,7 +5,6 @@ import {
   normalizeOutcomes, pickTier, performSkillCheck, formatMod, resolveRetryText,
   getAttempts, recordAttempt, isResolved, markResolved, resetAttempts,
   rollBreakdown, rollBreakdownParts, skillLabel, resolveTierText, retryCost, retryGate, applyRetryGate, spendRetryCost,
-  skillApCost, apGate, applyApGate, spendAp,
 } from '../src/systems/skill-checks.js';
 
 const TEST_RULES = {
@@ -311,40 +310,6 @@ test('performSkillCheck: passes breakdown parameters to translation engine', () 
   assert.equal(params.dc, 12);
   assert.equal(params.skill, 'Perception'); // display label, not the raw id
   assert.equal(params.breakdown, '1d20: 11 + 2 Perception');
-});
-
-// ── Skill-attempt AP costs (rules.apEconomy) ──────────────────────────────────
-
-test('skillApCost: explicit apCost wins; rules default applies; free otherwise', () => {
-  const engine = retryEngine({});
-  assert.equal(skillApCost(engine, {}), 0);
-  assert.equal(skillApCost(engine, { apCost: 2 }), 2);
-
-  engine.data.rules = { apEconomy: { skillAttemptCost: 1 } };
-  assert.equal(skillApCost(engine, {}), 1);
-  assert.equal(skillApCost(engine, { apCost: 0 }), 0); // explicit 0 opts out
-});
-
-test('apGate/spendAp: blocks unaffordable attempts and deducts on spend', () => {
-  const engine = retryEngine({});
-  assert.deepEqual(apGate(engine, 0), { cost: 0, blocked: false });
-  assert.deepEqual(apGate(engine, 2), { cost: 2, blocked: false }); // has 3
-
-  spendAp(engine, { cost: 2 });
-  assert.equal(gameState.getPlayer().resources.ap.current, 1);
-  assert.equal(apGate(engine, 2).blocked, true); // can no longer afford
-  spendAp(engine, { cost: 0 }); // free gate is a no-op
-  assert.equal(gameState.getPlayer().resources.ap.current, 1);
-});
-
-test('applyApGate: appends the AP cost as its own badge line; free gate is unchanged', () => {
-  const engine = retryEngine({});
-  assert.equal(applyApGate(engine, { cost: 0 }, 'DC 12'), 'DC 12');
-  const out = applyApGate(engine, { cost: 1 }, 'DC 12');
-  assert.equal(out.length, 2);
-  assert.equal(out[0], 'DC 12');
-  assert.match(out[1], /badgeApCost/);
-  assert.match(out[1], /"cost":1/);
 });
 
 // ── rollBreakdownParts ────────────────────────────────────────────────────────

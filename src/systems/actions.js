@@ -1,5 +1,4 @@
 import { LOG, ACTIONS, FLAG_KEYS, GOLD_ITEM_ID } from "../core/config.js";
-import { apEconomyRules } from "../core/utils.js";
 import { ticksUntilSegment } from "./time.js";
 
 // Built-in action handlers for the scene option action pipeline.
@@ -63,14 +62,6 @@ function handleReturn(_action, engine) {
 
 function handleFullRest(action, engine) {
   engine.state.modifyPlayerStat('hp', 'full');
-  // AP recovery on rest follows rules.apEconomy.restRestore (classic: full) —
-  // the recovery valve for persistent-AP economies.
-  const restRestore = apEconomyRules(engine.data.rules).restRestore;
-  if (restRestore === 'full') {
-    engine.state.modifyPlayerStat('ap', 'full');
-  } else if (restRestore > 0) {
-    engine.state.modifyPlayerStat('ap', restRestore);
-  }
   // A night's rest also refills the retry currency (rules.skillRetry.restRestore,
   // clamped to max) — the cozy counterweight to spending do-overs while out.
   const retry = engine.data.rules?.skillRetry;
@@ -91,26 +82,10 @@ function resourceDelta(res, amount) {
     : Math.max(Math.min(amount, res.max - res.current), -res.current);
 }
 
-// Moves AP mid-story, in either direction: { type: "modify_ap", amount: 2 }
-// restores, a negative amount drains, and "full" (also the default) resets
-// the pool to max. The narrative-side valve of rules.apEconomy — scenes,
-// dialogue choices, and victory pipelines hand exertion back or take it.
-function handleModifyAp(action, engine) {
-  const amount = resourceDelta(engine.state.getPlayer().resources.ap, action.amount);
-  if (amount === 0) return; // already full/empty — nothing to move or narrate
-  engine.state.modifyPlayerStat('ap', amount);
-  if (action.log !== false) {
-    const msg = typeof action.log === 'string'
-      ? action.log
-      : engine.t(amount < 0 ? 'actions.drainAp' : 'actions.restoreAp', { amount: Math.abs(amount) });
-    engine.log(LOG.SYSTEM, msg, amount < 0 ? 'system' : 'loot');
-  }
-}
-
-// modify_ap's generic sibling: moves any declared { current, max } resource
-// in either direction — { type: "modify_resource", resource: "luckPoints",
-// amount: 1 }, negative drains, "full" (also the default) tops it up. The
-// authoring valve for custom currencies (Luck Points, favor, ...).
+// Moves any declared { current, max } resource in either direction —
+// { type: "modify_resource", resource: "luckPoints", amount: 1 }, negative
+// drains, "full" (also the default) tops it up. The authoring valve for
+// custom currencies (Luck Points, favor, ...).
 function handleModifyResource(action, engine) {
   const res = engine.state.getPlayer().resources[action.resource];
   if (!res || typeof res !== 'object') {
@@ -200,7 +175,6 @@ export function registerBuiltinActions(engine) {
   engine.registerAction(ACTIONS.RETURN,          handleReturn);
   engine.registerAction(ACTIONS.FULL_REST,       handleFullRest);
   engine.registerAction(ACTIONS.HEAL,            handleHeal);
-  engine.registerAction(ACTIONS.MODIFY_AP,       handleModifyAp);
   engine.registerAction(ACTIONS.MODIFY_RESOURCE, handleModifyResource);
   engine.registerAction(ACTIONS.NAVIGATE,        handleNavigate);
   engine.registerAction(ACTIONS.SET_FLAG,        handleSetFlag);

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { itemStatLines, equipmentAttributeBonuses, apEconomyRules } from '../src/core/utils.js';
+import { itemStatLines, equipmentAttributeBonuses } from '../src/core/utils.js';
 
 // t() echoes "key:params" so assertions can check both key and values.
 const t = (key, p) => p ? `${key}:${JSON.stringify(p)}` : key;
@@ -51,18 +51,4 @@ test('equipmentAttributeBonuses: merges attributeBonuses with legacy armorClassB
     equipmentAttributeBonuses({ attributes: { armorClassBonus: 2, attributeBonuses: { perception: 1, ac: 1 } } }),
     { ac: 3, perception: 1 }
   );
-});
-
-// ── apEconomyRules ────────────────────────────────────────────────────────────
-
-test('apEconomyRules: defaults reproduce classic behavior; knobs pass through', () => {
-  assert.deepEqual(apEconomyRules(null), {
-    refillOnCombatStart: true, refillPerRound: 'full', restRestore: 'full',
-    minPerTurn: 0, maxPerTurn: 0, skillAttemptCost: 0,
-  });
-  const eco = apEconomyRules({ apEconomy: { refillOnCombatStart: false, refillPerRound: 2, maxPerTurn: 3 } });
-  assert.equal(eco.refillOnCombatStart, false);
-  assert.equal(eco.refillPerRound, 2);
-  assert.equal(eco.maxPerTurn, 3);
-  assert.equal(eco.restRestore, 'full');
 });

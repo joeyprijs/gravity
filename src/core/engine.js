@@ -280,10 +280,9 @@ export class RPGEngine {
   unequipItem(slot)        { return items.unequipItem(this, slot); }
 
   // Deducts AP in combat. Returns false (blocking the action) if the cost
-  // exceeds the remaining turn budget (current AP, further capped by
-  // rules.apEconomy.maxPerTurn — see CombatSystem.remainingTurnBudget).
-  // The spend is then handed to CombatSystem explicitly — turn handoff is
-  // core control flow, not a notification.
+  // exceeds the player's remaining AP for the turn. The spend is then handed
+  // to CombatSystem explicitly — turn handoff is core control flow, not a
+  // notification. Out of combat AP is never spent, so this is a no-op.
   _spendAP(cost) {
     if (!this.inCombat) return true;
     if (this.combatSystem.remainingTurnBudget() < cost) {
@@ -291,7 +290,7 @@ export class RPGEngine {
       return false;
     }
     this.state.modifyPlayerStat('ap', -cost);
-    this.combatSystem.notePlayerSpentAP(cost);
+    this.combatSystem.notePlayerSpentAP();
     return true;
   }
 

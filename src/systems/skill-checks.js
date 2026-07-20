@@ -1,5 +1,5 @@
 import { MAX_D20_ROLL, LOG } from "../core/config.js";
-import { apEconomyRules, attributeLabel } from "../core/utils.js";
+import { attributeLabel } from "../core/utils.js";
 import { roll } from "./dice.js";
 
 // Default tier margins. A roll beating the DC by criticalMargin or more lands
@@ -253,17 +253,16 @@ export function runCheckAttempt(engine, check, {
  * @param {number} attempts - Attempts made so far.
  * @param {number} [dc=check.dc] - The DC the badge advertises (discovery
  *   passes the easiest still-hidden item's).
- * @returns {{gate: object, ap: object, displayText: string,
+ * @returns {{gate: object, displayText: string,
  *   badge: ?string|string[], blocked: boolean}}
  */
 export function checkPresentation(engine, check, attempts, dc = check.dc) {
   const gate = retryGate(engine, attempts);
-  const ap = apGate(engine, skillApCost(engine, check));
   return {
-    gate, ap,
+    gate,
     displayText: resolveRetryText(check, attempts),
-    badge: applyRetryGate(engine, gate, applyApGate(engine, ap, skillBadge(engine, check.skillCheck, dc))),
-    blocked: gate.blocked || ap.blocked,
+    badge: applyRetryGate(engine, gate, skillBadge(engine, check.skillCheck, dc)),
+    blocked: gate.blocked,
   };
 }
 
@@ -347,56 +346,6 @@ export function spendRetryCost(engine, gate) {
   engine.log(LOG.SYSTEM, engine.t('actions.retrySpent', {
     cost: gate.cost, resource: label, remaining,
   }), 'system');
-}
-
-/**
- * The AP cost of one rolled skill-check attempt: the option's explicit apCost
- * wins; otherwise rules.apEconomy.skillAttemptCost applies (0 by default —
- * checks are free unless a game opts into an exertion economy). Narrative
- * (roll-free) beats don't use this: they only charge an explicit apCost.
- * @param {object} engine - The RPGEngine instance (reads data.rules).
- * @param {object} opt - The option/response carrying the check.
- * @returns {number}
- */
-export function skillApCost(engine, opt) {
-  return opt.apCost ?? apEconomyRules(engine.data.rules).skillAttemptCost;
-}
-
-/**
- * The AP gate for an attempt that costs AP: what it costs and whether the
- * player can afford it. `blocked` means callers render the button disabled.
- * @param {object} engine - The RPGEngine instance (reads state).
- * @param {number} cost - AP cost of one attempt (see skillApCost).
- * @returns {{cost: number, blocked: boolean}}
- */
-export function apGate(engine, cost) {
-  if (!(cost > 0)) return { cost: 0, blocked: false };
-  return { cost, blocked: (engine.state.getPlayer().resources.ap?.current ?? 0) < cost };
-}
-
-/**
- * Appends the AP cost to a check badge when the attempt charges one, as its
- * own badge line ("AP: 1"). Without a base badge (a plain dialogue response
- * with an explicit apCost) the AP line stands alone. Returns the (possibly
- * extended) badge lines.
- * @param {object} engine - The RPGEngine instance (used for locale).
- * @param {{cost: number}} gate - Result of apGate().
- * @param {?string|string[]} badge - The base badge line(s), or null.
- * @returns {?string|string[]}
- */
-export function applyApGate(engine, gate, badge) {
-  if (gate.cost <= 0) return badge;
-  return [...badgeLines(badge), engine.t('actions.badgeApCost', { cost: gate.cost })];
-}
-
-/**
- * Charges an AP gate. Silent — the header resource bar reflects the spend;
- * unlike retries there's no scarce-currency drama to narrate.
- * @param {object} engine - The RPGEngine instance (reads state).
- * @param {{cost: number}} gate - Result of apGate().
- */
-export function spendAp(engine, gate) {
-  if (gate.cost > 0) engine.state.modifyPlayerStat('ap', -gate.cost);
 }
 
 /**

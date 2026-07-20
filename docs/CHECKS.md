@@ -165,32 +165,11 @@ Without `rules.time` the system is dormant: no HUD chip, no default costs (expli
 
 Combat does not advance the clock by default; author an `advance_time` in `onVictory` if a fight should cost time.
 
-## The AP economy (`rules.apEconomy`)
+## Action Points
 
-Action Points pace combat: each attack or item costs AP, and how AP refills decides whether combat feels like a fresh budget every round (classic) or a scarce resource carried across a whole dungeon (persistent). Omit the block entirely and you get classic behavior — AP refills to full at every boundary, checks are free, no floor or cap. Add it to change any of those:
+Action Points (AP) pace combat and nothing else. Each attack, and each in-combat item use or gear swap, costs AP (`attributes.actionPoints` on the item; `rules.unequipApCost` for a swap-out). When a fight begins the pool refills to full, and it refills to full again at the end of every round, so each turn is a fresh tactical budget. AP is never spent outside combat and always resets per fight — there are no persistent or exertion economies to configure.
 
-```json
-"apEconomy": {
-  "refillOnCombatStart": true,
-  "refillPerRound": "full",
-  "restRestore": "full",
-  "minPerTurn": 0,
-  "maxPerTurn": 0,
-  "skillAttemptCost": 0
-}
-```
-
-- **`refillOnCombatStart`** *(boolean, default `true`)* — classic: the pool refills to max when a fight begins. `false` carries the current pool into combat (topped up to the `minPerTurn` floor), so AP spent exploring still matters when the ambush lands.
-- **`refillPerRound`** *(`"full"` or number, default `"full"`)* — how much AP recharges at the end of each round. `"full"` returns to max; a number adds that many; `0` gives no per-round income (a pool that only drains).
-- **`restRestore`** *(`"full"` or number, default `"full"`)* — how much AP a `full_rest` gives back. The out-of-combat recovery valve for a persistent economy.
-- **`minPerTurn`** *(number, default `0`)* — a floor: at each turn boundary AP is topped up to at least this, so the player can always take an action even after a lean round.
-- **`maxPerTurn`** *(number, default `0` = uncapped)* — the most AP spendable in a single turn, whatever the pool holds. Stops a large persistent pool from dumping every point in one turn; attacks that would exceed it render disabled.
-- **`skillAttemptCost`** *(number, default `0`)* — AP charged per rolled skill-check attempt (`0` keeps checks free). A check's own `apCost` overrides it. This is the bridge between the check toolkit and the AP economy — an exertion cost on trying, not just on fighting.
-
-Two configurations the validator warns about at boot, because both silently strand the player:
-
-- `refillPerRound: 0` with no `minPerTurn` floor — empty your AP mid-fight and you can never act again for the rest of that combat.
-- `maxPerTurn` below *every* weapon and spell's AP cost — no attack ever fits the turn, so combat can't proceed.
+The validator warns if every weapon and spell has an AP cost of `0`, since combat turns would then never end on their own (the End Turn button becomes the only handoff).
 
 ## There is no luck subsystem
 
