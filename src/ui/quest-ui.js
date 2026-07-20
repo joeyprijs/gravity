@@ -7,7 +7,7 @@ export class QuestUI {
     this.engine = engine;
   }
 
-  render() {
+  render(newQuests = null) {
     const panel = document.getElementById(EL.TAB_QUESTS);
     if (!panel) return;
     panel.innerHTML = '';
@@ -15,19 +15,20 @@ export class QuestUI {
     const activeList = [];
     const completedList = [];
 
-    const buildQuestItem = (mData, extraClass = null) => buildCard({
+    // A started/completed quest wears a dot until the player leaves the tab.
+    const buildQuestItem = (mId, mData, extraClass = null) => buildCard({
       tag: 'li',
       title: mData.name,
       body: mData.description,
-      classes: extraClass ? [extraClass] : [],
+      classes: [extraClass, newQuests?.has(mId) ? CSS.CARD_NEW : null].filter(Boolean),
     });
 
     for (const [mId, mData] of Object.entries(this.engine.data.missions)) {
       const status = this.engine.state.getMissionStatus(mId);
       if (status === MISSION_STATUS.ACTIVE) {
-        activeList.push(buildQuestItem(mData));
+        activeList.push(buildQuestItem(mId, mData));
       } else if (status === MISSION_STATUS.COMPLETE) {
-        completedList.push(buildQuestItem(mData, CSS.CARD_DONE));
+        completedList.push(buildQuestItem(mId, mData, CSS.CARD_DONE));
       }
     }
 

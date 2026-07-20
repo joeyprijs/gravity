@@ -199,6 +199,29 @@
         assert(badge.includes('Difficulty Check'), `skill badge "${badge}" shows the DC`);
       });
 
+      await step('tab notifier: dots a gain, clears on open, skips silent + active tab', () => {
+        const invBtn = $('[data-tab="inventory-tab"]');   // inactive (sheet tab is active)
+        window.gameEngine.state.addToInventory('healing_potion', 1);
+        assert(invBtn.classList.contains('tabs__btn--notify'), 'inventory dotted on item gain');
+        invBtn.click();
+        assert(!invBtn.classList.contains('tabs__btn--notify'), 'dot cleared on opening the tab');
+        window.gameEngine.state.addToInventory('healing_potion', 1);
+        assert(!invBtn.classList.contains('tabs__btn--notify'), 'the active tab is never dotted');
+        $('[data-tab="attributes-tab"]').click();          // leave inventory inactive again
+        window.gameEngine.state.addToInventory('healing_potion', 1, { silent: true });
+        assert(!invBtn.classList.contains('tabs__btn--notify'), 'a silent internal move never dots');
+      });
+
+      await step('tab notifier: per-entry dot marks the new item, cleared on leaving the tab', () => {
+        // Sheet tab is active (from the previous step) so inventory is inactive.
+        window.gameEngine.state.addToInventory('home_rune', 1);   // a distinct new item
+        $('[data-tab="inventory-tab"]').click();                  // open it — dots render
+        assert($$('#inventory-tab .card--new').length >= 1, 'the new item card is dotted');
+        $('[data-tab="attributes-tab"]').click();                 // leave -> acknowledge
+        $('[data-tab="inventory-tab"]').click();                  // reopen
+        assert($$('#inventory-tab .card--new').length === 0, 'per-entry dot cleared after leaving the tab');
+      });
+
       await step('inventory renders list cards with valid markup', () => {
         $('[data-tab="inventory-tab"]').click();
         assert(!$('#inventory-tab').hidden, 'inventory panel visible');

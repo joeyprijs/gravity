@@ -23,6 +23,12 @@ export class UIManager {
     this.questUI = new QuestUI(engine);
     this.inventoryUI = new InventoryUI(engine);
 
+    // Ids of entries added since the player last acknowledged the tab, so the
+    // list can dot which item/quest is new (see _setupTabNotifier). Cleared
+    // when the player leaves the tab.
+    this._newItems = new Set();
+    this._newQuests = new Set();
+
     // The built-in tab widgets. Registered on the engine so plugins share the
     // same mechanism for contributing whole sidebar tabs (rules.tabs[].widget).
     engine.registerTabWidget('map', (panel, ui) => ui._buildMapWidget(panel));
@@ -33,6 +39,7 @@ export class UIManager {
   setup() {
     this._buildTabs();
     this._buildTopBar();
+    this._setupTabNotifier();
     this.map.setup();
 
     // One delegated listener covers every inventory item button, present and
@@ -108,6 +115,10 @@ export class UIManager {
     // Remove any pre-existing tab panels so the HTML can be left empty
     playerPanel.querySelectorAll(`.${CSS.TABS_PANEL}`).forEach(p => p.remove());
 
+    // The sheet lives in the 'attributes' widget tab — remember its id so the
+    // notifier can dot it when a level-up point becomes spendable.
+    this._sheetTabId = rules.tabs.find(t => t.widget === 'attributes')?.id ?? null;
+
     rules.tabs.forEach(tab => {
       // Nav button
       const btn = document.createElement('button');
@@ -139,16 +150,79 @@ export class UIManager {
     // Tab switching
     nav.querySelectorAll(`.${CSS.TABS_BTN}`).forEach(btn => {
       btn.addEventListener('click', (e) => {
+        const opened = e.target.dataset.tab;
+        const departing = nav.querySelector(`.${CSS.TABS_BTN_ACTIVE}`)?.dataset.tab;
+        // Leaving a tab acknowledges its per-entry dots — next visit is clean.
+        if (departing && departing !== opened) this._acknowledgeTabEntries(departing);
+
         nav.querySelectorAll(`.${CSS.TABS_BTN}`).forEach(b => b.classList.remove(CSS.TABS_BTN_ACTIVE));
         document.querySelectorAll(`#${EL.PLAYER_PANEL} .${CSS.TABS_PANEL}`).forEach(c => { c.hidden = true; });
         e.target.classList.add(CSS.TABS_BTN_ACTIVE);
-        document.getElementById(e.target.dataset.tab).hidden = false;
-        if (e.target.dataset.tab === 'map-tab') {
+        // Viewing a tab clears its "something new" tab dot (per-entry dots stay
+        // until the player leaves).
+        e.target.classList.remove(CSS.TABS_BTN_NOTIFY);
+        document.getElementById(opened).hidden = false;
+
+        // Re-render the opened list so its per-entry dots reflect the new-set
+        // (the render triggered by the original gain ran before the set knew).
+        const player = this.engine.state.getPlayer();
+        if (opened === EL.TAB_INVENTORY) this.inventoryUI.renderInventory(player, this._newItems);
+        else if (opened === EL.TAB_QUESTS) this.questUI.render(this._newQuests);
+        if (opened === 'map-tab') {
           this.map.invalidateMinimap();
           this.map.renderMinimap();
         }
       });
     });
+  }
+
+  // Dots a non-active tab when something worth noticing is *added* to its
+  // panel — a found/gifted item, a started/advanced quest, a bankable level-up
+  // point — so richness in the player panel isn't missed while heads-down in
+  // the scene. Driven by the mutation bus (gains only, never removals/uses).
+  // Stats that also live in the scene top bar (HP/AC/AP/gold/luck) are
+  // deliberately not signalled here — they're already in view. State is
+  // in-memory: opening the tab clears its dot, and a reload/load starts clean.
+  _setupTabNotifier() {
+    let prevStatPoints = this.engine.state.getPlayer()?.statPoints ?? 0;
+    const dot = (tabId) => {
+      if (!tabId) return;
+      const btn = document.querySelector(`.${CSS.TABS_BTN}[data-tab="${tabId}"]`);
+      // Never dot the tab the player is already looking at.
+      if (!btn || btn.classList.contains(CSS.TABS_BTN_ACTIVE)) return;
+      btn.classList.add(CSS.TABS_BTN_NOTIFY);
+    };
+
+    this.engine.state.onMutation((method, info) => {
+      const player = this.engine.state.getPlayer();
+      // A fresh state (new game, save load, restart) starts with no dots and
+      // resyncs the level-up baseline — a load shouldn't light up every tab.
+      if (method === 'init' || method === 'loadFromObject' || method === 'reset') {
+        document.querySelectorAll(`.${CSS.TABS_BTN}.${CSS.TABS_BTN_NOTIFY}`)
+          .forEach(b => b.classList.remove(CSS.TABS_BTN_NOTIFY));
+        this._newItems.clear();
+        this._newQuests.clear();
+        prevStatPoints = player?.statPoints ?? 0;
+        return;
+      }
+
+      if (method === 'addToInventory' && !info.silent) { this._newItems.add(info.itemId); dot(EL.TAB_INVENTORY); }
+      if (method === 'setMissionStatus') { this._newQuests.add(info.missionId); dot(EL.TAB_QUESTS); }
+
+      // A level-up bank is the one sheet change worth flagging (the spend
+      // button is easy to miss); ordinary stat changes are top-bar-visible.
+      const sp = player?.statPoints ?? 0;
+      if (sp > prevStatPoints) dot(this._sheetTabId);
+      prevStatPoints = sp;
+    });
+  }
+
+  // Clears a tab's per-entry "new" set when the player leaves it — they've had
+  // the tab open, so its dotted items/quests are no longer new. The panel is
+  // being hidden, so no re-render is needed; the next open renders it clean.
+  _acknowledgeTabEntries(tabId) {
+    if (tabId === EL.TAB_INVENTORY) this._newItems.clear();
+    else if (tabId === EL.TAB_QUESTS) this._newQuests.clear();
   }
 
   // Map widget: the minimap structure MapManager.setup() wires up.
@@ -351,11 +425,11 @@ export class UIManager {
     // tick on every AP/HP change and the full panel rebuild would churn for
     // no reason (the combat attack buttons re-render themselves).
     if (!hint || hint === 'inventory' || (hint === 'stats' && !this.engine.inCombat)) {
-      this.inventoryUI.renderInventory(player);
+      this.inventoryUI.renderInventory(player, this._newItems);
     }
 
     if (!hint || hint === 'quests') {
-      this.questUI.render();
+      this.questUI.render(this._newQuests);
     }
 
     if (!hint || hint === 'map') {

@@ -644,7 +644,10 @@ class StateManager {
     }
     this._addToItemList(this.state.player.inventory, itemId, amount);
     if (!silent) this.notifyListeners('inventory');
-    this._emitMutation('addToInventory', { itemId, amount });
+    // silent flows to observers too: a silent add is an internal move (equip
+    // swap, chest/display withdrawal), not a narrative gain — the tab notifier
+    // dots only on non-silent gains.
+    this._emitMutation('addToInventory', { itemId, amount, silent });
     return true;
   }
 
@@ -687,7 +690,7 @@ class StateManager {
   }
 
   getMissionStatus(missionId) { return this.state.missions[missionId] || MISSION_STATUS.NOT_STARTED; }
-  setMissionStatus(missionId, status) { this.state.missions[missionId] = status; this.notifyListeners('quests'); }
+  setMissionStatus(missionId, status) { this.state.missions[missionId] = status; this.notifyListeners('quests'); this._emitMutation('setMissionStatus', { missionId, status }); }
 
   getCurrentSceneId() { return this.state.currentSceneId; }
   setCurrentSceneId(sceneId) { this.state.currentSceneId = sceneId; this.notifyListeners('map'); }

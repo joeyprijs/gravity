@@ -84,6 +84,7 @@ export const CSS = {
   // Tabs (ui.js setup)
   TABS_BTN:               'tabs__btn',
   TABS_BTN_ACTIVE:        'tabs__btn--active',
+  TABS_BTN_NOTIFY:        'tabs__btn--notify',
   TABS_PANEL:             'tabs__panel',
 
   // Buttons
@@ -101,6 +102,7 @@ export const CSS = {
   CARD_ACTIONS:           'card__actions',
   CARD_LIST:              'card-list',
   CARD_DONE:              'card--completed',
+  CARD_NEW:               'card--new',
 
   // Collapsible section headings (inventory & sheet panels)
   SECTION_TOGGLE:           'section-toggle',

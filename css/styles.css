@@ -361,6 +361,29 @@ button.card:disabled {
   opacity: 0.8;
 }
 
+/* A freshly-gained item / newly-started quest: the same accent dot the tab
+   nav uses, in the card's top-right corner. Set by the render functions from
+   the notifier's new-set; cleared when the player leaves the tab. */
+.card--new {
+  position: relative;
+}
+
+.card--new::after {
+  content: "";
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-color);
+  animation: tab-notify-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card--new::after { animation: none; }
+}
+
 /* Collapsible section headings: the whole heading is the toggle. Restates
    the .section-heading underline/padding explicitly (this selector
    outranks it, so it can't inherit them through the cascade); the +/−
@@ -510,6 +533,36 @@ button.section-toggle--collapsed .section-toggle__label::before {
   color: var(--accent-color);
   font-weight: bold;
   background: rgba(var(--accent-color-rgb), 0.1);
+}
+
+/* "Something new here" dot on a non-active tab — a found item, a started
+   quest, a bankable level-up point. Set by the tab notifier, cleared when the
+   tab is opened (see ui.js _setupTabNotifier). */
+.tabs__btn--notify {
+  position: relative;
+}
+
+.tabs__btn--notify::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-color);
+  animation: tab-notify-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes tab-notify-pulse {
+  0%, 100% { transform: scale(1);    opacity: 1;    }
+  50%      { transform: scale(1.35); opacity: 0.55; }
+}
+
+/* A pulse is an ambient cue, not essential motion — hold it still for players
+   who ask for reduced motion; the dot itself still signals. */
+@media (prefers-reduced-motion: reduce) {
+  .tabs__btn--notify::after { animation: none; }
 }
 
 /* ==========================================================================

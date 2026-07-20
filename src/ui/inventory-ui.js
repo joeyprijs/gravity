@@ -15,7 +15,7 @@ export class InventoryUI {
     this._toggles = createSectionToggles(INVENTORY_SECTION_GROUP);
   }
 
-  renderInventory(player) {
+  renderInventory(player, newItems = null) {
     const panel = document.getElementById(EL.TAB_INVENTORY);
     panel.innerHTML = '';
 
@@ -93,6 +93,8 @@ export class InventoryUI {
       }
 
       const title = getItemLabel(this.engine.data.items, invItem.item, invItem.amount);
+      // A freshly-gained item wears a dot until the player leaves the tab.
+      const classes = newItems?.has(invItem.item) ? [CSS.CARD_NEW] : [];
       // Actionless items (keepsakes, key items): a standard card, no buttons.
       if (actions.length === 0) {
         currentUl.appendChild(buildCard({
@@ -100,6 +102,7 @@ export class InventoryUI {
           title,
           body: itemData.description,
           stats: this._itemStats(itemData),
+          classes,
         }));
         return;
       }
@@ -113,6 +116,7 @@ export class InventoryUI {
         ],
         stats: this._itemStats(itemData),
         actions,
+        classes,
       }));
     });
   }

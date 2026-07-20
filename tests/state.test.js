@@ -123,6 +123,16 @@ test('addToInventory: accepts known item ID when an item database is provided', 
   assert.equal(gameState.getPlayer().inventory.find(i => i.item === 'rusty_sword').amount, 2);
 });
 
+test('addToInventory: mutation carries the silent flag so observers can tell gains from internal moves', () => {
+  const seen = [];
+  gameState.onMutation((method, info) => { if (method === 'addToInventory') seen.push(info); });
+  gameState.addToInventory('rusty_sword', 1);                  // a gain
+  gameState.addToInventory('rusty_sword', 1, { silent: true }); // an internal move
+  assert.equal(seen.length, 2);
+  assert.equal(seen[0].silent, false);
+  assert.equal(seen[1].silent, true);
+});
+
 test('removeFromInventory: removes entry when amount hits 0', () => {
   // healing_potion starts at 2, remove both
   gameState.removeFromInventory('healing_potion', 2);
@@ -183,6 +193,14 @@ test('reset: re-applies registered scene flags to their initial values', () => {
 test('setMissionStatus / getMissionStatus round-trips', () => {
   gameState.setMissionStatus('test_mission', 'active');
   assert.equal(gameState.getMissionStatus('test_mission'), 'active');
+});
+
+test('setMissionStatus: emits a mutation so observers can react to quest changes', () => {
+  const seen = [];
+  gameState.onMutation((method, info) => { if (method === 'setMissionStatus') seen.push(info); });
+  gameState.setMissionStatus('test_mission', 'active');
+  assert.equal(seen.length, 1);
+  assert.deepEqual(seen[0], { missionId: 'test_mission', status: 'active' });
 });
 
 test('getMissionStatus: unregistered mission returns not_started', () => {
