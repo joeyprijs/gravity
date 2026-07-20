@@ -2,14 +2,12 @@
   "startingScene": "dungeon_start",
   "merchantSellRatio": 0.5,
   "unequipApCost": 1,
-  "restHealAmount": 10,
   "snackHealAmount": 2,
   "levelUpHpBonus": 5,
   "levelUp": {
     "statPoints": 1
   },
   "xpPerLevel": 100,
-  "levelingCurve": "linear",
   "time": {
     "ticksPerDay": 24,
     "startTick": 8,
