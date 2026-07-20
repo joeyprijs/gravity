@@ -143,14 +143,12 @@
         assert($('#inventory-tab').hidden, 'inventory panel hidden');
       });
 
-      await step('sheet sections start collapsed', () => {
-        assert($('[data-section-body="character"]').hidden, 'character body hidden');
-        assert($('[data-section-body="skills"]').hidden, 'skills body hidden');
+      await step('sheet sections start expanded', () => {
+        assert(!$('[data-section-body="character"]').hidden, 'character body visible');
+        assert(!$('[data-section-body="skills"]').hidden, 'skills body visible');
       });
 
       await step('character section: rows, plugin row, bound values', () => {
-        $('[data-section="character"]').click();
-        assert(!$('[data-section-body="character"]').hidden, 'character body visible after toggle');
         const rows = $$('[data-section-body="character"] .attr-list__row');
         const labels = rows.map(r => text(r.querySelector('.attr-list__label')));
         const expected = ['Name', 'Level', 'Hit Points', 'Armor Class', 'Initiative', 'Action Points', 'Luck Points', 'Gold', 'Reputation'];
@@ -168,10 +166,17 @@
       });
 
       await step('skills section lists the custom attributes', () => {
-        $('[data-section="skills"]').click();
         const labels = $$('[data-section-body="skills"] .attr-list__row .attr-list__label').map(text);
         assert(JSON.stringify(labels) === JSON.stringify(['Strength', 'Intelligence', 'Perception', 'Stealth', 'Charisma', 'Luck']),
           `skill labels ${JSON.stringify(labels)}`);
+      });
+
+      await step('section headings toggle collapse and expand', () => {
+        const body = $('[data-section-body="character"]');
+        $('[data-section="character"]').click();
+        assert(body.hidden, 'character body hidden after collapse click');
+        $('[data-section="character"]').click();
+        assert(!body.hidden, 'character body visible again after expand click');
       });
 
       await step('collapse state is in-memory only, never persisted', () => {

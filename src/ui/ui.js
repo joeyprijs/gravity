@@ -244,8 +244,9 @@ export class UIManager {
   // shared machinery as the inventory sections (see createSectionToggles).
   _bindSheetToggles(panel) {
     const toggles = [...panel.querySelectorAll(`.${CSS.SECTION_TOGGLE}`)];
-    // Sections start collapsed until the player toggles something.
-    const sections = createSectionToggles(SHEET_SECTION_GROUP, toggles.map(btn => btn.dataset.section));
+    // Sections start expanded (no default-collapsed set); the player can
+    // collapse any of them, remembered for the session.
+    const sections = createSectionToggles(SHEET_SECTION_GROUP);
     toggles.forEach(btn => {
       const key = btn.dataset.section;
       sections.wire(btn, panel.querySelector(`[data-section-body="${key}"]`), key);
