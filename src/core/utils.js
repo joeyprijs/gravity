@@ -78,36 +78,36 @@ export function escapeHtml(str) {
     .replaceAll("'", '&#39;');
 }
 
+// Section collapse state, held in memory only — deliberately not persisted.
+// Sections start collapsed on every fresh load; a player's expansions last
+// only until they reload or restart the game (restart reloads the page). The
+// map is keyed by group so the state survives panel re-renders and tab
+// switches within a single session.
+const sectionCollapseState = new Map();
+
 /**
- * Collapse/expand wiring for section-toggle headings, with the collapsed-key
- * set persisted under one localStorage key — a UI preference, not game
- * state. `defaultCollapsed` applies only while nothing is stored yet: an
- * explicitly stored empty set means the player expanded everything, and
- * wins. Collapsing hides the body element in place — no re-render, so its
- * bindings and buttons survive. Used by the inventory panel and the sheet
- * tab, each with its own storage key.
+ * Collapse/expand wiring for section-toggle headings. The collapsed-key set
+ * lives in memory (see sectionCollapseState) — a per-session UI preference,
+ * never saved. `defaultCollapsed` seeds the group the first time it's seen
+ * this session, so sections start collapsed after every load. Collapsing
+ * hides the body element in place — no re-render, so its bindings and buttons
+ * survive. Used by the inventory panel and the sheet tab, each with its own
+ * group key.
  *
- * @param {string} storageKey - localStorage key holding the collapsed keys.
- * @param {string[]} [defaultCollapsed] - Keys collapsed on first run.
+ * @param {string} groupKey - Identifies this section group's in-memory state.
+ * @param {string[]} [defaultCollapsed] - Keys collapsed on a fresh load.
  * @returns {{wire: function(HTMLElement, HTMLElement, string): void}}
  */
-export function createSectionToggles(storageKey, defaultCollapsed = []) {
-  let collapsed;
-  try {
-    const stored = globalThis.localStorage?.getItem(storageKey);
-    collapsed = new Set(stored ? JSON.parse(stored) : defaultCollapsed);
-  } catch {
+export function createSectionToggles(groupKey, defaultCollapsed = []) {
+  let collapsed = sectionCollapseState.get(groupKey);
+  if (!collapsed) {
     collapsed = new Set(defaultCollapsed);
+    sectionCollapseState.set(groupKey, collapsed);
   }
-  const save = () => {
-    try {
-      globalThis.localStorage?.setItem(storageKey, JSON.stringify([...collapsed]));
-    } catch { /* storage unavailable (private mode) — state stays per-session */ }
-  };
   return {
-    // Applies the current state to a heading/body pair and flips it
-    // (persisting) on heading clicks. onclick, not addEventListener, so
-    // re-wiring after a re-render replaces the handler instead of stacking.
+    // Applies the current state to a heading/body pair and flips it on heading
+    // clicks. onclick, not addEventListener, so re-wiring after a re-render
+    // replaces the handler instead of stacking.
     wire(heading, body, key) {
       const applyState = (isCollapsed) => {
         body.hidden = isCollapsed;
@@ -118,7 +118,6 @@ export function createSectionToggles(storageKey, defaultCollapsed = []) {
         const nowCollapsed = !collapsed.delete(key);
         if (nowCollapsed) collapsed.add(key);
         applyState(nowCollapsed);
-        save();
       };
     },
   };

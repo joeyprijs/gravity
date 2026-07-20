@@ -1,9 +1,10 @@
 import { createElement, buildCard, createSectionToggles, getItemLabel, itemStatLines } from "../core/utils.js";
 import { EL, CSS, WEAPON_SLOTS } from "../core/config.js";
 
-// Collapse state persists across page loads — it's a UI preference, not game
-// state, so it lives beside the page rather than in the save file.
-const COLLAPSED_KEY = 'gravity:inventory-collapsed';
+// Group key for the inventory's in-memory section collapse state — a
+// per-session UI preference reset on reload, not saved (see
+// createSectionToggles).
+const INVENTORY_SECTION_GROUP = 'inventory';
 
 // InventoryUI renders the inventory and equipment sidebar panels. Every item
 // renders as a standard card (see buildCard); sections collapse via their
@@ -11,7 +12,7 @@ const COLLAPSED_KEY = 'gravity:inventory-collapsed';
 export class InventoryUI {
   constructor(engine) {
     this.engine = engine;
-    this._toggles = createSectionToggles(COLLAPSED_KEY);
+    this._toggles = createSectionToggles(INVENTORY_SECTION_GROUP);
   }
 
   renderInventory(player) {

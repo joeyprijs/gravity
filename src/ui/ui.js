@@ -7,9 +7,9 @@ import { ChestUI } from "./chest-ui.js";
 import { QuestUI } from "./quest-ui.js";
 import { InventoryUI } from "./inventory-ui.js";
 
-// Sheet section collapse state persists across page loads — a UI preference,
-// not game state, same treatment as the inventory's (see inventory-ui.js).
-const SHEET_COLLAPSED_KEY = 'gravity:sheet-collapsed';
+// Group key for the sheet's in-memory section collapse state — a per-session
+// UI preference reset on reload, not saved (see createSectionToggles).
+const SHEET_SECTION_GROUP = 'sheet';
 
 // A data-stat-bind span for an innerHTML template — the stats update loop
 // (see update()) fills every bound span on each stats change. Shared by the
@@ -245,7 +245,7 @@ export class UIManager {
   _bindSheetToggles(panel) {
     const toggles = [...panel.querySelectorAll(`.${CSS.SECTION_TOGGLE}`)];
     // Sections start collapsed until the player toggles something.
-    const sections = createSectionToggles(SHEET_COLLAPSED_KEY, toggles.map(btn => btn.dataset.section));
+    const sections = createSectionToggles(SHEET_SECTION_GROUP, toggles.map(btn => btn.dataset.section));
     toggles.forEach(btn => {
       const key = btn.dataset.section;
       sections.wire(btn, panel.querySelector(`[data-section-body="${key}"]`), key);

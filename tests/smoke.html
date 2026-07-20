@@ -99,9 +99,8 @@
     }
 
     // ── Boot the real game ─────────────────────────────────────────────────
-    // Deterministic UI prefs: the sheet must show its first-run defaults.
-    localStorage.removeItem('gravity:sheet-collapsed');
-    localStorage.removeItem('gravity:inventory-collapsed');
+    // Section collapse state is in-memory only, so a fresh page load already
+    // starts from the sheet's first-run defaults — no storage to reset.
 
     // The DOM skeleton comes from index.html itself — one source of truth,
     // so this page can't drift from the markup the engine actually targets.
@@ -175,9 +174,9 @@
           `skill labels ${JSON.stringify(labels)}`);
       });
 
-      await step('collapse state persists to localStorage', () => {
-        const stored = JSON.parse(localStorage.getItem('gravity:sheet-collapsed'));
-        assert(Array.isArray(stored) && stored.length === 0, `stored ${JSON.stringify(stored)} after expanding both`);
+      await step('collapse state is in-memory only, never persisted', () => {
+        assert(localStorage.getItem('gravity:sheet-collapsed') === null, 'sheet collapse state must not touch localStorage');
+        assert(localStorage.getItem('gravity:inventory-collapsed') === null, 'inventory collapse state must not touch localStorage');
       });
 
       await step('top bar shows stats and the world clock', () => {
