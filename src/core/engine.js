@@ -14,6 +14,18 @@ import { getDay, getSegment } from "../systems/time.js";
 import { CharCreationScreen } from "../screens/char-creation.js";
 import curatorPlugin from "../plugins/curator.js";
 
+// Plugins that ship with the engine, statically imported so they load without
+// dynamic import() (e.g. on the file:// protocol). The manifest still declares
+// them like any other plugin; a manifest entry matching a key here — by id, or
+// by the basename of its src — runs the bundled module instead of fetching it.
+// Adding a built-in is one import above plus one entry here, not a change to
+// the boot control flow.
+const BUILT_IN_PLUGINS = { curator: curatorPlugin };
+
+// The trailing filename of a path/URL, minus its .js extension — used to match
+// a manifest plugin src against a BUILT_IN_PLUGINS key when no id is declared.
+const pluginBasename = (url) => String(url).split('/').pop().replace(/\.js$/, '');
+
 // The locale file loaded before anything else, and the fallback when the
 // manifest declares no locale for the resolved language.
 const DEFAULT_LOCALE_PATH = 'data/locales.json';
@@ -95,15 +107,15 @@ export class RPGEngine {
             }
           }
 
-          // The curator ships with the engine and is statically imported so it
-          // works without dynamic import() (e.g. on the file:// protocol).
-          // Match it precisely — by id (object form) or an exact path tail —
-          // rather than a loose substring that could match an unrelated URL.
-          const isBuiltInCurator = id === 'curator'
-            || url === 'curator.js' || url.endsWith('/curator.js');
-          if (isBuiltInCurator) {
+          // A built-in plugin (see BUILT_IN_PLUGINS) is statically imported, so
+          // run the bundled module instead of a dynamic import() that would
+          // fail on the file:// protocol. Match by id (object form) or the
+          // src's basename — never a loose substring that could catch an
+          // unrelated URL.
+          const builtin = BUILT_IN_PLUGINS[id] ?? BUILT_IN_PLUGINS[pluginBasename(url)];
+          if (builtin) {
             try {
-              curatorPlugin(this);
+              builtin(this);
               return;
             } catch (e) {
               console.warn(`[Gravity] Static plugin fallback failed for ${url}`, e);
