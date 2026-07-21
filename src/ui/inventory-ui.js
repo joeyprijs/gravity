@@ -54,6 +54,13 @@ export class InventoryUI {
       });
     }
 
+    // Item types that hold a newly-gained item — their section heading wears
+    // the dot so a collapsed section still flags what's inside.
+    const newTypes = new Set();
+    if (newItems) sortedInv.forEach(entry => {
+      if (newItems.has(entry.item)) newTypes.add(this.engine.data.items[entry.item]?.type || 'Flavour');
+    });
+
     // Unequipped items, grouped by type
     let currentType = null;
     let currentUl = null;
@@ -67,7 +74,7 @@ export class InventoryUI {
         const count = sortedInv.reduce((sum, entry) =>
           (this.engine.data.items[entry.item]?.type || 'Flavour') === itemData.type
             ? sum + (entry.amount ?? 1) : sum, 0);
-        currentUl = this._buildSection(panel, `type:${itemData.type}`, this.engine.t(`itemTypes.${itemData.type}`), count);
+        currentUl = this._buildSection(panel, `type:${itemData.type}`, this.engine.t(`itemTypes.${itemData.type}`), count, newTypes.has(itemData.type));
       }
 
       const actions = [];
@@ -124,9 +131,13 @@ export class InventoryUI {
   // Builds a collapsible section (heading toggle + card list) and returns
   // the list element. The muted count tells the player what a collapsed
   // section holds without opening it.
-  _buildSection(panel, key, labelText, count) {
+  _buildSection(panel, key, labelText, count, hasNew = false) {
     const section = createElement('div', CSS.PANEL_SECTION);
-    const heading = createElement('button', [CSS.SECTION_HEADING, CSS.SECTION_TOGGLE]);
+    const headingClasses = [CSS.SECTION_HEADING, CSS.SECTION_TOGGLE];
+    // A section that holds a new item wears the dot too, so a collapsed
+    // section still signals there's something new inside it.
+    if (hasNew) headingClasses.push(CSS.SECTION_TOGGLE_NOTIFY);
+    const heading = createElement('button', headingClasses);
     heading.appendChild(createElement('span', CSS.SECTION_TOGGLE_LABEL, labelText));
     if (count !== undefined) heading.appendChild(createElement('span', CSS.SECTION_TOGGLE_COUNT, String(count)));
     const ul = createElement('ul', CSS.CARD_LIST);

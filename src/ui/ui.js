@@ -152,7 +152,8 @@ export class UIManager {
       btn.addEventListener('click', (e) => {
         const opened = e.target.dataset.tab;
         const departing = nav.querySelector(`.${CSS.TABS_BTN_ACTIVE}`)?.dataset.tab;
-        // Leaving a tab acknowledges its per-entry dots — next visit is clean.
+        // Leaving a tab acknowledges it — clears its tab dot and per-entry dots
+        // (covers a dot that appeared while the tab was already on screen).
         if (departing && departing !== opened) this._acknowledgeTabEntries(departing);
 
         nav.querySelectorAll(`.${CSS.TABS_BTN}`).forEach(b => b.classList.remove(CSS.TABS_BTN_ACTIVE));
@@ -176,21 +177,19 @@ export class UIManager {
     });
   }
 
-  // Dots a non-active tab when something worth noticing is *added* to its
-  // panel — a found/gifted item, a started/advanced quest, a bankable level-up
-  // point — so richness in the player panel isn't missed while heads-down in
-  // the scene. Driven by the mutation bus (gains only, never removals/uses).
-  // Stats that also live in the scene top bar (HP/AC/AP/gold/luck) are
-  // deliberately not signalled here — they're already in view. State is
-  // in-memory: opening the tab clears its dot, and a reload/load starts clean.
+  // Dots a tab — and its new entries — when something worth noticing is
+  // *added* to its panel: a found/gifted item, a started/advanced quest, a
+  // bankable level-up point. The dot shows even on the tab you're viewing, so
+  // a gain into a collapsed section still surfaces. Driven by the mutation bus
+  // (gains only, never removals/uses). Stats that also live in the scene top
+  // bar (HP/AC/AP/gold/luck) are deliberately not signalled here — they're
+  // already in view. State is in-memory: opening or leaving the tab clears its
+  // dot, and a reload/load starts clean.
   _setupTabNotifier() {
     let prevStatPoints = this.engine.state.getPlayer()?.statPoints ?? 0;
     const dot = (tabId) => {
       if (!tabId) return;
-      const btn = document.querySelector(`.${CSS.TABS_BTN}[data-tab="${tabId}"]`);
-      // Never dot the tab the player is already looking at.
-      if (!btn || btn.classList.contains(CSS.TABS_BTN_ACTIVE)) return;
-      btn.classList.add(CSS.TABS_BTN_NOTIFY);
+      document.querySelector(`.${CSS.TABS_BTN}[data-tab="${tabId}"]`)?.classList.add(CSS.TABS_BTN_NOTIFY);
     };
 
     this.engine.state.onMutation((method, info) => {
@@ -206,8 +205,8 @@ export class UIManager {
         return;
       }
 
-      if (method === 'addToInventory' && !info.silent) { this._newItems.add(info.itemId); dot(EL.TAB_INVENTORY); }
-      if (method === 'setMissionStatus') { this._newQuests.add(info.missionId); dot(EL.TAB_QUESTS); }
+      if (method === 'addToInventory' && !info.silent) { this._newItems.add(info.itemId); dot(EL.TAB_INVENTORY); this._refreshActiveList(EL.TAB_INVENTORY); }
+      if (method === 'setMissionStatus') { this._newQuests.add(info.missionId); dot(EL.TAB_QUESTS); this._refreshActiveList(EL.TAB_QUESTS); }
 
       // A level-up bank is the one sheet change worth flagging (the spend
       // button is easy to miss); ordinary stat changes are top-bar-visible.
@@ -217,10 +216,26 @@ export class UIManager {
     });
   }
 
-  // Clears a tab's per-entry "new" set when the player leaves it — they've had
-  // the tab open, so its dotted items/quests are no longer new. The panel is
-  // being hidden, so no re-render is needed; the next open renders it clean.
+  // Re-renders a list tab that's currently on screen so a just-added item or
+  // quest shows its per-entry (and section-heading) dot right away — the
+  // player may be looking at the panel when the gain lands, including at a
+  // collapsed section. Collapse state survives the rebuild (in-memory), so a
+  // closed section stays closed and simply gains its heading dot.
+  _refreshActiveList(tabId) {
+    const btn = document.querySelector(`.${CSS.TABS_BTN}[data-tab="${tabId}"]`);
+    if (!btn?.classList.contains(CSS.TABS_BTN_ACTIVE)) return;
+    const player = this.engine.state.getPlayer();
+    if (tabId === EL.TAB_INVENTORY) this.inventoryUI.renderInventory(player, this._newItems);
+    else if (tabId === EL.TAB_QUESTS) this.questUI.render(this._newQuests);
+  }
+
+  // Acknowledges a tab the player is leaving: they've had it open, so its
+  // notification is spent. Clears the tab-button dot (which may have appeared
+  // while the tab was already on screen — the clear-on-open path can't catch
+  // that) and its per-entry "new" set. The panel is being hidden, so no
+  // re-render is needed; the next open renders it clean.
   _acknowledgeTabEntries(tabId) {
+    document.querySelector(`.${CSS.TABS_BTN}[data-tab="${tabId}"]`)?.classList.remove(CSS.TABS_BTN_NOTIFY);
     if (tabId === EL.TAB_INVENTORY) this._newItems.clear();
     else if (tabId === EL.TAB_QUESTS) this._newQuests.clear();
   }

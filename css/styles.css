@@ -431,6 +431,25 @@ button.section-toggle--collapsed .section-toggle__label::before {
   font-weight: 400;
 }
 
+/* A section holding a new item shows the accent dot right after its name, so a
+   collapsed section still flags there's something new inside. Same dot as the
+   tab nav and item cards. */
+.section-toggle--notify .section-toggle__label::after {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: calc(var(--spacing) * 1);
+  border-radius: 50%;
+  background: var(--accent-color);
+  vertical-align: middle;
+  animation: tab-notify-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section-toggle--notify .section-toggle__label::after { animation: none; }
+}
+
 /* .btn--item — inventory action buttons (Use, Equip, Unequip, Deposit) */
 .btn--item { }
 

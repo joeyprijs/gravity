@@ -199,27 +199,30 @@
         assert(badge.includes('Difficulty Check'), `skill badge "${badge}" shows the DC`);
       });
 
-      await step('tab notifier: dots a gain, clears on open, skips silent + active tab', () => {
+      await step('tab notifier: dots a gain (including the active tab), clears on open and on leave', () => {
         const invBtn = $('[data-tab="inventory-tab"]');   // inactive (sheet tab is active)
         window.gameEngine.state.addToInventory('healing_potion', 1);
         assert(invBtn.classList.contains('tabs__btn--notify'), 'inventory dotted on item gain');
         invBtn.click();
-        assert(!invBtn.classList.contains('tabs__btn--notify'), 'dot cleared on opening the tab');
-        window.gameEngine.state.addToInventory('healing_potion', 1);
-        assert(!invBtn.classList.contains('tabs__btn--notify'), 'the active tab is never dotted');
-        $('[data-tab="attributes-tab"]').click();          // leave inventory inactive again
+        assert(!invBtn.classList.contains('tabs__btn--notify'), 'tab dot cleared on opening the tab');
+        window.gameEngine.state.addToInventory('healing_potion', 1);   // gain while viewing inventory
+        assert(invBtn.classList.contains('tabs__btn--notify'), 'the active tab is dotted too, so nothing is missed');
+        $('[data-tab="attributes-tab"]').click();          // leave the tab we were viewing
+        assert(!invBtn.classList.contains('tabs__btn--notify'), 'leaving a viewed tab clears its dot');
         window.gameEngine.state.addToInventory('healing_potion', 1, { silent: true });
         assert(!invBtn.classList.contains('tabs__btn--notify'), 'a silent internal move never dots');
       });
 
-      await step('tab notifier: per-entry dot marks the new item, cleared on leaving the tab', () => {
+      await step('tab notifier: per-entry + section dot mark the new item, cleared on leaving the tab', () => {
         // Sheet tab is active (from the previous step) so inventory is inactive.
         window.gameEngine.state.addToInventory('home_rune', 1);   // a distinct new item
         $('[data-tab="inventory-tab"]').click();                  // open it — dots render
         assert($$('#inventory-tab .card--new').length >= 1, 'the new item card is dotted');
+        assert($$('#inventory-tab .section-toggle--notify').length >= 1, 'the containing section heading is dotted');
         $('[data-tab="attributes-tab"]').click();                 // leave -> acknowledge
         $('[data-tab="inventory-tab"]').click();                  // reopen
         assert($$('#inventory-tab .card--new').length === 0, 'per-entry dot cleared after leaving the tab');
+        assert($$('#inventory-tab .section-toggle--notify').length === 0, 'section heading dot cleared after leaving');
       });
 
       await step('inventory renders list cards with valid markup', () => {

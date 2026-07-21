@@ -109,6 +109,7 @@ export const CSS = {
   SECTION_TOGGLE_COLLAPSED: 'section-toggle--collapsed',
   SECTION_TOGGLE_LABEL:     'section-toggle__label',
   SECTION_TOGGLE_COUNT:     'section-toggle__count',
+  SECTION_TOGGLE_NOTIFY:    'section-toggle--notify',
 
   // Map
   MAP_NODE:               'map-node',
