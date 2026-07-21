@@ -180,17 +180,20 @@ export class UIManager {
 
   // Dots a tab — and its new entries — when something worth noticing is
   // *added* to its panel: a found/gifted item, a started/advanced quest, a
-  // bankable level-up point. The dot shows even on the tab you're viewing, so
-  // a gain into a collapsed section still surfaces. Driven by the mutation bus
-  // (gains only, never removals/uses). Stats that also live in the scene top
-  // bar (HP/AC/AP/gold/luck) are deliberately not signalled here — they're
-  // already in view. State is in-memory: opening or leaving the tab clears its
-  // dot, and a reload/load starts clean.
+  // bankable level-up point. A dot marks only what the player can't see:
+  // the tab dot goes on inactive tabs alone — a gain into the tab on screen
+  // is already visible as its card dot (or its collapsed section's heading
+  // dot). Driven by the mutation bus (gains only, never removals/uses).
+  // Stats that also live in the scene top bar (HP/AC/AP/gold/luck) are
+  // deliberately not signalled here — they're already in view. State is
+  // in-memory: opening or leaving the tab clears its dot, and a reload/load
+  // starts clean.
   _setupTabNotifier() {
     let prevStatPoints = this.engine.state.getPlayer()?.statPoints ?? 0;
     const dot = (tabId) => {
       if (!tabId) return;
-      document.querySelector(`.${CSS.TABS_BTN}[data-tab="${tabId}"]`)?.classList.add(CSS.TABS_BTN_NOTIFY);
+      const btn = document.querySelector(`.${CSS.TABS_BTN}[data-tab="${tabId}"]`);
+      if (btn && !btn.classList.contains(CSS.TABS_BTN_ACTIVE)) btn.classList.add(CSS.TABS_BTN_NOTIFY);
     };
 
     this.engine.state.onMutation((method, info) => {

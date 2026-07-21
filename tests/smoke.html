@@ -203,30 +203,37 @@
         assert(badge.includes('Difficulty Check'), `skill badge "${badge}" shows the DC`);
       });
 
-      await step('tab notifier: dots a gain (including the active tab), clears on open and on leave', () => {
+      await step('tab notifier: dots a gain on an inactive tab only, clears on open and stays clear', () => {
         const invBtn = $('[data-tab="inventory-tab"]');   // inactive (sheet tab is active)
         window.gameEngine.state.addToInventory('healing_potion', 1);
         assert(invBtn.classList.contains('tabs__btn--notify'), 'inventory dotted on item gain');
         invBtn.click();
         assert(!invBtn.classList.contains('tabs__btn--notify'), 'tab dot cleared on opening the tab');
         window.gameEngine.state.addToInventory('healing_potion', 1);   // gain while viewing inventory
-        assert(invBtn.classList.contains('tabs__btn--notify'), 'the active tab is dotted too, so nothing is missed');
+        assert(!invBtn.classList.contains('tabs__btn--notify'), 'the active tab never dots — the gain is already on screen');
+        assert($$('#inventory-tab .card--new').length >= 1, 'the in-view gain is marked on its card instead');
         $('[data-tab="attributes-tab"]').click();          // leave the tab we were viewing
-        assert(!invBtn.classList.contains('tabs__btn--notify'), 'leaving a viewed tab clears its dot');
+        assert(!invBtn.classList.contains('tabs__btn--notify'), 'leaving a viewed tab keeps it undotted');
         window.gameEngine.state.addToInventory('healing_potion', 1, { silent: true });
         assert(!invBtn.classList.contains('tabs__btn--notify'), 'a silent internal move never dots');
       });
 
-      await step('tab notifier: per-entry + section dot mark the new item, cleared on leaving the tab', () => {
+      await step('tab notifier: card dot always; heading dot only while its section is collapsed', () => {
         // Sheet tab is active (from the previous step) so inventory is inactive.
-        window.gameEngine.state.addToInventory('home_rune', 1);   // a distinct new item
-        $('[data-tab="inventory-tab"]').click();                  // open it — dots render
+        const heading = () => $$('#inventory-tab .section-toggle').find(h => h.textContent.includes('Consumables'));
+        $('[data-tab="inventory-tab"]').click();
+        heading().click();                                        // collapse Consumables
+        $('[data-tab="attributes-tab"]').click();                 // leave — acknowledges earlier gains
+        window.gameEngine.state.addToInventory('home_rune', 1);   // a distinct new Consumable
+        $('[data-tab="inventory-tab"]').click();                  // open — the gain hides in the collapsed section
+        assert(heading().classList.contains('section-toggle--notify'), 'collapsed section heading is dotted');
+        heading().click();                                        // expand — the contents are revealed
+        assert(!heading().classList.contains('section-toggle--notify'), 'expanding clears the heading dot');
         assert($$('#inventory-tab .card--new').length >= 1, 'the new item card is dotted');
-        assert($$('#inventory-tab .section-toggle--notify').length >= 1, 'the containing section heading is dotted');
         $('[data-tab="attributes-tab"]').click();                 // leave -> acknowledge
         $('[data-tab="inventory-tab"]').click();                  // reopen
         assert($$('#inventory-tab .card--new').length === 0, 'per-entry dot cleared after leaving the tab');
-        assert($$('#inventory-tab .section-toggle--notify').length === 0, 'section heading dot cleared after leaving');
+        assert($$('#inventory-tab .section-toggle--notify').length === 0, 'no heading dot on the reopened tab');
       });
 
       await step('inventory renders list cards with valid markup', () => {

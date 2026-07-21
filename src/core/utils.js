@@ -105,6 +105,9 @@ export function createSectionToggles(groupKey, defaultCollapsed = []) {
     sectionCollapseState.set(groupKey, collapsed);
   }
   return {
+    // Whether a section is currently collapsed — render decisions that hinge
+    // on visibility (e.g. the heading's new-content dot) read this.
+    isCollapsed(key) { return collapsed.has(key); },
     // Applies the current state to a heading/body pair and flips it on heading
     // clicks. onclick, not addEventListener, so re-wiring after a re-render
     // replaces the handler instead of stacking.
@@ -117,6 +120,9 @@ export function createSectionToggles(groupKey, defaultCollapsed = []) {
       heading.onclick = () => {
         const nowCollapsed = !collapsed.delete(key);
         if (nowCollapsed) collapsed.add(key);
+        // Expanding reveals the contents — the heading's new-content dot has
+        // done its job.
+        if (!nowCollapsed) heading.classList.remove(CSS.SECTION_TOGGLE_NOTIFY);
         applyState(nowCollapsed);
       };
     },

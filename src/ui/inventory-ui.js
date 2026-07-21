@@ -78,7 +78,8 @@ export class InventoryUI {
         const count = sortedInv.reduce((sum, entry) =>
           (this.engine.data.items[entry.item]?.type || 'Flavour') === type
             ? sum + (entry.amount ?? 1) : sum, 0);
-        currentUl = this._buildSection(panel, `type:${type}`, this.engine.t(`itemTypes.${type}`), count, newTypes.has(type));
+        currentUl = this._buildSection(panel, `type:${type}`, this.engine.t(`itemTypes.${type}`), count,
+          newTypes.has(type) && this._toggles.isCollapsed(`type:${type}`));
       }
 
       const actions = [];
@@ -138,8 +139,8 @@ export class InventoryUI {
   _buildSection(panel, key, labelText, count, hasNew = false) {
     const section = createElement('div', CSS.PANEL_SECTION);
     const headingClasses = [CSS.SECTION_HEADING, CSS.SECTION_TOGGLE];
-    // A section that holds a new item wears the dot too, so a collapsed
-    // section still signals there's something new inside it.
+    // Only a COLLAPSED section holding a new item wears the dot (callers pass
+    // hasNew accordingly) — expanded, the item's own card dot is in view.
     if (hasNew) headingClasses.push(CSS.SECTION_TOGGLE_NOTIFY);
     const heading = createElement('button', headingClasses);
     heading.appendChild(createElement('span', CSS.SECTION_TOGGLE_LABEL, labelText));
