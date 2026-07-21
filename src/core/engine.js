@@ -19,8 +19,9 @@ import curatorPlugin from "../plugins/curator.js";
 // them like any other plugin; a manifest entry matching a key here — by id, or
 // by the basename of its src — runs the bundled module instead of fetching it.
 // Adding a built-in is one import above plus one entry here, not a change to
-// the boot control flow.
-const BUILT_IN_PLUGINS = { curator: curatorPlugin };
+// the boot control flow. A Map, not an object literal: a plugin named after
+// an Object.prototype key ("constructor", "toString") must not match.
+const BUILT_IN_PLUGINS = new Map([['curator', curatorPlugin]]);
 
 // The trailing filename of a path/URL, minus its .js extension — used to match
 // a manifest plugin src against a BUILT_IN_PLUGINS key when no id is declared.
@@ -77,6 +78,10 @@ export class RPGEngine {
   async init() {
     registerBuiltinActions(this);
     const manifest = await this.loadData();
+    // Plugins that failed to import — surfaced in the boot validation report
+    // (see _validateData): a dead plugin registered no actions or validators,
+    // so its authoring surface would otherwise misvalidate silently.
+    this._failedPlugins = [];
 
     // Load plugins before initialising state so they can register migrations.
     if (manifest?.plugins?.length) {
@@ -112,7 +117,7 @@ export class RPGEngine {
           // fail on the file:// protocol. Match by id (object form) or the
           // src's basename — never a loose substring that could catch an
           // unrelated URL.
-          const builtin = BUILT_IN_PLUGINS[id] ?? BUILT_IN_PLUGINS[pluginBasename(url)];
+          const builtin = BUILT_IN_PLUGINS.get(id) ?? BUILT_IN_PLUGINS.get(pluginBasename(url));
           if (builtin) {
             try {
               builtin(this);
@@ -131,6 +136,7 @@ export class RPGEngine {
             m.default?.(this);
           } catch (e) {
             console.warn(`[Gravity] Plugin failed: ${absoluteUrl}`, e);
+            this._failedPlugins.push(url);
           }
         })
       );
@@ -279,6 +285,12 @@ export class RPGEngine {
     for (const validator of this._validators) {
       try { validator(this.data, { add }); }
       catch (e) { console.warn('[Gravity] a plugin validator threw', e); }
+    }
+    // A plugin that failed to import registered nothing — no actions, no
+    // validators — so this report is blind to everything it owns. Say so
+    // loudly here rather than only in the load-time console warning.
+    for (const url of this._failedPlugins ?? []) {
+      add(`Plugin "${url}"`, 'failed to load — none of its actions, validators, or UI registered, and data it owns gets no checks; fix the manifest src or remove the entry');
     }
     if (!issues.length) return;
 

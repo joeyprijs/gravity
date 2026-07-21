@@ -164,8 +164,9 @@ export class UIManager {
         e.target.classList.remove(CSS.TABS_BTN_NOTIFY);
         document.getElementById(opened).hidden = false;
 
-        // Re-render the opened list so its per-entry dots reflect the new-set
-        // (the render triggered by the original gain ran before the set knew).
+        // Re-render the opened list so its per-entry dots match the current
+        // new-set (leaving a tab clears its set while the panel is hidden,
+        // without a re-render — see _acknowledgeTabEntries).
         const player = this.engine.state.getPlayer();
         if (opened === EL.TAB_INVENTORY) this.inventoryUI.renderInventory(player, this._newItems);
         else if (opened === EL.TAB_QUESTS) this.questUI.render(this._newQuests);
@@ -205,8 +206,11 @@ export class UIManager {
         return;
       }
 
-      if (method === 'addToInventory' && !info.silent) { this._newItems.add(info.itemId); dot(EL.TAB_INVENTORY); this._refreshActiveList(EL.TAB_INVENTORY); }
-      if (method === 'setMissionStatus') { this._newQuests.add(info.missionId); dot(EL.TAB_QUESTS); this._refreshActiveList(EL.TAB_QUESTS); }
+      // Mutations emit before their notifyListeners call (see onMutation), so
+      // the sets grown here are already in place for the render this same
+      // mutation triggers — no catch-up re-render needed.
+      if (method === 'addToInventory' && !info.silent) { this._newItems.add(info.itemId); dot(EL.TAB_INVENTORY); }
+      if (method === 'setMissionStatus') { this._newQuests.add(info.missionId); dot(EL.TAB_QUESTS); }
 
       // A level-up bank is the one sheet change worth flagging (the spend
       // button is easy to miss); ordinary stat changes are top-bar-visible.
@@ -214,19 +218,6 @@ export class UIManager {
       if (sp > prevStatPoints) dot(this._sheetTabId);
       prevStatPoints = sp;
     });
-  }
-
-  // Re-renders a list tab that's currently on screen so a just-added item or
-  // quest shows its per-entry (and section-heading) dot right away — the
-  // player may be looking at the panel when the gain lands, including at a
-  // collapsed section. Collapse state survives the rebuild (in-memory), so a
-  // closed section stays closed and simply gains its heading dot.
-  _refreshActiveList(tabId) {
-    const btn = document.querySelector(`.${CSS.TABS_BTN}[data-tab="${tabId}"]`);
-    if (!btn?.classList.contains(CSS.TABS_BTN_ACTIVE)) return;
-    const player = this.engine.state.getPlayer();
-    if (tabId === EL.TAB_INVENTORY) this.inventoryUI.renderInventory(player, this._newItems);
-    else if (tabId === EL.TAB_QUESTS) this.questUI.render(this._newQuests);
   }
 
   // Acknowledges a tab the player is leaving: they've had it open, so its

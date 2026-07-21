@@ -99,8 +99,12 @@
     }
 
     // ── Boot the real game ─────────────────────────────────────────────────
-    // Section collapse state is in-memory only, so a fresh page load already
-    // starts from the sheet's first-run defaults — no storage to reset.
+    // Section collapse state is in-memory only, but builds that predate that
+    // persisted it under these keys — clear leftovers so the 'never persisted'
+    // step below proves the current code writes nothing, not that the profile
+    // happens to be clean.
+    localStorage.removeItem('gravity:sheet-collapsed');
+    localStorage.removeItem('gravity:inventory-collapsed');
 
     // The DOM skeleton comes from index.html itself — one source of truth,
     // so this page can't drift from the markup the engine actually targets.

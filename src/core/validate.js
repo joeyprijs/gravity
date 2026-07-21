@@ -199,6 +199,8 @@ function validateActions(ctx, group, actions, where) {
       const res = ctx.rules?.playerDefaults?.resources?.[action.resource];
       if (!action.resource)
         ctx.add(group, `${where}: modify_resource needs a "resource" — the currency it moves`);
+      else if (action.resource === 'ap')
+        ctx.add(group, `${where}: modify_resource cannot move "ap" — AP is a combat-only budget the fight refills; out of combat nothing would ever restore a drain`);
       else if (!(res && typeof res === 'object' && 'current' in res))
         ctx.add(group, `${where}: modify_resource resource "${action.resource}" is not a declared { current, max } resource in playerDefaults.resources`);
     }
@@ -241,6 +243,8 @@ function validateCheck(ctx, group, check, where) {
     ctx.add(group, `${where}: "luckCheck" (the 2d6 Test-Your-Luck gamble) was removed — use a d20 check against a luck custom attribute ("skillCheck": "luck" with a dc) instead`);
   if ('increment' in check || (check.items || []).some(l => 'increment' in l))
     ctx.add(group, `${where}: "increment" (DC escalation) was removed — use maxAttempts, resolveOnce, or time pressure instead`);
+  if (check.apCost !== undefined)
+    ctx.add(group, `${where}: "apCost" was removed with the AP economy — attempts no longer spend AP; use maxAttempts, time costs, or a retry currency (rules.skillRetry) for pressure`);
   if (check.resolveOnce && check.maxAttempts)
     ctx.add(group, `${where}: resolveOnce makes maxAttempts redundant (one roll IS the budget)`);
   if (check.onExhausted && !check.maxAttempts)
@@ -301,6 +305,8 @@ function validateScenes(ctx) {
 
     for (const opt of (scene.options || [])) {
       const where = `option "${opt.text}"`;
+      if (opt.apCost !== undefined)
+        ctx.add(group, `${where}: "apCost" was removed with the AP economy — options no longer spend AP; use time costs (advance_time or rules.time.defaultCosts) for pacing`);
       validateCondition(ctx, group, opt.condition, where);
       if (opt.requirements?.item && !ctx.items[opt.requirements.item])
         ctx.add(group, `${where} requires unknown item "${opt.requirements.item}"`);
@@ -485,6 +491,12 @@ function validateRules(ctx) {
   // a tabs list without one leaves the player unable to save or restart.
   if (rules?.tabs && !rules.tabs.some(t => t?.widget === 'options'))
     ctx.add(group, 'tabs: no tab with widget "options" — the save/load/restart buttons render nowhere');
+
+  // The AP economy was removed — AP is a combat-only budget refilled at fight
+  // start, each round, and at fight end. The old knobs are inert; flag them
+  // so authored pacing doesn't silently vanish.
+  if (rules?.apEconomy !== undefined)
+    ctx.add(group, 'rules.apEconomy was removed — AP is a combat-only budget now (refills each fight); pace out-of-combat play with time costs (rules.time.defaultCosts) or a retry currency (rules.skillRetry)');
 
   // Every weapon/spell at 0 AP means combat turns never end on their own —
   // the End Turn button becomes the only handoff. Usually an authoring slip.

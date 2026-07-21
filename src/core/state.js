@@ -112,8 +112,10 @@ class StateManager {
   // these registrations instead.
 
   /**
-   * Registers a hook called after a state mutation completes (and after its
-   * notifyListeners call). Guard-rejected calls (e.g. addToInventory of an
+   * Registers a hook called after a state mutation completes, immediately
+   * BEFORE its notifyListeners call — so anything a hook derives or records
+   * (plugin stats, the UI's new-entry sets) is in place for the render that
+   * notification triggers. Guard-rejected calls (e.g. addToInventory of an
    * unknown item) do not emit. Hooks may themselves mutate state — but must
    * not call the method they are hooked on.
    *
@@ -278,8 +280,8 @@ class StateManager {
     }
 
     this.state = parsedData;
-    this.notifyListeners();
     this._emitMutation('loadFromObject');
+    this.notifyListeners();
     return true;
   }
 
@@ -316,8 +318,8 @@ class StateManager {
   reset() {
     this.state = makeDefaultState(this._rules);
     if (this.sceneFlags) Object.assign(this.state.flags, this.sceneFlags);
-    this.notifyListeners();
     this._emitMutation('reset');
+    this.notifyListeners();
   }
 
   getFlag(flagName) { return this.state.flags[flagName] ?? false; }
@@ -362,8 +364,8 @@ class StateManager {
     const due = timers.filter(t => t.deadline <= now).sort((a, b) => a.deadline - b.deadline);
     if (due.length) this.state.timers = timers.filter(t => t.deadline > now);
 
-    this.notifyListeners('time');
     this._emitMutation('advanceTime', { amount, ticks: now });
+    this.notifyListeners('time');
     return due;
   }
 
@@ -415,8 +417,8 @@ class StateManager {
       amount = res.max - res.current;
     }
     this._applyStatDelta(stat, amount);
-    this.notifyListeners('stats');
     this._emitMutation('modifyPlayerStat', { stat, amount });
+    this.notifyListeners('stats');
   }
 
   /**
@@ -441,8 +443,8 @@ class StateManager {
       changed = true;
     }
     if (!changed) return;
-    this.notifyListeners('stats');
     this._emitMutation('modifyPlayerStats', { deltas });
+    this.notifyListeners('stats');
   }
 
   // The delta application shared by modifyPlayerStat and modifyPlayerStats —
@@ -507,8 +509,8 @@ class StateManager {
         threshold = p.level * xpPerLevel;
       }
     }
-    this.notifyListeners('stats');
     this._emitMutation('addXP', { amount });
+    this.notifyListeners('stats');
   }
 
   /**
@@ -556,8 +558,8 @@ class StateManager {
     for (const { id, bonus } of bonuses) {
       if (bonus > 0) this._applyStatBonus(id, bonus);
     }
-    this.notifyListeners('stats');
     this._emitMutation('applyCharCreation', { name });
+    this.notifyListeners('stats');
   }
 
   /**
@@ -603,8 +605,8 @@ class StateManager {
       p.attributes[target] += 1;
     }
     p.statPoints -= 1;
-    this.notifyListeners('stats');
     this._emitMutation('spendStatPoint', { attrId: target });
+    this.notifyListeners('stats');
     return true;
   }
 
@@ -643,11 +645,11 @@ class StateManager {
       return false;
     }
     this._addToItemList(this.state.player.inventory, itemId, amount);
-    if (!silent) this.notifyListeners('inventory');
     // silent flows to observers too: a silent add is an internal move (equip
     // swap, chest/display withdrawal), not a narrative gain — the tab notifier
     // dots only on non-silent gains.
     this._emitMutation('addToInventory', { itemId, amount, silent });
+    if (!silent) this.notifyListeners('inventory');
     return true;
   }
 
@@ -661,8 +663,8 @@ class StateManager {
    */
   removeFromInventory(itemId, amount = 1, { silent = false } = {}) {
     this.state.player.inventory = this._removeFromItemList(this.state.player.inventory, itemId, amount);
-    if (!silent) this.notifyListeners('inventory');
     this._emitMutation('removeFromInventory', { itemId, amount });
+    if (!silent) this.notifyListeners('inventory');
   }
 
   /**
@@ -684,13 +686,13 @@ class StateManager {
       this.removeFromInventory(itemId, 1, { silent: true });
     }
     this.state.player.equipment[slot] = itemId;
-    this.notifyListeners('inventory');
     this._emitMutation('equipItem', { slot, itemId });
+    this.notifyListeners('inventory');
     return true;
   }
 
   getMissionStatus(missionId) { return this.state.missions[missionId] || MISSION_STATUS.NOT_STARTED; }
-  setMissionStatus(missionId, status) { this.state.missions[missionId] = status; this.notifyListeners('quests'); this._emitMutation('setMissionStatus', { missionId, status }); }
+  setMissionStatus(missionId, status) { this.state.missions[missionId] = status; this._emitMutation('setMissionStatus', { missionId, status }); this.notifyListeners('quests'); }
 
   getCurrentSceneId() { return this.state.currentSceneId; }
   setCurrentSceneId(sceneId) { this.state.currentSceneId = sceneId; this.notifyListeners('map'); }
@@ -839,8 +841,8 @@ class StateManager {
 
     display.item = itemId;
     this.removeFromInventory(itemId, 1, { silent: true });
-    this.notifyListeners('inventory');
     this._emitMutation('placeItemInDisplay', { sceneId, displayId, itemId });
+    this.notifyListeners('inventory');
     return true;
   }
 
@@ -859,8 +861,8 @@ class StateManager {
     const itemId = display.item;
     display.item = null;
     this.addToInventory(itemId, 1, { silent: true });
-    this.notifyListeners('inventory');
     this._emitMutation('takeItemFromDisplay', { sceneId, displayId, itemId });
+    this.notifyListeners('inventory');
     return itemId;
   }
 

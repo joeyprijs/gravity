@@ -85,8 +85,14 @@ function resourceDelta(res, amount) {
 // Moves any declared { current, max } resource in either direction —
 // { type: "modify_resource", resource: "luckPoints", amount: 1 }, negative
 // drains, "full" (also the default) tops it up. The authoring valve for
-// custom currencies (Luck Points, favor, ...).
+// custom currencies (Luck Points, favor, ...). AP is off limits: it's a
+// combat-only budget the fight refills, so out of combat nothing would ever
+// restore a drain (validation also flags this at boot).
 function handleModifyResource(action, engine) {
+  if (action.resource === 'ap') {
+    console.warn('[Gravity] modify_resource: "ap" is a combat-only budget — skipped');
+    return;
+  }
   const res = engine.state.getPlayer().resources[action.resource];
   if (!res || typeof res !== 'object') {
     console.warn(`[Gravity] modify_resource: "${action.resource}" is not a declared { current, max } resource — skipped`);

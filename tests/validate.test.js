@@ -434,6 +434,26 @@ test('modify_resource: flags a missing or undeclared resource; declared is clean
   assert.ok(!messages.some(m => m.includes('"luckPoints" is not a declared')));
 });
 
+test('modify_resource: flags "ap" — a combat-only budget no narrative action may move', () => {
+  const data = makeToolkitData();
+  data.rules.playerDefaults.resources = { ap: { current: 3, max: 3 } };
+  data.scenes.cave.options.push(
+    { text: 'Strain', actions: [{ type: 'modify_resource', resource: 'ap', amount: -2 }] },
+  );
+  assert.ok(issuesFor(data).some(m => m.includes('modify_resource cannot move "ap"')));
+});
+
+test('flags the removed AP economy: rules.apEconomy, and apCost on options, checks, and dialogue responses', () => {
+  const data = makeToolkitData();
+  data.rules.apEconomy = { skillAttemptCost: 2 };
+  data.scenes.cave.options[0].apCost = 3;
+  data.scenes.cave.skills[0].apCost = 1;
+  data.npcs.elder.conversations.start.responses[0].apCost = 2;
+  const messages = issuesFor(data);
+  assert.ok(messages.some(m => m.includes('rules.apEconomy was removed')));
+  assert.equal(messages.filter(m => m.includes('"apCost" was removed')).length, 3);
+});
+
 test('flags bad levelUp.statPoints, customAttributes max, and item attribute references', () => {
   const data = makeToolkitData();
   data.rules.levelUp = { statPoints: -1 };

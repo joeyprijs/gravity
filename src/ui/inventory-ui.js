@@ -68,13 +68,17 @@ export class InventoryUI {
       const itemData = this.engine.data.items[invItem.item];
       if (!itemData) return;
 
-      if (itemData.type !== currentType) {
-        currentType = itemData.type;
+      // Untyped items fall back to 'Flavour' everywhere the type is compared
+      // (sorting, the new-set above, this grouping) — one fallback, applied
+      // consistently, or the section key/count/dot checks diverge.
+      const type = itemData.type || 'Flavour';
+      if (type !== currentType) {
+        currentType = type;
         // The heading count is total units, so potion stacks count in full.
         const count = sortedInv.reduce((sum, entry) =>
-          (this.engine.data.items[entry.item]?.type || 'Flavour') === itemData.type
+          (this.engine.data.items[entry.item]?.type || 'Flavour') === type
             ? sum + (entry.amount ?? 1) : sum, 0);
-        currentUl = this._buildSection(panel, `type:${itemData.type}`, this.engine.t(`itemTypes.${itemData.type}`), count, newTypes.has(itemData.type));
+        currentUl = this._buildSection(panel, `type:${type}`, this.engine.t(`itemTypes.${type}`), count, newTypes.has(type));
       }
 
       const actions = [];

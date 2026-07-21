@@ -133,6 +133,14 @@ test('addToInventory: mutation carries the silent flag so observers can tell gai
   assert.equal(seen[1].silent, true);
 });
 
+test('mutation hooks fire before listener notification, so hook-derived state is in the notified render', () => {
+  const order = [];
+  gameState.onMutation((method) => { if (method === 'addToInventory') order.push('hook'); });
+  gameState.subscribe(() => order.push('listener'));
+  gameState.addToInventory('rusty_sword', 1);
+  assert.deepEqual(order, ['hook', 'listener']);
+});
+
 test('removeFromInventory: removes entry when amount hits 0', () => {
   // healing_potion starts at 2, remove both
   gameState.removeFromInventory('healing_potion', 2);

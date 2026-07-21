@@ -147,7 +147,7 @@ The optional `config` object holds the plugin's tunables, read back at runtime v
 - `engine.registerTabWidget(name, fn)` / `engine.registerSheetRow({ label, bind })` — contribute a whole sidebar tab (referenced from `rules.tabs[].widget`) or a single sheet row
 - `engine.on(event, fn)` — react to engine events
 - `engine.setCustomUIOpen(bool)` — mark a custom panel (chest, curator dashboard, …) as open/closed so scene re-renders don't draw over it; read back via `engine.inCustomUI`
-- `engine.state.onMutation(fn)` — observe state mutations: `fn(method, info)` fires after a mutating StateManager method completes (`init`, `loadFromObject`, `reset`, `modifyPlayerStat`, `addXP`, `addToInventory`, `removeFromInventory`, `equipItem`, `placeItemInDisplay`, `takeItemFromDisplay`, `applyCharCreation`, …)
+- `engine.state.onMutation(fn)` — observe state mutations: `fn(method, info)` fires after a mutating StateManager method completes, immediately before its listener notification — so anything a hook derives or records is in place for the render that notification triggers (`init`, `loadFromObject`, `reset`, `modifyPlayerStat`, `addXP`, `addToInventory`, `removeFromInventory`, `equipItem`, `placeItemInDisplay`, `takeItemFromDisplay`, `applyCharCreation`, …)
 - `engine.state.registerStatHandler(stat, fn)` — intercept `modifyPlayerStat` for a custom stat; the handler fully replaces the default behaviour
 - `engine.state.setPlayerAttribute(attr, value)` — absolute attribute writes (e.g. for derived stats)
 - `engine.state.registerMigration(version, fn)` — save-format migrations for plugin state (versions above the core `SAVE_VERSION`; collisions throw)

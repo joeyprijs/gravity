@@ -112,7 +112,7 @@ Restore the player at a resting point. Takes no effect parameters. Sets HP to fu
 
 Move any declared `{ current, max }` resource (a custom currency like luck points or favor).
 
-- `resource` *(string, required)* — the resource name. Must be a `{ current, max }` resource declared in `rules.playerDefaults.resources`; an undeclared name warns and does nothing (and is flagged at boot).
+- `resource` *(string, required)* — the resource name. Must be a `{ current, max }` resource declared in `rules.playerDefaults.resources`; an undeclared name warns and does nothing (and is flagged at boot). `ap` is off limits — it is a combat-only budget the fight refills, so out of combat nothing would ever restore a drain (also flagged at boot).
 - `amount` *(number or `"full"`, default `"full"`)* — a number moves the resource within `[0, max]`; a negative number drains; `"full"` (or omitting `amount`) tops it up to max. If the resolved change is zero, the action is silent and does nothing.
 - `log` — see [The `log` convention](#the-log-convention). The resource's display name comes from the `ui.resources.<resource>` locale key.
 

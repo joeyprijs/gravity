@@ -143,6 +143,11 @@ export default function curatorPlugin(engine) {
   // here rather than in the core item validator, so the engine stays unaware
   // of the plugin's fields.
   engine.registerValidator((data, { add }) => {
+    // The curator's settings moved from rules.json to the manifest plugin
+    // config — a leftover rules.curator block would silently fall back to
+    // the defaults (installCost 50).
+    if (data.rules?.curator !== undefined)
+      add('Rules', 'rules.curator was removed — set the curator\'s options on its manifest entry instead (data/index.json: plugins → { "id": "curator", "config": { "installCost": … } })');
     for (const [id, item] of Object.entries(data.items ?? {})) {
       if (item.reputation !== undefined)
         add(`Item "${id}"`, 'reputation moved into the attributes object — write attributes.reputation');

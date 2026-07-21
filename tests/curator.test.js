@@ -81,6 +81,18 @@ test('plugin registers a validator that flags the deprecated top-level item.repu
   assert.match(issues[0].message, /reputation moved into the attributes object/);
 });
 
+test('plugin validator flags the removed rules.curator block', () => {
+  const { engine, validators } = makeEngine();
+  curatorPlugin(engine);
+
+  const issues = [];
+  validators[0]({ items: {}, rules: { curator: { installCost: 200 } } },
+    { add: (group, message) => issues.push({ group, message }) });
+  assert.equal(issues.length, 1);
+  assert.equal(issues[0].group, 'Rules');
+  assert.match(issues[0].message, /rules\.curator was removed/);
+});
+
 test('exhibits decorator: scenes without displays get no table', () => {
   const { engine, decorators } = makeEngine();
   curatorPlugin(engine);
