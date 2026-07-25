@@ -29,7 +29,9 @@ export class NarrativeLog {
   }
 
   openScene(modifier = '') {
-    this.flushScenes();
+    // No flush here: one move can open several scene blocks (a scene that
+    // starts combat, a dialogue that becomes a trade). They're all new since
+    // the player's last move, so they all keep the rail until the next click.
     const classes = [CSS.SCENE, CSS.SCENE_NEW];
     if (modifier) classes.push(modifier);
     const scene = createElement('div', classes);
@@ -106,6 +108,8 @@ export class NarrativeLog {
         this.currentSceneEl.appendChild(p);
       }
     });
+    // Restored history is not new — only what happens after the load is.
+    this.flushScenes();
     this.scrollToBottom();
     return lastDesc;
   }
