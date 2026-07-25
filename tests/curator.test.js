@@ -62,7 +62,7 @@ test('plugin registers its scene decorator, action handlers, and sheet row', () 
   assert.equal(typeof decorators[0].options, 'function');
   assert.ok(registry.has('manage_exhibits'));
   assert.ok(registry.has('add_display'));
-  assert.deepEqual(sheetRows, [{ label: 'plugin.curator.reputationLabel', bind: 'attributes.reputation' }]);
+  assert.deepEqual(sheetRows, [{ label: 'plugin.curator.reputationLabel', bind: 'attributes.reputation', icon: 'thumbs_up' }]);
 });
 
 test('plugin registers a validator that flags the deprecated top-level item.reputation', () => {

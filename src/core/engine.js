@@ -614,14 +614,15 @@ export class RPGEngine {
    * Registers an extra row for the sheet tab's character section — the way a
    * plugin surfaces a custom stat (e.g. the curator's reputation). Plugins
    * load before the UI builds, so registered rows render as part of the
-   * sheet itself: right after the built-in stats, before the
-   * rules.headerResources rows, filled by the same data-stat-bind loop as
+   * sheet itself: last in the character section, after the built-in stats and
+   * any rules.headerResources rows, filled by the same data-stat-bind loop as
    * every other row. No-op for games whose tabs omit the attributes widget.
    *
    * @param {object} row
    * @param {string} row.label - Display label (plain text).
    * @param {string} row.bind - data-stat-bind path on the player (e.g.
    *   'attributes.reputation').
+   * @param {string} [row.icon] - Icon name marking the row (see core/icons.js).
    */
   registerSheetRow(row) {
     this._sheetRows.push(row);

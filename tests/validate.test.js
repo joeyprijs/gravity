@@ -355,7 +355,7 @@ test('skillRetry + headerResources: clean when the resource is declared with a l
   const data = makeToolkitData();
   data.rules.playerDefaults.resources = { luckPoints: { current: 3, max: 3 } };
   data.rules.skillRetry = { resource: 'luckPoints', cost: 1, restRestore: 3 };
-  data.rules.headerResources = ['luckPoints'];
+  data.rules.headerResources = [{ id: 'luckPoints', icon: 'star' }];
   data.locale.ui = { resources: { luckPoints: 'Luck' } };
   data.locale.actions.badgeRetryCost = 'Retry: {cost} {resource}';
   const messages = issuesFor(data);
@@ -376,12 +376,37 @@ test('flags missing skillBadgeDc, missing badgeRetryCost, and a tabs list withou
   assert.ok(messages.some(m => m.includes('no tab with widget "options"')));
 });
 
-test('headerResources: flags an undeclared resource and a missing label', () => {
+test('headerResources: flags an undeclared resource, a missing label, and an unknown icon', () => {
   const data = makeToolkitData();
-  data.rules.headerResources = ['luckPoints'];
+  data.rules.headerResources = [{ id: 'luckPoints', icon: 'horseshoe' }];
   const messages = issuesFor(data);
   assert.ok(messages.some(m => m.includes('headerResources "luckPoints" is not a declared')));
   assert.ok(messages.some(m => m.includes('missing locale entry at ui.resources.luckPoints')));
+  assert.ok(messages.some(m => m.includes('icon "horseshoe" is not a known icon')));
+});
+
+test('icons: flags a bare headerResources id, an unknown tab icon, and an unknown skill icon', () => {
+  const data = makeToolkitData();
+  data.rules.headerResources = ['luckPoints'];
+  data.rules.tabs = [
+    { id: 'ghost-tab', localeKey: 'ui.tabMap', icon: 'ghost' },
+    { id: 'options-tab', localeKey: 'ui.tabOptions', widget: 'options' },
+  ];
+  data.rules.customAttributes[0].icon = 'third-eye';
+  const messages = issuesFor(data);
+  assert.ok(messages.some(m => m.includes('headerResources entries are { "id", "icon" } objects')));
+  assert.ok(messages.some(m => m.includes('tabs "ghost-tab": icon "ghost" is not a known icon')));
+  assert.ok(messages.some(m => m.includes('customAttributes "perception": icon "third-eye" is not a known icon')));
+});
+
+test('icons: a known name on a tab, a header resource, and a skill is clean', () => {
+  const data = makeToolkitData();
+  data.rules.playerDefaults.resources = { luckPoints: { current: 3, max: 3 } };
+  data.rules.headerResources = [{ id: 'luckPoints', icon: 'star' }];
+  data.rules.customAttributes[0].icon = 'eye';
+  data.locale.ui = { resources: { luckPoints: 'Luck' } };
+  const messages = issuesFor(data);
+  assert.ok(!messages.some(m => m.includes('is not a known icon')));
 });
 
 test('flags malformed time config: bad segments, ranges, costs, locale entries', () => {

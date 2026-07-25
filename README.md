@@ -173,11 +173,13 @@ Player defaults, attributes, progression, economy, and the UI tabs:
   "customAttributes": [
     {
       "id": "perception",
+      "icon": "eye",
       "default": 0,
       "max": 5
     },
     {
       "id": "stealth",
+      "icon": "moon",
       "default": 0,
       "max": 5
     }
@@ -203,25 +205,30 @@ Player defaults, attributes, progression, economy, and the UI tabs:
     {
       "id": "attributes-tab",
       "localeKey": "ui.tabAttributes",
+      "icon": "sheet",
       "widget": "attributes",
       "default": true
     },
     {
       "id": "inventory-tab",
-      "localeKey": "ui.tabInventory"
+      "localeKey": "ui.tabInventory",
+      "icon": "backpack"
     },
     {
       "id": "quests-tab",
-      "localeKey": "ui.tabQuests"
+      "localeKey": "ui.tabQuests",
+      "icon": "trophy"
     },
     {
       "id": "map-tab",
       "localeKey": "ui.tabMap",
+      "icon": "map",
       "widget": "map"
     },
     {
       "id": "options-tab",
       "localeKey": "ui.tabOptions",
+      "icon": "cog",
       "widget": "options"
     }
   ],
@@ -231,15 +238,18 @@ Player defaults, attributes, progression, economy, and the UI tabs:
     "restRestore": 3
   },
   "headerResources": [
-    "luckPoints"
+    {
+      "id": "luckPoints",
+      "icon": "star"
+    }
   ]
 }
 ```
 
 Notes:
 
-*   `customAttributes` become skills: rollable in checks, readable in conditions, point-buyable at creation, and (with `levelUp.statPoints`) improvable on level-up from the Sheet, capped by `max`.
-*   `skillRetry` makes retrying a failed check cost a resource; `headerResources` surfaces custom resources in the status bar and the Sheet. Both optional — see [`docs/CHECKS.md`](docs/CHECKS.md).
+*   `customAttributes` become skills: rollable in checks, readable in conditions, point-buyable at creation, and (with `levelUp.statPoints`) improvable on level-up from the Sheet, capped by `max`. Each one's `icon` marks its row on the Sheet.
+*   `skillRetry` makes retrying a failed check cost a resource; `headerResources` surfaces custom resources in the status bar (as an icon) and the Sheet (as an icon plus a label). Both optional — see [`docs/CHECKS.md`](docs/CHECKS.md).
 *   `rules.time` (opt-in) enables the world clock; it is documented in [`docs/CHECKS.md`](docs/CHECKS.md).
 
 ### Conditions (Logic Gates)
@@ -650,10 +660,12 @@ Equipment `slot` names are **game-defined** — whatever keys appear in `rules.p
 The game renders as three panels, each with one job:
 
 *   **Left — the player.** Tabs generated from `rules.tabs`: the character **Sheet** (stats and skills as collapsible sections), **Inventory**, **Quests**, **Map**, and **Options** (save / load / restart).
-*   **Center — the story.** The narrative log, with a pinned status bar showing HP / AC / AP / Gold, any `headerResources`, and the world clock.
+*   **Center — the story.** The narrative log, with a pinned status bar showing HP / AC / AP / Gold, any `headerResources`, and the world clock. The bar is icon-only — each stat's label lives in its hover title and in screen-reader-only text.
 *   **Right — the interactions.** The current scene's options, skill checks, dialogue responses, or combat controls. Exactly one surface owns this panel at a time — the engine's mode machine guarantees it.
 
-Tabs are data-driven: each entry names a locale key and optionally a `widget` (`attributes`, `map`, `options` — or one a plugin registered). **The save/load/restart buttons only exist inside an `options` widget tab** — omit it and players cannot save (the validator warns).
+Tabs are data-driven: each entry names a locale key, an `icon`, and optionally a `widget` (`attributes`, `map`, `options` — or one a plugin registered). **The save/load/restart buttons only exist inside an `options` widget tab** — omit it and players cannot save (the validator warns).
+
+Icons come from the engine's own set and mark the same concept everywhere it appears — the heart on the Sheet's Hit Points row is the heart in the status bar. Game data references a glyph by name from `rules.tabs[].icon`, `rules.headerResources[].icon`, and `rules.customAttributes[].icon`; plugins pass one to `engine.registerSheetRow`. The set: `sheet`, `backpack`, `trophy`, `map`, `cog`, `heart`, `shield`, `sword`, `star`, `coin`, `person`, `level`, `bolt`, `thumbs_up`, `dumbbell`, `bulb`, `eye`, `moon`, `speech`. They are inline SVG filled with `currentColor` — no icon font, no image files. Add a glyph by adding it to [`src/core/icons.js`](src/core/icons.js), which is also what the validator checks names against.
 
 ---
 
@@ -715,6 +727,7 @@ gravity/
 │   │   ├── config.js        # CSS/element registries, action names, flag/check key builders
 │   │   ├── i18n.js          # Language resolution + Intl list/plural formatting (pure)
 │   │   ├── validate.js      # Load-time game-data validation (pure)
+│   │   ├── icons.js         # The inline SVG icon set, referenced by name from data
 │   │   └── utils.js         # DOM builders (cards, rows, toggles) & shared helpers
 │   ├── systems/
 │   │   ├── scene.js         # Scene rendering, options, item discovery

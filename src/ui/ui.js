@@ -1,5 +1,6 @@
 import { attrRowHtml, clearElement, createElement, createSectionToggles, escapeHtml, getByPath } from "../core/utils.js";
 import { EL, CSS, LOG } from "../core/config.js";
+import { iconHtml } from "../core/icons.js";
 import { getDay, getSegment } from "../systems/time.js";
 import { skillLabel } from "../systems/skill-checks.js";
 import { MapManager } from "../world/map.js";
@@ -138,7 +139,10 @@ export class UIManager {
       if (tab.default) classes.push(CSS.TABS_BTN_ACTIVE);
       btn.className = classes.join(' ');
       btn.dataset.tab = tab.id;
-      btn.textContent = this.engine.t(tab.localeKey);
+      // The icon sits beside the label, which keeps doing the explaining; a
+      // tab without an icon (rules.tabs[].icon) is just label-only.
+      const label = escapeHtml(this.engine.t(tab.localeKey));
+      btn.innerHTML = tab.icon ? `${iconHtml(tab.icon)}${label}` : label;
       nav.appendChild(btn);
 
       // Panel div
@@ -162,7 +166,9 @@ export class UIManager {
     // Tab switching
     nav.querySelectorAll(`.${CSS.TABS_BTN}`).forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const opened = e.target.dataset.tab;
+        // currentTarget, not target: a click can land on the button's icon.
+        const clicked = e.currentTarget;
+        const opened = clicked.dataset.tab;
         const departing = nav.querySelector(`.${CSS.TABS_BTN_ACTIVE}`)?.dataset.tab;
         // Leaving a tab acknowledges it — clears its tab dot and per-entry dots
         // (covers a dot that appeared while the tab was already on screen).
@@ -170,10 +176,10 @@ export class UIManager {
 
         nav.querySelectorAll(`.${CSS.TABS_BTN}`).forEach(b => b.classList.remove(CSS.TABS_BTN_ACTIVE));
         document.querySelectorAll(`#${EL.PLAYER_PANEL} .${CSS.TABS_PANEL}`).forEach(c => { c.hidden = true; });
-        e.target.classList.add(CSS.TABS_BTN_ACTIVE);
+        clicked.classList.add(CSS.TABS_BTN_ACTIVE);
         // Viewing a tab clears its "something new" tab dot (per-entry dots stay
         // until the player leaves).
-        e.target.classList.remove(CSS.TABS_BTN_NOTIFY);
+        clicked.classList.remove(CSS.TABS_BTN_NOTIFY);
         document.getElementById(opened).hidden = false;
 
         // Re-render the opened list so its per-entry dots match the current
@@ -300,24 +306,28 @@ export class UIManager {
     // The data-stat-bind spans ride the existing stats update loop.
     // Row order groups by meaning: identity, combat, spendable pools,
     // then wealth/standing (plugin sheetRows land in the last group).
+    // Each row carries the same icon its stat wears in the scene top bar, so
+    // the two surfaces read as one vocabulary (see core/icons.js).
     const characterRows = [
-      attrRowHtml(this.engine.t('ui.statName'), bindSpan('name')),
-      attrRowHtml(this.engine.t('ui.statLevel'), bindSpan('level')),
-      attrRowHtml(this.engine.t('ui.sheetHp'), `${bindSpan('resources.hp.current')}/${bindSpan('resources.hp.max')}`, '', spendBtnHtml('resources.hp.max')),
-      attrRowHtml(this.engine.t('ui.sheetAc'), bindSpan('attributes.ac'), '', spendBtnHtml('attributes.ac')),
-      attrRowHtml(this.engine.t('ui.statInitiative'), bindSpan('attributes.initiative'), '', spendBtnHtml('attributes.initiative')),
-      attrRowHtml(this.engine.t('ui.sheetAp'), `${bindSpan('resources.ap.current')}/${bindSpan('resources.ap.max')}`),
-      ...this._headerResourceEntries().map(({ label, valueHtml }) => attrRowHtml(label, valueHtml)),
-      attrRowHtml(this.engine.t('ui.statGold'), bindSpan('resources.gold')),
-      ...this.engine.sheetRows.map(row => attrRowHtml(row.label, bindSpan(row.bind))),
+      attrRowHtml({ icon: 'person', label: this.engine.t('ui.statName'), valueHtml: bindSpan('name') }),
+      attrRowHtml({ icon: 'level', label: this.engine.t('ui.statLevel'), valueHtml: bindSpan('level') }),
+      attrRowHtml({ icon: 'heart', label: this.engine.t('ui.sheetHp'), valueHtml: `${bindSpan('resources.hp.current')}/${bindSpan('resources.hp.max')}`, trailingHtml: spendBtnHtml('resources.hp.max') }),
+      attrRowHtml({ icon: 'shield', label: this.engine.t('ui.sheetAc'), valueHtml: bindSpan('attributes.ac'), trailingHtml: spendBtnHtml('attributes.ac') }),
+      attrRowHtml({ icon: 'bolt', label: this.engine.t('ui.statInitiative'), valueHtml: bindSpan('attributes.initiative'), trailingHtml: spendBtnHtml('attributes.initiative') }),
+      attrRowHtml({ icon: 'sword', label: this.engine.t('ui.sheetAp'), valueHtml: `${bindSpan('resources.ap.current')}/${bindSpan('resources.ap.max')}` }),
+      ...this._headerResourceEntries().map(entry => attrRowHtml(entry)),
+      attrRowHtml({ icon: 'coin', label: this.engine.t('ui.statGold'), valueHtml: bindSpan('resources.gold') }),
+      ...this.engine.sheetRows.map(row => attrRowHtml({ icon: row.icon, label: row.label, valueHtml: bindSpan(row.bind) })),
     ].join('');
-    const items = (rules.customAttributes ?? []).map(attr =>
-      `<div class="attr-list__row">
-        <span class="attr-list__label">${escapeHtml(skillLabel(this.engine, attr.id))}</span>
-        <span class="attr-list__value" data-stat-bind="attributes.${escapeHtml(attr.id)}"></span>${canSpend ? `
-        <button class="${CSS.BTN} attr-list__spend" data-spend-attr="${escapeHtml(attr.id)}" title="${escapeHtml(this.engine.t('ui.spendStatPoint'))}" hidden>+</button>` : ''}
-      </div>`
-    ).join('');
+    // Skills carry their authored icon (rules.customAttributes[].icon).
+    const items = (rules.customAttributes ?? []).map(attr => attrRowHtml({
+      icon: attr.icon,
+      label: skillLabel(this.engine, attr.id),
+      valueHtml: bindSpan(`attributes.${escapeHtml(attr.id)}`),
+      trailingHtml: canSpend
+        ? `<button class="${CSS.BTN} attr-list__spend" data-spend-attr="${escapeHtml(attr.id)}" title="${escapeHtml(this.engine.t('ui.spendStatPoint'))}" hidden>+</button>`
+        : '',
+    })).join('');
     const sectionHeading = (key, labelText) =>
       `<button class="${CSS.SECTION_HEADING} ${CSS.SECTION_TOGGLE}" data-section="${key}">
         <span class="${CSS.SECTION_TOGGLE_LABEL}">${escapeHtml(labelText)}</span>
@@ -378,18 +388,23 @@ export class UIManager {
     const bar = createElement('div', 'scene__topbar');
 
     const stats = createElement('div', 'scene__topbar-stats');
-    const stat = (label, valueHtml) => {
+    // The icon stands in for the label here — the bar is too narrow to spell
+    // five stats out. The label still ships twice over: as the hover title,
+    // and as screen-reader-only text in front of the value.
+    const stat = (icon, label, valueHtml) => {
       const item = createElement('span', 'scene__topbar-stat');
-      item.innerHTML = `${escapeHtml(label)}: <span class="scene__topbar-stat-value">${valueHtml}</span>`;
+      item.title = label;
+      item.innerHTML = `${iconHtml(icon)}<span class="visually-hidden">${escapeHtml(label)}: </span>`
+        + `<span class="scene__topbar-stat-value">${valueHtml}</span>`;
       return item;
     };
     // Same grouping as the sheet's character section: combat, pools, wealth.
     stats.append(
-      stat(this.engine.t('ui.statHp'), `${bindSpan('resources.hp.current')}/${bindSpan('resources.hp.max')}`),
-      stat(this.engine.t('ui.statAc'), bindSpan('attributes.ac')),
-      stat(this.engine.t('ui.statAp'), `${bindSpan('resources.ap.current')}/${bindSpan('resources.ap.max')}`),
-      ...this._headerResourceEntries().map(({ label, valueHtml }) => stat(label, valueHtml)),
-      stat(this.engine.t('ui.statGold'), bindSpan('resources.gold')),
+      stat('heart', this.engine.t('ui.statHp'), `${bindSpan('resources.hp.current')}/${bindSpan('resources.hp.max')}`),
+      stat('shield', this.engine.t('ui.statAc'), bindSpan('attributes.ac')),
+      stat('sword', this.engine.t('ui.statAp'), `${bindSpan('resources.ap.current')}/${bindSpan('resources.ap.max')}`),
+      ...this._headerResourceEntries().map(({ icon, label, valueHtml }) => stat(icon, label, valueHtml)),
+      stat('coin', this.engine.t('ui.statGold'), bindSpan('resources.gold')),
     );
     bar.appendChild(stats);
 
@@ -403,14 +418,15 @@ export class UIManager {
   }
 
   // The rules.headerResources entries that render as a label plus a bound
-  // current/max value — shared by the sheet's character section and the
-  // scene top bar so the two surfaces can't drift apart.
-  // @returns {Array<{label: string, valueHtml: string}>}
+  // current/max value — shared by the sheet's character section (icon plus
+  // label) and the scene top bar (icon alone) so the two can't drift apart.
+  // @returns {Array<{icon: string, label: string, valueHtml: string}>}
   _headerResourceEntries() {
     const player = this.engine.state.getPlayer();
     return (this.engine.data.rules?.headerResources || [])
-      .filter(id => { const r = player.resources?.[id]; return r && typeof r === 'object' && 'current' in r; })
-      .map(id => ({
+      .filter(({ id }) => { const r = player.resources?.[id]; return r && typeof r === 'object' && 'current' in r; })
+      .map(({ id, icon }) => ({
+        icon,
         label: this.engine.t(`ui.resources.${id}`),
         valueHtml: `${bindSpan(`resources.${id}.current`)}/${bindSpan(`resources.${id}.max`)}`,
       }));

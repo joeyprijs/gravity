@@ -1,4 +1,7 @@
 import { GOLD_ITEM_ID, ITEM_TYPES, TIMER_SAFE_ACTIONS } from "./config.js";
+// The icon set owns its own name list; validation reads it from there rather
+// than keeping a second copy that could drift.
+import { ICON_NAMES } from "./icons.js";
 
 // Load-time validation of all game data. Pure functions over the loaded data
 // object — no DOM, no engine — so authors get fail-fast feedback on boot and
@@ -401,6 +404,10 @@ function validateRules(ctx) {
       ctx.add(group, `customAttributes "${attr.id}": missing locale entry at actions.skillBadgeFree.${attr.id} — roll breakdowns fall back to the capitalized id`);
     if (attr.max !== undefined && !(typeof attr.max === 'number' && attr.max >= (attr.default ?? 0)))
       ctx.add(group, `customAttributes "${attr.id}": max must be a number ≥ its default`);
+    // Like a tab's icon: optional, since the skill's row always shows its
+    // label — but a name the icon set doesn't know renders nothing.
+    if (attr.icon !== undefined && !ICON_NAMES.includes(attr.icon))
+      ctx.add(group, `customAttributes "${attr.id}": icon "${attr.icon}" is not a known icon (${ICON_NAMES.join(', ')})`);
   }
   // Skill-check badges always append the shared DC line (see skillBadge).
   if ((rules?.customAttributes || []).length && !locale?.actions?.skillBadgeDc)
@@ -478,19 +485,35 @@ function validateRules(ctx) {
       ctx.add(group, 'skillRetry.restRestore must be a non-negative number');
   }
 
-  // headerResources render in the scene top bar and the sheet's character
-  // section: every id must be a declared resource with a display label.
-  for (const id of (rules?.headerResources ?? [])) {
+  // headerResources render in the sheet's character section as a label plus a
+  // value, and in the scene top bar as an icon plus a value: every entry needs
+  // a declared resource, a display label, and an icon — the top bar shows no
+  // label, so an entry without a usable icon leaves a bare number there.
+  for (const entry of (rules?.headerResources ?? [])) {
+    const id = entry?.id;
+    if (!id) {
+      ctx.add(group, 'headerResources entries are { "id", "icon" } objects, e.g. { "id": "luckPoints", "icon": "star" }');
+      continue;
+    }
     if (!isResource(id))
       ctx.add(group, `headerResources "${id}" is not a declared { current, max } resource in playerDefaults.resources`);
     if (!locale?.ui?.resources?.[id])
       ctx.add(group, `headerResources "${id}": missing locale entry at ui.resources.${id}`);
+    if (!ICON_NAMES.includes(entry.icon))
+      ctx.add(group, `headerResources "${id}": icon "${entry.icon}" is not a known icon (${ICON_NAMES.join(', ')})`);
   }
 
   // The save/load/restart buttons only render inside an options-widget tab —
   // a tabs list without one leaves the player unable to save or restart.
   if (rules?.tabs && !rules.tabs.some(t => t?.widget === 'options'))
     ctx.add(group, 'tabs: no tab with widget "options" — the save/load/restart buttons render nowhere');
+
+  // A tab's icon is optional — its label is always on screen — but a name the
+  // icon set doesn't know renders nothing where an icon was meant to go.
+  for (const tab of (rules?.tabs ?? [])) {
+    if (tab?.icon !== undefined && !ICON_NAMES.includes(tab.icon))
+      ctx.add(group, `tabs "${tab.id}": icon "${tab.icon}" is not a known icon (${ICON_NAMES.join(', ')})`);
+  }
 
   // The AP economy was removed — AP is a combat-only budget refilled at fight
   // start, each round, and at fight end. The old knobs are inert; flag them

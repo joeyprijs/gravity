@@ -111,12 +111,12 @@ Failing a check is free the first time; *retrying* it can cost a scarce resource
   "cost": 1,
   "restRestore": 3
 },
-"headerResources": ["luckPoints"]
+"headerResources": [{ "id": "luckPoints", "icon": "star" }]
 ```
 
 - **First attempt always free**; each retry of a failed pass/fail or discovery check (and dialogue checks) spends `cost` of the resource. The badge shows it as its own line ("Retry: 1 Luck Point", from `actions.badgeRetryCost`); when the player can't afford it the button renders disabled, like an unmet item requirement.
 - **`restRestore`** refills the resource on `full_rest` (clamped to max) — the cozy counterweight: spend do-overs while out, recover them sleeping at home.
-- **`headerResources`** lists resources to surface in the story panel's status bar and the character sheet (label from `ui.resources.<id>`); it's general — any declared `{ current, max }` resource can appear, and any can be spent/restored by name through actions.
+- **`headerResources`** lists resources to surface in the story panel's status bar and the character sheet — each entry is an `{ "id", "icon" }` pair, the sheet showing the label from `ui.resources.<id>` and the status bar showing the icon in its place (names from [`src/core/icons.js`](../src/core/icons.js)); it's general — any declared `{ current, max }` resource can appear, and any can be spent/restored by name through actions.
 - The resource is tone-neutral: name it "Luck", "Grit", "Focus", whatever fits. It doesn't touch how checks *resolve* (still d20 + modifier vs DC) — it only gates retries.
 
 *(A depleting resource is opt-in. Omit `skillRetry` and retries are unlimited and free.)*

@@ -95,31 +95,37 @@
   "customAttributes": [
     {
       "id": "strength",
+      "icon": "dumbbell",
       "default": 0,
       "max": 5
     },
     {
       "id": "intelligence",
+      "icon": "bulb",
       "default": 0,
       "max": 5
     },
     {
       "id": "perception",
+      "icon": "eye",
       "default": 0,
       "max": 5
     },
     {
       "id": "stealth",
+      "icon": "moon",
       "default": 0,
       "max": 5
     },
     {
       "id": "charisma",
+      "icon": "speech",
       "default": 0,
       "max": 5
     },
     {
       "id": "luck",
+      "icon": "star",
       "default": 0,
       "max": 5
     }
@@ -187,25 +193,30 @@
     {
       "id": "attributes-tab",
       "localeKey": "ui.tabAttributes",
+      "icon": "sheet",
       "widget": "attributes",
       "default": true
     },
     {
       "id": "inventory-tab",
-      "localeKey": "ui.tabInventory"
+      "localeKey": "ui.tabInventory",
+      "icon": "backpack"
     },
     {
       "id": "quests-tab",
-      "localeKey": "ui.tabQuests"
+      "localeKey": "ui.tabQuests",
+      "icon": "trophy"
     },
     {
       "id": "map-tab",
       "localeKey": "ui.tabMap",
+      "icon": "map",
       "widget": "map"
     },
     {
       "id": "options-tab",
       "localeKey": "ui.tabOptions",
+      "icon": "cog",
       "widget": "options"
     }
   ],
@@ -215,6 +226,9 @@
     "restRestore": 3
   },
   "headerResources": [
-    "luckPoints"
+    {
+      "id": "luckPoints",
+      "icon": "star"
+    }
   ]
 }

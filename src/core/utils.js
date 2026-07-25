@@ -1,4 +1,5 @@
 import { CSS, EL } from "./config.js";
+import { iconHtml } from "./icons.js";
 
 /**
  * Reads a value from a nested object using a dot-separated path.
@@ -340,17 +341,21 @@ export function buildSceneDescription(title, body = null, t = null) {
 /**
  * One sheet attribute row — the label/value line the sheet tab's sections
  * are made of, shared so plugin rows injected into them (e.g. the curator's
- * reputation) can't drift from the sheet's markup. The label is escaped;
- * valueHtml is engine-authored markup (data-stat-bind spans).
+ * reputation) can't drift from the sheet's markup. The label is escaped and
+ * marked with its icon; valueHtml and trailingHtml are engine-authored markup
+ * (data-stat-bind spans, the point-buy spend button).
  *
- * @param {string} label - Display label (plain text).
- * @param {string} valueHtml - HTML for the value cell.
- * @param {string} [extraClasses] - Extra classes on the row element.
+ * @param {object} row
+ * @param {string} row.label - Display label (plain text).
+ * @param {string} row.valueHtml - HTML for the value cell.
+ * @param {string} [row.icon] - Icon name (see core/icons.js); omit for none.
+ * @param {string} [row.extraClasses] - Extra classes on the row element.
+ * @param {string} [row.trailingHtml] - Markup after the value cell.
  * @returns {string} HTML for one .attr-list__row.
  */
-export function attrRowHtml(label, valueHtml, extraClasses = '', trailingHtml = '') {
+export function attrRowHtml({ label, valueHtml, icon = '', extraClasses = '', trailingHtml = '' }) {
   return `<div class="attr-list__row${extraClasses ? ` ${extraClasses}` : ''}">
-    <span class="attr-list__label">${escapeHtml(label)}</span>
+    <span class="attr-list__label">${icon ? iconHtml(icon) : ''}${escapeHtml(label)}</span>
     <span class="attr-list__value">${valueHtml}</span>${trailingHtml}
   </div>`;
 }

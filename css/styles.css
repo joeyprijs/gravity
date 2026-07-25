@@ -225,6 +225,27 @@ body {
   display: none;
 }
 
+/* Inline SVG icons (built by core/icons.js). Sized in em and filled with
+   currentColor, so a host sizes and tints its icons through its own
+   font-size and color — nothing here is per-icon. */
+.icon {
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+  fill: currentColor;
+}
+
+/* Text kept for screen readers where the visible UI carries the meaning some
+   other way — the top bar's stat labels, which its icons stand in for. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* ==========================================================================
    .button — single source of truth for small action-button visuals
    (Use, Equip, Save/Load, the stat-point "+"). Modifier classes
@@ -470,6 +491,16 @@ button.section-toggle--collapsed .section-toggle__label::before {
      share because the values are mostly short numbers — a fraction rather
      than a fixed width so translated labels get the same room. */
   flex: 0 0 60%;
+  /* Icon then label text, on one line: the icon is a marker for the label,
+     so it stays as quiet as the label while the value keeps the emphasis. */
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 1.25);
+}
+
+.attr-list__label .icon {
+  font-size: 1.1em;
+  color: var(--text-secondary);
 }
 
 /* Takes the rest of the row so a spend button still lands at the right edge. */
@@ -550,6 +581,13 @@ button.section-toggle--collapsed .section-toggle__label::before {
 
 .tabs__btn {
   flex: 1;
+  gap: calc(var(--spacing) * 0.75);
+}
+
+/* The icon is the label's companion here, so it stays as quiet as the label
+   until the tab is active, when both take the accent color. */
+.tabs__btn .icon {
+  font-size: 1.15em;
 }
 
 .tabs__btn--active {
@@ -644,12 +682,20 @@ button.section-toggle--collapsed .section-toggle__label::before {
   gap: calc(var(--spacing) * 2.5);
 }
 
-/* Each stat stacks its label over its value; the label text node and the
-   value span become the two flex lines. */
+/* Each stat pairs an icon with its value on one line — the icon replaces the
+   label, which survives only for screen readers (.visually-hidden) and as the
+   hover title. The icon carries the label's muted color, the value the
+   emphasis, keeping the hierarchy the two-line version had. */
 .scene__topbar-stat {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--spacing) * 0.75);
   white-space: nowrap;
+}
+
+.scene__topbar-stat .icon {
+  font-size: 1.2em;
+  color: var(--text-secondary);
 }
 
 .scene__topbar-stat-value {

@@ -30,6 +30,7 @@ engine.js (orchestrator, mode machine, delegate API, event bus, registries)
 ├── core/validate.js   load-time game-data validation
 ├── core/i18n.js       language resolution, list/plural formatting (pure)
 ├── core/utils.js      DOM helpers (createElement, resetOptionsPanel, …)
+├── core/icons.js      the inline SVG icon set, referenced by name from data (pure)
 ├── systems/
 │   ├── scene.js       scene rendering, options, item discovery
 │   ├── combat.js      initiative-based turn combat (renderer in ui/combat-ui.js)
@@ -118,7 +119,7 @@ Two mechanisms let dynamic content reach scene rendering:
 
 - **Description hooks** (`engine.registerDescriptionHook(name, fn)`) — *per-scene, opt-in*: a scene declares `"descriptionHook": "name"` in its JSON and the hook's return value (an HTML string) is appended to that scene's description.
 - **Scene decorators** (`engine.registerSceneDecorator({ description?, options? })`) — *global*: invoked for every rendered scene. `description(scene, sceneId, engine)` returns HTML appended to the description; `options(scene, optionsContainer, engine)` may append extra option buttons. The curator plugin uses this to render its exhibits table and "Museum Curator Panel" button on any scene that has display cases.
-- **Sheet rows** (`engine.registerSheetRow({ label, bind })`) — adds a row to the sheet tab's character section, filled by the same `data-stat-bind` loop as the built-in stats. Plugins load before the UI builds, so registered rows render as part of the sheet itself — no DOM injection or timing games. The curator plugin surfaces `attributes.reputation` this way; the row simply doesn't render in games whose tabs omit the attributes widget.
+- **Sheet rows** (`engine.registerSheetRow({ label, bind, icon })`) — adds a row to the sheet tab's character section, filled by the same `data-stat-bind` loop as the built-in stats. Plugins load before the UI builds, so registered rows render as part of the sheet itself — no DOM injection or timing games. The curator plugin surfaces `attributes.reputation` this way; the row simply doesn't render in games whose tabs omit the attributes widget.
 
 ## Plugins
 
@@ -144,7 +145,7 @@ The optional `config` object holds the plugin's tunables, read back at runtime v
 - `engine.registerAction(name, fn)` — custom action types
 - `engine.registerValidator(fn)` — a boot-time data validator run after the core checks; `fn(data, { add })` calls `add(group, message)` per issue, so a plugin flags its own authoring mistakes (deprecated shapes, missing config) in the same report as the built-ins
 - `engine.registerDescriptionHook(name, fn)` / `engine.registerSceneDecorator(decorator)` — dynamic scene content
-- `engine.registerTabWidget(name, fn)` / `engine.registerSheetRow({ label, bind })` — contribute a whole sidebar tab (referenced from `rules.tabs[].widget`) or a single sheet row
+- `engine.registerTabWidget(name, fn)` / `engine.registerSheetRow({ label, bind, icon })` — contribute a whole sidebar tab (referenced from `rules.tabs[].widget`) or a single sheet row
 - `engine.on(event, fn)` — react to engine events
 - `engine.setCustomUIOpen(bool)` — mark a custom panel (chest, curator dashboard, …) as open/closed so scene re-renders don't draw over it; read back via `engine.inCustomUI`
 - `engine.state.onMutation(fn)` — observe state mutations: `fn(method, info)` fires after a mutating StateManager method completes, immediately before its listener notification — so anything a hook derives or records is in place for the render that notification triggers (`init`, `loadFromObject`, `reset`, `modifyPlayerStat`, `addXP`, `addToInventory`, `removeFromInventory`, `equipItem`, `placeItemInDisplay`, `takeItemFromDisplay`, `applyCharCreation`, …)
@@ -193,11 +194,11 @@ Grammar never lives in code: lists join through `formatList` (`Intl.ListFormat`)
 
 The game is three panels — player (left), story (center), interactions (right) — a deliberate layout: each panel maps onto one future mobile drawer.
 
-- **Player panel:** tabs generated from `rules.tabs`. Each entry names a locale key and an optional `widget` — `attributes` (the character sheet: stat and skill sections as collapsible label/value rows), `map` (the minimap), or `options` (the save/load/restart buttons, which exist *only* here; `validate.js` warns when a tabs list omits the widget). Collapse state persists per section via `createSectionToggles` in `core/utils.js`, shared with the inventory panel's groups.
-- **Story panel:** the narrative log, with a pinned top bar (`scene__topbar`) showing HP/AC/AP/Gold, every `rules.headerResources` entry, and the world clock. The bar never scrolls — the log is the panel's internal scroll container.
+- **Player panel:** tabs generated from `rules.tabs`. Each entry names a locale key, an `icon`, and an optional `widget` — `attributes` (the character sheet: stat and skill sections as collapsible icon/label/value rows, the skills' icons coming from `rules.customAttributes[].icon`), `map` (the minimap), or `options` (the save/load/restart buttons, which exist *only* here; `validate.js` warns when a tabs list omits the widget). Collapse state persists per section via `createSectionToggles` in `core/utils.js`, shared with the inventory panel's groups.
+- **Story panel:** the narrative log, with a pinned top bar (`scene__topbar`) showing HP/AC/AP/Gold, every `rules.headerResources` entry, and the world clock. Each stat shows an icon in place of its label — the label survives as the hover title and as `.visually-hidden` text, so the accessible reading is still "HP: 10/10". The bar never scrolls — the log is the panel's internal scroll container.
 - **Interactions panel:** the scene options, skill checks, dialogue responses, or combat controls. It is reset through `resetOptionsPanel()` in `core/utils.js` — every system that takes over the panel (scene, combat, dialogue, store, chest, curator) goes through it.
 - **Reactive updates:** `UIManager.update(hint)` re-renders the hinted region (`'stats'`, `'inventory'`, `'quests'`, `'map'`); `[data-stat-bind="path"]` elements anywhere in the document are filled from player state by dot-path on every stats change. The sheet, the top bar, and plugin-registered sheet rows all ride this one loop.
-- **Shared DOM vocabulary:** `buildCard` in `core/utils.js` is the single builder for every titled box (options, checks, attacks, inventory items, quests, chest rows); `attrRowHtml` is the single builder for sheet rows. Restyle `.card` and `.attr-list__row` and the whole game follows.
+- **Shared DOM vocabulary:** `buildCard` in `core/utils.js` is the single builder for every titled box (options, checks, attacks, inventory items, quests, chest rows); `attrRowHtml` is the single builder for sheet rows, icon included. Restyle `.card` and `.attr-list__row` and the whole game follows.
 - **Text vs HTML policy:** `createElement(tag, class, text)` sets `textContent` — game data is always treated as plain text. The only sanctioned HTML channels are scene description bodies (`buildSceneDescription`) and engine-authored structural templates; any dynamic value embedded in those must pass through `escapeHtml()`.
 
 ## Testing

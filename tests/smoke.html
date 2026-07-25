@@ -148,6 +148,7 @@
         assert(tabs.length === 5, `expected 5 tabs, got ${tabs.length}`);
         assert(text(tabs[0]) === 'Sheet', `first tab is "${text(tabs[0])}", expected "Sheet"`);
         assert(tabs[0].classList.contains('tabs__btn--active'), 'sheet tab starts active');
+        assert(tabs.every(t => t.querySelector('svg.icon')), 'every tab renders its rules.tabs[].icon');
         assert(!$('#attributes-tab').hidden, 'sheet panel visible');
         assert($('#inventory-tab').hidden, 'inventory panel hidden');
       });
@@ -172,12 +173,16 @@
         assert($('[data-spend-attr="resources.hp.max"]'), 'HP row has a spend button');
         assert($('[data-spend-attr="attributes.ac"]'), 'AC row has a spend button');
         assert($('[data-spend-attr="attributes.initiative"]'), 'Initiative row has a spend button');
+        // Every row is marked, including the plugin's (registerSheetRow icon).
+        assert(rows.every(r => r.querySelector('.attr-list__label svg.icon')), 'every character row shows an icon');
       });
 
       await step('skills section lists the custom attributes', () => {
-        const labels = $$('[data-section-body="skills"] .attr-list__row .attr-list__label').map(text);
+        const rows = $$('[data-section-body="skills"] .attr-list__row');
+        const labels = rows.map(r => text(r.querySelector('.attr-list__label')));
         assert(JSON.stringify(labels) === JSON.stringify(['Strength', 'Intelligence', 'Perception', 'Stealth', 'Charisma', 'Luck']),
           `skill labels ${JSON.stringify(labels)}`);
+        assert(rows.every(r => r.querySelector('.attr-list__label svg.icon')), 'every skill row shows its rules.customAttributes[].icon');
       });
 
       await step('section headings toggle collapse and expand', () => {
@@ -195,9 +200,14 @@
 
       await step('top bar shows stats and the world clock', () => {
         const bar = text($('.scene__topbar'));
+        // Each stat's label is screen-reader-only text in front of its value —
+        // an icon stands in for it on screen.
         for (const part of ['HP: 10/10', 'AC: 10', 'AP: 3/3', 'Gold: 0', 'Luck Points: 3/3', 'Day 1:']) {
           assert(bar.includes(part), `top bar "${bar}" missing "${part}"`);
         }
+        const stats = $$('.scene__topbar-stat');
+        assert(stats.length === 5, `expected 5 top-bar stats, got ${stats.length}`);
+        assert(stats.every(s => s.querySelector('svg.icon') && s.title), 'every stat has an icon and a hover title');
       });
 
       await step('scene renders narrative, options, and a skill check', () => {

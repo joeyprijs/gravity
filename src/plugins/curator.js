@@ -196,6 +196,7 @@ export default function curatorPlugin(engine) {
   engine.registerSheetRow({
     label: engine.t('plugin.curator.reputationLabel'),
     bind: 'attributes.reputation',
+    icon: 'thumbs_up',
   });
 
   // Tabs are fully data-driven, so a game can configure the reputation stat
