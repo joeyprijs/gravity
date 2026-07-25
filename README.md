@@ -50,6 +50,7 @@ A browser-native, zero-dependency, data-driven text RPG engine. Define your enti
 *   **Character Progression** — Point-buy character creation, XP levels that bank spendable stat points, weapons governed by a wielder attribute (`attackAttribute`), and equipment that raises any attribute (`attributeBonuses`).
 *   **Branching Dialogue & Merchants** — Conversation trees with skill-checked responses, item and quest rewards, and stateful merchant stock with per-NPC pricing.
 *   **A World Clock (opt-in)** — Player actions advance a deterministic tick counter; days and named segments derive from rules, timers fire quiet action pipelines, and conditions can read `time` / `day` / `segment`. No wall clock, fully save-safe.
+*   **Two-Channel Audio (opt-in)** — Looping ambience resolved per region (overridable per scene) plus one-shot narration clips for scene descriptions and action outcomes, with per-channel volume in the Options tab. A game that authors no audio never touches the Web Audio API. Full guide: [`docs/AUDIO.md`](docs/AUDIO.md).
 *   **Interactive World Map** — A scaled minimap in the sidebar plus a full-screen scrollable coordinate map centered on the player.
 *   **Localisation** — Every player-facing string resolves through locale files; the engine matches the browser's language, and list/plural grammar goes through `Intl`, never through code.
 *   **Load-Time Validation** — The engine validates all game data on boot and prints authoring mistakes (dangling IDs, missing locale keys, unreachable UI) to the console, grouped per entity.
@@ -468,9 +469,11 @@ A scene can also start a fight the moment it's entered with `autoAttack` — an 
 
 Winning re-renders the scene without re-triggering the ambush, so gate it on a flag its own `onVictory` sets (as above) if it should fire only once.
 
+**An ambush is framed once.** The scene description printed a heartbeat earlier already narrates the encounter, so an `autoAttack` fight does *not* also print its enemy's `description` — otherwise the same instant is told twice. Write the reveal into the scene description; the enemy's own `description` still opens a fight the player *chose* (see [NPCs & Enemies](#npcs--enemies)).
+
 ### NPCs & Enemies
 
-One shape covers monsters, conversation partners, and merchants:
+One shape covers monsters, conversation partners, and merchants. `description` is the encounter's opening framing: it prints at the top of a **solo** fight the player chose — never in a multi-enemy fight, and never in an `autoAttack` ambush, where the scene description did the framing instead.
 
 ```json
 {
@@ -724,14 +727,17 @@ gravity/
 │   │   ├── time.js          # World-clock ticks, segments, timers (pure)
 │   │   ├── actions.js       # Built-in action pipeline handlers
 │   │   ├── quests.js        # Mission lifecycle
-│   │   └── narrative.js     # The chronological story log
+│   │   ├── narrative.js     # The chronological story log
+│   │   └── audio.js         # Ambience loops & narration clips (Web Audio)
 │   ├── ui/                  # UIManager (tab widgets, sheet, top bar, save/load) + panels
 │   ├── world/map.js         # Minimap + full-screen world map
 │   ├── screens/char-creation.js
 │   └── plugins/curator.js   # Reference plugin (museum curation & reputation)
 ├── scripts/generate-manifest.js  # Regenerates data/index.json from the data tree
+├── scripts/generate-narration-script.js  # Per-scene narration recording scripts
 ├── tests/                   # Node unit tests (npm test) + smoke.html (browser UI test)
 ├── schemas/                 # JSON Schemas for items, scenes, and NPCs
+├── audio/                   # Ambience & narration clips (layout: docs/AUDIO.md)
 └── data/                    # The shipped demo game: scenes, items, NPCs, rules, locales
 ```
 

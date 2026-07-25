@@ -99,6 +99,18 @@ export class UIManager {
       this.engine.state.reset();
       window.location.reload();
     });
+
+    // Audio controls (options tab) — write straight through to the
+    // AudioSystem, which persists them as device preferences.
+    document.getElementById(EL.AUDIO_MUTE)?.addEventListener('change', (e) => {
+      this.engine.audio.setMuted(e.target.checked);
+    });
+    document.getElementById(EL.AUDIO_AMBIENCE_VOL)?.addEventListener('input', (e) => {
+      this.engine.audio.setVolume('ambience', e.target.value / 100);
+    });
+    document.getElementById(EL.AUDIO_NARRATION_VOL)?.addEventListener('input', (e) => {
+      this.engine.audio.setVolume('narration', e.target.value / 100);
+    });
   }
 
   // Reads rules.tabs and generates tab nav buttons + panel divs inside #player-panel.
@@ -242,11 +254,29 @@ export class UIManager {
   // Options widget: the save/load/restart buttons. The click handlers bind in
   // setup() right after the tabs are built.
   _buildOptionsWidget(panel) {
+    const audio = this.engine.audio.settings;
     panel.innerHTML = `<div class="${CSS.PANEL_SECTION}">
       <div class="options-actions">
         <button class="${CSS.BTN}" id="${EL.BTN_SAVE}">${escapeHtml(this.engine.t('ui.btnSave'))}</button>
         <button class="${CSS.BTN}" id="${EL.BTN_LOAD}">${escapeHtml(this.engine.t('ui.btnLoad'))}</button>
         <button class="${CSS.BTN}" id="${EL.BTN_RESTART}">${escapeHtml(this.engine.t('ui.btnRestart'))}</button>
+      </div>
+    </div>
+    <div class="${CSS.PANEL_SECTION}">
+      <div class="${CSS.SECTION_HEADING}">${escapeHtml(this.engine.t('ui.audioHeading'))}</div>
+      <div class="audio-options">
+        <label class="audio-options__row">
+          <span>${escapeHtml(this.engine.t('ui.audioMute'))}</span>
+          <input type="checkbox" id="${EL.AUDIO_MUTE}"${audio.muted ? ' checked' : ''}>
+        </label>
+        <label class="audio-options__row">
+          <span>${escapeHtml(this.engine.t('ui.audioAmbience'))}</span>
+          <input type="range" id="${EL.AUDIO_AMBIENCE_VOL}" min="0" max="100" value="${Math.round(audio.ambienceVolume * 100)}">
+        </label>
+        <label class="audio-options__row">
+          <span>${escapeHtml(this.engine.t('ui.audioNarration'))}</span>
+          <input type="range" id="${EL.AUDIO_NARRATION_VOL}" min="0" max="100" value="${Math.round(audio.narrationVolume * 100)}">
+        </label>
       </div>
     </div>`;
   }

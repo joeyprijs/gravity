@@ -1,2 +1,15 @@
 .DS_Store
 .claude/
+
+# Audio clips stay out of git for now — not ready to publish. The generated
+# recording scripts under audio/_scripts/ ARE tracked: they are text, and their
+# diffs are how prose drift surfaces. A checkout without clips plays silent.
+audio/**/*.wav
+audio/**/*.ogg
+audio/**/*.m4a
+audio/**/*.mp3
+audio/**/*.webm
+
+# Lossless recording sources — every re-record of a tracked binary is a
+# permanent copy in git history.
+audio/_masters/

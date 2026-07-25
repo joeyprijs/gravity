@@ -498,6 +498,24 @@ button.section-toggle--collapsed .section-toggle__label::before {
   gap: calc(var(--spacing) * 1);
 }
 
+.audio-options {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 1);
+}
+
+.audio-options__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--spacing) * 1);
+}
+
+.audio-options__row input[type="range"] {
+  flex: 1;
+  max-width: 55%;
+}
+
 /* ==========================================================================
  SIDEBAR: TABS
  ========================================================================== */

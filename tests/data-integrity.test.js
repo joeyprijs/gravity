@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { validateGameData, normalizeCarriedItems } from '../src/core/validate.js';
 import { ACTIONS, ITEM_TYPES } from '../src/core/config.js';
 
@@ -84,6 +84,37 @@ test('every shipped scene conforms to scene.schema.json at the top level', () =>
 test('every shipped NPC conforms to npc.schema.json at the top level', () => {
   for (const [id, npc] of Object.entries(data.npcs)) {
     assert.deepEqual(topLevelSchemaIssues(npcSchema, npc), [], `npc "${id}"`);
+  }
+});
+
+// ── Audio assets ─────────────────────────────────────────────────────────────
+// Clips are recorded by hand and referenced by path, and a missing file is only
+// a console warning at runtime — so a typo would ship as silence. Collect every
+// `ambience`/`narration` path in the data (scene-level, description variants,
+// and anywhere inside an action pipeline) and assert the file is on disk.
+
+function collectAudioPaths(node, out = []) {
+  if (Array.isArray(node)) node.forEach(child => collectAudioPaths(child, out));
+  else if (node && typeof node === 'object') {
+    for (const [key, value] of Object.entries(node)) {
+      if ((key === 'ambience' || key === 'narration') && typeof value === 'string') out.push(value);
+      else collectAudioPaths(value, out);
+    }
+  }
+  return out;
+}
+
+test('every audio path referenced by the shipped data exists on disk', (t) => {
+  const paths = collectAudioPaths([index.regions, data.scenes]);
+  assert.ok(paths.length > 0, 'expected the example game to reference some audio');
+  const onDisk = paths.filter(path => existsSync(new URL(`../${path}`, import.meta.url)));
+  // The clips themselves are gitignored, so a fresh clone and CI have none of
+  // them and there is nothing to check. All-or-nothing on purpose: once even
+  // one clip is present, every path must resolve — which is what catches a
+  // typo in the checkout that actually has the audio.
+  if (!onDisk.length) return t.skip('no audio clips in this checkout (they are gitignored)');
+  for (const path of paths) {
+    assert.ok(existsSync(new URL(`../${path}`, import.meta.url)), `missing audio file "${path}"`);
   }
 });
 

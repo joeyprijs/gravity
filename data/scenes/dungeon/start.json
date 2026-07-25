@@ -22,7 +22,8 @@
       }
     },
     {
-      "text": "You awake in a dimly lit cellar. The smell of damp earth fills the air. A heavy wooden door stands locked to the north. You don't remember who you are, but a worn pack rests beside you, a sword's hilt jutting from it. Whoever left you here left you your gear; best arm yourself before anything else. (Open the Inventory tab to equip your belongings.)"
+      "text": "You awake in a dimly lit cellar. The smell of damp earth fills the air. A heavy wooden door stands locked to the north. You don't remember who you are, but a worn pack rests beside you, a sword's hilt jutting from it. Whoever left you here left you your gear; best arm yourself before anything else. (Open the Inventory tab to equip your belongings.)",
+      "narration": "audio/narration/dungeon/start.webm"
     }
   ],
   "options": [
@@ -74,7 +75,8 @@
         {
           "type": "loot",
           "item": "cellar_key",
-          "log": "You run your hands over the rough planks, feeling for weakness. Nothing gives. But crouching at the threshold, you spot it: a small iron key lying in the gap beneath the door, slid through from the other side. Whoever locked you in wanted you to let yourself out."
+          "log": "You run your hands over the rough planks, feeling for weakness. Nothing gives. But crouching at the threshold, you spot it: a small iron key lying in the gap beneath the door, slid through from the other side. Whoever locked you in wanted you to let yourself out.",
+          "narration": "audio/narration/dungeon/start__closer_look.webm"
         }
       ]
     },

@@ -42,7 +42,12 @@ export class SceneRenderer {
       this.lastRenderedDesc = lastDesc;
     }
     const scene = this.engine.data.scenes[sceneId];
-    if (scene) this.renderOptions(scene);
+    if (scene) {
+      // Loading into a location should sound like it — but stay quiet:
+      // ambience only, no narration replay.
+      this.engine.audio?.syncAmbience(scene);
+      this.renderOptions(scene);
+    }
   }
 
   /**
@@ -83,7 +88,16 @@ export class SceneRenderer {
     this.engine.state.addVisitedScene(sceneId);
     this.engine.state.setCurrentSceneId(sceneId);
 
-    this._appendSceneDescription(scene, sceneId);
+    const appended = this._appendSceneDescription(scene, sceneId);
+
+    // Audio rides the description's own dedupe: ambience re-syncs on every
+    // render (a no-op while the loop is unchanged), narration plays exactly
+    // when a new description block was appended — covering the boot render
+    // (where currentSceneId is pre-seeded, so isEntry is false) while
+    // skipping skill-check re-renders and save restores.
+    this.engine.audio?.syncAmbience(scene);
+    if (appended) this.engine.audio?.playNarration(this._resolveNarration(scene));
+
     passiveTexts.forEach(text => this.engine.log(LOG.NARRATOR, text));
     if (isEntry) this._resetSkillAttempts(scene, sceneId);
     this._awardSceneXP(scene, sceneId);
@@ -117,10 +131,11 @@ export class SceneRenderer {
 
   // Appends the scene description as a new narrative block — but only when the
   // scene or its description actually changed, preventing duplicate entries
-  // when options re-render.
+  // when options re-render. Returns whether a block was appended (the audio
+  // narration trigger rides the same dedupe).
   _appendSceneDescription(scene, sceneId) {
     const currentDesc = this._resolveDescription(scene);
-    if (this.lastRenderedSceneId === sceneId && this.lastRenderedDesc === currentDesc) return;
+    if (this.lastRenderedSceneId === sceneId && this.lastRenderedDesc === currentDesc) return false;
 
     this.engine.openScene();
     // Scene content comes from developer-authored JSON, not user input —
@@ -132,6 +147,7 @@ export class SceneRenderer {
 
     this.lastRenderedSceneId = sceneId;
     this.lastRenderedDesc = currentDesc;
+    return true;
   }
 
   // Passive checks: auto-rolled the first time the player enters the scene,
@@ -182,7 +198,9 @@ export class SceneRenderer {
     if (!scene.autoAttack) return false;
     const cond = scene.autoAttack.condition ?? null;
     if (cond && !evaluateCondition(cond, this.engine.state)) return false;
-    this.engine.combatSystem.startCombat(scene.autoAttack.enemies, scene.autoAttack);
+    // The scene description rendered a moment ago is this encounter's framing,
+    // so the fight doesn't re-describe the enemy on top of it.
+    this.engine.combatSystem.startCombat(scene.autoAttack.enemies, scene.autoAttack, { fromSceneEntry: true });
     return true;
   }
 
@@ -553,14 +571,7 @@ export class SceneRenderer {
     let desc = scene.description;
 
     if (Array.isArray(scene.description)) {
-      desc = scene.description.find(d => !d.condition)?.text || '';
-      for (const d of scene.description) {
-        const cond = d.condition ?? null;
-        if (cond && evaluateCondition(cond, this.engine.state)) {
-          desc = d.text;
-          break;
-        }
-      }
+      desc = this._resolveDescriptionVariant(scene)?.text || '';
     }
 
     if (scene.descriptionHook) {
@@ -576,6 +587,24 @@ export class SceneRenderer {
     }
 
     return desc;
+  }
+
+  // The matching entry of a conditional description array — first matching
+  // condition wins; the entry with no condition is the fallback. Null for
+  // plain-string descriptions.
+  _resolveDescriptionVariant(scene) {
+    if (!Array.isArray(scene.description)) return null;
+    for (const d of scene.description) {
+      if (d.condition && evaluateCondition(d.condition, this.engine.state)) return d;
+    }
+    return scene.description.find(d => !d.condition) ?? null;
+  }
+
+  // The narration clip for a scene entry: the resolved description variant's
+  // `narration` wins, the scene-level field is the fallback (and covers
+  // plain-string descriptions). Null when neither is authored.
+  _resolveNarration(scene) {
+    return this._resolveDescriptionVariant(scene)?.narration ?? scene.narration ?? null;
   }
 
   // Updates the body of the most recently rendered scene description in place.

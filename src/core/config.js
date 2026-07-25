@@ -157,6 +157,11 @@ export const EL = {
   BTN_RESTART:             'btn-restart',
   FILE_UPLOAD:             'file-upload',
 
+  // Audio controls (options tab)
+  AUDIO_MUTE:              'audio-mute',
+  AUDIO_AMBIENCE_VOL:      'audio-ambience-volume',
+  AUDIO_NARRATION_VOL:     'audio-narration-volume',
+
   // Character creation overlay
   CHAR_CREATION:           'char-creation',
 
