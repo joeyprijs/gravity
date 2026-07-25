@@ -33,6 +33,26 @@ The state-changing actions — `loot`, `heal`, `full_rest`, `modify_resource`, a
 
 `advance_time` is the one exception in shape: it has **no** default message and logs *only* when you pass a string (its day/segment-change narration is produced separately by the clock). The other action types (`navigate`, `set_flag`, `combat`, `dialogue`, timers, …) don't take `log` at all.
 
+### The `narration` convention
+
+Any action may carry `"narration": "audio/clip.webm"` — a recorded read-aloud of the line it just wrote, played on the audio system's narration channel. It sits beside the text it narrates:
+
+```json
+{
+  "type": "loot",
+  "item": "cellar_key",
+  "log": "You spot it: a small iron key in the gap beneath the door.",
+  "narration": "audio/narration/dungeon/start__closer_look.webm"
+}
+```
+
+Two things follow from the narration channel playing one clip at a time:
+
+- A second narrated action in the same pipeline **cuts off** the first. Narrate one beat per pipeline.
+- Entering a scene stops narration, so a narrated action followed by `navigate` in the same pipeline is silenced on arrival. Narrate the destination instead.
+
+A missing file warns once in the console and is otherwise silent — clips can be recorded and dropped in after the data is authored. The channel model, the file layout, and the naming rules are in [`docs/AUDIO.md`](AUDIO.md).
+
 ---
 
 ## Actions available everywhere

@@ -251,10 +251,79 @@
         }
       });
 
+      await step('options tab holds the audio controls, wired to the AudioSystem', () => {
+        assert($('#options-tab #audio-mute'), 'mute checkbox present');
+        for (const id of ['audio-ambience-volume', 'audio-narration-volume']) {
+          assert($(`#options-tab #${id}`), `#${id} slider present`);
+        }
+        const mute = $('#audio-mute');
+        mute.checked = true;
+        mute.dispatchEvent(new Event('change', { bubbles: true }));
+        assert(window.gameEngine.audio.settings.muted === true, 'mute writes through to audio settings');
+        mute.checked = false;
+        mute.dispatchEvent(new Event('change', { bubbles: true }));
+        assert(window.gameEngine.audio.settings.muted === false, 'unmute writes through too');
+      });
+
+      await step('dungeon ambience resolved as the scene audio target', () => {
+        assert(window.gameEngine.audio._ambiencePath === 'audio/ambience/dungeon.m4a',
+          `ambience target is the dungeon loop (got ${window.gameEngine.audio._ambiencePath})`);
+      });
+
+      await step('an action pipeline plays its own narration clip', async () => {
+        const played = [];
+        const audio = window.gameEngine.audio;
+        const real = audio.playNarration.bind(audio);
+        audio.playNarration = (path) => played.push(path);
+        const option = $$('#scene-options .card').find(c => text(c).includes('closer look'));
+        assert(option, 'the "take a closer look" option is on screen');
+        option.click();
+        await until(() => played.length > 0, 'a narration clip to be requested');
+        assert(played[0] === 'audio/narration/dungeon/start__closer_look.webm',
+          `the loot action's clip played (got ${played[0]})`);
+        // The option re-render that follows must not stop the clip it started.
+        assert(played.length === 1, `narration requested once, not ${played.length} times`);
+        audio.playNarration = real;
+      });
+
       await step('clicking a skill check advances the story', async () => {
         const logCount = $$('#scene-narrative .scene__log').length;
         $('#scene-options-skills .card').click();
         await until(() => $$('#scene-narrative .scene__log').length > logCount, 'narrative log to grow');
+      });
+
+      await step('a chosen solo fight introduces its enemy', async () => {
+        // Nothing framed this encounter, so the NPC description is the only
+        // thing establishing what the player is up against — it must survive.
+        // Called directly: every combat *option* in the demo is multi-enemy,
+        // which never shows a description anyway.
+        window.gameEngine.combatSystem.startCombat(['lost_wanderer'], {});
+        await until(() => $('.scene--combat'), 'the combat block to open');
+        const body = $('.scene--combat .scene__description .scene__body');
+        assert(body, 'a chosen fight keeps the enemy description');
+        assert(text(body).includes('hollow-eyed'), `enemy described (got "${text(body)}")`);
+        window.gameEngine.combatSystem.endCombat(true);   // leave combat cleanly
+      });
+
+      await step('an ambush is framed once: the scene describes it, the fight does not', async () => {
+        // dungeon_corridor autoAttacks. Its description already narrates the
+        // figure lunging, so the combat block must not repeat the NPC's own
+        // description under it — one beat, one description, one clip.
+        // The previous step left a combat block in the log, so wait for a new
+        // one and assert against the newest — $() would return the first.
+        const before = $$('.scene--combat').length;
+        window.gameEngine.state.modifyPlayerStat('hp', 'full');   // don't die mid-assertion
+        window.gameEngine.renderScene('dungeon_corridor');
+        await until(() => $$('.scene--combat').length > before, 'a new combat block to open');
+        const combat = $$('.scene--combat').pop();
+        const block = combat.querySelector('.scene__description');
+        assert(text(block).includes('Combat: Lost Wanderer'), `combat block titled (got "${text(block)}")`);
+        assert(!block.querySelector('.scene__body'),
+          `no enemy description in an ambush block (got "${text(block)}")`);
+        // The block right before the fight — by sibling, not by index, since
+        // the wanderer may append turns (or a Game Over) after it.
+        assert(text(combat.previousElementSibling).includes('disheveled figure'),
+          'the scene description before it did the framing');
       });
 
       await step('no uncaught errors during the run', () => {

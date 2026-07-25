@@ -50,8 +50,11 @@ export class CombatSystem {
    *
    * @param {string[]} enemyIds - Array of NPC identifiers to fight (e.g. ["goblin_guard"]).
    * @param {object} originOption - The action pipeline node that triggered this combat.
+   * @param {{fromSceneEntry?: boolean}} [opts] - `fromSceneEntry` marks an
+   *   `autoAttack` ambush, where the scene description just framed the
+   *   encounter and the enemy's own description would repeat it.
    */
-  startCombat(enemyIds, originOption) {
+  startCombat(enemyIds, originOption, { fromSceneEntry = false } = {}) {
     // Clone enemy templates so battles never mutate the loaded base data.
     const enemyDataList = enemyIds.map(id => {
       const data = this.engine.data.npcs[id];
@@ -82,7 +85,12 @@ export class CombatSystem {
     this.engine.currentSceneEl.appendChild(
       buildSceneDescription(
         this.engine.t('combat.fightingTitle', { names }),
-        this.enemies.length === 1 ? (this.enemies[0].description || null) : null,
+        // A solo enemy introduces itself at the top of the fight — but only
+        // when nothing else framed the encounter. On an ambush the scene
+        // description printed a heartbeat earlier already narrated this exact
+        // instant, so printing both says it twice (and would mean recording
+        // two narration clips for one beat). Whoever framed it owns the prose.
+        !fromSceneEntry && this.enemies.length === 1 ? (this.enemies[0].description || null) : null,
         this.engine.t.bind(this.engine)
       )
     );

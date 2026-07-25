@@ -18,3 +18,5 @@ jobs:
         run: node scripts/generate-manifest.js --check
       - name: Data files are in canonical expanded form
         run: node scripts/format-data.js --check
+      - name: Narration scripts match the authored prose
+        run: node scripts/generate-narration-script.js --check

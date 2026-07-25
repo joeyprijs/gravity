@@ -1,0 +1,391 @@
+#!/usr/bin/env node
+// Generates per-scene recording scripts for the narration channel: every line
+// of authored prose a narrator could read, in one plain-text file per scene.
+//
+//   node scripts/generate-narration-script.js          write audio/_scripts/
+//   node scripts/generate-narration-script.js --check  exit 1 if stale (CI)
+//
+// The output is committed on purpose. Narration's real maintenance problem is
+// drift — a clip silently stops matching the prose it reads — so a tracked
+// script turns `git diff` after a text edit into the list of clips to re-cut.
+//
+// Prose locations are an explicit allowlist, not a scan for "text": a scene's
+// `options[].text`, `skills[].text`, and `retryText` are button labels, and
+// narrating those would be wrong. Where the data already wires a `narration`
+// path, that path is authoritative and shown as-is; where it doesn't, a name
+// following docs/AUDIO.md is suggested.
+
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { basename, dirname, join, relative } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+const root = fileURLToPath(new URL('..', import.meta.url));
+const OUT_DIR = join(root, 'audio', '_scripts');
+const WRAP = 72;
+
+// Extension for suggested clip paths — narration is currently delivered as
+// Opus in WebM (see docs/AUDIO.md). One line to change if the shipped format
+// does; a path the data already wires is used verbatim regardless.
+export const CLIP_EXT = 'webm';
+
+// Outcome tiers, widest margin first — the order they read in the data.
+const TIERS = ['critical', 'success', 'partial', 'failure'];
+
+// Kinds the engine can actually play today. The rest are recordable in advance
+// but have no hook yet, which the script says out loud rather than implying
+// that a recorded file would be heard.
+const PLAYABLE = new Set(['description', 'action']);
+
+// Dropped when slugging a button label into a filename — they carry no meaning
+// and eat the four-word budget.
+const STOPWORDS = new Set(['a', 'an', 'the', 'at', 'to', 'it', 'for', 'of', 'in', 'on', 'and', 'your', 'you']);
+
+// ── Extraction ──────────────────────────────────────────────────────────────
+
+/**
+ * Every prose line in one scene, in reading order.
+ *
+ * @param {object} scene - A parsed scene JSON file.
+ * @returns {Array<{jsonPath: string, kind: string, label: string, text: string,
+ *   narration: (string|null), owner: (string|null)}>} `narration` is the clip
+ *   the data wires for the line, if any; `owner` is the button label the line
+ *   hangs off, used for naming and context.
+ */
+export function collectSceneLines(scene) {
+  const lines = [];
+  const push = (jsonPath, text, meta) => {
+    if (typeof text !== 'string' || !text.trim()) return;
+    lines.push({ jsonPath, text: text.trim(), narration: null, owner: null, ...meta });
+  };
+  // Outcome and narrative-check prose takes a string or an array of escalating
+  // variants (one per attempt) — both shapes land as one line each.
+  const pushEach = (jsonPath, value, meta) => {
+    if (Array.isArray(value)) value.forEach((text, i) => push(`${jsonPath}[${i}]`, text, { ...meta, label: `${meta.label} · attempt ${i + 1}` }));
+    else push(jsonPath, value, meta);
+  };
+
+  // Descriptions: a plain string, or conditional variants where the first
+  // match wins and the entry without a condition is the fallback.
+  if (Array.isArray(scene.description)) {
+    scene.description.forEach((variant, i) => {
+      push(`description[${i}].text`, variant.text, {
+        kind: 'description',
+        label: variant.condition ? `Description · when ${conditionSummary(variant.condition)}` : 'Description · default',
+        narration: variant.narration ?? scene.narration ?? null,
+        condition: variant.condition ?? null,
+      });
+    });
+  } else {
+    push('description', scene.description, { kind: 'description', label: 'Description', narration: scene.narration ?? null });
+  }
+
+  // Passive checks: rolled once on entry, their text logged on a success.
+  (scene.passiveChecks ?? []).forEach((check, i) => {
+    push(`passiveChecks[${i}].text`, check.text, {
+      kind: 'passive',
+      label: `Passive check · ${check.skillCheck ?? 'flag'} → ${check.flag ?? '?'}`,
+      slug: `passive_${check.skillCheck ?? check.flag ?? i}`,
+    });
+  });
+
+  (scene.skills ?? []).forEach((skill, i) => {
+    const owner = skill.text ?? `skill ${i}`;
+    const slug = slugify(owner);
+    // A narrative check (no dc, no items) resolves straight to resultText.
+    pushEach(`skills[${i}].resultText`, skill.resultText, { kind: 'result', label: `Check · ${owner}`, owner, slug });
+    for (const tier of TIERS) {
+      pushEach(`skills[${i}].outcomes.${tier}.text`, skill.outcomes?.[tier]?.text, {
+        kind: 'outcome',
+        label: `Check · ${owner} · ${tier}`,
+        owner,
+        slug: `${slug}_${tier}`,
+      });
+    }
+    collectActionLines(skill.outcomes, `skills[${i}].outcomes`, owner, slug, lines, push);
+    collectActionLines(skill.onExhausted, `skills[${i}].onExhausted`, owner, `${slug}_exhausted`, lines, push);
+  });
+
+  (scene.options ?? []).forEach((option, i) => {
+    const owner = option.text ?? `option ${i}`;
+    collectActionLines(option.actions, `options[${i}].actions`, owner, slugify(owner), lines, push);
+  });
+  collectActionLines(scene.autoAttack?.onVictory, 'autoAttack.onVictory', 'auto-attack victory', 'auto_attack_victory', lines, push);
+
+  return lines;
+}
+
+// Action pipelines nest (an outcome's actions, a timer's actions, onVictory),
+// and any action can log a custom sentence: `log` on the state-changing types,
+// `message` on the log type. Objects carrying a `type` are actions — which is
+// what keeps button labels out. A recursive walk covers every nesting depth
+// without a case per container.
+function collectActionLines(node, jsonPath, owner, slug, lines, push) {
+  if (Array.isArray(node)) {
+    node.forEach((child, i) => collectActionLines(child, `${jsonPath}[${i}]`, owner, slug, lines, push));
+    return;
+  }
+  if (!node || typeof node !== 'object') return;
+  if (typeof node.type === 'string') {
+    for (const field of ['log', 'message']) {
+      push(`${jsonPath}.${field}`, node[field], {
+        kind: 'action',
+        label: `Log line · ${owner}${node.type === 'log' ? '' : ` · ${node.type}`}`,
+        owner,
+        slug,
+        narration: node.narration ?? null,
+      });
+    }
+  }
+  for (const [key, value] of Object.entries(node)) {
+    if (value && typeof value === 'object') collectActionLines(value, `${jsonPath}.${key}`, owner, slug, lines, push);
+  }
+}
+
+// ── Shared locale prose ─────────────────────────────────────────────────────
+
+// Namespaces that are UI chrome by construction — labels, headings, stat
+// values. Nothing in them is ever read aloud.
+const CHROME_NAMESPACES = ['ui.', 'charCreation.', 'itemTypes.', 'itemStats.', 'inventory.', 'stats.', 'log.', 'time.segments.'];
+
+// Individually excluded: prose-shaped strings that are still buttons or
+// developer-facing errors.
+const CHROME_KEYS = new Set([
+  'dialogue.neverMind', 'dialogue.comeAgain', 'combat.loadLastSave', 'combat.restartGame',
+  'combat.gameOverTitle', 'system.dataError',
+]);
+
+/**
+ * The engine's own narrator lines — the shared outcomes a scene doesn't author,
+ * like the generic "Look Around" miss. Candidates, not a final list: a string
+ * qualifies if it reads as a sentence (a space, terminal punctuation) and
+ * carries no `{placeholder}`, since an interpolated line can't be one clip.
+ *
+ * @param {object} locale - A parsed locale file.
+ * @returns {Array<{key: string, text: string}>}
+ */
+export function collectSharedLines(locale) {
+  const out = [];
+  const walk = (node, path) => {
+    if (node && typeof node === 'object') {
+      for (const [key, value] of Object.entries(node)) walk(value, path ? `${path}.${key}` : key);
+      return;
+    }
+    if (typeof node !== 'string') return;
+    if (CHROME_NAMESPACES.some(ns => path.startsWith(ns)) || CHROME_KEYS.has(path)) return;
+    if (node.includes('{') || !node.includes(' ') || !/[.!?…]$/.test(node)) return;
+    out.push({ key: path, text: node });
+  };
+  walk(locale, '');
+  return out;
+}
+
+// ── Naming ──────────────────────────────────────────────────────────────────
+
+/** A button label as a filename fragment: four significant words, snake_case. */
+export function slugify(label) {
+  const words = String(label).toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/)
+    .filter(w => w && !STOPWORDS.has(w));
+  return (words.length ? words : ['clip']).slice(0, 4).join('_');
+}
+
+// A condition in words, so the reader knows which state they are voicing.
+// Mirrors the condition AST: flag leaves read as `flag = value`, and/or/not
+// recurse, and any other leaf (item, segment, time) reads as `key = value`.
+function conditionSummary(condition) {
+  if (!condition || typeof condition !== 'object') return 'condition';
+  if ('flag' in condition) return `${condition.flag} = ${condition.value ?? true}`;
+  if (Array.isArray(condition.and)) return condition.and.map(conditionSummary).join(' and ');
+  if (Array.isArray(condition.or)) return condition.or.map(conditionSummary).join(' or ');
+  if (condition.not) return `not ${conditionSummary(condition.not)}`;
+  return Object.entries(condition)
+    .map(([key, value]) => `${key} = ${typeof value === 'object' ? JSON.stringify(value) : value}`)
+    .join(', ');
+}
+
+function variantSlug(line, index) {
+  if (line.condition?.flag) return line.condition.flag;
+  return line.condition ? `variant${index}` : null; // null → the scene's base name
+}
+
+/**
+ * Fills in `clip` — the path each line's take belongs at. A path the data
+ * already wires wins; otherwise a name is suggested from docs/AUDIO.md's
+ * rules, de-duplicated within the scene.
+ *
+ * Deliberately does not look at the filesystem: the generated script is a
+ * function of the data alone, so it reads the same in a fresh checkout and a
+ * `--check` run can't fail over which clips happen to be on this disk. That a
+ * wired file exists is asserted by the data-integrity suite instead.
+ *
+ * @param {Array<object>} lines - From collectSceneLines.
+ * @param {string} region - The scene's region id.
+ * @param {string} stem - The scene's filename stem.
+ * @returns {Array<object>} The same lines, each with clip and wired.
+ */
+export function assignClips(lines, region, stem) {
+  const taken = new Set();
+  return lines.map((line, i) => {
+    const suffix = line.kind === 'description' ? variantSlug(line, i) : (line.slug ?? slugify(line.owner ?? line.kind));
+    const base = suffix ? `${stem}__${suffix}` : stem;
+    let name = base;
+    for (let n = 2; taken.has(name); n++) name = `${base}_${n}`;
+    taken.add(name);
+    return { ...line, clip: line.narration ?? `audio/narration/${region}/${name}.${CLIP_EXT}`, wired: Boolean(line.narration) };
+  });
+}
+
+// ── Formatting ──────────────────────────────────────────────────────────────
+
+function wrap(text, width, indent) {
+  const out = [];
+  let row = '';
+  for (const word of text.split(/\s+/)) {
+    if (row && (row + ' ' + word).length > width) { out.push(indent + row); row = word; }
+    else row = row ? `${row} ${word}` : word;
+  }
+  if (row) out.push(indent + row);
+  return out.join('\n');
+}
+
+function statusOf(line) {
+  if (line.wired) return 'clip authored';
+  return PLAYABLE.has(line.kind) ? 'no clip yet' : 'no clip yet — no engine hook for this kind';
+}
+
+function formatScene({ id, path, title, lines }) {
+  const wired = lines.filter(l => l.wired).length;
+  const head = [
+    `${title}`,
+    `scene ${id} · ${path}`,
+    `${lines.length} line${lines.length === 1 ? '' : 's'} · ${wired} with a clip · ${lines.length - wired} to go`,
+    '',
+    'Generated by scripts/generate-narration-script.js — edits here are lost.',
+    'Read the line as written; save the take to the path above it, then wire',
+    'that path into the data so the engine plays it.',
+  ];
+  const body = lines.map(line => [
+    '─'.repeat(WRAP),
+    line.label,
+    `${line.jsonPath}`,
+    `→ ${line.clip}  [${statusOf(line)}]`,
+    '',
+    wrap(line.text, WRAP - 2, '  '),
+    '',
+  ].join('\n'));
+  return `${head.join('\n')}\n\n${body.join('\n')}`;
+}
+
+function formatShared(lines) {
+  const head = [
+    'Shared narrator lines',
+    'data/locales.json — the engine\'s own outcomes, used wherever a scene',
+    'authors none of its own (the generic Look Around miss, and friends).',
+    '',
+    `${lines.length} candidates.`,
+    '',
+    'Generated by scripts/generate-narration-script.js — edits here are lost.',
+    'CANDIDATES, not a final list: these are locale strings that read as whole',
+    'sentences and carry no {placeholder}. Skip any that turn out to be chrome.',
+    'The engine has no hook for narrating a locale key yet — recording these',
+    'is ahead of the engine.',
+  ];
+  const body = lines.map(({ key, text, clip }) => [
+    '─'.repeat(WRAP),
+    key,
+    `→ ${clip}  [no clip yet — no engine hook for this kind]`,
+    '',
+    wrap(text, WRAP - 2, '  '),
+    '',
+  ].join('\n'));
+  return `${head.join('\n')}\n\n${body.join('\n')}`;
+}
+
+// ── Main ────────────────────────────────────────────────────────────────────
+
+function build() {
+  const index = JSON.parse(readFileSync(join(root, 'data', 'index.json'), 'utf8'));
+  const localePath = index.locales?.[index.defaultLanguage ?? 'en'] ?? 'data/locales.json';
+  const files = new Map(); // output path (relative to OUT_DIR) → contents
+  const stats = { total: 0, wired: 0, unhooked: 0 };
+  const count = (kind, wired) => {
+    stats.total++;
+    if (wired) stats.wired++;
+    if (!PLAYABLE.has(kind)) stats.unhooked++;
+  };
+
+  for (const [id, scenePath] of Object.entries(index.scenes ?? {})) {
+    const scene = JSON.parse(readFileSync(join(root, scenePath), 'utf8'));
+    const region = scene.region ?? 'unsorted';
+    const stem = basename(scenePath, '.json');
+    const lines = assignClips(collectSceneLines(scene), region, stem);
+    if (!lines.length) continue;
+    for (const line of lines) count(line.kind, line.wired);
+    files.set(join(region, `${stem}.txt`), formatScene({
+      id,
+      path: scenePath,
+      title: scene.title ?? scene.name ?? id,
+      lines,
+    }));
+  }
+
+  const shared = collectSharedLines(JSON.parse(readFileSync(join(root, localePath), 'utf8')))
+    .map(line => ({ ...line, clip: `audio/narration/shared/${line.key}.${CLIP_EXT}` }));
+  if (shared.length) {
+    for (const line of shared) count('shared', false);
+    files.set('shared.txt', formatShared(shared));
+  }
+
+  return { files, stats };
+}
+
+// Generated .txt files left behind by a scene that was renamed or deleted.
+function orphanedScripts(files) {
+  const out = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const p = join(dir, entry.name);
+      if (entry.isDirectory()) walk(p);
+      else if (entry.name.endsWith('.txt') && !files.has(relative(OUT_DIR, p))) out.push(relative(OUT_DIR, p));
+    }
+  };
+  if (existsSync(OUT_DIR)) walk(OUT_DIR);
+  return out;
+}
+
+function main() {
+  const { files, stats } = build();
+  const orphans = orphanedScripts(files);
+  const stale = [...files].filter(([rel, contents]) => {
+    const full = join(OUT_DIR, rel);
+    return !existsSync(full) || readFileSync(full, 'utf8') !== contents;
+  }).map(([rel]) => rel);
+
+  if (process.argv.includes('--check')) {
+    if (stale.length || orphans.length) {
+      for (const rel of stale) console.error(`[narration-script] stale: ${rel}`);
+      for (const rel of orphans) console.error(`[narration-script] orphaned: ${rel}`);
+      console.error('[narration-script] run: node scripts/generate-narration-script.js');
+      process.exit(1);
+    }
+    console.log(`[narration-script] ${files.size} scripts up to date`);
+    return;
+  }
+
+  for (const [rel, contents] of files) {
+    const full = join(OUT_DIR, rel);
+    mkdirSync(dirname(full), { recursive: true });
+    writeFileSync(full, contents);
+  }
+  for (const rel of orphans) {
+    const full = join(OUT_DIR, rel);
+    rmSync(full);
+    // A renamed region leaves its directory behind once the last script goes.
+    if (dirname(full) !== OUT_DIR && !readdirSync(dirname(full)).length) rmSync(dirname(full), { recursive: true });
+    console.log(`[narration-script] removed orphan ${rel}`);
+  }
+  console.log(`[narration-script] wrote ${files.size} scripts to audio/_scripts/ (${stale.length} changed)`);
+  console.log(`[narration-script] ${stats.total} lines · ${stats.wired} with a clip · ${stats.total - stats.wired} to go (${stats.unhooked} of them ahead of the engine)`);
+}
+
+// Importable for tests; only generates when run as a script.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

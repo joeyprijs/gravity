@@ -30,10 +30,12 @@
       "condition": {
         "flag": "wanderer_defeated",
         "value": true
-      }
+      },
+      "narration": "audio/narration/dungeon/corridor__wanderer_defeated.webm"
     },
     {
-      "text": "A narrow corridor stretches north toward the stone hallway. A disheveled figure lurches out of the shadows: hollow-eyed, wild with fear. They raise a blade before you can say a word."
+      "text": "A narrow corridor stretches north toward the stone hallway. A disheveled figure lurches out of the shadows: hollow-eyed, wild with fear. They raise a blade before you can say a word.",
+      "narration": "audio/narration/dungeon/corridor.webm"
     }
   ],
   "autoAttack": {

@@ -10,6 +10,7 @@
     "background": "rgba(80, 50, 20, 0.9)"
   },
   "description": "You stand before a sturdy oak door set into a quiet hillside. Warm light spills from tiny windows.",
+  "ambience": "audio/ambience/home_door.m4a",
   "options": [
     {
       "text": "Go Inside",

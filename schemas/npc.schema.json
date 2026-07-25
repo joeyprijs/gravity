@@ -9,7 +9,7 @@
     },
     "description": {
       "type": "string",
-      "description": "Flavor/lore description (printed on combat/encounter card)."
+      "description": "Opening framing for an encounter. Printed at the top of a solo fight the player chose — not in a multi-enemy fight, and not in an autoAttack ambush, where the scene description frames it."
     },
     "isMerchant": {
       "type": "boolean",

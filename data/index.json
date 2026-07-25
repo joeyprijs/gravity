@@ -26,7 +26,8 @@
   },
   "regions": {
     "dungeon": {
-      "name": "The Dungeon"
+      "name": "The Dungeon",
+      "ambience": "audio/ambience/dungeon.m4a"
     },
     "player_home": {
       "name": "Player Home"

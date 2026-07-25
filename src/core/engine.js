@@ -5,6 +5,7 @@ import { QuestSystem } from "../systems/quests.js";
 import { NarrativeLog } from "../systems/narrative.js";
 import { UIManager } from "../ui/ui.js";
 import { SceneRenderer } from "../systems/scene.js";
+import { AudioSystem } from "../systems/audio.js";
 import { DEFAULT_WORLD_MAP_SIZE, LOG, TIMER_SAFE_ACTIONS } from "./config.js";
 import { resolveLanguage } from "./i18n.js";
 import { normalizeCarriedItems, validateGameData } from "./validate.js";
@@ -71,6 +72,7 @@ export class RPGEngine {
     this.questSystem = new QuestSystem(this);
     this.ui = new UIManager(this);
     this.scene = new SceneRenderer(this);
+    this.audio = new AudioSystem(this);
 
     this.init();
   }
@@ -388,6 +390,10 @@ export class RPGEngine {
       const handler = this.getActionHandler(action.type);
       if (handler) handler(action, this);
       else console.warn(`[Gravity] runActions: no handler for action type "${action.type}"`);
+      // Any action can carry a narration clip for the text it just wrote —
+      // a field beside the line, like a description variant's, rather than a
+      // separate audio action to keep in step with the pipeline.
+      if (action.narration) this.audio?.playNarration(action.narration);
     }
   }
 
