@@ -20,3 +20,7 @@ jobs:
         run: node scripts/format-data.js --check
       - name: Narration scripts match the authored prose
         run: node scripts/generate-narration-script.js --check
+      # The DOM half of the suite. Node can't import engine.js (no window), so
+      # without this everything UI-side is unprotected in CI.
+      - name: Browser smoke test
+        run: scripts/run-smoke.sh
