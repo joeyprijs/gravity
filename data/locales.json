@@ -147,7 +147,8 @@
     "armorClassBonus": "Armor Class: +{value}",
     "reputation": "Reputation: {value}",
     "attributeBonus": "{attribute}: {value}",
-    "modifyResource": "{resource}: {value}"
+    "modifyResource": "{resource}: {value}",
+    "value": "Value: {value} Gold"
   },
   "inventory": {
     "useButton": "Use",

@@ -153,10 +153,15 @@ export class InventoryUI {
     return ul;
   }
 
-  // The card's accent stat lines — same lines as the combat attack buttons
-  // (see itemStatLines); the hit line shows the player's current modifier.
+  // The card's stat lines — the combat attack buttons' lines (see
+  // itemStatLines; the hit line shows the player's current modifier), plus
+  // what the item is worth. Worth is inventory-only: it's what a merchant
+  // pays for the thing, nothing an attack button needs. An item a merchant
+  // won't pay for (value 0, the quest keys) stays quiet about it.
   _itemStats(itemData) {
-    const lines = itemStatLines(this.engine.t.bind(this.engine), itemData, this.engine.state.getPlayer().attributes);
+    const t = this.engine.t.bind(this.engine);
+    const lines = itemStatLines(t, itemData, this.engine.state.getPlayer().attributes);
+    if (itemData.value > 0) lines.push(t('itemStats.value', { value: itemData.value }));
     return lines.length > 0 ? lines : undefined;
   }
 }
