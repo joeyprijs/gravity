@@ -368,6 +368,29 @@ export function buildOptionButton(text, reqText = null) {
 }
 
 /**
+ * Builds one stat line for a card: "Action Points: 1" becomes a label span
+ * ("Action Points:") and a value span ("1") so CSS can put every value of a
+ * card in its own column. Stat lines are locale strings, so the split is on
+ * the line's first colon — a line without one (a bare badge like "Deposit")
+ * stays a single span that spans the whole row.
+ *
+ * @param {string} tag - 'li' in container cards, 'span' in button cards.
+ * @param {string} line - The rendered stat line.
+ * @returns {HTMLElement}
+ */
+function buildStatLine(tag, line) {
+  const el = createElement(tag);
+  const colon = line.indexOf(':');
+  if (colon > 0) {
+    el.appendChild(createElement('span', CSS.CARD_STAT_LABEL, line.slice(0, colon + 1)));
+    el.appendChild(createElement('span', CSS.CARD_STAT_VALUE, line.slice(colon + 1).trim()));
+  } else {
+    el.appendChild(createElement('span', '', line));
+  }
+  return el;
+}
+
+/**
  * Builds a card — THE standard block for anything presented as a titled box:
  * scene options, skill checks, dialogue responses, combat attacks, inventory
  * items, quests, chest rows, exhibits. One DOM shape and one class
@@ -377,9 +400,11 @@ export function buildOptionButton(text, reqText = null) {
  *   <tag class="card">
  *     <.card__title>     the bold first line
  *     <.card__body>      0..n muted secondary lines
- *     <.card__stats>     accent stat lines, one element per fact — a real
+ *     <.card__stats>     muted stat lines, one element per fact — a real
  *                        <ul>/<li> in container cards; block <span>s inside
- *                        button cards (buttons allow phrasing content only)
+ *                        button cards (buttons allow phrasing content only).
+ *                        Each line splits into a label/value pair of spans
+ *                        (see buildStatLine)
  *     <.card__actions>   optional row of action buttons
  *
  * Interactive cards are <button class="card"> — the whole card is the
@@ -412,7 +437,7 @@ export function buildCard({ tag = 'div', title, body, stats, actions = [], class
     // nothing over a list there; CSS displays both shapes as one-fact rows.
     const [listTag, lineTag] = tag === 'button' ? ['span', 'span'] : ['ul', 'li'];
     const list = createElement(listTag, CSS.CARD_STATS);
-    statLines.forEach(line => list.appendChild(createElement(lineTag, '', line)));
+    statLines.forEach(line => list.appendChild(buildStatLine(lineTag, line)));
     card.appendChild(list);
   }
   if (actions.length > 0) {

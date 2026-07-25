@@ -185,7 +185,7 @@
       "intelligence": "Bonus: Intelligence {mod}",
       "luck": "Bonus: Luck {mod}"
     },
-    "skillBadgeDc": "Difficulty Check (DC): {dc}",
+    "skillBadgeDc": "Difficulty Check: {dc}",
     "skillBadgeFree": {
       "perception": "Perception",
       "charisma": "Charisma",

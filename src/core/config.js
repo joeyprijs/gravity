@@ -99,6 +99,8 @@ export const CSS = {
   CARD_TITLE:             'card__title',
   CARD_BODY:              'card__body',
   CARD_STATS:             'card__stats',
+  CARD_STAT_LABEL:        'card__stat-label',
+  CARD_STAT_VALUE:        'card__stat-value',
   CARD_ACTIONS:           'card__actions',
   CARD_LIST:              'card-list',
   CARD_DONE:              'card--completed',

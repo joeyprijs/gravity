@@ -273,7 +273,7 @@ body {
    - container card:    <li>/<div class="card"> with buttons in .card__actions
 
    Structure: .card__title (bold first line) → .card__body (muted lines)
-   → .card__stats (accent stat lines, one per row) → .card__actions.
+   → .card__stats (muted stat lines, one per row) → .card__actions.
    ========================================================================== */
 
 .card {
@@ -325,16 +325,28 @@ button.card:disabled {
   color: var(--text-secondary);
 }
 
-/* Accent stat lines — a <ul> of <li>s in container cards, block spans in
-   button cards (see buildCard). Either way: one fact per row. */
+/* Stat lines — a <ul> of <li>s in container cards, block spans in button
+   cards (see buildCard). Either way: one fact per row, laid out as a label
+   column and a value column so a card's values all start at the same x — a
+   fraction rather than a fixed width so translated labels get the same room.
+   Muted like .card__body: the title carries the card, the facts sit under it. */
 .card__stats {
-  display: block;
-  color: var(--accent-color);
+  display: grid;
+  grid-template-columns: 50% 1fr;
+  color: var(--text-secondary);
   list-style: none;
 }
 
+/* Each line hands its label/value spans to the shared columns above. */
 .card__stats > * {
-  display: block;
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+}
+
+/* A line with no label/value split (a bare badge) takes the whole row. */
+.card__stats > * > :only-child {
+  grid-column: 1 / -1;
 }
 
 .card__actions {
@@ -383,7 +395,9 @@ button.section-toggle {
   border: 0;
   border-bottom: calc(var(--spacing) * 0.125) solid var(--panel-border);
   padding: 0 0 calc(var(--spacing) * 1.5);
-  color: inherit;
+  /* Accent — the heading is a control, so it reads like one. The count keeps
+     its own muted colour. */
+  color: var(--accent-color);
   font: inherit;
   font-weight: 600;
   text-align: left;
