@@ -95,6 +95,11 @@
       if (done) {
         document.title = failed.length ? `SMOKE: FAIL (${failed.length})` : `SMOKE: PASS (${results.length})`;
         window.__SMOKE__ = { done: true, passed: results.length - failed.length, failed: failed.length, results };
+        // Which steps failed, in the URL. A headless runner can read the title
+        // and the URL of a target over Chrome's plain-HTTP DevTools endpoint —
+        // so scripts/run-smoke.sh can name the broken step in CI output without
+        // a WebSocket client to reach into the page.
+        if (failed.length) location.hash = `failed=${encodeURIComponent(failed.map(r => r.name).join(' | '))}`;
       }
     }
 

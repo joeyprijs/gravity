@@ -23,9 +23,13 @@ const SETTINGS_KEY = 'gravity.audio';
 const DEFAULT_SETTINGS = { muted: false, ambienceVolume: 1, narrationVolume: 0.25 };
 
 // Seconds an ambience loop takes to fade in/out when the location changes.
-// Narration also waits this out, so a room is established before the narrator
-// speaks over it.
 export const AMBIENCE_FADE = 1.5;
+
+// Seconds after a bed starts before narration may speak over it. Defaults to
+// the fade length — the narrator waits for the room to settle — but it is its
+// own knob on purpose: giving the narrator a longer beat should not slow the
+// crossfade, and quickening the crossfade should not cut the beat short.
+export const NARRATION_DELAY = AMBIENCE_FADE;
 
 /**
  * Resolves the ambience loop path for a scene: the scene's own `ambience`
@@ -132,7 +136,7 @@ export class AudioSystem {
     if (!this._ambiencePath) return Promise.resolve(this._ctx.currentTime);
     return this._getBuffer(this._ambiencePath).then(buffer => {
       if (!buffer) return this._ctx.currentTime;
-      return (this._ambienceNodes?.startedAt ?? this._ctx.currentTime) + AMBIENCE_FADE;
+      return (this._ambienceNodes?.startedAt ?? this._ctx.currentTime) + NARRATION_DELAY;
     });
   }
 
@@ -217,8 +221,8 @@ export class AudioSystem {
       source.connect(gain);
       gain.connect(this._channelGain.ambience);
       source.start();
-      // startedAt + AMBIENCE_FADE is when this bed is at full volume — the
-      // moment narration is allowed to speak over it.
+      // startedAt is what narration measures its wait from (see
+      // _narrationStartTime) — the fade completes AMBIENCE_FADE later.
       this._ambienceNodes = { source, gain, path, startedAt: now };
     });
   }

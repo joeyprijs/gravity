@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { AudioSystem, resolveAmbience, AMBIENCE_FADE } from '../src/systems/audio.js';
+import { AudioSystem, resolveAmbience, NARRATION_DELAY } from '../src/systems/audio.js';
 import { SceneRenderer } from '../src/systems/scene.js';
 
 // ── resolveAmbience: scene override → region fallback → silence ────────────
@@ -68,7 +68,7 @@ const makeTimedAudio = ({ now, ambiencePath, startedAt, buffer = {} }) => {
 
 test('narration waits for a bed that just started to finish fading in', async () => {
   const audio = makeTimedAudio({ now: 10, ambiencePath: 'audio/dungeon.wav', startedAt: 10 });
-  assert.equal(await audio._narrationStartTime(), 10 + AMBIENCE_FADE);
+  assert.equal(await audio._narrationStartTime(), 10 + NARRATION_DELAY);
 });
 
 test('narration starts at once over a bed that faded in long ago', async () => {
@@ -98,7 +98,7 @@ test('narration waits for a bed that is still decoding, not just its fade', asyn
   audio._ctx.currentTime = 14;                                   // 4s of decoding
   audio._ambienceNodes = { path: 'audio/dungeon.wav', startedAt: 14 };
   resolveBuffer({});
-  assert.equal(await pending, 14 + AMBIENCE_FADE);
+  assert.equal(await pending, 14 + NARRATION_DELAY);
 });
 
 test('setMuted and setVolume update settings headless', () => {

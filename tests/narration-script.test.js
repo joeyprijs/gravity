@@ -109,6 +109,32 @@ test('assignClips prefers the wired path and suggests unique names otherwise', (
   assert.equal(new Set(assigned.map(l => l.clip)).size, assigned.length, 'every clip path is unique');
 });
 
+test('a variant is named from its position in description, not in the line list', () => {
+  // The line list is not the description array: anything collected before the
+  // descriptions would shift a positional index. Feeding assignClips a list
+  // where the variant sits third pins that the name follows `variantIndex`.
+  const lines = [
+    { jsonPath: 'passiveChecks[0].text', kind: 'passive', slug: 'passive_perception', narration: null },
+    { jsonPath: 'skills[0].outcomes.success.text', kind: 'outcome', slug: 'force_hatch_success', narration: null },
+    { jsonPath: 'description[1].text', kind: 'description', narration: null, variantIndex: 1,
+      condition: { and: [{ flag: 'a', value: true }, { flag: 'b', value: true }] } },
+  ];
+  const assigned = assignClips(lines, 'testland', 'scene');
+  assert.equal(assigned[2].clip, `audio/narration/testland/scene__variant1.${CLIP_EXT}`);
+});
+
+test('a wired line reserves no suggested name for the lines after it', () => {
+  // The wired clip below would otherwise consume the base name and push the
+  // unwired default variant to a needless `_2`.
+  const lines = [
+    { jsonPath: 'description[0].text', kind: 'description', narration: 'audio/narration/testland/hand_picked.webm', condition: null, variantIndex: 0 },
+    { jsonPath: 'description[1].text', kind: 'description', narration: null, condition: null, variantIndex: 1 },
+  ];
+  const assigned = assignClips(lines, 'testland', 'scene');
+  assert.equal(assigned[0].clip, 'audio/narration/testland/hand_picked.webm');
+  assert.equal(assigned[1].clip, `audio/narration/testland/scene.${CLIP_EXT}`);
+});
+
 test('slugify drops stopwords and punctuation, keeping four words', () => {
   assert.equal(slugify('Take a closer look at the door'), 'take_closer_look_door');
   assert.equal(slugify('Climb toward the shimmer in the ceiling crack.'), 'climb_toward_shimmer_ceiling');

@@ -73,6 +73,11 @@ export function collectSceneLines(scene) {
         label: variant.condition ? `Description · when ${conditionSummary(variant.condition)}` : 'Description · default',
         narration: variant.narration ?? scene.narration ?? null,
         condition: variant.condition ?? null,
+        // Carried explicitly: a variant's fallback name is derived from its
+        // position in `description`, which must not be inferred from where the
+        // line happens to sit in the collected array — reordering collection
+        // would silently rename clips.
+        variantIndex: i,
       });
     });
   } else {
@@ -202,9 +207,9 @@ function conditionSummary(condition) {
     .join(', ');
 }
 
-function variantSlug(line, index) {
+function variantSlug(line) {
   if (line.condition?.flag) return line.condition.flag;
-  return line.condition ? `variant${index}` : null; // null → the scene's base name
+  return line.condition ? `variant${line.variantIndex}` : null; // null → the scene's base name
 }
 
 /**
@@ -224,13 +229,18 @@ function variantSlug(line, index) {
  */
 export function assignClips(lines, region, stem) {
   const taken = new Set();
-  return lines.map((line, i) => {
-    const suffix = line.kind === 'description' ? variantSlug(line, i) : (line.slug ?? slugify(line.owner ?? line.kind));
+  return lines.map(line => {
+    // A wired path wins outright, and reserves nothing: letting it consume a
+    // suggested name would push the next unwired line to a `_2` suffix that
+    // collides with nothing.
+    if (line.narration) return { ...line, clip: line.narration, wired: true };
+
+    const suffix = line.kind === 'description' ? variantSlug(line) : (line.slug ?? slugify(line.owner ?? line.kind));
     const base = suffix ? `${stem}__${suffix}` : stem;
     let name = base;
     for (let n = 2; taken.has(name); n++) name = `${base}_${n}`;
     taken.add(name);
-    return { ...line, clip: line.narration ?? `audio/narration/${region}/${name}.${CLIP_EXT}`, wired: Boolean(line.narration) };
+    return { ...line, clip: `audio/narration/${region}/${name}.${CLIP_EXT}`, wired: false };
   });
 }
 
