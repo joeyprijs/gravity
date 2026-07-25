@@ -421,7 +421,8 @@ button.section-toggle--collapsed .section-toggle__label::before {
 /* .btn--item — inventory action buttons (Use, Equip, Unequip, Deposit) */
 .btn--item { }
 
-/* Skills tab: attributes as a list — label left, value right, one per row. */
+/* Skills tab: attributes as a list — label and value in two left-aligned
+   columns, one stat per row. */
 .attr-list {
   display: flex;
   flex-direction: column;
@@ -435,7 +436,6 @@ button.section-toggle--collapsed .section-toggle__label::before {
 
 .attr-list__row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 0.5);
   border-bottom: 1px solid var(--panel-border);
@@ -452,12 +452,16 @@ button.section-toggle--collapsed .section-toggle__label::before {
 }
 
 .attr-list__label {
-  /* The label absorbs the free space so every row's value column lines up
-     regardless of label length. */
-  flex: 1;
+  /* The label column starts every value at the same x. It takes the larger
+     share because the values are mostly short numbers — a fraction rather
+     than a fixed width so translated labels get the same room. */
+  flex: 0 0 60%;
 }
 
+/* Takes the rest of the row so a spend button still lands at the right edge. */
 .attr-list__value {
+  flex: 1;
+  min-width: 0;
   font-weight: 700;
 }
 
