@@ -388,8 +388,11 @@ export class RPGEngine {
   runActions(actions) {
     for (const action of (actions || [])) {
       const handler = this.getActionHandler(action.type);
-      if (handler) handler(action, this);
-      else console.warn(`[Gravity] runActions: no handler for action type "${action.type}"`);
+      if (!handler) {
+        console.warn(`[Gravity] runActions: no handler for action type "${action.type}"`);
+        continue; // nothing ran, so there is no line to narrate
+      }
+      handler(action, this);
       // Any action can carry a narration clip for the text it just wrote —
       // a field beside the line, like a description variant's, rather than a
       // separate audio action to keep in step with the pipeline.
