@@ -251,12 +251,94 @@
         assert($$('#inventory-tab .section-toggle--notify').length === 0, 'no heading dot on the reopened tab');
       });
 
+      await step('tab notifier: a deliberate hover spends an item dot for good', async () => {
+        // Inventory is on screen (the previous step reopened it), so a gain
+        // dots the card itself. The cellar key is actionless — the branch with
+        // no dataset of its own to carry the item id.
+        window.gameEngine.state.addToInventory('cellar_key', 1);
+        const card = () => $$('#inventory-tab .card').find(c => text(c).includes('Cellar Key'));
+        const enter = () => card().dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+        const leave = () => card().dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
+        assert(card().classList.contains('card--new'), 'the gained key is dotted');
+
+        // A pointer passing over on its way somewhere else is not a look.
+        enter();
+        leave();
+        await new Promise(r => setTimeout(r, 400));
+        assert(card().classList.contains('card--new'), 'a drive-by leaves the dot alone');
+
+        enter();
+        assert(card().classList.contains('card--new'), 'the dot survives the first instant of a hover');
+        await until(() => !card().classList.contains('card--new'), 'the dwell to spend the dot');
+
+        // A re-render must not paint it back — the hover left the new-set too.
+        window.gameEngine.state.addToInventory('healing_potion', 1);
+        assert(!card().classList.contains('card--new'), 'the dot stays gone across a re-render');
+        assert($$('#inventory-tab .card--new').length === 1, 'the unhovered gain keeps its own dot');
+
+        // A re-render mid-dwell must not spend a dot either: the render
+        // detaches the hovered card without a mouseout, so its timer fires on
+        // the old node while the on-screen replacement was never dwelt on.
+        const potion = () => $$('#inventory-tab .card').find(c => text(c).includes('Healing Potion'));
+        potion().dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+        window.gameEngine.state.notifyListeners('inventory');   // re-render detaches the hovered card
+        await new Promise(r => setTimeout(r, 400));
+        window.gameEngine.state.notifyListeners('inventory');   // would drop a spent dot
+        assert(potion().classList.contains('card--new'), 'a re-render mid-dwell leaves the dot alone');
+      });
+
+      await step('tab notifier: a quest dot is spent the same way', async () => {
+        $('[data-tab="quests-tab"]').click();
+        // Re-asserting the mission's current status changes nothing in the log
+        // but still counts as an update — enough to dot the card in place.
+        window.gameEngine.state.setMissionStatus('escape_dungeon', 'active');
+        const card = () => $$('#quests-tab .card').find(c => text(c).includes('Escape the Dungeon'));
+        assert(card().classList.contains('card--new'), 'the advanced quest is dotted');
+
+        card().dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+        card().dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
+        await new Promise(r => setTimeout(r, 400));
+        assert(card().classList.contains('card--new'), 'a drive-by leaves the quest dot alone');
+
+        card().dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+        await until(() => !card().classList.contains('card--new'), 'the dwell to spend the quest dot');
+        // A plain re-render must not paint it back — the hover left the
+        // new-set too. (Another status update legitimately re-dots it, so this
+        // renders from the current set instead of mutating the mission again.)
+        window.gameEngine.state.notifyListeners('quests');
+        assert(!card().classList.contains('card--new'), 'the quest dot stays gone across a re-render');
+      });
+
       await step('inventory renders list cards with valid markup', () => {
         $('[data-tab="inventory-tab"]').click();
         assert(!$('#inventory-tab').hidden, 'inventory panel visible');
         assert($$('#inventory-tab .card').length >= 3, 'inventory cards rendered');
-        assert($('#inventory-tab ul.card__stats li'), 'container-card stats are real lists');
+        // An item you can act on IS its card: a button card in its own list
+        // row, carrying the action but never a slot.
+        const actionable = $$('#inventory-tab ul.card-list > li > button.card[data-action]');
+        assert(actionable.length >= 3, 'actionable items are whole-card buttons');
+        assert(!actionable.some(c => c.dataset.slot && c.dataset.action === 'equip'), 'equip cards name no slot');
+        assert(!$('#inventory-tab .card button'), 'no buttons nested in a card — the card is the control');
         assert(!$('button ul'), 'no <ul> inside any <button> (content-model invariant)');
+      });
+
+      await step('clicking an item equips it — left hand first, then right', () => {
+        const equipCard = (name) => $$('#inventory-tab button.card[data-action="equip"]').find(c => text(c).includes(name));
+        const equipment = () => window.gameEngine.state.getPlayer().equipment;
+
+        equipCard('Rusty Sword').click();
+        assert(equipment()['Left Hand'] === 'rusty_sword', `first equip went to ${JSON.stringify(equipment())}`);
+        equipCard('Flames').click();
+        assert(equipment()['Right Hand'] === 'flames', `second equip went to ${JSON.stringify(equipment())}`);
+
+        // Clicking an equipped card takes it off again. Each click re-renders
+        // the panel, so re-query rather than iterating a stale list.
+        let off = $('#inventory-tab button.card[data-action="unequip"]');
+        while (off) {
+          off.click();
+          off = $('#inventory-tab button.card[data-action="unequip"]');
+        }
+        assert(Object.values(equipment()).every(id => !id), 'every slot empty after unequipping by click');
       });
 
       await step('options tab holds save/load/restart', () => {
@@ -307,6 +389,297 @@
         await until(() => $$('#scene-narrative .scene__log').length > logCount, 'narrative log to grow');
       });
 
+      await step('inside the museum, reputation stands under the scene name', async () => {
+        // Awarded through the stat handler the curator registers — the same
+        // path acquiring a relic takes.
+        window.gameEngine.state.modifyPlayerStat('reputation', 12);
+        window.gameEngine.renderScene('home_museum');
+        await until(() => text($('#scene-location-reminder')).includes('Museum Lobby'), 'the museum lobby');
+        const rep = $('#scene-location-reminder .curator-scene-rep');
+        assert(rep, 'the reputation line renders in the lobby, which has no display cases');
+        assert(text($('.curator-scene-rep__label')) === 'Reputation', 'the line is labelled');
+        assert(text($('.curator-scene-rep__value')) === '12 Points', `value reads "${text($('.curator-scene-rep__value'))}"`);
+
+        window.gameEngine.renderScene('home_living_room');
+        await until(() => text($('#scene-location-reminder')).includes('Living Room'), 'the living room');
+        assert(!$('#scene-location-reminder .curator-scene-rep'), 'no reputation line outside the museum');
+      });
+
+      await step('walking into a wing opens the curator panel, titled with the room', async () => {
+        // Curating is what the room is for, so no button press stands between
+        // the player and the panel — and the panel names the room, not itself.
+        const openPanel = () => $$('#scene-options-panel button.card').some(b => text(b).includes('Install New Display Case'));
+        window.gameEngine.renderScene('home_museum_relics');
+        await until(openPanel, 'the panel to open by itself');
+        assert(text($('#scene-location-reminder')).includes('Relic Wing'),
+          `the room names itself (got "${text($('#scene-location-reminder'))}")`);
+        assert(!text($('#scene-location-reminder')).includes('Curator Panel'), 'and not the panel');
+        assert($('#scene-location-reminder .curator-scene-rep'), 'the reputation line stands with the panel open');
+        assert($$('.curator-scene-rep').length === 1, 'shown once, not twice');
+        assert(text($('.curator-scene-rep__value')) === '12 Points', `value reads "${text($('.curator-scene-rep__value'))}"`);
+
+        // A same-scene re-render swaps the panel back out for the room's own
+        // options, and must NOT reopen it.
+        window.gameEngine.renderScene('home_museum_relics');
+        await until(() => $$('#scene-options .card').some(c => text(c).includes('Curator Panel')), 'the room\'s own options');
+        assert(!openPanel(), 'a re-render leaves the panel closed');
+        assert(text($('.curator-scene-rep__value')) === '12 Points', 'the line reads the same either way');
+      });
+
+      await step('the panel\'s way out is the room\'s: one click to the lobby', async () => {
+        // There is nothing to do in a wing but curate, so the panel carries the
+        // room's exit instead of a Done that would only reveal it.
+        window.gameEngine.renderScene('home_museum');
+        await until(() => $$('#scene-options-panel button.card').some(b => text(b).includes('Enter the Relic Wing')), 'the hall');
+        $$('#scene-options-panel button.card').find(b => text(b).includes('Enter the Relic Wing')).click();
+        await until(() => $$('#scene-options-panel button.card').some(b => text(b).includes('Install New Display Case')), 'the wing\'s panel');
+
+        const exit = $$('#scene-options-panel button.card').find(b => text(b).includes('Go back to Museum Lobby'));
+        assert(exit, 'the panel offers the room\'s exit');
+        assert(!$$('#scene-options-panel button.card').some(b => text(b) === 'Done'), 'and no Done in front of it');
+        exit.click();
+        await until(() => text($('#scene-location-reminder')).includes('Museum Lobby'), 'the lobby, in one click');
+        assert(window.gameEngine.state.getCurrentSceneId() === 'home_museum', 'no stop-off in the wing\'s options');
+      });
+
+      await step('the personal chest: item cards with stats, clicked to move a stack', async () => {
+        const state = window.gameEngine.state;
+        const panelCards = () => $$('#scene-options-panel button.card');
+        const row = (name) => panelCards().find(b => text(b).includes(name));
+
+        // The chest's contents are a block of their own in the log, written when
+        // it opens — so it reads click, then result — and kept current after that
+        // without the rows moving about.
+        const chestTable = () => $$('#scene-narrative .scene__contents .contents-table').pop();
+
+        window.gameEngine.renderScene('home_bedroom');
+        await until(() => $$('#scene-options .card').some(c => text(c).includes('Personal Chest')), 'the bedroom');
+        assert(!chestTable(), 'a shut chest keeps its contents to itself');
+        // The bedroom's own description — museum blocks further up the log do
+        // carry tables, and should.
+        assert(!$$('#scene-narrative .scene__body').pop().querySelector('.contents-table'),
+          'the room description never tables the chest');
+        $$('#scene-options .card').find(c => text(c).includes('Personal Chest')).click();
+        await until(() => row('Rusty Sword'), 'the chest panel with an inventory row');
+        // The panel names the chest while it owns the screen.
+        assert(text($('#scene-location-reminder')) === 'Personal Chest',
+          `the heading names the chest (got "${text($('#scene-location-reminder'))}")`);
+        // The table breaks the run of [Player] lines: whatever is logged next
+        // starts a fresh group, with its label and the full gap — a continuation
+        // would tuck itself right under the table.
+        const firstAfterBlock = () => {
+          const block = $('#scene-narrative .scene__contents');
+          let el = block?.nextElementSibling;
+          while (el && !el.classList.contains('scene__log')) el = el.nextElementSibling;
+          return el;
+        };
+
+        // Opening it is a thing the player did, so the log says so — and the
+        // contents land AFTER that line, the way a room's block follows the
+        // choice that walked you in.
+        const openLine = $$('#scene-narrative .scene__log').find(p => text(p).includes('Open Personal Chest'));
+        assert(openLine, 'the log records the opening');
+        const block = $('#scene-narrative .scene__contents');
+        assert(block, 'the contents block is in the log');
+        assert(openLine.compareDocumentPosition(block) & Node.DOCUMENT_POSITION_FOLLOWING,
+          'the contents come after the [Player] line, not before it');
+
+        // Every row is a plain item card: the item's stats, no action verb.
+        assert(text(row('Rusty Sword')).includes('Damage:'), `stats on the row (got "${text(row('Rusty Sword'))}")`);
+        assert(!panelCards().some(b => /\b(Take|Deposit)\b/.test(text(b))), 'no Take/Deposit labels anywhere in the panel');
+
+        // Clicking an inventory row puts one in, and the chest row takes it out.
+        const inBag = () => state.countPlayerItem('rusty_sword', { includeEquipped: false });
+        const inChest = () => state.getChest('personal').find(s => s.item === 'rusty_sword')?.amount ?? 0;
+        const bagBefore = inBag();
+        const rowCount = () => $$('#scene-narrative .scene__contents tbody tr').length;
+        row('Rusty Sword').click();
+        await until(() => inChest() === 1, 'the sword to land in the chest');
+        assert(inBag() === bagBefore - 1, 'and to leave the bag');
+        await until(() => text(chestTable()).includes('Rusty Sword'), 'the table to keep up');
+        const depositLine = $$('#scene-narrative .scene__log').find(p => text(p).includes('You placed Rusty Sword'));
+        assert(depositLine, 'the deposit is narrated');
+        assert(firstAfterBlock() === depositLine, 'it is the first line under the table');
+        assert(!depositLine.classList.contains('scene__log--grouped'), 'not tucked under it as a continuation');
+        assert(depositLine.querySelector('.scene__log-prefix'), 'and it keeps its [Narrator] label');
+        assert($('#scene-narrative .scene__contents').compareDocumentPosition(depositLine) & Node.DOCUMENT_POSITION_FOLLOWING,
+          'and lands under the table');
+
+        // Two rows read "Rusty Sword" now (chest + bag), so take the chest's.
+        const chestSection = $$('#scene-options-panel .panel-section')
+          .find(s => text(s.querySelector('.section-heading')) === 'Contents');
+        const rowsWithSword = rowCount();
+        [...chestSection.querySelectorAll('button.card')].find(b => text(b).includes('Rusty Sword')).click();
+        await until(() => inChest() === 0, 'the sword to come back out');
+        assert(inBag() === bagBefore, 'and to be back in the bag');
+        // The last one out takes the row with it — no 0 rows left behind.
+        assert(rowCount() === rowsWithSword - 1, `the row is gone (${rowsWithSword} → ${rowCount()})`);
+        assert(!text(chestTable()).includes('Rusty Sword'), 'and the sword is not listed');
+
+        // Empty it out completely: the table gives way to an empty-chest line.
+        const emptyOut = () => {
+          const section = $$('#scene-options-panel .panel-section')
+            .find(s => text(s.querySelector('.section-heading')) === 'Contents');
+          const next = [...section.querySelectorAll('button.card')].find(b => !b.disabled);
+          if (next) { next.click(); return true; }
+          return false;
+        };
+        while (emptyOut()) await new Promise(r => setTimeout(r, 30));
+        await until(() => $('#scene-narrative .scene__contents .contents-table__empty'), 'the empty-chest line');
+        assert(!chestTable(), 'and no table over nothing');
+        assert(text($('#scene-narrative .scene__contents')) === 'Chest is empty.',
+          `the empty message reads right (got "${text($('#scene-narrative .scene__contents'))}")`);
+
+        // Put something back, then shut the chest: closing is logged too, and
+        // the block stays in the log.
+        row('Healing Potion').click();
+        await until(() => state.getChest('personal').some(s => s.item === 'healing_potion'), 'the potion in the chest');
+        panelCards().find(b => text(b) === 'Done').click();
+        await until(() => text($('#scene-location-reminder')).includes('Bedroom'), 'the bedroom again');
+        const closeLine = $$('#scene-narrative .scene__log').pop();
+        assert(text(closeLine).includes('Close Chest'), `closing is logged (got "${text(closeLine)}")`);
+        assert(text(closeLine).startsWith('[Player]'), `in the player's voice (got "${text(closeLine)}")`);
+        assert($('#scene-narrative .scene__contents'), 'the opening block stays in the log');
+
+        // Opening it again writes a fresh block — this one showing the potion,
+        // since that is what is in there now.
+        $$('#scene-options .card').find(c => text(c).includes('Personal Chest')).click();
+        await until(() => $$('#scene-narrative .scene__contents').length === 2, 'a second contents block');
+        assert(text(chestTable()).includes('Healing Potion'), 'the new snapshot shows what is in there now');
+        panelCards().find(b => text(b) === 'Done').click();
+        await until(() => text($('#scene-location-reminder')).includes('Bedroom'), 'the bedroom');
+      });
+
+      await step('clicking an exhibited relic takes it back out of its case', async () => {
+        // The relic wing ships a Rusty Sword in its Glass Case. The item card is
+        // the control here, exactly as in the inventory — no separate button.
+        const state = window.gameEngine.state;
+        const panelCards = () => $$('#scene-options-panel button.card');
+        window.gameEngine.renderScene('home_museum_relics');   // arrival opens the panel
+        await until(() => panelCards().some(b => text(b).includes('Glass Case')), 'the exhibits list');
+
+        const before = state.countPlayerItem('rusty_sword');
+        panelCards().find(b => text(b).includes('Glass Case')).click();
+        await until(() => panelCards().some(b => text(b).includes('Rusty Sword')), 'the case\'s contents');
+        // Back + the relic card, and nothing else: the card is the control, and
+        // it reads as a plain item card — stats, no action verb.
+        assert(panelCards().length === 2, `two cards on the inspect screen, got ${panelCards().length}`);
+        const relicCard = panelCards().find(b => text(b).includes('Rusty Sword'));
+        assert(text(relicCard).includes('Value:'), `the relic shows its stats (got "${text(relicCard)}")`);
+        assert(!/Retrieve|Take/.test(text(relicCard)), `no action verb on the card (got "${text(relicCard)}")`);
+
+        panelCards().find(b => text(b).includes('Rusty Sword')).click();
+        await until(() => panelCards().some(b => text(b).includes('Install New Display Case')), 'the dashboard again');
+        assert(state.countPlayerItem('rusty_sword') === before + 1, 'the relic is in the player\'s bag');
+        const glassCase = state.getDisplaysForScene('home_museum_relics').find(d => d.name === 'Glass Case');
+        assert(glassCase.item === null, `the case is empty (holds ${glassCase.item})`);
+
+        panelCards().find(b => text(b).includes('Go back to Museum Lobby')).click();
+        await until(() => text($('#scene-location-reminder')).includes('Museum Lobby'), 'the lobby');
+      });
+
+      await step('hall and wing read the same: exit, what is here, construction', async () => {
+        // The lobby is a museum room like any other — same panel, same order —
+        // so moving through the museum never rearranges under the player.
+        // The location reminder is a .section-heading too — skip it by id.
+        const layout = () => $$('#scene-options-panel .section-heading:not(#scene-location-reminder), #scene-options-panel button.card')
+          .map(el => text(el));
+
+        window.gameEngine.renderScene('home_museum_relics');
+        await until(() => layout().includes('Current Exhibits'), 'the wing\'s panel');
+        let order = layout();
+        assert(order[0].includes('Go back to'), `the exit comes first (got "${order[0]}")`);
+        assert(order.indexOf('Current Exhibits') < order.indexOf('Construction'), 'contents before construction');
+        assert(order[order.length - 1].includes('Install New Display Case'), `building is last (got "${order[order.length - 1]}")`);
+        assert(!order.some(l => l.startsWith('+')), 'no + prefixes on the buttons');
+
+        window.gameEngine.renderScene('home_museum');
+        await until(() => layout().includes('Wings'), 'the hall\'s panel');
+        order = layout();
+        assert(order[0] === 'Return to Living Room', `the exit comes first (got "${order[0]}")`);
+        assert(order.indexOf('Wings') < order.indexOf('Construction'), 'the wings before construction');
+        assert(order[order.length - 1].includes('Build a New Wing'), `building is last (got "${order[order.length - 1]}")`);
+        assert(!order.some(l => l.startsWith('+')), 'no + prefixes on the buttons');
+        // Doors in slot order — the way the wings sit on the map.
+        assert(order.indexOf('Enter the Armor Wing') < order.indexOf('Enter the Relic Wing'), 'slot 0 before slot 1');
+      });
+
+      await step('the hall gates building a wing on gold', async () => {
+        const state = window.gameEngine.state;
+        const buildBtn = () => $$('#scene-options-panel button.card').find(b => text(b).includes('Build a New Wing'));
+        // The panel is built on arrival, so its affordability is re-read by
+        // walking out and back in — as a player would.
+        const reenterHall = async () => {
+          window.gameEngine.renderScene('home_museum_armor');
+          await until(() => text($('#scene-location-reminder')).includes('Armor Wing'), 'a wing');
+          window.gameEngine.renderScene('home_museum');
+          await until(() => buildBtn(), 'the build option in the hall');
+        };
+
+        await reenterHall();
+        assert(text(buildBtn()).includes('250 Gold'), `the cost is on the button (got "${text(buildBtn())}")`);
+
+        state.modifyPlayerStat('gold', -state.getPlayer().resources.gold);   // broke
+        await reenterHall();
+        assert(buildBtn().disabled, 'a museum owner with no gold cannot build');
+        assert(text(buildBtn()).includes('Not enough gold'), 'and is told why');
+
+        state.modifyPlayerStat('gold', 300);
+        await reenterHall();
+        assert(!buildBtn().disabled, 'affordable once the gold is there');
+      });
+
+      await step('building a wing opens a new room off the hall', async () => {
+        // The button prompts for a name. A real prompt() would block the run
+        // (and every tool driving it), so it is stubbed for the click and put
+        // straight back — the path under test is button → prompt → action.
+        const panelCard = (label) => $$('#scene-options-panel button.card').find(b => text(b).includes(label));
+        const realPrompt = window.prompt;
+        window.prompt = () => 'Pottery Wing';
+        try {
+          panelCard('Build a New Wing').click();
+          await until(() => panelCard('Enter the Pottery Wing'), 'the new wing\'s door');
+        } finally {
+          window.prompt = realPrompt;
+        }
+
+        assert(window.gameEngine.state.getPlayer().resources.gold === 50, `250 Gold spent (left: ${window.gameEngine.state.getPlayer().resources.gold})`);
+        // Slot 2 opens a second column, so the hall spans both — the map room
+        // for the wing is the whole point.
+        const hall = window.gameEngine.data.scenes.home_museum.mapDefinitions;
+        const wing = window.gameEngine.data.scenes.home_museum_wing_2.mapDefinitions;
+        assert(hall.width === 240, `the hall widened to two columns (got ${hall.width})`);
+        assert(wing.left === 2760 && wing.top === 1700, `the wing sits north of column 1 (got ${wing.left},${wing.top})`);
+
+        // A built wing behaves like the shipped ones: entering opens its panel,
+        // titled with the name the player gave it, and its exit walks back out.
+        panelCard('Enter the Pottery Wing').click();
+        await until(() => panelCard('Install New Display Case'), 'its panel on arrival');
+        assert(text($('#scene-location-reminder')).includes('Pottery Wing'), 'the panel wears the player\'s own room name');
+        assert($('#scene-location-reminder .curator-scene-rep'), 'a built wing carries the reputation line');
+        assert(text($('#scene-narrative')).includes('plaster is new'), 'the room describes itself as newly built');
+
+        $$('#scene-options-panel button.card').find(b => text(b).includes('Go back to Museum Lobby')).click();
+        await until(() => text($('#scene-location-reminder')).includes('Museum Lobby'), 'the hall again');
+      });
+
+      await step('a built wing survives a save/load round trip', async () => {
+        const state = window.gameEngine.state;
+        const save = JSON.parse(JSON.stringify(state.state));
+        state.reset();                          // wipes the museum's wings
+        assert(!window.gameEngine.data.scenes.home_museum_wing_2, 'a reset takes the wing off the map');
+
+        assert(state.loadFromObject(save) === true, 'the save loads');
+        const wing = window.gameEngine.data.scenes.home_museum_wing_2;
+        assert(wing?.name === 'Pottery Wing', 'the wing came back with its name');
+        assert(wing.mapDefinitions.left === 2760, 'and its geometry was re-derived, not stored');
+        // Walk in from the house, so the hall builds its panel on arrival.
+        window.gameEngine.renderScene('home_living_room');
+        window.gameEngine.renderScene('home_museum');
+        await until(() => $$('#scene-options-panel button.card').some(b => text(b).includes('Enter the Pottery Wing')),
+          'its door in the hall again');
+      });
+
       await step('a chosen solo fight introduces its enemy', async () => {
         // Nothing framed this encounter, so the NPC description is the only
         // thing establishing what the player is up against — it must survive.
@@ -339,6 +712,32 @@
         // the wanderer may append turns (or a Game Over) after it.
         assert(text(combat.previousElementSibling).includes('disheveled figure'),
           'the scene description before it did the framing');
+      });
+
+      await step('a log saved before the table rename still renders styled', async () => {
+        // A save stores its narrative log as rendered HTML, so old entries carry
+        // the pre-rename class names for good. Restore one and check the CSS
+        // aliases still reach it — scrollback must not turn into bare tables.
+        const legacy = {
+          type: 'scene', title: 'Museum Armor Room',
+          desc: 'An old hall.<div class="exhibits-table-container"><table class="exhibits-table">'
+            + '<thead><tr><th>Display Stand</th><th>Showcased Relic</th></tr></thead>'
+            + '<tbody><tr><td>Wall Shield Mount</td><td class="exhibits-table__item--empty">(Empty)</td></tr></tbody>'
+            + '</table></div>',
+        };
+        const save = JSON.parse(JSON.stringify(window.gameEngine.state.state));
+        save.log = [legacy];
+        // The load path the file picker uses — it rebuilds the narrative DOM
+        // from the saved log, which is the thing under test.
+        assert(window.gameEngine.ui._applyLoadedSave(save) !== false, 'the legacy save loads');
+        await until(() => $('#scene-narrative .exhibits-table'), 'the restored old table');
+
+        const table = $('#scene-narrative .exhibits-table');
+        const th = getComputedStyle(table.querySelector('th'));
+        const td = getComputedStyle(table.querySelector('.exhibits-table__item--empty'));
+        assert(th.textTransform === 'uppercase', `old headers keep their styling (got ${th.textTransform})`);
+        assert(td.fontStyle === 'italic', `old empty cells keep theirs (got ${td.fontStyle})`);
+        assert(parseFloat(getComputedStyle(table.querySelector('td')).paddingTop) > 0, 'and the cells keep their padding');
       });
 
       await step('no uncaught errors during the run', () => {

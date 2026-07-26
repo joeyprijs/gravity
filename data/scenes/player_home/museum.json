@@ -1,7 +1,8 @@
 {
   "id": "home_museum",
-  "name": "Museum Room",
+  "name": "Museum Lobby",
   "region": "player_home",
+  "museumHall": true,
   "mapDefinitions": {
     "top": 1800,
     "left": 2640,
@@ -9,29 +10,9 @@
     "height": 100,
     "background": "rgba(60, 30, 70, 0.9)"
   },
-  "description": "You step into the grand museum room. Elegant display cases line the walls, waiting to preserve your most valuable discoveries.",
-  "supportsExhibits": true,
-  "displays": [
-    {
-      "id": "home_museum_pedestal_1",
-      "name": "Mahogany Pedestal"
-    },
-    {
-      "id": "home_museum_pedestal_2",
-      "name": "Glass Case",
-      "item": "rusty_sword"
-    }
-  ],
+  "description": "You step into the museum lobby. There is nothing on show here — just a worn mosaic floor, your grandfather's portrait over the arch, and the doors to the wings standing open on either side.",
+  "showsReputation": true,
   "options": [
-    {
-      "text": "Enter the Armor Wing",
-      "actions": [
-        {
-          "type": "navigate",
-          "destination": "home_museum_armor"
-        }
-      ]
-    },
     {
       "text": "Return to Living Room",
       "isBack": true,

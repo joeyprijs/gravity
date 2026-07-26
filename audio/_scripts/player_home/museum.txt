@@ -1,4 +1,4 @@
-Museum Room
+Museum Lobby
 scene home_museum · data/scenes/player_home/museum.json
 1 line · 0 with a clip · 1 to go
 
@@ -11,5 +11,6 @@ Description
 description
 → audio/narration/player_home/museum.webm  [no clip yet]
 
-  You step into the grand museum room. Elegant display cases line the
-  walls, waiting to preserve your most valuable discoveries.
+  You step into the museum lobby. There is nothing on show here — just a
+  worn mosaic floor, your grandfather's portrait over the arch, and the
+  doors to the wings standing open on either side.

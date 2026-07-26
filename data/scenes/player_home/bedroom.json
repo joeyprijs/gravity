@@ -40,7 +40,6 @@
     },
     {
       "text": "Open Personal Chest",
-      "log": false,
       "actions": [
         {
           "type": "manage_chest",

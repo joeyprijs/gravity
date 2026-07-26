@@ -74,6 +74,9 @@ export const CSS = {
   SCENE_BODY_TEXT:        'scene__body-text',
   SCENE_LOG:              'scene__log',
   SCENE_LOG_PREFIX:       'scene__log-prefix',
+  // A block appended after the log so far, showing what a click revealed —
+  // a chest's contents table (see NarrativeLog.appendBlock).
+  SCENE_CONTENTS:         'scene__contents',
   // Generic section container and heading — used by the scene options panel,
   // the player tabs (inventory/quests/sheet/map), and the chest/merchant/
   // curator panels.
@@ -101,7 +104,6 @@ export const CSS = {
   CARD_STATS:             'card__stats',
   CARD_STAT_LABEL:        'card__stat-label',
   CARD_STAT_VALUE:        'card__stat-value',
-  CARD_ACTIONS:           'card__actions',
   CARD_LIST:              'card-list',
   CARD_DONE:              'card--completed',
   CARD_NEW:               'card--new',

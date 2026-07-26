@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { itemStatLines, equipmentAttributeBonuses } from '../src/core/utils.js';
+import { buildContentsTable, itemStatLines, equipmentAttributeBonuses } from '../src/core/utils.js';
 
 // t() echoes "key:params" so assertions can check both key and values.
 const t = (key, p) => p ? `${key}:${JSON.stringify(p)}` : key;
@@ -51,4 +51,43 @@ test('equipmentAttributeBonuses: merges attributeBonuses with legacy armorClassB
     equipmentAttributeBonuses({ attributes: { armorClassBonus: 2, attributeBonuses: { perception: 1, ac: 1 } } }),
     { ac: 3, perception: 1 }
   );
+});
+
+// ── buildContentsTable ────────────────────────────────────────────────────────
+// One builder behind every "what does this container hold" table (a chest's
+// stacks, a museum room's display cases), so they cannot drift apart.
+
+test('buildContentsTable: no rows means no table at all', () => {
+  assert.equal(buildContentsTable(['Stored', 'Amount'], []), '');
+});
+
+test('buildContentsTable: with an empty message, that message stands in for the table', () => {
+  const html = buildContentsTable(['Stored', 'Amount'], [], 'Chest is empty.');
+  assert.match(html, /contents-table__empty">Chest is empty\.</);
+  assert.ok(!html.includes('<table'), 'no headers over nothing');
+});
+
+test('buildContentsTable: the empty message is escaped too', () => {
+  assert.match(buildContentsTable(['a', 'b'], [], '<b>empty</b>'), /&lt;b&gt;empty/);
+});
+
+test('buildContentsTable: a row per entry, with the headers given', () => {
+  const html = buildContentsTable(['Stored', 'Amount'], [{ label: 'Rusty Sword', value: '2' }]);
+  assert.match(html, /<th>Stored<\/th><th>Amount<\/th>/);
+  assert.match(html, /<td>Rusty Sword<\/td>/);
+  assert.match(html, /contents-table__value--filled">2</);
+});
+
+test('buildContentsTable: an empty entry styles its value as a placeholder', () => {
+  const html = buildContentsTable(['Stand', 'Relic'], [{ label: 'Pedestal', value: '(Empty)', empty: true }]);
+  assert.match(html, /contents-table__value--empty">\(Empty\)</);
+});
+
+test('buildContentsTable: labels and values are escaped — both can be player input', () => {
+  const html = buildContentsTable(['Stand', 'Relic'], [
+    { label: '<img src=x onerror=alert(1)>', value: '<b>relic</b>' },
+  ]);
+  assert.ok(!html.includes('<img'), 'the raw tag must not survive');
+  assert.ok(!html.includes('<b>'), 'nor markup in the value');
+  assert.match(html, /&lt;img/);
 });

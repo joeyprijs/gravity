@@ -249,6 +249,55 @@ export function itemStatLines(t, itemData, attributes = {}) {
 }
 
 /**
+ * The stat lines of an item CARD — itemStatLines plus what the item is worth.
+ * Worth is a card thing, not an attack-button thing: it's what a merchant pays
+ * for the item, nothing combat needs. An item a merchant won't pay for
+ * (value 0, the quest keys) stays quiet about it. Shared by every surface that
+ * presents an item as a card (inventory, the curator's exhibits) so the same
+ * item reads the same in all of them.
+ *
+ * @param {function} t - The engine's translate function.
+ * @param {object} itemData - The item definition from data/items.
+ * @param {Object<string, number>} [attributes] - The wielder's attributes.
+ * @returns {string[]|undefined} Stat lines, or undefined if the item has none
+ *   (buildCard's `stats` takes undefined for "no stat block").
+ */
+export function itemCardStats(t, itemData, attributes = {}) {
+  const lines = itemStatLines(t, itemData, attributes);
+  if (itemData.value > 0) lines.push(t('itemStats.value', { value: itemData.value }));
+  return lines.length > 0 ? lines : undefined;
+}
+
+/**
+ * A two-column table of what a container holds, for appending to a scene's
+ * description: a chest's stacks, a museum room's display cases. One builder so
+ * every container reads the same in the narrative — and so nothing has to write
+ * table HTML by hand. Values are escaped: rows carry item names and
+ * player-typed labels (a display case's name comes from a prompt).
+ *
+ * @param {[string, string]} headers - The two column headings, already translated.
+ * @param {Array<{label: string, value: string, empty?: boolean}>} rows - One per
+ *   entry; `empty` styles the value as a placeholder (an unfilled display case).
+ * @param {?string} [emptyMessage=null] - Shown in place of the table when there
+ *   are no rows ("Chest is empty."). Without one, an empty container renders
+ *   nothing at all.
+ * @returns {string} The table's HTML, the empty message, or ''.
+ */
+export function buildContentsTable([leftHeader, rightHeader], rows, emptyMessage = null) {
+  if (!rows.length) {
+    return emptyMessage
+      ? `<div class="contents-table-container"><p class="contents-table__empty">${escapeHtml(emptyMessage)}</p></div>`
+      : '';
+  }
+  const head = `<thead><tr><th>${escapeHtml(leftHeader)}</th><th>${escapeHtml(rightHeader)}</th></tr></thead>`;
+  const body = rows.map(({ label, value, empty }) => {
+    const valueClass = empty ? 'contents-table__value--empty' : 'contents-table__value--filled';
+    return `<tr><td>${escapeHtml(label)}</td><td class="${valueClass}">${escapeHtml(value)}</td></tr>`;
+  }).join('');
+  return `<div class="contents-table-container"><table class="contents-table">${head}<tbody>${body}</tbody></table></div>`;
+}
+
+/**
  * Resets the scene options panel to an empty state: clears the option button
  * container, removes injected option sections, and clears + hides the skills
  * container. The location reminder is re-appended as the container's first
@@ -410,11 +459,10 @@ function buildStatLine(tag, line) {
  *                        button cards (buttons allow phrasing content only).
  *                        Each line splits into a label/value pair of spans
  *                        (see buildStatLine)
- *     <.card__actions>   optional row of action buttons
  *
- * Interactive cards are <button class="card"> — the whole card is the
- * control (scene options, chest rows). Container cards are <div>/<li>
- * carrying their controls in .card__actions (inventory items).
+ * A card the player acts on is a <button class="card"> — the whole card is the
+ * control (scene options, chest rows, inventory items). Cards with nothing to
+ * click are <div>/<li> (quests, keepsakes).
  *
  * @param {object} spec
  * @param {string} [spec.tag='div'] - 'button' | 'div' | 'li'.
@@ -423,11 +471,10 @@ function buildStatLine(tag, line) {
  * @param {string|string[]} [spec.stats] - Accent stat lines. Strings (array
  *   elements included) are split on \n so game packs with multi-line locale
  *   strings keep working.
- * @param {HTMLElement[]} [spec.actions] - Buttons for the actions row.
  * @param {string[]} [spec.classes] - Extra classes on the card element.
  * @returns {HTMLElement}
  */
-export function buildCard({ tag = 'div', title, body, stats, actions = [], classes = [] } = {}) {
+export function buildCard({ tag = 'div', title, body, stats, classes = [] } = {}) {
   // Buttons may not contain block elements — inline children only.
   const child = tag === 'button' ? 'span' : 'div';
   const card = createElement(tag, [CSS.CARD, ...classes]);
@@ -444,11 +491,6 @@ export function buildCard({ tag = 'div', title, body, stats, actions = [], class
     const list = createElement(listTag, CSS.CARD_STATS);
     statLines.forEach(line => list.appendChild(buildStatLine(lineTag, line)));
     card.appendChild(list);
-  }
-  if (actions.length > 0) {
-    const row = createElement('div', CSS.CARD_ACTIONS);
-    actions.forEach(a => row.appendChild(a));
-    card.appendChild(row);
   }
   return card;
 }

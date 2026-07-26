@@ -361,6 +361,25 @@
       "type": "boolean",
       "description": "If true, this scene supports exhibits curatorship."
     },
+    "showsReputation": {
+      "type": "boolean",
+      "description": "If true, the curator plugin keeps the museum's reputation on screen under the scene name while the player is here."
+    },
+    "museumSlot": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Which slot off the museum hall this wing occupies. The curator plugin derives the scene's mapDefinitions geometry from it (even slots north of the hall, odd slots south, a pair per column), so a growing museum never needs hand-placed coordinates. Authored geometry is a fallback for running without the plugin.",
+      "$comment": "Requires museumLayout in the curator's manifest config."
+    },
+    "museumHall": {
+      "type": "boolean",
+      "description": "Marks the museum's hall: the curator plugin widens it to span every slot column in use, making map room for the next wing, and offers the build-a-wing option there."
+    },
+    "museumBuilt": {
+      "type": "boolean",
+      "description": "Set by the curator plugin on a wing the player built, never authored. Such scenes are synthesized from the save on every load, so the flag is what tells them apart from authored rooms.",
+      "$comment": "Runtime-only — a scene file carrying this is a mistake."
+    },
     "displays": {
       "type": "array",
       "description": "Initial display cases defined in this scene.",

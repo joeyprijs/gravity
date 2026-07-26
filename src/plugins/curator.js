@@ -1,5 +1,5 @@
-import { createElement, buildOptionButton, escapeHtml, getItemLabel, resetOptionsPanel } from "../core/utils.js";
-import { CSS, LOG } from "../core/config.js";
+import { buildCard, buildContentsTable, buildOptionButton, createElement, escapeHtml, getItemLabel, itemCardStats, resetOptionsPanel } from "../core/utils.js";
+import { CSS, EL, LOG } from "../core/config.js";
 
 // The curator's reputation model: a permanent score (earned by acquiring
 // relics for the first time) plus a dynamic bonus from relics currently on
@@ -11,12 +11,15 @@ import { CSS, LOG } from "../core/config.js";
 // state.pluginState('curator').
 
 // Set by registerCuratorState(). Module-level because the hook callbacks need
-// them: the engine's StateManager and the loaded item database.
+// them: the engine's StateManager and the loaded item database. curatorEngine
+// is set by the plugin's register function only — the state-level tests call
+// registerCuratorState on its own, and room synthesis stays out of their way.
 let curatorState = null;
 let curatorItems = {};
+let curatorEngine = null;
 let hooksRegistered = false;
 
-// The curator's save-data bag ({ museumReputation, obtainedItems }).
+// The curator's save-data bag ({ museumReputation, obtainedItems, rooms }).
 const bag = () => curatorState.pluginState('curator');
 
 /** Returns the museum reputation currently shown to the player (permanent + display bonus). */
@@ -72,6 +75,9 @@ export function registerCuratorState(state, items = {}) {
       case 'init':
       case 'loadFromObject':
       case 'reset':
+        // Rooms first: a loaded save's wings must be on the map (and their
+        // display cases addressable) before anything reads the museum.
+        syncMuseumRooms(curatorEngine);
         updateReputation();
         break;
       case 'addToInventory':
@@ -115,29 +121,163 @@ export function registerCuratorState(state, items = {}) {
   });
 }
 
-// Builds the exhibits status table appended to the description of any scene
-// that has display cases. Returns '' for scenes without displays. Display
-// names come from player input (prompt), so all dynamic values are escaped.
+// The exhibits table appended to the description of any scene that has display
+// cases — the same contents table the engine gives a chest (buildContentsTable),
+// so a museum room and a chest read alike. Every case is listed, filled or not:
+// an empty stand is the museum's standing invitation.
 function buildExhibitsTable(engine, sceneId) {
   const displays = engine.state.getDisplaysForScene(sceneId);
-  if (!displays.length) return '';
+  return buildContentsTable(
+    [engine.t('plugin.curator.curatorTableStand'), engine.t('plugin.curator.curatorTableRelic')],
+    displays.map(d => ({
+      label: d.name,
+      value: d.item ? getItemLabel(engine.data.items, d.item) : engine.t('plugin.curator.curatorEmpty'),
+      empty: !d.item,
+    })),
+  );
+}
 
-  const header = `<thead><tr>`
-    + `<th>${engine.t('plugin.curator.curatorTableStand')}</th>`
-    + `<th>${engine.t('plugin.curator.curatorTableRelic')}</th>`
-    + `</tr></thead>`;
-  const rows = displays.map(d => {
-    const itemName = d.item ? getItemLabel(engine.data.items, d.item) : engine.t('plugin.curator.curatorEmpty');
-    const stateClass = d.item ? 'exhibits-table__item--filled' : 'exhibits-table__item--empty';
-    return `<tr><td>${escapeHtml(d.name)}</td><td class="${stateClass}">${escapeHtml(itemName)}</td></tr>`;
-  }).join('');
+// Pins the museum's reputation under the scene name in the options panel, for
+// scenes flagged `showsReputation` — so it reads at a glance from anywhere in
+// the museum, not only with the curator panel open. It hangs off the location
+// reminder (sharing its underline) rather than sitting between the options,
+// and resetOptionsPanel rewrites that element's text on every render, so the
+// line is discarded and rebuilt with the current value each time.
+function showReputationLine(engine) {
+  const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
+  if (!reminder) return;
+  const line = createElement('div', 'curator-scene-rep');
+  line.appendChild(createElement('span', 'curator-scene-rep__label', engine.t('plugin.curator.reputationLabel')));
+  line.appendChild(createElement('span', 'curator-scene-rep__value',
+    engine.t('plugin.curator.museumReputationValue', { value: getMuseumReputation() })));
+  reminder.appendChild(line);
+}
 
-  return `<div class="exhibits-table-container"><table class="exhibits-table">${header}<tbody>${rows}</tbody></table></div>`;
+// Lays the museum out on the world map. A museum that can grow can't have its
+// coordinates authored one room at a time: a wing declares which slot it
+// occupies (`museumSlot`) and the geometry is derived from that, so however
+// many rooms exist, they tile without overlapping and without anyone editing
+// pixels. Slots run away from the hall in a pair per column — even slots north
+// of it, odd slots south — so the museum grows one column per TWO rooms and
+// stays roughly square instead of stretching into a ribbon.
+//
+//     ┌────┬────┐        slot 0   slot 2      (north, columns 0 and 1)
+//     │ 0  │ 2  │
+//   ──┼────┴────┤        the hall (museumHall) spans every column in use
+//     │ 1  │ 3  │
+//     └────┴────┘        slot 1   slot 3      (south)
+//
+// The hall's own width follows the column count, which is what makes room for
+// the next wing on the map. Geometry only — nothing here knows what a room
+// holds. Needs `museumLayout: { top, left, roomWidth, roomHeight }` in the
+// plugin's manifest config (the hall's top-left corner and one room's size);
+// without it the authored mapDefinitions are left exactly as they are.
+export function layoutMuseum(engine) {
+  const layout = engine.pluginConfig('curator').museumLayout;
+  if (!layout) return;
+  const { top, left, roomWidth, roomHeight } = layout;
+
+  let columns = 0;
+  let hall = null;
+  for (const scene of Object.values(engine.data.scenes)) {
+    if (scene.museumHall) hall = scene;
+    if (!Number.isInteger(scene.museumSlot)) continue;
+    const column = Math.floor(scene.museumSlot / 2);
+    columns = Math.max(columns, column + 1);
+    Object.assign(scene.mapDefinitions ??= {}, {
+      left: left + column * roomWidth,
+      top: scene.museumSlot % 2 ? top + roomHeight : top - roomHeight,
+      width: roomWidth,
+      height: roomHeight,
+    });
+  }
+
+  // An empty museum still has its hall — one column wide.
+  if (hall) Object.assign(hall.mapDefinitions ??= {}, {
+    left, top, width: roomWidth * Math.max(columns, 1), height: roomHeight,
+  });
+}
+
+// Rooms the curator takes over on arrival: the hall (its wings and the building
+// of them) and anything holding display cases. Both get a panel instead of a
+// plain option list, so the museum reads the same wherever you stand in it.
+function isMuseumRoom(scene, hasDisplays) {
+  return Boolean(scene.museumHall || scene.supportsExhibits || hasDisplays);
+}
+
+// The museum's hall, as { id, scene } — the scene flagged museumHall. Null in
+// a game that has no museum.
+function findHall(engine) {
+  const entry = Object.entries(engine.data.scenes).find(([, s]) => s.museumHall);
+  return entry ? { id: entry[0], scene: entry[1] } : null;
+}
+
+// The slot a newly built wing takes: one past the highest in use, so ids and
+// geometry both follow from it and nothing has to be counted or stored twice.
+function nextMuseumSlot(engine) {
+  const slots = Object.values(engine.data.scenes)
+    .map(s => s.museumSlot)
+    .filter(Number.isInteger);
+  return slots.length ? Math.max(...slots) + 1 : 0;
+}
+
+// A built wing as a scene object. Everything but the player's chosen name is
+// derived: the id and geometry from the slot, the room's text from the plugin's
+// locale, the region and the way back from the hall it opens off. Bare on
+// purpose — the player installs display cases and decides what goes in.
+// The name is player input, and a description is rendered as HTML, so it is
+// escaped going in (the option button and map label take text nodes).
+function buildRoomScene(engine, hall, room) {
+  // Geometry comes from layoutMuseum; without a museumLayout there is none to
+  // derive, and a bare mapDefinitions would put the wing on the map at
+  // undefined coordinates — so the wing gets no map presence at all. (Building
+  // is gated on the layout, but a save carrying wings can be loaded anywhere.)
+  const layout = engine.pluginConfig('curator').museumLayout;
+  return {
+    id: room.id,
+    name: room.name,
+    region: hall.scene.region,
+    museumSlot: room.slot,
+    museumBuilt: true,
+    supportsExhibits: true,
+    showsReputation: true,
+    description: engine.t('plugin.curator.wingDescription', { name: escapeHtml(room.name) }),
+    ...(layout ? { mapDefinitions: { background: layout.roomBackground } } : {}),
+    options: [{
+      text: engine.t('plugin.curator.wingBack', { name: hall.scene.name }),
+      isBack: true,
+      actions: [{ type: 'navigate', destination: hall.id }],
+    }],
+  };
+}
+
+// Brings data.scenes in line with the built wings in the save, then re-runs the
+// layout. Wings live in the save as { id, name, slot } and nothing else — their
+// scenes are rebuilt from that on every load, so a saved game can never carry
+// stale coordinates or drift from the layout rules. Called on boot, on load,
+// and after building: a loaded save must also DROP the wings the previous game
+// had, which is what museumBuilt marks.
+function syncMuseumRooms(engine) {
+  if (!engine) return;
+  const hall = findHall(engine);
+  if (!hall) return;
+
+  const rooms = bag().rooms ?? [];
+  const wanted = new Map(rooms.map(r => [r.id, r]));
+  for (const [id, scene] of Object.entries(engine.data.scenes)) {
+    if (scene.museumBuilt && !wanted.has(id)) delete engine.data.scenes[id];
+  }
+  for (const room of rooms) {
+    engine.data.scenes[room.id] ??= buildRoomScene(engine, hall, room);
+  }
+  layoutMuseum(engine);
 }
 
 export default function curatorPlugin(engine) {
   // 1. Register state integrations (stat handler, mutation hooks, migration)
+  curatorEngine = engine;
   registerCuratorState(engine.state, engine.data.items);
+  layoutMuseum(engine);
 
   // Reputation is a curator concept: flag the deprecated top-level item shape
   // here rather than in the core item validator, so the engine stays unaware
@@ -155,13 +295,15 @@ export default function curatorPlugin(engine) {
   });
 
   // 2. Decorate every scene that has display cases: exhibits table appended to
-  // the description, plus the curator-panel option button.
+  // the description, plus the curator-panel option button. Scenes flagged
+  // `showsReputation` also get the standing reputation line.
   engine.registerSceneDecorator({
     description: (scene, sceneId) => buildExhibitsTable(engine, sceneId),
     options: (scene, optionsContainer) => {
+      if (scene.showsReputation) showReputationLine(engine);
       const sceneId = engine.state.getCurrentSceneId();
       const hasDisplays = engine.state.getDisplaysForScene(sceneId).length > 0;
-      if (!scene.supportsExhibits && !hasDisplays) return;
+      if (!isMuseumRoom(scene, hasDisplays)) return;
       const btn = buildOptionButton(engine.t('plugin.curator.curatorTitle'));
       btn.onclick = () => engine.scene.handleOption({
         text: engine.t('plugin.curator.curatorTitle'),
@@ -171,7 +313,48 @@ export default function curatorPlugin(engine) {
     }
   });
 
+  // Walking into any museum room opens its panel then and there — curating IS
+  // what these rooms are for, so the button to get to it was a step for its own
+  // sake. It stays on the scene's options as the way back in after Done. Only
+  // on arrival (isEntry): a re-render or a save restore must not reopen a panel
+  // the player closed. And combat comes first if a scene has both — a fight
+  // already running (inCombat) or one the render is about to start
+  // (startsCombat: the scene's autoAttack fires right after this emit).
+  engine.on('scene:entered', ({ sceneId, scene, isEntry, startsCombat }) => {
+    if (!isEntry || engine.inCombat || startsCombat) return;
+    if (!isMuseumRoom(scene, engine.state.getDisplaysForScene(sceneId).length > 0)) return;
+    engine.setCustomUIOpen(true);
+    new CuratorUI(engine).render();
+  });
+
   // 3. Register custom action handlers
+  engine.registerAction("build_wing", (action, engine) => {
+    const hall = findHall(engine);
+    // No layout, no construction: a built wing's map geometry is derived from
+    // museumLayout, so without one the wing would land nowhere. The hall's
+    // panel hides the build option on the same condition.
+    if (!hall || !engine.pluginConfig('curator').museumLayout) return;
+    const cost = action.cost ?? engine.pluginConfig('curator').wingCost ?? 0;
+    if (engine.state.getPlayer().resources.gold < cost) {
+      engine.log(LOG.SYSTEM, engine.t('ui.notEnoughGold'));
+      return;
+    }
+
+    const slot = nextMuseumSlot(engine);
+    const name = action.name || engine.t('plugin.curator.wingDefaultName', { count: slot + 1 });
+    engine.state.modifyPlayerStat('gold', -cost);
+    // The save carries the wing, not its scene: the scene is rebuilt from this
+    // on every load (see syncMuseumRooms), and pluginState persists it.
+    (bag().rooms ??= []).push({ id: `${hall.id}_wing_${slot}`, name, slot });
+    syncMuseumRooms(engine);
+
+    // The hall just got wider and the wing is on the map — but neither the
+    // player nor the clock moved, so nothing would redraw the map on its own.
+    engine.ui?.map?.invalidateMinimap?.();
+    engine.ui?.map?.renderMinimap?.();
+    engine.log(LOG.SYSTEM, engine.t('plugin.curator.wingBuiltLog', { cost, name }));
+  });
+
   engine.registerAction("manage_exhibits", (action, engine) => {
     engine.setCustomUIOpen(true);
     new CuratorUI(engine).render();
@@ -223,9 +406,19 @@ export class CuratorUI {
     const scene = this.engine.data.scenes[sceneId];
     if (!scene) return;
 
-    const { panel, container, skillsContainer } = resetOptionsPanel(this.engine.t('plugin.curator.curatorTitle'));
+    // The panel names the room, not itself: it opens on arrival and is what the
+    // room looks like, so the heading stays the location reminder it is
+    // everywhere else.
+    const { panel, container, skillsContainer } = resetOptionsPanel(scene.title || scene.name);
 
-    if (screen === 'dashboard') {
+    // resetOptionsPanel rewrote the reminder, so the standing reputation line
+    // has to be rebuilt here too — it reads the same, in the same place, with
+    // the panel open as without it.
+    if (scene.showsReputation) showReputationLine(this.engine);
+
+    if (screen === 'dashboard' && scene.museumHall) {
+      this._renderHall(container, panel, skillsContainer, scene);
+    } else if (screen === 'dashboard') {
       this._renderDashboard(container, panel, skillsContainer, sceneId, scene);
     } else if (screen === 'inspect_display') {
       this._renderInspectDisplay(container, panel, skillsContainer, sceneId, context);
@@ -236,26 +429,98 @@ export class CuratorUI {
     this.engine.scrollNarrativeToBottom();
   }
 
-  _renderDashboard(container, panel, skillsContainer, sceneId, scene) {
-    // 1. Done Button
-    const doneBtn = buildOptionButton(this.engine.t('plugin.curator.curatorDone'));
-    doneBtn.onclick = () => {
+  // The way out of the panel. When curating is ALL there is to do in the room,
+  // that's the room's own exit — the panel opens on arrival, so a "Done" that
+  // revealed nothing but a single "Go back" was a step for its own sake. A room
+  // with anything else to do keeps Done, or those options would be unreachable
+  // while the panel is up.
+  _exitButton(scene) {
+    const isBack = (o) => o.isBack === true || (o.actions ?? []).some(a => a.type === 'return');
+    const options = scene.options ?? [];
+    const back = options.length === 1 && isBack(options[0]) ? options[0] : null;
+
+    if (!back) {
+      const doneBtn = buildOptionButton(this.engine.t('plugin.curator.curatorDone'));
+      doneBtn.onclick = () => {
+        this.engine.setCustomUIOpen(false);
+        this.engine.scene.renderOptions(scene);
+      };
+      return doneBtn;
+    }
+
+    const backBtn = buildOptionButton(back.text);
+    backBtn.onclick = () => {
       this.engine.setCustomUIOpen(false);
-      this.engine.scene.renderOptions(scene);
+      this.engine.scene.handleOption(back);   // logs the choice and walks out
     };
-    container.appendChild(doneBtn);
+    return backBtn;
+  }
 
-    // Museum Reputation Section
-    const repSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC, 'curator-panel__rep']);
+  // A panel section headed "Construction" — what the player can add here. Every
+  // museum room ends with one, so building is always in the same place: a case
+  // in a wing, a whole wing in the hall.
+  _constructionSection() {
+    const section = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
+    section.appendChild(createElement('div', CSS.SECTION_HEADING, this.engine.t('plugin.curator.constructionHeading')));
+    return section;
+  }
 
-    const repTitle = createElement('div', CSS.SECTION_HEADING, this.engine.t('plugin.curator.museumReputationHeading'));
-    repSection.appendChild(repTitle);
+  // The hall: the way out of the museum, then a door into every wing in slot
+  // order (so they read the way the map does), then construction. Same shape as
+  // a wing's panel — exit, what's here, what you can add.
+  _renderHall(container, panel, skillsContainer, scene) {
+    container.appendChild(this._exitButton(scene));
 
-    const repVal = getMuseumReputation();
-    const repText = createElement('div', [CSS.CARD_STATS, 'curator-panel__rep-value'], this.engine.t('plugin.curator.museumReputationValue', { value: repVal }));
-    repSection.appendChild(repText);
+    const wingsSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
+    wingsSection.appendChild(createElement('div', CSS.SECTION_HEADING, this.engine.t('plugin.curator.wingsHeading')));
 
-    panel.insertBefore(repSection, skillsContainer);
+    const wings = Object.entries(this.engine.data.scenes)
+      .filter(([, s]) => Number.isInteger(s.museumSlot))
+      .sort((a, b) => a[1].museumSlot - b[1].museumSlot);
+
+    for (const [id, wing] of wings) {
+      const text = this.engine.t('plugin.curator.wingEnter', { name: wing.name });
+      const btn = buildOptionButton(text);
+      btn.onclick = () => {
+        this.engine.setCustomUIOpen(false);
+        this.engine.scene.handleOption({ text, actions: [{ type: 'navigate', destination: id }] });
+      };
+      wingsSection.appendChild(btn);
+    }
+    panel.insertBefore(wingsSection, skillsContainer);
+
+    // No layout, no construction (the build_wing action refuses on the same
+    // condition): a built wing's geometry is derived from museumLayout.
+    if (!this.engine.pluginConfig('curator').museumLayout) return;
+
+    const cost = this.engine.pluginConfig('curator').wingCost ?? 0;
+    const affordable = this.engine.state.getPlayer().resources.gold >= cost;
+    const section = this._constructionSection();
+    const buildBtn = buildOptionButton(
+      this.engine.t('plugin.curator.wingBuild', { cost }),
+      affordable ? null : this.engine.t('ui.notEnoughGold')
+    );
+    if (!affordable) buildBtn.disabled = true;
+    buildBtn.onclick = () => {
+      // Named like a display case is: the player's own label, prompted for.
+      const slot = nextMuseumSlot(this.engine);
+      const fallback = this.engine.t('plugin.curator.wingDefaultName', { count: slot + 1 });
+      const typed = prompt(this.engine.t('plugin.curator.wingPrompt'), fallback);
+      if (typed === null) return;   // cancelled
+      // Run the action rather than handleOption: nobody is leaving the hall, so
+      // the panel redraws itself with the new wing instead of being replaced by
+      // the scene's options.
+      this.engine.runActions([{ type: 'build_wing', name: typed.trim() || fallback }]);
+      this.render();
+    };
+    section.appendChild(buildBtn);
+    panel.insertBefore(section, skillsContainer);
+  }
+
+  _renderDashboard(container, panel, skillsContainer, sceneId, scene) {
+    // 1. Out of the panel — and, in a room that is only its exhibits, out of
+    // the room itself.
+    container.appendChild(this._exitButton(scene));
 
     // 2. Exhibits Section
     const exhibitsSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
@@ -283,12 +548,13 @@ export class CuratorUI {
 
     panel.insertBefore(exhibitsSection, skillsContainer);
 
-    // 3. Purchase Exhibit Case Button
+    // 3. Construction — what the player can add to the room, last, under its
+    // own heading (the hall's wing-building sits in the same place).
     const installCost = this.engine.pluginConfig('curator').installCost ?? 50;
     const p = this.engine.state.getPlayer();
     const canInstall = p.resources.gold >= installCost;
 
-    const installSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
+    const installSection = this._constructionSection();
     const installBtn = buildOptionButton(
       this.engine.t('plugin.curator.curatorInstall', { cost: installCost }),
       canInstall ? null : this.engine.t('ui.notEnoughGold')
@@ -334,34 +600,24 @@ export class CuratorUI {
     const detailSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
     detailSection.appendChild(createElement('div', CSS.SECTION_HEADING, display.name));
 
-    // Item Info
-    const infoContainer = createElement('div', [CSS.CARD, 'curator-panel__item-info']);
-
-    infoContainer.appendChild(createElement('h3', CSS.CARD_TITLE, name));
-    if (itemData?.type) {
-      infoContainer.appendChild(createElement('div', CSS.CARD_BODY, itemData.type));
-    }
-    if (itemData?.description) {
-      infoContainer.appendChild(createElement('p', CSS.CARD_BODY, itemData.description));
-    }
-
-    if (itemData?.value !== undefined || itemData?.attributes?.actionPoints !== undefined) {
-      let stats = this.engine.t('plugin.curator.inspectValue', { value: itemData.value ?? 0 });
-      if (itemData.attributes?.actionPoints) stats += ` | ${this.engine.t('plugin.curator.inspectApCost', { ap: itemData.attributes.actionPoints })}`;
-      infoContainer.appendChild(createElement('p', CSS.CARD_STATS, stats));
-    }
-
-    detailSection.appendChild(infoContainer);
-
-    // 3. Take Button
-    const takeBtn = buildOptionButton(this.engine.t('plugin.curator.curatorRetrieve'));
-    takeBtn.onclick = () => {
+    // Item Info — the exhibited item as a standard card, built by the same
+    // helpers the inventory uses (buildCard, itemCardStats), so a relic in its
+    // case reads exactly as it does in the player's bag. And like there, the
+    // card IS the control: clicking the relic takes it out of the case.
+    const t = this.engine.t.bind(this.engine);
+    const itemCard = buildCard({
+      tag: 'button',
+      title: name,
+      body: itemData?.description,
+      stats: itemData ? itemCardStats(t, itemData, this.engine.state.getPlayer().attributes) : undefined,
+    });
+    itemCard.onclick = () => {
       this.engine.state.takeItemFromDisplay(sceneId, displayId);
       this.engine.log(LOG.SYSTEM, this.engine.t('actions.displayTook', { name, display: display.name }));
       this._refreshSceneDesc();
       this.render('dashboard');
     };
-    detailSection.appendChild(takeBtn);
+    detailSection.appendChild(itemCard);
 
     panel.insertBefore(detailSection, skillsContainer);
   }

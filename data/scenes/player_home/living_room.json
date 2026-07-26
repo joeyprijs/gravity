@@ -30,7 +30,7 @@
       ]
     },
     {
-      "text": "Enter Museum Room",
+      "text": "Enter Museum Lobby",
       "actions": [
         {
           "type": "navigate",

@@ -12,6 +12,10 @@ import { InventoryUI } from "./inventory-ui.js";
 // UI preference reset on reload, not saved (see createSectionToggles).
 const SHEET_SECTION_GROUP = 'sheet';
 
+// How long the pointer must rest on a dotted item card before the dot counts
+// as seen (see setup) — long enough that a sweep or a scroll past it doesn't.
+const NEW_DOT_DWELL_MS = 250;
+
 // A data-stat-bind span for an innerHTML template — the stats update loop
 // (see update()) fills every bound span on each stats change. Shared by the
 // sheet's character section and the scene top bar.
@@ -43,16 +47,59 @@ export class UIManager {
     this._setupTabNotifier();
     this.map.setup();
 
-    // One delegated listener covers every inventory item button, present and
-    // future — no per-render rebinding. Buttons call engine game-logic
-    // methods; the UI layer owns no game logic here.
+    // One delegated listener covers every inventory item card, present and
+    // future — no per-render rebinding. Cards call engine game-logic
+    // methods; the UI layer owns no game logic here — which slot a piece of
+    // gear equips into is the engine's call, not the card's.
     document.getElementById(EL.PLAYER_PANEL).addEventListener('click', (e) => {
-      const btn = e.target.closest(`.${CSS.BTN_ITEM}`);
-      if (!btn || btn.disabled) return;
-      const { action, item: itemId, slot } = btn.dataset;
+      const card = e.target.closest(`.${CSS.BTN_ITEM}`);
+      if (!card || card.disabled) return;
+      const { action, item: itemId, slot } = card.dataset;
       if (action === 'consume') this.engine.useItem(itemId);
-      else if (action === 'equip') this.engine.equipItem(slot, itemId);
+      else if (action === 'equip') this.engine.equipItem(itemId);
       else if (action === 'unequip') this.engine.unequipItem(slot);
+    });
+
+    // A dot marks what the player hasn't looked at, so resting the pointer on a
+    // dotted card spends it there and then — reading down a list clears the
+    // dots as you go, instead of every one of them lingering until the next tab
+    // switch. It takes a deliberate hover (NEW_DOT_DWELL_MS): a pointer
+    // sweeping across the list, or cards sliding under a parked cursor while
+    // the panel scrolls, must not wipe dots the player never looked at. The
+    // new-set is updated too, or the next render paints the dot back on.
+    // Delegated like the click above, and covers every dotted card in the
+    // panel — an item in the inventory, a quest in the log. mouseover/mouseout
+    // (not enter/leave) bubble, so one listener each is enough.
+    let dwell = null;   // { card, timer } — the card being looked at, if any
+    const panel = document.getElementById(EL.PLAYER_PANEL);
+    panel.addEventListener('mouseover', (e) => {
+      const card = e.target.closest(`.${CSS.CARD_NEW}`);
+      if (!card) return;
+      if (dwell?.card === card) return;   // moving within the same card — keep counting
+      clearTimeout(dwell?.timer);
+      dwell = {
+        card,
+        timer: setTimeout(() => {
+          dwell = null;
+          // A re-render mid-dwell detaches the card without a mouseout, so the
+          // timer would fire on the old node and spend a dot the player only
+          // rested on for part of the dwell. A detached card spends nothing —
+          // its on-screen replacement starts a fresh dwell when hovered.
+          if (!card.isConnected) return;
+          card.classList.remove(CSS.CARD_NEW);
+          // The card names its own entry: an item id in the inventory, a
+          // mission id in the quest log.
+          this._newItems.delete(card.dataset.item);
+          this._newQuests.delete(card.dataset.mission);
+        }, NEW_DOT_DWELL_MS),
+      };
+    });
+    panel.addEventListener('mouseout', (e) => {
+      if (!dwell) return;
+      // Moving between a card's own children isn't leaving it.
+      if (e.relatedTarget && dwell.card.contains(e.relatedTarget)) return;
+      clearTimeout(dwell.timer);
+      dwell = null;
     });
 
     // Save/load/restart buttons live in the options tab (the 'options'

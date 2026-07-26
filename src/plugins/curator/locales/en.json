@@ -1,5 +1,4 @@
 {
-  "museumReputationHeading": "Museum Reputation",
   "reputationLabel":         "Reputation",
   "museumReputationValue":   "{value} Points",
   "curatorTitle":            "Museum Curator Panel",
@@ -9,10 +8,11 @@
   "curatorEmpty":            "(Empty)",
   "curatorTableStand":       "Display Stand",
   "curatorTableRelic":       "Showcased Relic",
-  "curatorInstall":          "+ Install New Display Case ({cost} Gold)",
-  "curatorRetrieve":         "Retrieve Artifact",
+  "curatorInstall":          "Install New Display Case ({cost} Gold)",
   "curatorExhibit":          "Exhibit",
   "curatorHeadingExhibits":  "Current Exhibits",
+  "constructionHeading":     "Construction",
+  "wingsHeading":            "Wings",
   "curatorSelectArtifact":   "Select an artifact to exhibit:",
   "curatorNoEligibleItems":  "No eligible artifacts in your inventory.",
   "curatorInstallPrompt":    "Enter a name for your new display case:",
@@ -20,6 +20,11 @@
   "curatorInstallSuccess":   "You spent {cost} Gold and installed the \"{name}\".",
   "displayDefaultName":      "Display Pedestal",
   "displayAddedLog":         "A new {name} has been added to the room.",
-  "inspectValue":            "Value: {value} Gold",
-  "inspectApCost":           "AP Cost: {ap}"
+  "wingBuild":               "Build a New Wing ({cost} Gold)",
+  "wingPrompt":              "Enter a name for your new wing:",
+  "wingDefaultName":         "Wing {count}",
+  "wingBuiltLog":            "You spent {cost} Gold. Builders knock through the hall and the \"{name}\" opens off it.",
+  "wingEnter":               "Enter the {name}",
+  "wingBack":                "Go back to {name}",
+  "wingDescription":         "You step into the {name}. The plaster is new, the lights are hung, and the floor is bare — whatever stands here, you will be the one to put it there."
 }
