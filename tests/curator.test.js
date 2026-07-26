@@ -168,8 +168,8 @@ test('add_display: an explicit target scene overrides the current scene', () => 
 test('scene:entered opens the panel on arrival only, and only where there is curating to do', () => {
   const { engine, calls } = makeEngine();
   curatorPlugin(engine);
-  const enter = (scene, isEntry = true) =>
-    engine.emit('scene:entered', { sceneId: 'somewhere', scene, isEntry });
+  const enter = (scene, isEntry = true, startsCombat = false) =>
+    engine.emit('scene:entered', { sceneId: 'somewhere', scene, isEntry, startsCombat });
 
   enter({ supportsExhibits: true }, false);
   assert.deepEqual(calls.customUI, [], 'a re-render or save restore does not reopen a closed panel');
@@ -177,9 +177,15 @@ test('scene:entered opens the panel on arrival only, and only where there is cur
   enter({});
   assert.deepEqual(calls.customUI, [], 'a room with no cases is left alone');
 
+  // A fight comes first — one already running, or one the render is about to
+  // start (the scene's autoAttack fires right after this emit, so inCombat is
+  // still false at emit time).
+  enter({ supportsExhibits: true }, true, true);
+  assert.deepEqual(calls.customUI, [], 'an auto-encounter about to start keeps the panel shut');
+
   engine.inCombat = true;
   enter({ supportsExhibits: true });
-  assert.deepEqual(calls.customUI, [], 'a fight comes first');
+  assert.deepEqual(calls.customUI, [], 'a fight already running comes first');
 });
 
 // ── Museum map layout ────────────────────────────────────────────────────────
@@ -302,6 +308,17 @@ test('build_wing: each wing takes the next slot, and the hall widens to cover th
   const slots = gameState.pluginState('curator').rooms.map(r => r.slot);
   assert.deepEqual(slots, [0, 1, 2]);
   assert.deepEqual(engine.data.scenes.home_museum_wing_2.mapDefinitions.left, 2760);
+});
+
+test('build_wing: without a museumLayout, nothing is built and nothing is charged', () => {
+  // A wing's geometry is derived from the layout, so a game that configures
+  // the curator without one must not build wings that would land nowhere.
+  const { engine, registry } = withMuseum({ curator: { wingCost: 40 } });
+  registry.get('build_wing')({ type: 'build_wing', name: 'Pottery Wing' }, engine);
+
+  assert.equal(engine.state.getPlayer().resources.gold, 100, 'no gold taken');
+  assert.deepEqual(gameState.pluginState('curator').rooms ?? [], []);
+  assert.equal(Object.keys(engine.data.scenes).length, 1, 'no scene synthesized');
 });
 
 test('build_wing: an unaffordable wing is not built', () => {

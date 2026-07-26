@@ -275,6 +275,16 @@
         window.gameEngine.state.addToInventory('healing_potion', 1);
         assert(!card().classList.contains('card--new'), 'the dot stays gone across a re-render');
         assert($$('#inventory-tab .card--new').length === 1, 'the unhovered gain keeps its own dot');
+
+        // A re-render mid-dwell must not spend a dot either: the render
+        // detaches the hovered card without a mouseout, so its timer fires on
+        // the old node while the on-screen replacement was never dwelt on.
+        const potion = () => $$('#inventory-tab .card').find(c => text(c).includes('Healing Potion'));
+        potion().dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+        window.gameEngine.state.notifyListeners('inventory');   // re-render detaches the hovered card
+        await new Promise(r => setTimeout(r, 400));
+        window.gameEngine.state.notifyListeners('inventory');   // would drop a spent dot
+        assert(potion().classList.contains('card--new'), 'a re-render mid-dwell leaves the dot alone');
       });
 
       await step('tab notifier: a quest dot is spent the same way', async () => {

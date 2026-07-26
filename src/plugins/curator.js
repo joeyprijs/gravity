@@ -228,6 +228,11 @@ function nextMuseumSlot(engine) {
 // The name is player input, and a description is rendered as HTML, so it is
 // escaped going in (the option button and map label take text nodes).
 function buildRoomScene(engine, hall, room) {
+  // Geometry comes from layoutMuseum; without a museumLayout there is none to
+  // derive, and a bare mapDefinitions would put the wing on the map at
+  // undefined coordinates — so the wing gets no map presence at all. (Building
+  // is gated on the layout, but a save carrying wings can be loaded anywhere.)
+  const layout = engine.pluginConfig('curator').museumLayout;
   return {
     id: room.id,
     name: room.name,
@@ -237,7 +242,7 @@ function buildRoomScene(engine, hall, room) {
     supportsExhibits: true,
     showsReputation: true,
     description: engine.t('plugin.curator.wingDescription', { name: escapeHtml(room.name) }),
-    mapDefinitions: { background: engine.pluginConfig('curator').museumLayout?.roomBackground },
+    ...(layout ? { mapDefinitions: { background: layout.roomBackground } } : {}),
     options: [{
       text: engine.t('plugin.curator.wingBack', { name: hall.scene.name }),
       isBack: true,
@@ -312,9 +317,11 @@ export default function curatorPlugin(engine) {
   // what these rooms are for, so the button to get to it was a step for its own
   // sake. It stays on the scene's options as the way back in after Done. Only
   // on arrival (isEntry): a re-render or a save restore must not reopen a panel
-  // the player closed, and combat comes first if a scene has both.
-  engine.on('scene:entered', ({ sceneId, scene, isEntry }) => {
-    if (!isEntry || engine.inCombat) return;
+  // the player closed. And combat comes first if a scene has both — a fight
+  // already running (inCombat) or one the render is about to start
+  // (startsCombat: the scene's autoAttack fires right after this emit).
+  engine.on('scene:entered', ({ sceneId, scene, isEntry, startsCombat }) => {
+    if (!isEntry || engine.inCombat || startsCombat) return;
     if (!isMuseumRoom(scene, engine.state.getDisplaysForScene(sceneId).length > 0)) return;
     engine.setCustomUIOpen(true);
     new CuratorUI(engine).render();
@@ -323,7 +330,10 @@ export default function curatorPlugin(engine) {
   // 3. Register custom action handlers
   engine.registerAction("build_wing", (action, engine) => {
     const hall = findHall(engine);
-    if (!hall) return;
+    // No layout, no construction: a built wing's map geometry is derived from
+    // museumLayout, so without one the wing would land nowhere. The hall's
+    // panel hides the build option on the same condition.
+    if (!hall || !engine.pluginConfig('curator').museumLayout) return;
     const cost = action.cost ?? engine.pluginConfig('curator').wingCost ?? 0;
     if (engine.state.getPlayer().resources.gold < cost) {
       engine.log(LOG.SYSTEM, engine.t('ui.notEnoughGold'));
@@ -478,6 +488,10 @@ export class CuratorUI {
       wingsSection.appendChild(btn);
     }
     panel.insertBefore(wingsSection, skillsContainer);
+
+    // No layout, no construction (the build_wing action refuses on the same
+    // condition): a built wing's geometry is derived from museumLayout.
+    if (!this.engine.pluginConfig('curator').museumLayout) return;
 
     const cost = this.engine.pluginConfig('curator').wingCost ?? 0;
     const affordable = this.engine.state.getPlayer().resources.gold >= cost;

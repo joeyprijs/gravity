@@ -80,12 +80,17 @@ export class UIManager {
       dwell = {
         card,
         timer: setTimeout(() => {
+          dwell = null;
+          // A re-render mid-dwell detaches the card without a mouseout, so the
+          // timer would fire on the old node and spend a dot the player only
+          // rested on for part of the dwell. A detached card spends nothing —
+          // its on-screen replacement starts a fresh dwell when hovered.
+          if (!card.isConnected) return;
           card.classList.remove(CSS.CARD_NEW);
           // The card names its own entry: an item id in the inventory, a
           // mission id in the quest log.
           this._newItems.delete(card.dataset.item);
           this._newQuests.delete(card.dataset.mission);
-          dwell = null;
         }, NEW_DOT_DWELL_MS),
       };
     });
