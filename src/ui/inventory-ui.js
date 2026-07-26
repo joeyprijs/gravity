@@ -1,5 +1,5 @@
-import { createElement, buildCard, createSectionToggles, getItemLabel, itemStatLines } from "../core/utils.js";
-import { EL, CSS, WEAPON_SLOTS } from "../core/config.js";
+import { createElement, buildCard, createSectionToggles, getItemLabel, itemCardStats } from "../core/utils.js";
+import { EL, CSS } from "../core/config.js";
 
 // Group key for the inventory's in-memory section collapse state — a
 // per-session UI preference reset on reload, not saved (see
@@ -7,7 +7,9 @@ import { EL, CSS, WEAPON_SLOTS } from "../core/config.js";
 const INVENTORY_SECTION_GROUP = 'inventory';
 
 // InventoryUI renders the inventory and equipment sidebar panels. Every item
-// renders as a standard card (see buildCard); sections collapse via their
+// renders as a standard card (see buildCard) and an item you can act on IS
+// its card — clicking it uses, equips or unequips the thing (see _itemRow),
+// so there are no per-item action buttons. Sections collapse via their
 // headings so a grown inventory stays navigable.
 export class InventoryUI {
   constructor(engine) {
@@ -35,22 +37,17 @@ export class InventoryUI {
     }
 
     // Equipped section — no description line: the slot and stats are what
-    // matter for gear you already know you own.
+    // matter for gear you already know you own. Clicking a card takes it off.
     if (equippedEntries.length > 0) {
       const ul = this._buildSection(panel, 'equipped', this.engine.t('ui.equippedSection'), equippedEntries.length);
       equippedEntries.forEach(([slot, itemId]) => {
         const itemData = this.engine.data.items[itemId];
         if (!itemData) return;
-        const btn = createElement('button', [CSS.BTN, CSS.BTN_ITEM], this.engine.t('inventory.unequipButton'));
-        btn.dataset.action = 'unequip';
-        btn.dataset.slot = slot;
-        ul.appendChild(buildCard({
-          tag: 'li',
+        ul.appendChild(this._itemRow({
           title: itemData.name,
           body: this.engine.t('ui.equippedTo', { slot }),
           stats: this._itemStats(itemData),
-          actions: [btn],
-        }));
+        }, { action: 'unequip', slot }));
       });
     }
 
@@ -82,55 +79,50 @@ export class InventoryUI {
           newTypes.has(type) && this._toggles.isCollapsed(`type:${type}`));
       }
 
-      const actions = [];
-      if (itemData.type === 'Consumable') {
-        const btn = createElement('button', [CSS.BTN, CSS.BTN_ITEM], this.engine.t('inventory.useButton'));
-        btn.dataset.action = 'consume';
-        btn.dataset.item = invItem.item;
-        actions.push(btn);
-      } else if (itemData.type === 'Weapon' || itemData.type === 'Spell') {
-        for (const [slot, labelKey] of [[WEAPON_SLOTS[0], 'inventory.leftHandButton'], [WEAPON_SLOTS[1], 'inventory.rightHandButton']]) {
-          const btn = createElement('button', [CSS.BTN, CSS.BTN_ITEM], this.engine.t(labelKey));
-          btn.dataset.action = 'equip';
-          btn.dataset.slot = slot;
-          btn.dataset.item = invItem.item;
-          actions.push(btn);
-        }
-      } else if (itemData.type === 'Armor') {
-        const btn = createElement('button', [CSS.BTN, CSS.BTN_ITEM], this.engine.t('inventory.equipButton'));
-        btn.dataset.action = 'equip';
-        btn.dataset.slot = itemData.slot;
-        btn.dataset.item = invItem.item;
-        actions.push(btn);
-      }
+      // What clicking the card does. Gear equips into the slot the engine
+      // picks for it (hand items alternate left/right — see systems/items.js),
+      // so the card carries the item, never a slot.
+      let dataset = null;
+      if (itemData.type === 'Consumable') dataset = { action: 'consume', item: invItem.item };
+      else if (['Weapon', 'Spell', 'Armor'].includes(itemData.type)) dataset = { action: 'equip', item: invItem.item };
 
-      const title = getItemLabel(this.engine.data.items, invItem.item, invItem.amount);
-      // A freshly-gained item wears a dot until the player leaves the tab.
-      const classes = newItems?.has(invItem.item) ? [CSS.CARD_NEW] : [];
-      // Actionless items (keepsakes, key items): a standard card, no buttons.
-      if (actions.length === 0) {
-        currentUl.appendChild(buildCard({
-          tag: 'li',
-          title,
-          body: itemData.description,
-          stats: this._itemStats(itemData),
-          classes,
-        }));
-        return;
-      }
-
-      currentUl.appendChild(buildCard({
-        tag: 'li',
-        title,
+      const spec = {
+        title: getItemLabel(this.engine.data.items, invItem.item, invItem.amount),
         body: [
           itemData.description,
           itemData.type === 'Armor' && itemData.slot ? this.engine.t('ui.armorSlot', { slot: itemData.slot }) : null,
         ],
         stats: this._itemStats(itemData),
-        actions,
-        classes,
-      }));
+        // A freshly-gained item wears a dot until the player rests the pointer
+        // on its card (see UIManager.setup) or leaves the tab.
+        classes: newItems?.has(invItem.item) ? [CSS.CARD_NEW] : [],
+      };
+
+      // Actionless items (keepsakes, key items): a plain card, nothing to
+      // click. It still names its item in the dataset — that's what the
+      // hover-to-acknowledge handler reads off a dotted card (see
+      // UIManager.setup); an actionable card carries it already.
+      if (dataset) {
+        currentUl.appendChild(this._itemRow(spec, dataset));
+      } else {
+        const card = buildCard({ tag: 'li', ...spec });
+        card.dataset.item = invItem.item;
+        currentUl.appendChild(card);
+      }
     });
+  }
+
+  // A row whose whole card is the control: a button card wrapped in an <li>,
+  // so the section stays a real list while the card itself is what you click.
+  // The dataset drives the panel's delegated click handler (see UIManager);
+  // CSS.BTN_ITEM is the hook it — and combat's "no acting on your enemy's
+  // turn" blanket disable — looks for.
+  _itemRow(spec, dataset) {
+    const card = buildCard({ ...spec, tag: 'button', classes: [CSS.BTN_ITEM, ...(spec.classes ?? [])] });
+    Object.assign(card.dataset, dataset);
+    const li = createElement('li');
+    li.appendChild(card);
+    return li;
   }
 
   // Builds a collapsible section (heading toggle + card list) and returns
@@ -153,15 +145,9 @@ export class InventoryUI {
     return ul;
   }
 
-  // The card's stat lines — the combat attack buttons' lines (see
-  // itemStatLines; the hit line shows the player's current modifier), plus
-  // what the item is worth. Worth is inventory-only: it's what a merchant
-  // pays for the thing, nothing an attack button needs. An item a merchant
-  // won't pay for (value 0, the quest keys) stays quiet about it.
+  // The card's stat lines (see itemCardStats), bound to the engine's
+  // translator and the player's current attributes.
   _itemStats(itemData) {
-    const t = this.engine.t.bind(this.engine);
-    const lines = itemStatLines(t, itemData, this.engine.state.getPlayer().attributes);
-    if (itemData.value > 0) lines.push(t('itemStats.value', { value: itemData.value }));
-    return lines.length > 0 ? lines : undefined;
+    return itemCardStats(this.engine.t.bind(this.engine), itemData, this.engine.state.getPlayer().attributes);
   }
 }

@@ -103,11 +103,12 @@ export class SceneRenderer {
     this._awardSceneXP(scene, sceneId);
     this.renderOptions(scene);
 
-    // Emit scene:entered once per actual entry so quest triggers and other
-    // listeners don't fire on skill-check re-renders or save restores.
-    if (scene.questTrigger) {
-      this.engine.emit('scene:entered', { sceneId, scene });
-    }
+    // Emitted after the options render, so a listener may replace the panel
+    // with a UI of its own (the curator opens its dashboard on entering a wing).
+    // `isEntry` separates walking in from a same-scene re-render or a save
+    // restore — listeners that act on arrival must check it. Quest triggers do
+    // not: they re-check scene.questTrigger and are idempotent.
+    this.engine.emit('scene:entered', { sceneId, scene, isEntry });
 
     if (!skipAutoAttack && this._maybeStartAutoAttack(scene)) return;
 
@@ -578,6 +579,7 @@ export class SceneRenderer {
       const hook = this.engine.getDescriptionHook(scene.descriptionHook);
       if (hook) desc += hook(this.engine);
     }
+
 
     // Plugin-registered decorators may append dynamic HTML to any scene's
     // description (e.g. the curator plugin's exhibits table).

@@ -599,9 +599,9 @@ Weapons, spells, armor, and consumables. All mechanical stats live inside `attri
 }
 ```
 
-Item `type` is one of `Weapon`, `Spell`, `Armor`, `Consumable`, or `Flavour` (the default when omitted — keepsakes and key items). The type drives behavior: weapons and spells equip to a hand and attack; armor equips to its `slot`; consumables get a "Use" button; flavour items just sit in the pack.
+Item `type` is one of `Weapon`, `Spell`, `Armor`, `Consumable`, or `Flavour` (the default when omitted — keepsakes and key items). The type drives behavior: weapons and spells equip to a hand and attack; armor equips to its `slot`; consumables are drunk/used; flavour items just sit in the pack. In the inventory the card *is* the control — clicking an item equips, uses or unequips it, with no per-item buttons.
 
-Equipment `slot` names are **game-defined** — whatever keys appear in `rules.playerDefaults.equipment` (the demo uses `Head`, `Amulet`, `Torso`, `Left Hand`, `Right Hand`, `Legs`). Only the two hand slots are engine-fixed, because combat reads weapons from them. Both `type` and `slot` are validated at boot.
+Equipment `slot` names are **game-defined** — whatever keys appear in `rules.playerDefaults.equipment` (the demo uses `Head`, `Amulet`, `Torso`, `Left Hand`, `Right Hand`, `Legs`). Only the two hand slots are engine-fixed, because combat reads weapons from them. A weapon or spell goes to a hand by virtue of its `type`, so the engine picks the hand and the item's own `slot` is ignored (most weapons declare none): an empty hand first, left before right, and otherwise alternating left, right, left… Both `type` and `slot` are validated at boot.
 
 *   `attackAttribute` names the attribute whose modifier the wielder adds to attack rolls — accuracy belongs to the character, not the weapon.
 *   Armor and relics use `attributes.attributeBonuses` (e.g. `{ "perception": 1 }`) and/or `armorClassBonus` to raise attributes while worn.

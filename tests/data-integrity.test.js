@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { validateGameData, normalizeCarriedItems } from '../src/core/validate.js';
 import { ACTIONS, ITEM_TYPES } from '../src/core/config.js';
+import { layoutMuseum } from '../src/plugins/curator.js';
 
 // Integration coverage for the *shipped* example game. The unit tests in
 // validate.test.js exercise synthetic fixtures; these load the real data/
@@ -116,6 +117,46 @@ test('every audio path referenced by the shipped data exists on disk', (t) => {
   for (const path of paths) {
     assert.ok(existsSync(new URL(`../${path}`, import.meta.url)), `missing audio file "${path}"`);
   }
+});
+
+// ── Museum map layout ────────────────────────────────────────────────────────
+// The curator derives museum geometry from each wing's slot; the coordinates in
+// the scene files are the fallback for running without the plugin. Two sources,
+// so they must agree — otherwise the map jumps the moment the plugin loads, and
+// nobody would know which of the two they were supposed to edit.
+
+test('the shipped museum scenes are authored where the curator computes them', () => {
+  const config = index.plugins.find(p => p.id === 'curator')?.config?.museumLayout;
+  assert.ok(config, 'the curator declares a museumLayout');
+
+  const engine = { data: { scenes: structuredClone(data.scenes) }, pluginConfig: () => ({ museumLayout: config }) };
+  layoutMuseum(engine);
+
+  const museumScenes = Object.entries(data.scenes)
+    .filter(([, s]) => s.museumHall || Number.isInteger(s.museumSlot));
+  assert.ok(museumScenes.length >= 3, 'the demo ships a hall and its wings');
+  for (const [id, scene] of museumScenes) {
+    assert.deepEqual(scene.mapDefinitions, engine.data.scenes[id].mapDefinitions,
+      `scene "${id}" is authored at coordinates the curator would move it away from`);
+  }
+});
+
+// Growth is the point: a museum with more wings than the demo ships must still
+// tile without overlaps, and the hall must cover every column.
+test('the museum layout stays overlap-free as wings are added', () => {
+  const config = index.plugins.find(p => p.id === 'curator').config.museumLayout;
+  const scenes = { hall: { museumHall: true } };
+  for (let slot = 0; slot < 24; slot++) scenes[`wing${slot}`] = { museumSlot: slot };
+  layoutMuseum({ data: { scenes }, pluginConfig: () => ({ museumLayout: config }) });
+
+  const wings = Object.values(scenes).filter(s => Number.isInteger(s.museumSlot));
+  const spots = wings.map(s => `${s.mapDefinitions.left},${s.mapDefinitions.top}`);
+  assert.equal(new Set(spots).size, wings.length, 'every wing has the map to itself');
+
+  const hall = scenes.hall.mapDefinitions;
+  const rightmost = Math.max(...wings.map(s => s.mapDefinitions.left + s.mapDefinitions.width));
+  assert.equal(hall.left + hall.width, rightmost, 'the hall reaches the last column');
+  assert.ok(rightmost <= index.worldMapSize.width, `24 wings (${rightmost}px) fit the world canvas`);
 });
 
 test('config.ITEM_TYPES matches the item.schema.json type enum', () => {

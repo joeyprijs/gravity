@@ -1,4 +1,4 @@
-import { LOG } from "../core/config.js";
+import { LOG, WEAPON_SLOTS } from "../core/config.js";
 import { equipmentAttributeBonuses } from "../core/utils.js";
 import { parseDamage } from "./dice.js";
 
@@ -103,20 +103,42 @@ export function useItem(engine, itemId) {
   }
 }
 
+// The item types held in a hand — the same pair combat reads its attacks from.
+// A weapon or spell goes to a hand whatever slot it declares (many declare
+// none at all), so the type decides, not the item's slot.
+const HAND_TYPES = new Set(['Weapon', 'Spell']);
+
 /**
- * Equips an item into a slot (the item's own slot when none is given),
- * swapping the worn attribute bonuses as one delta and spending the item's
- * AP cost.
+ * The hand a weapon or spell goes into: an empty hand (left before right),
+ * otherwise the hand opposite the one filled last — so successive equips
+ * alternate left, right, left… The alternation is session memory
+ * (engine._lastEquippedHand); after a reload the next equip starts left again.
  *
  * @param {object} engine - The RPGEngine instance.
- * @param {string|null} slot - Target slot, or null to use itemData.slot.
+ * @returns {string} A hand slot name.
+ */
+function pickHand(engine) {
+  const equipment = engine.state.getPlayer().equipment;
+  const empty = WEAPON_SLOTS.find(hand => !equipment[hand]);
+  if (empty) return empty;
+  return engine._lastEquippedHand === WEAPON_SLOTS[0] ? WEAPON_SLOTS[1] : WEAPON_SLOTS[0];
+}
+
+/**
+ * Equips an item, swapping the worn attribute bonuses as one delta and
+ * spending the item's AP cost. The slot is the engine's call: a hand item
+ * alternates between the hands (see pickHand), everything else goes to the
+ * slot it declares.
+ *
+ * @param {object} engine - The RPGEngine instance.
  * @param {string} itemId - The item to equip.
  */
-export function equipItem(engine, slot, itemId) {
+export function equipItem(engine, itemId) {
   if (engine.isGameOver) return;
   const itemData = engine.data.items[itemId];
-  const targetSlot = slot || itemData?.slot;
-  if (!itemData || !targetSlot) return;
+  if (!itemData) return;
+  const targetSlot = HAND_TYPES.has(itemData.type) ? pickHand(engine) : itemData.slot;
+  if (!targetSlot) return;
 
   if (engine.state.countPlayerItem(itemId, { includeEquipped: false }) <= 0) return;
 
@@ -138,6 +160,7 @@ export function equipItem(engine, slot, itemId) {
     deltas[key] = (newBonuses[key] ?? 0) - (oldBonuses[key] ?? 0);
   }
   engine.state.modifyPlayerStats(deltas);
+  if (WEAPON_SLOTS.includes(targetSlot)) engine._lastEquippedHand = targetSlot;
   engine.log(LOG.PLAYER, engine.t('player.equipped', { name: itemData.name, slot: targetSlot }));
   engine._spendAP(apCost);
 }

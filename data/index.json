@@ -1,7 +1,7 @@
 {
   "worldMapSize": {
-    "width": 3000,
-    "height": 2000
+    "width": 6000,
+    "height": 3000
   },
   "defaultLanguage": "en",
   "locales": {
@@ -16,7 +16,15 @@
         "en": "./src/plugins/curator/locales/en.json"
       },
       "config": {
-        "installCost": 50
+        "installCost": 50,
+        "wingCost": 250,
+        "museumLayout": {
+          "top": 1800,
+          "left": 2640,
+          "roomWidth": 120,
+          "roomHeight": 100,
+          "roomBackground": "rgba(75, 45, 90, 0.9)"
+        }
       }
     }
   ],
@@ -70,6 +78,7 @@
     "home_kitchen": "data/scenes/player_home/kitchen.json",
     "home_living_room": "data/scenes/player_home/living_room.json",
     "home_museum_armor": "data/scenes/player_home/museum_armor.json",
+    "home_museum_relics": "data/scenes/player_home/museum_relics.json",
     "home_museum": "data/scenes/player_home/museum.json"
   },
   "missions": {

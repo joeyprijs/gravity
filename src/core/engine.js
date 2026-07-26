@@ -57,6 +57,11 @@ export class RPGEngine {
     // can never smear across per-subsystem booleans.
     this.mode = 'scene';
 
+    // The hand a weapon or spell last went into, so equipping alternates
+    // left, right, left… (see systems/items.js). Session-only, not saved: a
+    // reload starts from the left hand again.
+    this._lastEquippedHand = null;
+
     this._actionRegistry = new Map();
     this._descriptionHooks = new Map();
     this._sceneDecorators = [];
@@ -315,7 +320,7 @@ export class RPGEngine {
   // AP-cost checks and effect handling live in that module.
 
   useItem(itemId)          { return items.useItem(this, itemId); }
-  equipItem(slot, itemId)  { return items.equipItem(this, slot, itemId); }
+  equipItem(itemId)        { return items.equipItem(this, itemId); }
   unequipItem(slot)        { return items.unequipItem(this, slot); }
 
   // Deducts AP in combat. Returns false (blocking the action) if the cost

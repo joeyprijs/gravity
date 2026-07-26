@@ -74,10 +74,13 @@
     "questsActive": "Active Quests",
     "questsCompleted": "Completed Quests",
     "chestTitle": "Chest",
+    "chestContents": "Contents",
+    "personalTitle": "Personal Chest",
     "chestEmpty": "Chest is empty.",
     "chestDone": "Done",
-    "chestWithdraw": "Take",
-    "chestDeposit": "Deposit",
+    "chestClose": "Close Chest",
+    "chestTableItem": "Stored",
+    "chestTableAmount": "Amount",
     "inventoryTitle": "Your Inventory",
     "skillsHeading": "Skills",
     "tabInventory": "Inventory",
@@ -149,13 +152,6 @@
     "attributeBonus": "{attribute}: {value}",
     "modifyResource": "{resource}: {value}",
     "value": "Value: {value} Gold"
-  },
-  "inventory": {
-    "useButton": "Use",
-    "equipButton": "Equip",
-    "unequipButton": "Unequip",
-    "leftHandButton": "Left hand",
-    "rightHandButton": "Right hand"
   },
   "loot": {
     "foundGold": "Found {amount} Gold.",

@@ -1,0 +1,39 @@
+{
+  "id": "home_museum_relics",
+  "name": "Relic Wing",
+  "region": "player_home",
+  "museumSlot": 1,
+  "mapDefinitions": {
+    "top": 1900,
+    "left": 2640,
+    "width": 120,
+    "height": 100,
+    "background": "rgba(75, 45, 90, 0.9)"
+  },
+  "description": "You step into the Relic Wing, the oldest hall your family still keeps open. Mahogany stands and glass cases wait in a patient row, each one lit from above, ready for whatever you carry home.",
+  "supportsExhibits": true,
+  "showsReputation": true,
+  "displays": [
+    {
+      "id": "relic_wing_pedestal",
+      "name": "Mahogany Pedestal"
+    },
+    {
+      "id": "relic_wing_glass_case",
+      "name": "Glass Case",
+      "item": "rusty_sword"
+    }
+  ],
+  "options": [
+    {
+      "text": "Go back to Museum Lobby",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "home_museum"
+        }
+      ]
+    }
+  ]
+}

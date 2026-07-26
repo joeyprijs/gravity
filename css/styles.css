@@ -291,10 +291,10 @@ body {
 
    Two shapes, one look:
    - interactive card:  <button class="card"> — the entire card is the control
-   - container card:    <li>/<div class="card"> with buttons in .card__actions
+   - container card:    <li>/<div class="card"> — nothing to click
 
    Structure: .card__title (bold first line) → .card__body (muted lines)
-   → .card__stats (muted stat lines, one per row) → .card__actions.
+   → .card__stats (muted stat lines, one per row).
    ========================================================================== */
 
 .card {
@@ -370,24 +370,17 @@ button.card:disabled {
   grid-column: 1 / -1;
 }
 
-.card__actions {
-  display: flex;
-  gap: var(--spacing);
-  margin-top: calc(var(--spacing) * 2);
-}
-
-/* Card lists (inventory sections, quests): plain stacked columns. */
+/* Card lists (inventory sections, quests): plain stacked columns. The gap
+   sits between list rows, not on the card — an inventory item you can act on
+   is a button card inside its <li>, so a card-anchored margin would collapse
+   (every such card is its row's only child). */
 .card-list {
   list-style: none;
   padding: 0;
 }
 
-.card-list .card {
-  margin-bottom: calc(var(--spacing) * 2);
-
-  &:last-child {
-    margin-bottom: 0;
-  }
+.card-list > li + li {
+  margin-top: calc(var(--spacing) * 2);
 }
 
 .card--completed {
@@ -453,7 +446,10 @@ button.section-toggle--collapsed .section-toggle__label::before {
 /* A section holding a new item shows the accent dot right after its name, so a
    collapsed section still flags there's something new inside. Same dot as the
    tab nav and item cards. */
-/* .btn--item — inventory action buttons (Use, Equip, Unequip, Deposit) */
+/* .btn--item — an inventory item card you can act on: clicking it uses,
+   equips or unequips the item. It looks like any other card (the marker is
+   what the click handler and combat's blanket disable look for), so this hook
+   is where a designer would set such cards apart. */
 .btn--item { }
 
 /* Skills tab: attributes as a list — label and value in two left-aligned
@@ -887,7 +883,10 @@ button.section-toggle--collapsed .section-toggle__label::before {
 }
 
 
-.panel-section .card {
+/* Cards stacked straight into a panel section (chest rows, store rows, the
+   curator's exhibits). Cards inside a .card-list take their gap from the list
+   instead — hence the direct-child selector. */
+.panel-section > .card {
   margin-bottom: calc(var(--spacing) * 2);
 
   &:last-child {
@@ -1170,14 +1169,22 @@ button.section-toggle--collapsed .section-toggle__label::before {
 }
 
 /* ==========================================================================
- CURATOR PLUGIN — EXHIBITS TABLE
+ CONTENTS TABLE — what a container holds, appended to a scene's description
+ (a chest's stacks, a museum room's display cases). Built by
+ buildContentsTable; shared so every container reads the same.
+
+ The .exhibits-* selectors are the pre-rename names, kept as aliases because a
+ save file stores its narrative log as rendered HTML — scrolling back through a
+ game saved before the rename would otherwise show bare, unstyled tables.
  ========================================================================== */
+.contents-table-container,
 .exhibits-table-container {
   margin-top: 20px;
   border-top: 1px solid var(--panel-border);
   padding-top: 15px;
 }
 
+.contents-table,
 .exhibits-table {
   width: 100%;
   border-collapse: collapse;
@@ -1185,6 +1192,7 @@ button.section-toggle--collapsed .section-toggle__label::before {
   font-size: 0.95em;
 }
 
+.contents-table thead tr,
 .exhibits-table thead tr {
   border-bottom: 2px solid var(--panel-border);
   color: var(--accent-color);
@@ -1193,49 +1201,67 @@ button.section-toggle--collapsed .section-toggle__label::before {
   letter-spacing: 0.05em;
 }
 
+.contents-table th,
 .exhibits-table th {
   padding: 6px 4px;
   font-weight: 600;
 }
 
+.contents-table tbody tr,
 .exhibits-table tbody tr {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.contents-table td,
 .exhibits-table td {
   padding: 8px 4px;
   color: var(--text-primary);
 }
 
+.contents-table__value--filled,
 .exhibits-table__item--filled {
   font-weight: bold;
   color: var(--accent-color);
 }
 
+.contents-table__value--empty,
 .exhibits-table__item--empty {
   font-style: italic;
   opacity: 0.5;
 }
 
+/* Stands in for the table when the container holds nothing at all. */
+.contents-table__empty {
+  font-style: italic;
+  opacity: 0.5;
+}
+
+/* ==========================================================================
+ CURATOR PLUGIN — STANDING REPUTATION LINE
+ ========================================================================== */
+/* Sits inside the options panel's location reminder, so the heading's
+   underline closes off the name and the reputation together. */
+.curator-scene-rep {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing);
+  margin-top: var(--spacing);
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
+.curator-scene-rep__label {
+  color: var(--text-secondary);
+}
+
+.curator-scene-rep__value {
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
 /* ==========================================================================
  CURATOR PLUGIN — DASHBOARD PANEL
  ========================================================================== */
-.curator-panel__rep {
-  padding: 12px 15px;
-  margin-bottom: 15px;
-  background: var(--list-item-bg);
-  border: 1px solid var(--panel-border);
-}
-
-.curator-panel__rep-value {
-  font-weight: bold;
-}
-
-.curator-panel__item-info {
-  padding: 15px;
-  margin-bottom: 15px;
-}
-
 .curator-panel__empty-note {
   text-align: center;
   padding: 20px;

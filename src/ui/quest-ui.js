@@ -15,13 +15,19 @@ export class QuestUI {
     const activeList = [];
     const completedList = [];
 
-    // A started/completed quest wears a dot until the player leaves the tab.
-    const buildQuestItem = (mId, mData, extraClass = null) => buildCard({
-      tag: 'li',
-      title: mData.name,
-      body: mData.description,
-      classes: [extraClass, newQuests?.has(mId) ? CSS.CARD_NEW : null].filter(Boolean),
-    });
+    // A started/completed quest wears a dot until the player rests the pointer
+    // on its card (see UIManager.setup) or leaves the tab. The card names its
+    // mission in the dataset — that's what the hover handler acknowledges.
+    const buildQuestItem = (mId, mData, extraClass = null) => {
+      const card = buildCard({
+        tag: 'li',
+        title: mData.name,
+        body: mData.description,
+        classes: [extraClass, newQuests?.has(mId) ? CSS.CARD_NEW : null].filter(Boolean),
+      });
+      card.dataset.mission = mId;
+      return card;
+    };
 
     for (const [mId, mData] of Object.entries(this.engine.data.missions)) {
       const status = this.engine.state.getMissionStatus(mId);
