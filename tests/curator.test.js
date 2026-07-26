@@ -321,6 +321,18 @@ test('build_wing: without a museumLayout, nothing is built and nothing is charge
   assert.equal(Object.keys(engine.data.scenes).length, 1, 'no scene synthesized');
 });
 
+test('build_wing: without a configured wingCost, a wing costs the default 250 — never 0', () => {
+  // installCost falls back to a real price; wingCost must too, or a game that
+  // configures the layout but forgets the cost hands out free wings. The
+  // player's 100 gold can't cover the default, so the build is refused.
+  const { engine, registry, calls } = withMuseum({ curator: TEST_LAYOUT });
+  registry.get('build_wing')({ type: 'build_wing', name: 'Marble Hall' }, engine);
+
+  assert.equal(engine.state.getPlayer().resources.gold, 100, 'no gold taken');
+  assert.deepEqual(gameState.pluginState('curator').rooms ?? [], []);
+  assert.equal(calls.logs[0].message, 'ui.notEnoughGold');
+});
+
 test('build_wing: an unaffordable wing is not built', () => {
   const { engine, registry, calls } = withMuseum();
   registry.get('build_wing')({ type: 'build_wing', name: 'Marble Hall', cost: 500 }, engine);

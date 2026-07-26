@@ -22,6 +22,12 @@ let hooksRegistered = false;
 // The curator's save-data bag ({ museumReputation, obtainedItems, rooms }).
 const bag = () => curatorState.pluginState('curator');
 
+// What building a wing costs when the game's config doesn't say — the demo's
+// configured price. One constant because two places must agree on it: the
+// hall's build button (its label and its affordability check) and the
+// build_wing action that does the charging.
+const DEFAULT_WING_COST = 250;
+
 /** Returns the museum reputation currently shown to the player (permanent + display bonus). */
 export function getMuseumReputation() {
   return curatorState?.getPlayer()?.attributes?.reputation ?? 0;
@@ -334,7 +340,7 @@ export default function curatorPlugin(engine) {
     // museumLayout, so without one the wing would land nowhere. The hall's
     // panel hides the build option on the same condition.
     if (!hall || !engine.pluginConfig('curator').museumLayout) return;
-    const cost = action.cost ?? engine.pluginConfig('curator').wingCost ?? 0;
+    const cost = action.cost ?? engine.pluginConfig('curator').wingCost ?? DEFAULT_WING_COST;
     if (engine.state.getPlayer().resources.gold < cost) {
       engine.log(LOG.SYSTEM, engine.t('ui.notEnoughGold'));
       return;
@@ -493,7 +499,7 @@ export class CuratorUI {
     // condition): a built wing's geometry is derived from museumLayout.
     if (!this.engine.pluginConfig('curator').museumLayout) return;
 
-    const cost = this.engine.pluginConfig('curator').wingCost ?? 0;
+    const cost = this.engine.pluginConfig('curator').wingCost ?? DEFAULT_WING_COST;
     const affordable = this.engine.state.getPlayer().resources.gold >= cost;
     const section = this._constructionSection();
     const buildBtn = buildOptionButton(
