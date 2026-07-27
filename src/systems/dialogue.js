@@ -391,7 +391,10 @@ export class DialogueSystem {
         }
         this.engine.state.modifyPlayerStat('gold', -price);
         this.engine.state.addToInventory(itemId, 1);
-        this.engine.log(LOG.PLAYER, this.engine.t('dialogue.bought', { name: item.name, price }), 'loot');
+        // Narrated, not logged in the player's voice: buying is a card click
+        // inside a panel, and the line reports what happened — the same shape
+        // as lifting a relic out of a chest or a display case.
+        this.engine.log(LOG.SYSTEM, this.engine.t('dialogue.bought', { name: item.name, price }), 'loot');
       };
       buySection.appendChild(btn);
     });
@@ -424,7 +427,7 @@ export class DialogueSystem {
       btn.onclick = () => {
         this.engine.state.removeFromInventory(invItem.item, 1);
         this.engine.state.modifyPlayerStat('gold', sellValue);
-        this.engine.log(LOG.PLAYER, this.engine.t('dialogue.sold', { name: item.name, price: sellValue }), 'loot');
+        this.engine.log(LOG.SYSTEM, this.engine.t('dialogue.sold', { name: item.name, price: sellValue }), 'loot');
       };
       sellSection.appendChild(btn);
     });

@@ -310,9 +310,11 @@ export default function curatorPlugin(engine) {
       const sceneId = engine.state.getCurrentSceneId();
       const hasDisplays = engine.state.getDisplaysForScene(sceneId).length > 0;
       if (!isMuseumRoom(scene, hasDisplays)) return;
-      const btn = buildOptionButton(engine.t('plugin.curator.curatorTitle'));
+      // Named for the act, not the panel: this is the museum's "Open Personal
+      // Chest", and handleOption logs its text as the player's choice.
+      const btn = buildOptionButton(engine.t('plugin.curator.curatorOpen'));
       btn.onclick = () => engine.scene.handleOption({
-        text: engine.t('plugin.curator.curatorTitle'),
+        text: engine.t('plugin.curator.curatorOpen'),
         actions: [{ type: "manage_exhibits" }]
       });
       optionsContainer.appendChild(btn);
@@ -412,10 +414,14 @@ export class CuratorUI {
     const scene = this.engine.data.scenes[sceneId];
     if (!scene) return;
 
-    // The panel names the room, not itself: it opens on arrival and is what the
-    // room looks like, so the heading stays the location reminder it is
-    // everywhere else.
-    const { panel, container, skillsContainer } = resetOptionsPanel(scene.title || scene.name);
+    // The panel names what you are looking at, never itself — a chest's panel
+    // names the chest, a dialogue names the speaker. On the dashboard that is
+    // the room (the panel opens on arrival and IS what the room looks like);
+    // drilled into a case, it is the case, so the heading follows you in.
+    const display = context
+      ? this.engine.state.getDisplaysForScene(sceneId).find(d => d.id === context)
+      : null;
+    const { panel, container, skillsContainer } = resetOptionsPanel(display?.name ?? (scene.title || scene.name));
 
     // resetOptionsPanel rewrote the reminder, so the standing reputation line
     // has to be rebuilt here too — it reads the same, in the same place, with
@@ -448,6 +454,10 @@ export class CuratorUI {
     if (!back) {
       const doneBtn = buildOptionButton(this.engine.t('plugin.curator.curatorDone'));
       doneBtn.onclick = () => {
+        // Terse button, act-shaped log line — the chest's "Done" logs "Close
+        // Chest" the same way. The back-button path below needs none: walking
+        // out through handleOption logs the option's own text.
+        this.engine.log(LOG.PLAYER, this.engine.t('plugin.curator.curatorClose'), 'choice');
         this.engine.setCustomUIOpen(false);
         this.engine.scene.renderOptions(scene);
       };
@@ -538,9 +548,16 @@ export class CuratorUI {
         const badge = d.item ? getItemLabel(this.engine.data.items, d.item) : this.engine.t('plugin.curator.curatorEmpty');
         const btn = buildOptionButton(d.name, badge);
         btn.onclick = () => {
+          // Panel buttons are not scene options, so handleOption's choice log
+          // never runs for them — stepping up to a case logs itself, in the
+          // player's voice and as the act, the way "Open Personal Chest" does.
+          // The card stays terse (a name and its relic); the log line carries
+          // the act, exactly as the chest's "Done" button logs "Close Chest".
           if (d.item) {
+            this.engine.log(LOG.PLAYER, this.engine.t('plugin.curator.displayApproach', { display: d.name }), 'choice');
             this.render('inspect_display', d.id);
           } else {
+            this.engine.log(LOG.PLAYER, this.engine.t('plugin.curator.displayApproachEmpty', { display: d.name }), 'choice');
             this.render('select_artifact', d.id);
           }
         };
@@ -599,12 +616,16 @@ export class CuratorUI {
 
     // 1. Back button
     const backBtn = buildOptionButton(this.engine.t('plugin.curator.curatorBack'));
-    backBtn.onclick = () => this.render('dashboard');
+    backBtn.onclick = () => {
+      this.engine.log(LOG.PLAYER, this.engine.t('plugin.curator.displayLeave', { display: display.name }), 'choice');
+      this.render('dashboard');
+    };
     container.appendChild(backBtn);
 
     // 2. Display Details Section
+    // No section heading: the panel's own heading is the case's name now, and
+    // this section holds nothing but the relic standing in it.
     const detailSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
-    detailSection.appendChild(createElement('div', CSS.SECTION_HEADING, display.name));
 
     // Item Info — the exhibited item as a standard card, built by the same
     // helpers the inventory uses (buildCard, itemCardStats), so a relic in its
@@ -638,7 +659,10 @@ export class CuratorUI {
 
     // 1. Cancel button
     const cancelBtn = buildOptionButton(this.engine.t('plugin.curator.curatorCancel'));
-    cancelBtn.onclick = () => this.render('dashboard');
+    cancelBtn.onclick = () => {
+      this.engine.log(LOG.PLAYER, this.engine.t('plugin.curator.displayLeaveEmpty', { display: display.name }), 'choice');
+      this.render('dashboard');
+    };
     container.appendChild(cancelBtn);
 
     // 2. Select Artifact Section

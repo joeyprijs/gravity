@@ -45,6 +45,17 @@ The test for every rule here: it must describe what the codebase actually does. 
 - Every player-facing string resolves through `engine.t(key)`. No English sentence fragments assembled in code: lists join via `formatList` (`Intl.ListFormat`), plural-sensitive messages pick a `…One` key variant via `isOne` (`Intl.PluralRules`).
 - Game data renders through `textContent` (`createElement`). `innerHTML` is reserved for engine-authored templates and scene description bodies; any dynamic value embedded there passes through `escapeHtml()`.
 
+### The narrative log's two voices
+
+Every line in the log is either a choice the player made or the world's answer to one. Which it is decides the log type, the grammar, and the string's home:
+
+- **`LOG.PLAYER`, variant `'choice'` — the act.** Written as a label, imperative, no "You": `Open Personal Chest`, `Enter the Relic Wing`, `Step up to the Glass Case`, `Leave the exhibits`. Used for clicks that change what the player is looking at — scene options, and the buttons that open, close, or back out of a panel. The button itself may be terser than the line (`Done` logs `Close Chest`); the log records the act, the button only has to be pressable.
+- **`LOG.SYSTEM` — the outcome.** Second person, full sentence: `You retrieved the Rusty Sword from the chest.`, `You equipped the Simple Dagger in your Left Hand.` Used for clicks that change the world rather than the view — moving an item, buying, equipping, building. These log the result only; a `[Player]` line naming the card that was clicked would be noise.
+
+Combat is the one exception, and deliberate: attacks are logged under their actor, `LOG.PLAYER` for the player's and `enemy.name` for the enemy's, so the exchange reads as two combatants trading blows.
+
+`LOG.NARRATOR`, `LOG.COMBAT` and `LOG.QUEST` exist so a game can label those streams separately; the demo locale maps all of them, and `LOG.SYSTEM`, onto `Narrator`. Because consecutive entries of the same *type* group under one prefix, a run of lines meant to read as one block must share a type — mixing `LOG.SYSTEM` and `LOG.NARRATOR` mid-block prints the same `[Narrator]` label twice.
+
 ### Errors
 
 - Bad *data* degrades gracefully: `console.warn('[Gravity] <where>: <what> — <consequence>')` and a no-op, plus a `validateGameData` rule so authors hear about it at boot.
