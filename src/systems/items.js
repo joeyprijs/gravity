@@ -161,7 +161,9 @@ export function equipItem(engine, itemId) {
   }
   engine.state.modifyPlayerStats(deltas);
   if (WEAPON_SLOTS.includes(targetSlot)) engine._lastEquippedHand = targetSlot;
-  engine.log(LOG.PLAYER, engine.t('player.equipped', { name: itemData.name, slot: targetSlot }));
+  // Narrated: the click on the inventory card is the player's act, this line
+  // is what came of it — the same split every other card in the game follows.
+  engine.log(LOG.SYSTEM, engine.t('player.equipped', { name: itemData.name, slot: targetSlot }));
   engine._spendAP(apCost);
 }
 
@@ -187,6 +189,6 @@ export function unequipItem(engine, slot) {
   engine.state.modifyPlayerStats(Object.fromEntries(
     Object.entries(bonuses).map(([key, bonus]) => [key, -bonus])
   ));
-  engine.log(LOG.PLAYER, engine.t('player.unequipped', { name: itemName, slot }));
+  engine.log(LOG.SYSTEM, engine.t('player.unequipped', { name: itemName, slot }));
   engine._spendAP(unequipCost);
 }

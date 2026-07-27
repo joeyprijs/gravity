@@ -328,6 +328,14 @@
 
         equipCard('Rusty Sword').click();
         assert(equipment()['Left Hand'] === 'rusty_sword', `first equip went to ${JSON.stringify(equipment())}`);
+
+        // The click is the act; the line is what came of it, so it is narrated
+        // — the same split as taking a stack out of a chest.
+        const lastLog = () => $$('#scene-narrative .scene__log').at(-1);
+        assert(text(lastLog()).endsWith('You equipped the Rusty Sword to your Left Hand.'),
+          `equipping is narrated (got "${text(lastLog())}")`);
+        assert(lastLog().classList.contains('scene__log--system'), 'in the narrator\'s voice, not the player\'s');
+
         equipCard('Flames').click();
         assert(equipment()['Right Hand'] === 'flames', `second equip went to ${JSON.stringify(equipment())}`);
 
@@ -339,6 +347,8 @@
           off = $('#inventory-tab button.card[data-action="unequip"]');
         }
         assert(Object.values(equipment()).every(id => !id), 'every slot empty after unequipping by click');
+        assert(text(lastLog()).endsWith('from your Right Hand.'),
+          `unequipping is narrated to match (got "${text(lastLog())}")`);
       });
 
       await step('options tab holds save/load/restart', () => {
@@ -413,7 +423,7 @@
         await until(openPanel, 'the panel to open by itself');
         assert(text($('#scene-location-reminder')).includes('Relic Wing'),
           `the room names itself (got "${text($('#scene-location-reminder'))}")`);
-        assert(!text($('#scene-location-reminder')).includes('Curator Panel'), 'and not the panel');
+        assert(!text($('#scene-location-reminder')).includes('Curate the exhibits'), 'and not the panel');
         assert($('#scene-location-reminder .curator-scene-rep'), 'the reputation line stands with the panel open');
         assert($$('.curator-scene-rep').length === 1, 'shown once, not twice');
         assert(text($('.curator-scene-rep__value')) === '12 Points', `value reads "${text($('.curator-scene-rep__value'))}"`);
@@ -421,7 +431,7 @@
         // A same-scene re-render swaps the panel back out for the room's own
         // options, and must NOT reopen it.
         window.gameEngine.renderScene('home_museum_relics');
-        await until(() => $$('#scene-options .card').some(c => text(c).includes('Curator Panel')), 'the room\'s own options');
+        await until(() => $$('#scene-options .card').some(c => text(c).includes('Curate the exhibits')), 'the room\'s own options');
         assert(!openPanel(), 'a re-render leaves the panel closed');
         assert(text($('.curator-scene-rep__value')) === '12 Points', 'the line reads the same either way');
       });
@@ -440,6 +450,94 @@
         exit.click();
         await until(() => text($('#scene-location-reminder')).includes('Museum Lobby'), 'the lobby, in one click');
         assert(window.gameEngine.state.getCurrentSceneId() === 'home_museum', 'no stop-off in the wing\'s options');
+      });
+
+      await step('stepping up to a display case, and away again, is the player\'s choice', async () => {
+        // A panel button is not a scene option, so nothing logs it on the
+        // player's behalf. Stepping up to a case is an act, so it logs as one,
+        // in the same voice and shape as "Open Personal Chest".
+        const panelCards = () => $$('#scene-options-panel button.card');
+        const card = (name) => panelCards().find(b => text(b).includes(name));
+        const lastLog = () => $$('#scene-narrative .scene__log').at(-1);
+        // A run of same-source lines drops the repeated [Player] after the
+        // first, so the prefix is stripped rather than asserted on.
+        const lastLogText = () => text(lastLog()).replace(/^\[\w+\]\s*/, '');
+
+        window.gameEngine.renderScene('home_museum_relics');
+        await until(() => card('Install New Display Case'), 'the wing\'s panel');
+
+        // The panel heading follows the player in: the room on the dashboard,
+        // the case once they are standing at one.
+        const heading = () => text($('#scene-location-reminder'));
+        assert(heading().startsWith('Relic Wing'), `the dashboard names the room (got "${heading()}")`);
+
+        // A filled case: the card is terse, the log line carries the act.
+        card('Glass Case').click();
+        await until(() => card('Back'), 'the inspect screen');
+        assert(lastLogText() === 'Step up to the Glass Case', `approaching is an act (got "${lastLogText()}")`);
+        assert(lastLog().classList.contains('scene__log--choice'), 'logged as the player\'s choice');
+        assert(heading().startsWith('Glass Case'), `the panel names the case (got "${heading()}")`);
+        // The reminder carries .section-heading itself, so it is excluded here.
+        assert(!$$('#scene-options-panel .section-heading')
+          .some(h => h.id !== 'scene-location-reminder' && text(h) === 'Glass Case'),
+          'and does not repeat the name as a section heading');
+        card('Back').click();
+        await until(() => card('Install New Display Case'), 'the dashboard');
+        assert(lastLogText() === 'Step back from the Glass Case', `leaving is an act too (got "${lastLogText()}")`);
+        assert(heading().startsWith('Relic Wing'), `the room takes its heading back (got "${heading()}")`);
+
+        // An empty stand reads differently, and Cancel leaves it standing.
+        card('Mahogany Pedestal').click();
+        await until(() => card('Cancel'), 'the artifact picker');
+        assert(lastLogText() === 'Step up to the empty Mahogany Pedestal',
+          `an empty stand reads differently (got "${lastLogText()}")`);
+        assert(heading().startsWith('Mahogany Pedestal'), `the picker names the stand (got "${heading()}")`);
+        card('Cancel').click();
+        await until(() => card('Install New Display Case'), 'the dashboard');
+        assert(lastLogText() === 'Leave the Mahogany Pedestal empty',
+          `cancelling is an act too (got "${lastLogText()}")`);
+        assert(heading().startsWith('Relic Wing'), `and hands the heading back (got "${heading()}")`);
+
+        // Moving a relic is the world's response, not a choice — narrated,
+        // exactly like taking a stack out of a chest.
+        card('Mahogany Pedestal').click();
+        await until(() => card('Cancel'), 'the artifact picker');
+        card('Healing Potion').click();
+        await until(() => card('Install New Display Case'), 'the dashboard');
+        assert(lastLogText() === 'You arranged the Healing Potion in the Mahogany Pedestal.',
+          `placing is narrated (got "${lastLogText()}")`);
+        assert(lastLog().classList.contains('scene__log--system'), 'in the narrator\'s voice, not the player\'s');
+        card('Mahogany Pedestal').click();
+        await until(() => card('Back'), 'the inspect screen');
+        card('Healing Potion').click();
+        await until(() => card('Install New Display Case'), 'the dashboard');
+        assert(lastLogText() === 'You retrieved the Healing Potion from the Mahogany Pedestal.',
+          `taking is narrated to match (got "${lastLogText()}")`);
+      });
+
+      await step('the curator panel opens and closes in the player\'s voice', async () => {
+        // The museum's "Open Personal Chest" / "Close Chest" pair. Every museum
+        // room in the demo has nothing to do but curate, so its panel carries
+        // the room's exit instead of a Done — a second option is added here to
+        // reach the Done path, then taken away again.
+        const panelCards = () => $$('#scene-options-panel button.card');
+        const lastLogText = () => text($$('#scene-narrative .scene__log').at(-1)).replace(/^\[\w+\]\s*/, '');
+        const lobby = window.gameEngine.data.scenes['home_museum'];
+        lobby.options.push({ text: 'Admire the mosaic', actions: [] });
+
+        try {
+          window.gameEngine.renderScene('home_museum');
+          await until(() => panelCards().some(b => text(b).includes('Build a New Wing')), 'the hall\'s panel');
+          panelCards().find(b => text(b) === 'Done').click();
+          await until(() => $$('#scene-options .card').some(c => text(c).includes('Curate the exhibits')), 'the room\'s options');
+          assert(lastLogText() === 'Leave the exhibits', `closing is an act (got "${lastLogText()}")`);
+
+          $$('#scene-options .card').find(c => text(c).includes('Curate the exhibits')).click();
+          await until(() => panelCards().some(b => text(b).includes('Build a New Wing')), 'the panel again');
+          assert(lastLogText() === 'Curate the exhibits', `and so is opening (got "${lastLogText()}")`);
+        } finally {
+          lobby.options.pop();
+        }
       });
 
       await step('the personal chest: item cards with stats, clicked to move a stack', async () => {
@@ -497,7 +595,7 @@
         await until(() => inChest() === 1, 'the sword to land in the chest');
         assert(inBag() === bagBefore - 1, 'and to leave the bag');
         await until(() => text(chestTable()).includes('Rusty Sword'), 'the table to keep up');
-        const depositLine = $$('#scene-narrative .scene__log').find(p => text(p).includes('You placed Rusty Sword'));
+        const depositLine = $$('#scene-narrative .scene__log').find(p => text(p).includes('You placed the Rusty Sword'));
         assert(depositLine, 'the deposit is narrated');
         assert(firstAfterBlock() === depositLine, 'it is the first line under the table');
         assert(!depositLine.classList.contains('scene__log--grouped'), 'not tucked under it as a continuation');
@@ -738,6 +836,40 @@
         assert(th.textTransform === 'uppercase', `old headers keep their styling (got ${th.textTransform})`);
         assert(td.fontStyle === 'italic', `old empty cells keep theirs (got ${td.fontStyle})`);
         assert(parseFloat(getComputedStyle(table.querySelector('td')).paddingTop) > 0, 'and the cells keep their padding');
+      });
+
+      await step('buying and selling are narrated, the trade buttons are the choice', async () => {
+        // Money changing hands is a consequence, not a choice — same voice as
+        // lifting a relic out of a case. The merchant lives deep in the dungeon,
+        // so the conversation is opened directly rather than walked to. Last in
+        // the run: it leaves the game in a conversation, not in a scene.
+        const engine = window.gameEngine;
+        const cards = () => $$('#scene-options-panel button.card');
+        const lastLog = () => $$('#scene-narrative .scene__log').at(-1);
+        const lastLogText = () => text(lastLog()).replace(/^\[\w+\]\s*/, '');
+
+        engine.state.modifyPlayerStat('gold', 500);
+        engine.dialogueSystem.startDialogue('mysterious_stranger');
+        await until(() => cards().some(c => text(c).includes('Let\'s trade')), 'the stranger');
+        cards().find(c => text(c).includes('Let\'s trade')).click();
+
+        await until(() => cards().some(c => /^Buy /.test(text(c))), 'the trade screen');
+        assert(lastLogText() === 'Let\'s trade.', `opening the trade is the choice (got "${lastLogText()}")`);
+        assert(lastLog().classList.contains('scene__log--choice'), 'logged in the player\'s voice');
+
+        cards().find(c => /^Buy /.test(text(c))).click();
+        await until(() => /^You bought the /.test(lastLogText()), 'the purchase line');
+        assert(lastLog().classList.contains('scene__log--loot'), 'still gold-coloured');
+        assert(!lastLog().classList.contains('scene__log--choice'), 'but not in the player\'s voice');
+
+        cards().find(c => /^Sell /.test(text(c))).click();
+        await until(() => /^You sold the /.test(lastLogText()), 'the sale line');
+
+        // Backing out of the trade is a choice too, and its label carries no
+        // trailing period — the log line is the button, verbatim.
+        cards().find(c => text(c) === 'Never mind').click();
+        await until(() => cards().some(c => text(c).includes('I must be going')), 'the conversation again');
+        assert(lastLogText() === 'Never mind', `backing out is a choice (got "${lastLogText()}")`);
       });
 
       await step('no uncaught errors during the run', () => {
