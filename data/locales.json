@@ -153,11 +153,11 @@
     "value": "Value: {value} Gold"
   },
   "loot": {
-    "foundGold": "Found {amount} Gold.",
-    "foundItem": "Found {name}.",
+    "foundGold": "You found {amount} Gold.",
+    "foundItem": "You found the {name}.",
     "receivedGold": "You received {amount} Gold!",
-    "receivedItem": "You received {name}!",
-    "foundItems": "Found {list}.",
+    "receivedItem": "You received the {name}!",
+    "foundItems": "You found {list}.",
     "gold": "Gold",
     "xpGained": "+{amount} XP"
   },
@@ -203,11 +203,11 @@
     "retrySpent": "You spend {cost} Luck Point to press your luck. ({remaining} remaining)"
   },
   "player": {
-    "equipped": "You equipped the {name} in your {slot}.",
+    "equipped": "You equipped the {name} to your {slot}.",
     "unequipped": "You unequipped the {name} from your {slot}.",
-    "usedItem": "You used {name} and recovered {amount} HP{rollSuffix}.",
-    "usedItemAp": "You used {name} and recovered {amount} AP{rollSuffix}.",
-    "usedItemResource": "You used {name} and gained {amount} {resource}{rollSuffix}.",
+    "usedItem": "You used the {name} and recovered {amount} HP{rollSuffix}.",
+    "usedItemAp": "You used the {name} and recovered {amount} AP{rollSuffix}.",
+    "usedItemResource": "You used the {name} and gained {amount} {resource}{rollSuffix}.",
     "rollSuffix": " ({dice}: {roll})",
     "teleported": "You gripped the {name} and vanished into thin air...",
     "alreadyHere": "You are already here.",

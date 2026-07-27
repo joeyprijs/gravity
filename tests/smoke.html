@@ -332,7 +332,7 @@
         // The click is the act; the line is what came of it, so it is narrated
         // — the same split as taking a stack out of a chest.
         const lastLog = () => $$('#scene-narrative .scene__log').at(-1);
-        assert(text(lastLog()).endsWith('You equipped the Rusty Sword in your Left Hand.'),
+        assert(text(lastLog()).endsWith('You equipped the Rusty Sword to your Left Hand.'),
           `equipping is narrated (got "${text(lastLog())}")`);
         assert(lastLog().classList.contains('scene__log--system'), 'in the narrator\'s voice, not the player\'s');
 
@@ -865,7 +865,8 @@
         cards().find(c => /^Sell /.test(text(c))).click();
         await until(() => /^You sold the /.test(lastLogText()), 'the sale line');
 
-        // Back out of the trade, then out of the conversation — both choices.
+        // Backing out of the trade is a choice too, and its label carries no
+        // trailing period — the log line is the button, verbatim.
         cards().find(c => text(c) === 'Never mind').click();
         await until(() => cards().some(c => text(c).includes('I must be going')), 'the conversation again');
         assert(lastLogText() === 'Never mind', `backing out is a choice (got "${lastLogText()}")`);
