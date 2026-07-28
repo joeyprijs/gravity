@@ -22,11 +22,6 @@
     {
       "text": "Long Rest",
       "timeCost": 0,
-      "condition": {
-        "not": {
-          "segment": "morning"
-        }
-      },
       "actions": [
         {
           "type": "advance_time",
