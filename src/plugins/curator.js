@@ -10,17 +10,19 @@ import { CSS, EL, LOG } from "../core/config.js";
 // (museumReputation, obtainedItems) lives in the sanctioned plugin bag,
 // state.pluginState('curator').
 
-// Set by registerCuratorState(). Module-level because the hook callbacks need
-// them: the engine's StateManager and the loaded item database. curatorEngine
-// is set by the plugin's register function only — the state-level tests call
-// registerCuratorState on its own, and room synthesis stays out of their way.
+// Hook registrations are per-StateManager: each registered manager gets its
+// own record holding the item database and (when the full plugin runs) the
+// engine, and the hook callbacks read through that record — so two engines
+// booted in one page (a manual-boot harness, the test suite) each keep their
+// own reputation current instead of the first registration winning forever.
+// Repeat registrations only refresh the record (the test suite re-inits state
+// per test). curatorState tracks the most recent registration for the
+// module-level getMuseumReputation() export.
+const registrations = new WeakMap(); // StateManager → { items, engine }
 let curatorState = null;
-let curatorItems = {};
-let curatorEngine = null;
-let hooksRegistered = false;
 
 // The curator's save-data bag ({ museumReputation, obtainedItems, rooms }).
-const bag = () => curatorState.pluginState('curator');
+const bagOf = (state) => state.pluginState('curator');
 
 // What building a wing costs when the game's config doesn't say — the demo's
 // configured price. One constant because two places must agree on it: the
@@ -35,45 +37,54 @@ export function getMuseumReputation() {
 
 // Recomputes the derived reputation attribute from the permanent score plus
 // the reputation of every relic currently on display.
-function updateReputation() {
-  let rep = bag().museumReputation ?? 0;
-  const displays = curatorState.getAllDisplays();
+function updateReputation(state, items) {
+  let rep = bagOf(state).museumReputation ?? 0;
+  const displays = state.getAllDisplays();
   for (const sceneId in displays) {
     for (const display of displays[sceneId]) {
-      if (display.item && curatorItems[display.item]) {
-        rep += curatorItems[display.item].attributes?.reputation ?? 0;
+      if (display.item && items[display.item]) {
+        rep += items[display.item].attributes?.reputation ?? 0;
       }
     }
   }
-  curatorState.setPlayerAttribute('reputation', rep);
+  state.setPlayerAttribute('reputation', rep);
 }
 
 // First-time acquisition of a reputation-bearing item awards its reputation
 // permanently. obtainedItems tracks which items have already been counted.
-function handleAcquisition(itemId) {
-  const itemData = curatorItems[itemId];
+function handleAcquisition(state, items, itemId) {
+  const itemData = items[itemId];
   if (!itemData?.attributes?.reputation) return;
-  const obtained = (bag().obtainedItems ??= []);
+  const obtained = (bagOf(state).obtainedItems ??= []);
   if (obtained.includes(itemId)) return;
   obtained.push(itemId);
-  curatorState.modifyPlayerStat('reputation', itemData.attributes.reputation);
+  state.modifyPlayerStat('reputation', itemData.attributes.reputation);
 }
 
 // Registers the curator's state integrations: the reputation stat handler,
 // the mutation hooks that keep the derived attribute current, and the save
-// migration for the plugin's fields. Idempotent — repeat calls only refresh
-// the state/item references (the test suite re-inits state per test).
-export function registerCuratorState(state, items = {}) {
+// migration for the plugin's fields. Idempotent per StateManager — repeat
+// calls only refresh the registration's item/engine references (the test
+// suite re-inits state per test). The engine reference is optional: the
+// state-level tests call this on its own, and room synthesis stays out of
+// their way.
+export function registerCuratorState(state, items = {}, engine = null) {
   curatorState = state;
-  curatorItems = items;
-  if (hooksRegistered) return;
-  hooksRegistered = true;
+  const existing = registrations.get(state);
+  if (existing) {
+    existing.items = items;
+    if (engine) existing.engine = engine;
+    return;
+  }
+  const reg = { items, engine };
+  registrations.set(state, reg);
 
   // modifyPlayerStat('reputation', delta) adjusts the permanent score; the
   // visible attribute is recomputed (and notified) from updateReputation.
   state.registerStatHandler('reputation', (amount) => {
-    bag().museumReputation = (bag().museumReputation ?? 0) + amount;
-    updateReputation();
+    const bag = bagOf(state);
+    bag.museumReputation = (bag.museumReputation ?? 0) + amount;
+    updateReputation(state, reg.items);
   });
 
   state.onMutation((method, info) => {
@@ -83,25 +94,26 @@ export function registerCuratorState(state, items = {}) {
       case 'reset':
         // Rooms first: a loaded save's wings must be on the map (and their
         // display cases addressable) before anything reads the museum.
-        syncMuseumRooms(curatorEngine);
-        updateReputation();
+        syncMuseumRooms(reg.engine);
+        updateReputation(state, reg.items);
         break;
       case 'addToInventory':
-        handleAcquisition(info.itemId);
+        handleAcquisition(state, reg.items, info.itemId);
         break;
       case 'placeItemInDisplay':
       case 'takeItemFromDisplay':
-        updateReputation();
+        updateReputation(state, reg.items);
         break;
     }
   });
 
-  // Migration v5: curator save data. v5 because plugin migrations must sit
-  // above the core SAVE_VERSION (4) — registering at a core version would
-  // shadow that core migration (registerMigration throws). Adopts the
-  // pre-bag top-level fields older saves carried, and seeds defaults for
-  // saves that predate the curator entirely.
-  state.registerMigration(5, (data) => {
+  // The curator's save data, version 1 on the plugin's own migration line
+  // (state.pluginSaveVersions.curator — partitioned from the core
+  // saveVersion). Adopts the pre-bag top-level fields older saves carried,
+  // and seeds defaults for saves that predate the curator entirely.
+  // Idempotent on purpose: saves stamped 5 by the pre-partition version line
+  // re-run it once when they adopt the partitioned form.
+  state.registerMigration('curator', 1, (data) => {
     if (!data.plugins) data.plugins = {};
     const saved = data.plugins.curator ?? (data.plugins.curator = {});
     saved.museumReputation ??= data.museumReputation ?? 0;
@@ -252,7 +264,7 @@ function syncMuseumRooms(engine) {
   const hall = findHall(engine);
   if (!hall) return;
 
-  const rooms = bag().rooms ?? [];
+  const rooms = bagOf(engine.state).rooms ?? [];
   const wanted = new Map(rooms.map(r => [r.id, r]));
   for (const [id, scene] of Object.entries(engine.data.scenes)) {
     if (scene.museumBuilt && !wanted.has(id)) delete engine.data.scenes[id];
@@ -265,8 +277,7 @@ function syncMuseumRooms(engine) {
 
 export default function curatorPlugin(engine) {
   // 1. Register state integrations (stat handler, mutation hooks, migration)
-  curatorEngine = engine;
-  registerCuratorState(engine.state, engine.data.items);
+  registerCuratorState(engine.state, engine.data.items, engine);
   layoutMuseum(engine);
 
   // Reputation is a curator concept: flag the deprecated top-level item shape
@@ -338,7 +349,7 @@ export default function curatorPlugin(engine) {
     engine.state.modifyPlayerStat('gold', -cost);
     // The save carries the wing, not its scene: the scene is rebuilt from this
     // on every load (see syncMuseumRooms), and pluginState persists it.
-    (bag().rooms ??= []).push({ id: `${hall.id}_wing_${slot}`, name, slot });
+    (bagOf(engine.state).rooms ??= []).push({ id: `${hall.id}_wing_${slot}`, name, slot });
     syncMuseumRooms(engine);
 
     // The hall just got wider and the wing is on the map — but neither the
@@ -657,11 +668,15 @@ export class CuratorUI {
     const isEquipped = (itemId) => Object.values(player.equipment).includes(itemId);
 
     // Filter inventory to show all non-equipped items. Special items are never
-    // exhibited — a story relic belongs in the pack, not behind glass.
+    // exhibited — a story relic belongs in the pack, not behind glass. A case
+    // with allowedTypes only offers what it accepts (placeItemInDisplay
+    // enforces the same gate).
     let eligibleItems = player.inventory.filter(invItem => {
       if (isEquipped(invItem.item)) return false;
-      if (isSpecialItem(this.engine.data.items[invItem.item])) return false;
-      return !!this.engine.data.items[invItem.item];
+      const itemData = this.engine.data.items[invItem.item];
+      if (isSpecialItem(itemData)) return false;
+      if (display.allowedTypes && !display.allowedTypes.includes(itemData?.type)) return false;
+      return !!itemData;
     });
 
     if (eligibleItems.length > 0) {

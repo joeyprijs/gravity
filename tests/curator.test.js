@@ -347,7 +347,7 @@ test('build_wing: wings survive a save round-trip, and a loaded save drops the l
 
 test('a pre-time (v3) save with the curator active runs core AND plugin migrations', () => {
   const { engine } = makeEngine();
-  curatorPlugin(engine); // idempotent — ensures migration 5 is registered
+  curatorPlugin(engine); // idempotent — ensures the curator migration is registered
 
   const ok = gameState.loadFromObject({
     saveVersion: 3,
@@ -362,11 +362,14 @@ test('a pre-time (v3) save with the curator active runs core AND plugin migratio
   });
 
   assert.equal(ok, true);
-  // Before the collision guard, the curator's migration shadowed core v4 and
-  // these two seeds were silently skipped.
+  // Before the version-line partition, the curator's migration shadowed core
+  // v4 and these two seeds were silently skipped.
   assert.deepEqual(gameState.state.time, { ticks: 0 }, 'core v4 seeded the clock');
   assert.deepEqual(gameState.state.timers, [], 'core v4 seeded timers');
-  assert.equal(gameState.pluginState('curator').museumReputation, 0, 'curator v5 seeded the permanent score');
-  assert.deepEqual(gameState.pluginState('curator').obtainedItems, ['relic_crown'], 'curator v5 backfilled owned relics');
-  assert.equal(gameState.state.saveVersion, 5);
+  assert.equal(gameState.pluginState('curator').museumReputation, 0, 'the curator migration seeded the permanent score');
+  assert.deepEqual(gameState.pluginState('curator').obtainedItems, ['relic_crown'], 'the curator migration backfilled owned relics');
+  // Core and plugin versions are partitioned: the core counter never carries
+  // the curator's number.
+  assert.equal(gameState.state.saveVersion, 4);
+  assert.equal(gameState.state.pluginSaveVersions.curator, 1);
 });

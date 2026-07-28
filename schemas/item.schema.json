@@ -38,7 +38,7 @@
         "Right Hand",
         "Legs"
       ],
-      "description": "The equipment slot target. Required for weapons, spells, and armor."
+      "description": "The equipment slot target for armor and accessories. Ignored for weapons and spells — they always go to a hand, alternating left and right."
     },
     "attributes": {
       "type": "object",

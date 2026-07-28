@@ -79,7 +79,8 @@ export class CombatSystem {
     this.engine.state.modifyPlayerStat('ap', 'full');
     const player = this.engine.state.getPlayer();
 
-    const names = this.enemies.map(e => e.name).join(' & ');
+    // List grammar comes from Intl, not code (see _narrateEnemyResult).
+    const names = formatList(this.engine.language, this.enemies.map(e => e.name));
 
     this.engine.openScene(CSS.SCENE_COMBAT);
     this.engine.currentSceneEl.appendChild(
@@ -142,6 +143,16 @@ export class CombatSystem {
    * @param {object} targetEnemy - The cloned NPC object being attacked.
    */
   playerAttack(weapon, targetEnemy) {
+    // The renderer disables unaffordable attacks, but the damage below lands
+    // BEFORE the spend — precheck the turn budget (mirroring items.js's
+    // useItem guard) so a call that slipped past the buttons can't resolve an
+    // attack the budget can't pay for.
+    const apCost = weapon.attributes?.actionPoints ?? 0;
+    if (this.remainingTurnBudget() < apCost) {
+      this.engine.log(LOG.SYSTEM, this.engine.t('player.notEnoughAP', { cost: apCost }));
+      return;
+    }
+
     // Accuracy is the wielder's: d20 + the weapon's governing attribute
     // (attributes.attackAttribute — strength for a sword, intelligence for a
     // spell). Weapons themselves carry no hit bonus; an "accurate blade" is
@@ -167,7 +178,7 @@ export class CombatSystem {
       }), 'damage');
 
       if (this._handleEnemyDefeat(targetEnemy)) return;
-      this.engine._spendAP(weapon.attributes?.actionPoints ?? 0);
+      this.engine._spendAP(apCost);
       return;
     }
 
@@ -175,7 +186,7 @@ export class CombatSystem {
       weapon: weapon.name, roll: hitRoll, breakdown, ac: targetEnemy.attributes.armorClass
     }), 'damage');
 
-    this.engine._spendAP(weapon.attributes?.actionPoints ?? 0);
+    this.engine._spendAP(apCost);
   }
 
   /**
@@ -226,6 +237,12 @@ export class CombatSystem {
       const eWeapon = this._resolveEnemyWeapon(enemy);
       if (!eWeapon) {
         console.warn(`[Gravity] enemyTurn: no weapon resolved for "${enemy.name}", skipping.`);
+        continue;
+      }
+      // Same authoring-slip visibility as the missing weapon above: without an
+      // AP budget the enemy stands mute every turn with no other hint.
+      if (!(enemy.attributes.actionPoints > 0)) {
+        console.warn(`[Gravity] enemyTurn: "${enemy.name}" has no attributes.actionPoints — it can never attack.`);
         continue;
       }
 
@@ -352,7 +369,7 @@ export class CombatSystem {
     this.engine.setMode(isVictory ? 'scene' : 'gameover');
 
     if (isVictory) {
-      const names = this.enemies.map(e => e.name).join(' & ');
+      const names = formatList(this.engine.language, this.enemies.map(e => e.name));
 
       // Award XP from defeated enemies, folded into the victory line — one
       // event, one message. addXP carries surplus across level-ups, so a
@@ -371,8 +388,9 @@ export class CombatSystem {
       // If the victory pipeline did not trigger scene navigation (or open a
       // dialogue, custom UI, or new combat), force re-render options. The
       // re-render skips the scene's autoAttack — without that, victory on an
-      // auto-attack scene would instantly restart the same encounter.
-      if (!didNavigate()) this.engine.renderScene(this.engine.state.getCurrentSceneId(), { skipAutoAttack: true });
+      // auto-attack scene would instantly restart the same encounter — and its
+      // narration clip, which the player already heard on the way in.
+      if (!didNavigate()) this.engine.renderScene(this.engine.state.getCurrentSceneId(), { skipAutoAttack: true, skipNarration: true });
 
     } else {
       this.renderer.renderGameOver();

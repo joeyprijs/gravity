@@ -111,6 +111,19 @@ function validateItems(ctx) {
       if (!ctx.knownSkills.has(key))
         ctx.add(group, `attributeBonuses key "${key}" is not a declared attribute (playerDefaults.attributes or customAttributes)`);
     }
+    // The consumable modifyResource effect mirrors the modify_resource
+    // action's rules: never AP (a combat-only budget — apRestore is the
+    // sanctioned AP consumable), and only declared { current, max } resources.
+    const mod = item.attributes?.modifyResource;
+    if (mod !== undefined) {
+      const res = ctx.rules?.playerDefaults?.resources?.[mod?.resource];
+      if (!mod?.resource)
+        ctx.add(group, 'attributes.modifyResource needs a "resource" — the currency it moves');
+      else if (mod.resource === 'ap')
+        ctx.add(group, 'attributes.modifyResource cannot move "ap" — AP is a combat-only budget the fight refills; use attributes.apRestore for an AP consumable');
+      else if (!(res && typeof res === 'object' && 'current' in res))
+        ctx.add(group, `attributes.modifyResource resource "${mod.resource}" is not a declared { current, max } resource in playerDefaults.resources`);
+    }
   }
 }
 
@@ -388,6 +401,11 @@ function validateRules(ctx) {
   // makes the threshold 0 and hangs addXP in an infinite loop on the first XP gain.
   if (rules && !(rules.xpPerLevel > 0))
     ctx.add(group, `xpPerLevel must be a positive number (got ${rules.xpPerLevel}) — required for level-up math`);
+
+  // levelUpHpBonus is optional (omitted means no HP growth per level), but a
+  // malformed value would be silently treated as 0 by addXP's guard.
+  if (rules?.levelUpHpBonus !== undefined && !Number.isFinite(rules.levelUpHpBonus))
+    ctx.add(group, `levelUpHpBonus must be a number (got ${JSON.stringify(rules.levelUpHpBonus)}) — omit it for no HP growth on level-up`);
 
   for (const role of ['player', 'enemy']) {
     const fallback = rules?.fallbackWeapons?.[role];

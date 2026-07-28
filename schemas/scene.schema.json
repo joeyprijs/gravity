@@ -26,7 +26,7 @@
     },
     "descriptionHook": {
       "type": "string",
-      "description": "Optional runtime callback hook (e.g., 'museumChestContents') to append dynamic text."
+      "description": "Optional runtime callback hook name (registered via engine.registerDescriptionHook) to append dynamic text."
     },
     "mapDefinitions": {
       "type": "object",
@@ -653,6 +653,21 @@
         "narration": {
           "type": "string",
           "description": "Path to a narration clip played when this action runs — the read-aloud of its log text."
+        },
+        "log": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "false silences the handler's default log line; a string overrides it. Override strings resolve through t(), so a locale key keeps the prose translatable; any other string logs as-is."
+        },
+        "received": {
+          "type": "boolean",
+          "description": "loot: the item was handed over (an NPC gift or reward) rather than found — selects the log message's locale key."
+        },
+        "name": {
+          "type": "string",
+          "description": "build_wing / add_display: the player-facing name of the new wing or display case."
         }
       },
       "required": [

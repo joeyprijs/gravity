@@ -47,6 +47,10 @@
           {
             "flag": "goblins_pacified",
             "value": false
+          },
+          {
+            "flag": "goblins_snuck_past",
+            "value": false
           }
         ]
       },
@@ -201,6 +205,11 @@
               "value": true
             },
             {
+              "type": "loot",
+              "item": "home_rune",
+              "amount": 1
+            },
+            {
               "type": "heal",
               "amount": -2,
               "log": "The graze burns. (-2 HP)"
@@ -306,6 +315,10 @@
           },
           {
             "flag": "goblins_pacified",
+            "value": false
+          },
+          {
+            "flag": "goblins_snuck_past",
             "value": false
           }
         ]

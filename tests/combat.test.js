@@ -251,6 +251,26 @@ test('playerAttack: miss leaves enemy HP unchanged, still costs AP', () => {
   Math.random = orig;
 });
 
+test('playerAttack: an attack the turn budget cannot afford resolves nothing', () => {
+  // The renderer disables unaffordable buttons, but the precheck must hold on
+  // its own — damage lands before the spend, and the two must never disagree.
+  const orig = Math.random;
+  Math.random = () => 0.9999; // would always hit if the attack ran
+
+  const cs = makeCS();
+  cs.engine.setMode('combat');
+  const enemy = makeEnemy({ hp: 50, ac: 5 });
+  cs.enemies = [enemy];
+
+  gameState.modifyPlayerStat('ap', -3); // drain the pool to 0
+  cs.playerAttack(makeWeapon({ actionPoints: 2 }), enemy);
+
+  assert.equal(enemy.attributes.healthPoints, 50, 'no damage may land on a refused spend');
+  assert.equal(ap(), 0);
+
+  Math.random = orig;
+});
+
 test('playerAttack: calls endCombat when last enemy is defeated', () => {
   const orig = Math.random;
   Math.random = () => 0.9999; // always hit
@@ -413,7 +433,10 @@ test('endCombat: victory re-render skips the scene autoAttack', () => {
   cs.endCombat(true);
 
   assert.equal(cs.inCombat, false);
-  assert.deepEqual(rendered, [{ sceneId: 'corridor', opts: { skipAutoAttack: true } }]);
+  // The re-render also skips the scene's narration clip — the player already
+  // heard it on the way in; only combat's reset of the description cache
+  // makes the block (and without this, its audio) repeat.
+  assert.deepEqual(rendered, [{ sceneId: 'corridor', opts: { skipAutoAttack: true, skipNarration: true } }]);
 });
 
 test('endCombat: no re-render when onVictory opened a dialogue', () => {

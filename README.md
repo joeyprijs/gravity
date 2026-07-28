@@ -321,7 +321,7 @@ Valid only inside conversation nodes:
 | `makeFriendly` | — | Mark the active NPC friendly — future `combat` actions skip it. |
 | `questTrigger` | `mission`, `status` | Start (`"active"`) or complete (`"complete"`) a mission. |
 
-The state-changing actions (`loot`, `heal`, `full_rest`, `modify_resource`, `advance_time`) take an optional `log`: `false` silences the default message, a string replaces it. Timer pipelines are restricted to *quiet* actions (`set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`) — a timer changes the world through flags, never by navigating or starting combat. Plugins register their own types (the curator plugin adds `manage_exhibits` and `add_display`) — see the [Plugin API](#plugin-api). Every parameter above is documented in full in [`docs/ACTIONS.md`](docs/ACTIONS.md).
+The state-changing actions (`loot`, `heal`, `full_rest`, `modify_resource`, `advance_time`) take an optional `log`: `false` silences the default message, a string replaces it (resolved through the locale table first, so a locale key stays translatable; any other string logs as-is). Timer pipelines are restricted to *quiet* actions (`set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`) — a timer changes the world through flags, never by navigating or starting combat. Plugins register their own types (the curator plugin adds `manage_exhibits`, `add_display`, and `build_wing`) — see the [Plugin API](#plugin-api). Every parameter above is documented in full in [`docs/ACTIONS.md`](docs/ACTIONS.md).
 
 ### Scenes
 
@@ -763,7 +763,7 @@ The deeper tour — boot flow, the mode machine, state contracts, events, hooks,
 ## Testing
 
 *   **`npm test`** — 350+ synchronous unit tests on Node's native runner: state and saves, combat math, the condition AST, dice, checks and their attempt machine, scene and dialogue logic, the world clock, the validator, the curator plugin, and a data-integrity suite over the shipped demo.
-*   **`tests/smoke.html`** — a zero-dependency browser smoke test that boots the real game and drives the UI like a player: character creation, tabs, the sheet, the top bar, inventory markup invariants, a live skill check, the audio controls, and the combat framing rules. `scripts/run-smoke.sh` runs it in headless Chrome and is part of CI, so the surfaces Node cannot reach are covered there too.
+*   **`tests/smoke.html`** — a zero-dependency browser smoke test that boots the real game and drives the UI like a player: character creation, tabs, the sheet, the top bar, the new-content notifier dots, inventory markup invariants and equipping, a live skill check, the scene panel's option sections, the audio controls, the museum's curator flows (wings, display cases, building, a save/load round trip), the combat framing rules, and merchant trade. `scripts/run-smoke.sh` runs it in headless Chrome and is part of CI, so the surfaces Node cannot reach are covered there too.
 *   **CI** — GitHub Actions runs the test suite and verifies the manifest is in sync with the data tree on every push and pull request.
 
 ---

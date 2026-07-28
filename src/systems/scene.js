@@ -44,8 +44,10 @@ export class SceneRenderer {
     const scene = this.engine.data.scenes[sceneId];
     if (scene) {
       // Loading into a location should sound like it — but stay quiet:
-      // ambience only, no narration replay.
+      // ambience only, no narration replay. That includes a clip already
+      // mid-sentence from before the load — the null stops it.
       this.engine.audio?.syncAmbience(scene);
+      this.engine.audio?.playNarration(null);
       this.renderOptions(scene);
     }
   }
@@ -59,8 +61,12 @@ export class SceneRenderer {
    * @param {boolean} [opts.skipAutoAttack=false] - Suppresses the scene's
    *   autoAttack encounter. Used by the post-victory re-render so winning a
    *   fight on an auto-attack scene doesn't immediately restart it.
+   * @param {boolean} [opts.skipNarration=false] - Renders the description
+   *   without starting its narration clip. Used by the post-victory re-render:
+   *   combat reset the description cache, so the block re-appends — but the
+   *   narrator already read this room on the way in.
    */
-  render(sceneId, { skipAutoAttack = false } = {}) {
+  render(sceneId, { skipAutoAttack = false, skipNarration = false } = {}) {
     if (this.engine.inCombat) return;
 
     const scene = this.engine.data.scenes[sceneId];
@@ -96,7 +102,7 @@ export class SceneRenderer {
     // (where currentSceneId is pre-seeded, so isEntry is false) while
     // skipping skill-check re-renders and save restores.
     this.engine.audio?.syncAmbience(scene);
-    if (appended) this.engine.audio?.playNarration(this._resolveNarration(scene));
+    if (appended && !skipNarration) this.engine.audio?.playNarration(this._resolveNarration(scene));
 
     passiveTexts.forEach(text => this.engine.log(LOG.NARRATOR, text));
     if (isEntry) this._resetSkillAttempts(scene, sceneId);
