@@ -1,6 +1,6 @@
 {
   "id": "dungeon_start",
-  "title": "The Awakening",
+  "title": "Cellar",
   "region": "dungeon",
   "mapDefinitions": {
     "top": 245,
@@ -28,7 +28,7 @@
   ],
   "options": [
     {
-      "text": "Unlock the door",
+      "text": "Unlock the door and step through",
       "condition": {
         "flag": "door_unlocked",
         "value": false

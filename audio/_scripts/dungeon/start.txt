@@ -1,4 +1,4 @@
-The Awakening
+Cellar
 scene dungeon_start · data/scenes/dungeon/start.json
 5 lines · 2 with a clip · 3 to go
 
@@ -35,9 +35,9 @@ skills[0].onExhausted[0].message
   hides, your eyes won't find it.
 
 ────────────────────────────────────────────────────────────────────────
-Log line · Unlock the door
+Log line · Unlock the door and step through
 options[0].actions[1].actions[1].message
-→ audio/narration/dungeon/start__unlock_door.webm  [no clip yet]
+→ audio/narration/dungeon/start__unlock_door_step_through.webm  [no clip yet]
 
   Somewhere above, a horn sounds: long, low, and answered.
 
