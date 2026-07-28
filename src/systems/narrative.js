@@ -81,33 +81,6 @@ export class NarrativeLog {
   }
 
   /**
-   * Appends a free-standing HTML block to the current scene container, after
-   * everything logged so far — for showing the RESULT of the click that just
-   * happened (a chest's contents, once the player opens it). A scene's own
-   * description is written on the way in, so anything spliced into it lands
-   * ABOVE the choice that produced it; this lands below, where it belongs.
-   *
-   * Returned so the caller can rewrite it in place while it is on screen. Like
-   * every other in-place refresh (see SceneRenderer.refreshDescription), it is
-   * not persisted: a reloaded save shows the lines, not the live panels.
-   *
-   * @param {string} [html=''] - Trusted HTML (build it with buildContentsTable).
-   * @returns {HTMLElement} The appended block.
-   */
-  appendBlock(html = '') {
-    if (!this.currentSceneEl) this.openScene();
-    const el = createElement('div', CSS.SCENE_CONTENTS);
-    el.innerHTML = html;
-    this.currentSceneEl.appendChild(el);
-    // A block ends any run of same-source lines, exactly as opening a scene
-    // does: the next entry gets its [Label] back and the full gap, instead of
-    // tucking itself under the table as a continuation of what came before.
-    this._lastLogType = null;
-    this.scrollToBottom();
-    return el;
-  }
-
-  /**
    * Rebuilds the narrative DOM from a persisted log (used on save load).
    *
    * @param {object[]} logEntries - The persisted log entries (see appendLog).

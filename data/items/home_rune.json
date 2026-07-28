@@ -1,8 +1,7 @@
 {
   "name": "Hearthstone",
-  "type": "Consumable",
+  "type": "Special",
   "description": "An ancient, smooth stone that hums with magic. Rubbing it teleports you to your sanctuary.",
-  "value": 50,
   "attributes": {
     "teleportScene": "home_door"
   }

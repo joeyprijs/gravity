@@ -1,4 +1,4 @@
-import { buildCard, buildContentsTable, buildOptionButton, createElement, escapeHtml, getItemLabel, itemCardStats, resetOptionsPanel } from "../core/utils.js";
+import { buildCard, buildOptionButton, createElement, escapeHtml, getItemLabel, isSpecialItem, itemCardStats, resetOptionsPanel } from "../core/utils.js";
 import { CSS, EL, LOG } from "../core/config.js";
 
 // The curator's reputation model: a permanent score (earned by acquiring
@@ -125,22 +125,6 @@ export function registerCuratorState(state, items = {}) {
     delete data.museumReputation;
     delete data.obtainedItems;
   });
-}
-
-// The exhibits table appended to the description of any scene that has display
-// cases — the same contents table the engine gives a chest (buildContentsTable),
-// so a museum room and a chest read alike. Every case is listed, filled or not:
-// an empty stand is the museum's standing invitation.
-function buildExhibitsTable(engine, sceneId) {
-  const displays = engine.state.getDisplaysForScene(sceneId);
-  return buildContentsTable(
-    [engine.t('plugin.curator.curatorTableStand'), engine.t('plugin.curator.curatorTableRelic')],
-    displays.map(d => ({
-      label: d.name,
-      value: d.item ? getItemLabel(engine.data.items, d.item) : engine.t('plugin.curator.curatorEmpty'),
-      empty: !d.item,
-    })),
-  );
 }
 
 // Pins the museum's reputation under the scene name in the options panel, for
@@ -300,24 +284,25 @@ export default function curatorPlugin(engine) {
     }
   });
 
-  // 2. Decorate every scene that has display cases: exhibits table appended to
-  // the description, plus the curator-panel option button. Scenes flagged
-  // `showsReputation` also get the standing reputation line.
+  // 2. Decorate every scene that has display cases with the curator-panel
+  // option button. What stands in each case is the panel's job to show — the
+  // description doesn't table it, the way a chest doesn't table its contents.
+  // Scenes flagged `showsReputation` also get the standing reputation line.
   engine.registerSceneDecorator({
-    description: (scene, sceneId) => buildExhibitsTable(engine, sceneId),
-    options: (scene, optionsContainer) => {
+    options: (scene, optionsContainer, _engine, sections) => {
       if (scene.showsReputation) showReputationLine(engine);
       const sceneId = engine.state.getCurrentSceneId();
       const hasDisplays = engine.state.getDisplaysForScene(sceneId).length > 0;
       if (!isMuseumRoom(scene, hasDisplays)) return;
       // Named for the act, not the panel: this is the museum's "Open Personal
-      // Chest", and handleOption logs its text as the player's choice.
+      // Chest", and handleOption logs its text as the player's choice. It sits
+      // in the panel's Actions section for the same reason the chest does.
       const btn = buildOptionButton(engine.t('plugin.curator.curatorOpen'));
       btn.onclick = () => engine.scene.handleOption({
         text: engine.t('plugin.curator.curatorOpen'),
         actions: [{ type: "manage_exhibits" }]
       });
-      optionsContainer.appendChild(btn);
+      (sections?.actions ?? optionsContainer).appendChild(btn);
     }
   });
 
@@ -404,11 +389,6 @@ export class CuratorUI {
     this.engine = engine;
   }
 
-  _refreshSceneDesc() {
-    const scene = this.engine.data.scenes[this.engine.state.getCurrentSceneId()];
-    if (scene) this.engine.scene.refreshDescription(scene);
-  }
-
   render(screen = 'dashboard', context = null) {
     const sceneId = this.engine.state.getCurrentSceneId();
     const scene = this.engine.data.scenes[sceneId];
@@ -442,22 +422,23 @@ export class CuratorUI {
   }
 
   // The way out of the panel. When curating is ALL there is to do in the room,
-  // that's the room's own exit — the panel opens on arrival, so a "Done" that
-  // revealed nothing but a single "Go back" was a step for its own sake. A room
-  // with anything else to do keeps Done, or those options would be unreachable
-  // while the panel is up.
+  // that's the room's own exit — the panel opens on arrival, so a "Leave the
+  // exhibits" that revealed nothing but a single "Return to…" was a step for
+  // its own sake. A room with anything else to do keeps its own exit button,
+  // or those options would be unreachable while the panel is up.
   _exitButton(scene) {
     const isBack = (o) => o.isBack === true || (o.actions ?? []).some(a => a.type === 'return');
     const options = scene.options ?? [];
     const back = options.length === 1 && isBack(options[0]) ? options[0] : null;
 
     if (!back) {
-      const doneBtn = buildOptionButton(this.engine.t('plugin.curator.curatorDone'));
+      // The button carries the words the log records, as the chest's "Close
+      // Chest" does. The back-button path below needs no line of its own:
+      // walking out through handleOption logs the option's own text.
+      const close = this.engine.t('plugin.curator.curatorClose');
+      const doneBtn = buildOptionButton(close);
       doneBtn.onclick = () => {
-        // Terse button, act-shaped log line — the chest's "Done" logs "Close
-        // Chest" the same way. The back-button path below needs none: walking
-        // out through handleOption logs the option's own text.
-        this.engine.log(LOG.PLAYER, this.engine.t('plugin.curator.curatorClose'), 'choice');
+        this.engine.log(LOG.PLAYER, close, 'choice');
         this.engine.setCustomUIOpen(false);
         this.engine.scene.renderOptions(scene);
       };
@@ -595,7 +576,6 @@ export class CuratorUI {
         name: name
       });
       this.engine.log(LOG.SYSTEM, this.engine.t('plugin.curator.curatorInstallSuccess', { cost: installCost, name }));
-      this._refreshSceneDesc();
       this.render('dashboard');
     };
     installSection.appendChild(installBtn);
@@ -614,7 +594,8 @@ export class CuratorUI {
     const itemData = this.engine.data.items[itemId];
     const name = getItemLabel(this.engine.data.items, itemId);
 
-    // 1. Back button
+    // 1. The way out. The panel heading names the case right above this, so
+    // the button carries the verb alone; the log line spells the case out.
     const backBtn = buildOptionButton(this.engine.t('plugin.curator.curatorBack'));
     backBtn.onclick = () => {
       this.engine.log(LOG.PLAYER, this.engine.t('plugin.curator.displayLeave', { display: display.name }), 'choice');
@@ -641,7 +622,6 @@ export class CuratorUI {
     itemCard.onclick = () => {
       this.engine.state.takeItemFromDisplay(sceneId, displayId);
       this.engine.log(LOG.SYSTEM, this.engine.t('actions.displayTook', { name, display: display.name }));
-      this._refreshSceneDesc();
       this.render('dashboard');
     };
     detailSection.appendChild(itemCard);
@@ -657,10 +637,13 @@ export class CuratorUI {
       return;
     }
 
-    // 1. Cancel button
-    const cancelBtn = buildOptionButton(this.engine.t('plugin.curator.curatorCancel'));
+    // 1. The way out. The same words as the filled case's — stepping away is
+    // stepping away, whatever is or isn't standing there. The log line is the
+    // one that distinguishes them: this one records the case left empty.
+    const cancelBtn = buildOptionButton(this.engine.t('plugin.curator.curatorBack'));
     cancelBtn.onclick = () => {
-      this.engine.log(LOG.PLAYER, this.engine.t('plugin.curator.displayLeaveEmpty', { display: display.name }), 'choice');
+      this.engine.log(LOG.PLAYER,
+        this.engine.t('plugin.curator.displayLeaveEmpty', { display: display.name }), 'choice');
       this.render('dashboard');
     };
     container.appendChild(cancelBtn);
@@ -673,9 +656,11 @@ export class CuratorUI {
     const player = this.engine.state.getPlayer();
     const isEquipped = (itemId) => Object.values(player.equipment).includes(itemId);
 
-    // Filter inventory to show all non-equipped items
+    // Filter inventory to show all non-equipped items. Special items are never
+    // exhibited — a story relic belongs in the pack, not behind glass.
     let eligibleItems = player.inventory.filter(invItem => {
       if (isEquipped(invItem.item)) return false;
+      if (isSpecialItem(this.engine.data.items[invItem.item])) return false;
       return !!this.engine.data.items[invItem.item];
     });
 
@@ -689,7 +674,6 @@ export class CuratorUI {
         btn.onclick = () => {
           this.engine.state.placeItemInDisplay(sceneId, displayId, invItem.item);
           this.engine.log(LOG.SYSTEM, this.engine.t('actions.displayDeposited', { name, display: display.name }));
-          this._refreshSceneDesc();
           this.render('dashboard');
         };
         selectSection.appendChild(btn);

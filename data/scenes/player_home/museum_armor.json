@@ -31,7 +31,7 @@
   ],
   "options": [
     {
-      "text": "Go back to Museum Lobby",
+      "text": "Return to Museum Lobby",
       "isBack": true,
       "actions": [
         {

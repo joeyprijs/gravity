@@ -44,7 +44,8 @@
     "Spell": 2,
     "Armor": 3,
     "Consumable": 4,
-    "Flavour": 5
+    "Special": 5,
+    "Flavour": 6
   },
   "playerDefaults": {
     "name": "",

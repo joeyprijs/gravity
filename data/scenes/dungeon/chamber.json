@@ -62,7 +62,7 @@
       ]
     },
     {
-      "text": "Retreat to the Hallway",
+      "text": "Return to the Hallway",
       "actions": [
         {
           "type": "navigate",

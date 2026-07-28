@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildContentsTable, itemStatLines, equipmentAttributeBonuses } from '../src/core/utils.js';
+import { isSpecialItem, itemCardStats, itemStatLines, equipmentAttributeBonuses } from '../src/core/utils.js';
 
 // t() echoes "key:params" so assertions can check both key and values.
 const t = (key, p) => p ? `${key}:${JSON.stringify(p)}` : key;
@@ -53,41 +53,39 @@ test('equipmentAttributeBonuses: merges attributeBonuses with legacy armorClassB
   );
 });
 
-// ── buildContentsTable ────────────────────────────────────────────────────────
-// One builder behind every "what does this container hold" table (a chest's
-// stacks, a museum room's display cases), so they cannot drift apart.
+// ── isSpecialItem ─────────────────────────────────────────────────────────────
 
-test('buildContentsTable: no rows means no table at all', () => {
-  assert.equal(buildContentsTable(['Stored', 'Amount'], []), '');
+test('isSpecialItem: only the Special type, and never throws on a missing item', () => {
+  assert.ok(isSpecialItem({ type: 'Special' }));
+  assert.ok(!isSpecialItem({ type: 'Consumable' }));
+  assert.ok(!isSpecialItem({}), 'an untyped item is Flavour, not Special');
+  assert.ok(!isSpecialItem(undefined), 'an id with no definition behind it');
 });
 
-test('buildContentsTable: with an empty message, that message stands in for the table', () => {
-  const html = buildContentsTable(['Stored', 'Amount'], [], 'Chest is empty.');
-  assert.match(html, /contents-table__empty">Chest is empty\.</);
-  assert.ok(!html.includes('<table'), 'no headers over nothing');
+// ── itemCardStats ─────────────────────────────────────────────────────────────
+
+test('itemCardStats: the slot leads and worth trails, around the shared stat lines', () => {
+  const lines = itemCardStats(t, {
+    type: 'Armor', slot: 'Amulet', value: 40,
+    attributes: { attributeBonuses: { perception: 1 } },
+  });
+  assert.match(lines[0], /itemStats\.slot.*Amulet/, 'the slot is the first row');
+  assert.match(lines[1], /itemStats\.attributeBonus/);
+  assert.match(lines.at(-1), /itemStats\.value/, 'worth is the last row');
 });
 
-test('buildContentsTable: the empty message is escaped too', () => {
-  assert.match(buildContentsTable(['a', 'b'], [], '<b>empty</b>'), /&lt;b&gt;empty/);
+test('itemCardStats: only armor prints a slot — a weapon goes to whichever hand is free', () => {
+  // rusty_sword declares "Right Hand" and the engine ignores it, so the card
+  // must not claim otherwise.
+  const weapon = itemCardStats(t, { type: 'Weapon', slot: 'Right Hand', attributes: { damageRoll: '1d6' } });
+  assert.ok(!weapon.some(l => l.includes('itemStats.slot')), 'no slot row on a weapon');
+  assert.ok(!itemCardStats(t, { type: 'Armor', attributes: { armorClassBonus: 1 } })
+    .some(l => l.includes('itemStats.slot')), 'nor on armor that declares none');
 });
 
-test('buildContentsTable: a row per entry, with the headers given', () => {
-  const html = buildContentsTable(['Stored', 'Amount'], [{ label: 'Rusty Sword', value: '2' }]);
-  assert.match(html, /<th>Stored<\/th><th>Amount<\/th>/);
-  assert.match(html, /<td>Rusty Sword<\/td>/);
-  assert.match(html, /contents-table__value--filled">2</);
-});
-
-test('buildContentsTable: an empty entry styles its value as a placeholder', () => {
-  const html = buildContentsTable(['Stand', 'Relic'], [{ label: 'Pedestal', value: '(Empty)', empty: true }]);
-  assert.match(html, /contents-table__value--empty">\(Empty\)</);
-});
-
-test('buildContentsTable: labels and values are escaped — both can be player input', () => {
-  const html = buildContentsTable(['Stand', 'Relic'], [
-    { label: '<img src=x onerror=alert(1)>', value: '<b>relic</b>' },
-  ]);
-  assert.ok(!html.includes('<img'), 'the raw tag must not survive');
-  assert.ok(!html.includes('<b>'), 'nor markup in the value');
-  assert.match(html, /&lt;img/);
+test('itemCardStats: { slot: false } drops the slot row for the equipped list', () => {
+  const item = { type: 'Armor', slot: 'Amulet', value: 40, attributes: { attributeBonuses: { perception: 1 } } };
+  const lines = itemCardStats(t, item, {}, { slot: false });
+  assert.ok(!lines.some(l => l.includes('itemStats.slot')), 'no slot row');
+  assert.match(lines[0], /itemStats\.attributeBonus/, 'the rest is unchanged');
 });

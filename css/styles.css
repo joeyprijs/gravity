@@ -507,11 +507,14 @@ button.section-toggle--collapsed .section-toggle__label::before {
 }
 
 /* Level-up point-buy cue at the top of the sheet (shown only while points
-   are banked). The bottom margin matches the panel-section gap so the
-   Character section sits at the same rhythm below it. */
+   are banked). A card, because points waiting to be spent are the one thing
+   on this panel asking to be acted on — centered so it reads as an
+   announcement rather than another label/value row. The bottom margin matches
+   the panel-section gap so the Character section sits at the same rhythm
+   below it. */
 .attr-list__points {
   color: var(--accent-color);
-  padding: 0 calc(var(--spacing) * 0.5);
+  text-align: center;
   margin-bottom: calc(var(--spacing) * 3);
 }
 
@@ -630,24 +633,8 @@ button.section-toggle--collapsed .section-toggle__label::before {
   vertical-align: middle;
 }
 
-/* Tab and heading dots pulse a few beats to catch the eye, then settle; the
-   card dot is static — its card is already on screen when it renders. */
-.tabs__btn--notify::after,
-.section-toggle--notify .section-toggle__label::after {
-  animation: tab-notify-pulse 1.6s ease-in-out 3;
-}
-
-@keyframes tab-notify-pulse {
-  0%, 100% { transform: scale(1);    opacity: 1;    }
-  50%      { transform: scale(1.35); opacity: 0.55; }
-}
-
-/* A pulse is an ambient cue, not essential motion — hold it still for players
-   who ask for reduced motion; the dot itself still signals. */
-@media (prefers-reduced-motion: reduce) {
-  .tabs__btn--notify::after,
-  .section-toggle--notify .section-toggle__label::after { animation: none; }
-}
+/* Every dot is static — the mark itself is the signal, at the tab, the heading
+   and the card alike. Nothing here moves to earn attention. */
 
 /* ==========================================================================
  SIDEBAR: INVENTORY & EQUIPMENT
@@ -864,6 +851,12 @@ button.section-toggle--collapsed .section-toggle__label::before {
 .panel-section {
   display: flex;
   flex-direction: column;
+}
+
+/* display:flex above outranks the UA's [hidden] rule, so an empty section would
+   still take up a box and its neighbour's margin. Say it explicitly. */
+.panel-section[hidden] {
+  display: none;
 }
 
 .panel-section--skills {
@@ -1169,19 +1162,28 @@ button.section-toggle--collapsed .section-toggle__label::before {
 }
 
 /* ==========================================================================
- CONTENTS TABLE — what a container holds, appended to a scene's description
- (a chest's stacks, a museum room's display cases). Built by
- buildContentsTable; shared so every container reads the same.
-
- The .exhibits-* selectors are the pre-rename names, kept as aliases because a
- save file stores its narrative log as rendered HTML — scrolling back through a
- game saved before the rename would otherwise show bare, unstyled tables.
+ CONTENTS TABLE — LEGACY SAVES ONLY. Nothing renders these any more: a chest
+ and a museum room both show what they hold in the options panel, so neither
+ writes a table into the narrative. The rules stay because a save stores its
+ log as rendered HTML (see appendLog: type 'scene' keeps the description
+ verbatim) — a game saved before this change still has tables in its
+ scrollback, and without these they would load as bare, unstyled markup.
+ The .exhibits-* selectors are an older alias kept for the same reason.
+ Deleting this block costs nothing but those old saves' scrollback.
  ========================================================================== */
+/* Framed like a card (see CARDS) instead of ruled off with a top border: the
+   contents of a chest or a room are something to look at, so they sit in their
+   own panel rather than reading as a gap in the narration. No hover — nothing
+   in here is clickable. The top gap matches a log entry's, so the table
+   breathes exactly like the lines around it; the side inset is double a card's
+   because these rows span the full measure — the columns need room to sit in
+   rather than running to the frame. */
 .contents-table-container,
 .exhibits-table-container {
-  margin-top: 20px;
-  border-top: 1px solid var(--panel-border);
-  padding-top: 15px;
+  margin-top: calc(var(--spacing) * 3);
+  background: var(--btn-bg);
+  border: 1px solid var(--panel-border);
+  padding: calc(var(--spacing) * 2) calc(var(--spacing) * 4);
 }
 
 .contents-table,
@@ -1210,6 +1212,12 @@ button.section-toggle--collapsed .section-toggle__label::before {
 .contents-table tbody tr,
 .exhibits-table tbody tr {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* The card's own edge closes the last row — a rule there would double up. */
+.contents-table tbody tr:last-child,
+.exhibits-table tbody tr:last-child {
+  border-bottom: none;
 }
 
 .contents-table td,

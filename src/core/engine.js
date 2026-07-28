@@ -584,8 +584,9 @@ export class RPGEngine {
    * @param {object} decorator
    * @param {(scene: object, sceneId: string, engine: RPGEngine) => string} [decorator.description]
    *   Returns an HTML string appended to the scene description.
-   * @param {(scene: object, optionsContainer: HTMLElement, engine: RPGEngine) => void} [decorator.options]
-   *   May append extra option buttons to the options container.
+   * @param {(scene: object, optionsContainer: HTMLElement, engine: RPGEngine, sections: {conversations: HTMLElement, actions: HTMLElement}) => void} [decorator.options]
+   *   May append extra option buttons to the options container, or to one of the
+   *   panel's headed sections. A section left empty is hidden again afterwards.
    */
   registerSceneDecorator(decorator) {
     this._sceneDecorators.push(decorator);

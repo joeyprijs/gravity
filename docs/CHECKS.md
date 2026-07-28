@@ -19,7 +19,7 @@ A scene's `skills` array (and an NPC's dialogue `responses`) supports five check
 | **Item discovery** | `skillCheck` + `items` | One roll vs every still-hidden item's own DC; found items persist. |
 | **Passive** | scene-level `passiveChecks` | Auto-rolled silently on first entry, once per game, into an author-named flag. |
 
-Check buttons always show the player what they're weighing: their modifier ("Bonus: Perception +2", from the `actions.skillBadge.*` locale strings) and the DC on its own line (`actions.skillBadgeDc`). Informed decisions are the point — hidden math is a slot machine.
+Check buttons always show the player what they're weighing: their modifier ("Uses: Perception +2", from the `actions.skillBadge.*` locale strings) and the DC on its own line (`actions.skillBadgeDc`). Informed decisions are the point — hidden math is a slot machine. `Uses:` is the same row a weapon card shows for the attribute its attack rolls with (`itemStats.hit`) — one word for "what this roll leans on", wherever the roll is offered. It is deliberately not `Bonus:`, which on an item card means a bonus the thing *grants* while worn.
 
 ## Outcome tiers
 

@@ -1,4 +1,4 @@
-import { attrRowHtml, clearElement, createElement, createSectionToggles, escapeHtml, getByPath } from "../core/utils.js";
+import { attrRowHtml, clearElement, collapseAllSections, createElement, createSectionToggles, escapeHtml, getByPath } from "../core/utils.js";
 import { EL, CSS, LOG } from "../core/config.js";
 import { iconHtml } from "../core/icons.js";
 import { getDay, getSegment } from "../systems/time.js";
@@ -220,6 +220,11 @@ export class UIManager {
         // Leaving a tab acknowledges it — clears its tab dot and per-entry dots
         // (covers a dot that appeared while the tab was already on screen).
         if (departing && departing !== opened) this._acknowledgeTabEntries(departing);
+        // ...and shuts every section behind them. A tab is entered the way it
+        // presents itself the first time — headings only — rather than in the
+        // shape the last visit left it in. Before the re-render below, so the
+        // opened panel wires itself collapsed.
+        if (departing !== opened) collapseAllSections();
 
         nav.querySelectorAll(`.${CSS.TABS_BTN}`).forEach(b => b.classList.remove(CSS.TABS_BTN_ACTIVE));
         document.querySelectorAll(`#${EL.PLAYER_PANEL} .${CSS.TABS_PANEL}`).forEach(c => { c.hidden = true; });
@@ -385,7 +390,7 @@ export class UIManager {
     // spendable rows) and sits outside the collapsible bodies so a player
     // with points to spend always sees the cue.
     panel.innerHTML = `${canSpend ? `
-    <div class="attr-list__points" hidden>${escapeHtml(this.engine.t('ui.statPoints'))} <span data-stat-bind="statPoints"></span></div>` : ''}
+    <div class="${CSS.CARD} attr-list__points" hidden>${escapeHtml(this.engine.t('ui.statPoints'))} <span data-stat-bind="statPoints"></span></div>` : ''}
     <div class="${CSS.PANEL_SECTION}">
       ${sectionHeading('character', this.engine.t('ui.sheetCharacterTitle'))}
       <div class="attr-list" data-section-body="character">${characterRows}</div>
@@ -414,8 +419,8 @@ export class UIManager {
   // shared machinery as the inventory sections (see createSectionToggles).
   _bindSheetToggles(panel) {
     const toggles = [...panel.querySelectorAll(`.${CSS.SECTION_TOGGLE}`)];
-    // Sections start expanded (no default-collapsed set); the player can
-    // collapse any of them, remembered for the session.
+    // Sections start collapsed (see createSectionToggles); what the player
+    // opens stays open for the session.
     const sections = createSectionToggles(SHEET_SECTION_GROUP);
     toggles.forEach(btn => {
       const key = btn.dataset.section;

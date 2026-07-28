@@ -599,7 +599,9 @@ Weapons, spells, armor, and consumables. All mechanical stats live inside `attri
 }
 ```
 
-Item `type` is one of `Weapon`, `Spell`, `Armor`, `Consumable`, or `Flavour` (the default when omitted — keepsakes and key items). The type drives behavior: weapons and spells equip to a hand and attack; armor equips to its `slot`; consumables are drunk/used; flavour items just sit in the pack. In the inventory the card *is* the control — clicking an item equips, uses or unequips it, with no per-item buttons.
+Item `type` is one of `Weapon`, `Spell`, `Armor`, `Consumable`, `Special`, or `Flavour` (the default when omitted — keepsakes and key items). The type drives behavior: weapons and spells equip to a hand and attack; armor equips to its `slot`; consumables are drunk/used; flavour items just sit in the pack. In the inventory the card *is* the control — clicking an item equips, uses or unequips it, with no per-item buttons.
+
+`Special` is the story/required category (the demo's Hearthstone). A Special item never leaves the pack by the player's hand: it's filtered out of the merchant's sell list, the display-case artifact picker, and the chest deposit list, so give it no `value`. It is still *used* like a consumable when it declares a use (`teleportScene`, `healingAmount`, …) and is otherwise an inert card. Scripted effects — a quest turn-in, a scene that consumes it — remove it normally; the rule governs the player's choices, not the engine's reach.
 
 Equipment `slot` names are **game-defined** — whatever keys appear in `rules.playerDefaults.equipment` (the demo uses `Head`, `Amulet`, `Torso`, `Left Hand`, `Right Hand`, `Legs`). Only the two hand slots are engine-fixed, because combat reads weapons from them. A weapon or spell goes to a hand by virtue of its `type`, so the engine picks the hand and the item's own `slot` is ignored (most weapons declare none): an empty hand first, left before right, and otherwise alternating left, right, left… Both `type` and `slot` are validated at boot.
 

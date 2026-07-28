@@ -65,8 +65,10 @@ test('plugin registers its scene decorator, action handlers, and sheet row', () 
   const { engine, registry, decorators, sheetRows } = makeEngine();
   curatorPlugin(engine);
   assert.equal(decorators.length, 1);
-  assert.equal(typeof decorators[0].description, 'function');
   assert.equal(typeof decorators[0].options, 'function');
+  // No description decorator: the cases are the panel's to show, so nothing
+  // is spliced into the room's narrative description.
+  assert.equal(decorators[0].description, undefined);
   assert.ok(registry.has('manage_exhibits'));
   assert.ok(registry.has('add_display'));
   assert.deepEqual(sheetRows, [{ label: 'plugin.curator.reputationLabel', bind: 'attributes.reputation', icon: 'thumbs_up' }]);
@@ -98,35 +100,6 @@ test('plugin validator flags the removed rules.curator block', () => {
   assert.equal(issues.length, 1);
   assert.equal(issues[0].group, 'Rules');
   assert.match(issues[0].message, /rules\.curator was removed/);
-});
-
-test('exhibits decorator: scenes without displays get no table', () => {
-  const { engine, decorators } = makeEngine();
-  curatorPlugin(engine);
-  assert.equal(decorators[0].description({}, 'home_kitchen', engine), '');
-});
-
-test('exhibits decorator: renders a row per display with item label or empty marker', () => {
-  const { engine, decorators } = makeEngine();
-  curatorPlugin(engine);
-  gameState.addDisplayToScene('home_museum', { id: 'd1', name: 'North Stand', item: 'relic_crown' });
-  gameState.addDisplayToScene('home_museum', { id: 'd2', name: 'South Stand' });
-
-  const html = decorators[0].description({}, 'home_museum', engine);
-  assert.match(html, /North Stand/);
-  assert.match(html, /Ancient Crown/);
-  assert.match(html, /South Stand/);
-  assert.match(html, /plugin\.curator\.curatorEmpty/);
-});
-
-test('exhibits decorator: player-entered display names are HTML-escaped', () => {
-  const { engine, decorators } = makeEngine();
-  curatorPlugin(engine);
-  gameState.addDisplayToScene('home_museum', { id: 'd1', name: '<img src=x onerror=alert(1)>' });
-
-  const html = decorators[0].description({}, 'home_museum', engine);
-  assert.ok(!html.includes('<img'), 'expected the raw tag to be escaped');
-  assert.match(html, /&lt;img/);
 });
 
 test('add_display: installs a named display and charges the cost', () => {

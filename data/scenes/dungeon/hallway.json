@@ -124,7 +124,7 @@
       ]
     },
     {
-      "text": "Retreat to the corridor",
+      "text": "Return to the Corridor",
       "actions": [
         {
           "type": "navigate",

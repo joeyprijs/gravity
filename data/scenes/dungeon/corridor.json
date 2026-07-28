@@ -79,7 +79,7 @@
       ]
     },
     {
-      "text": "Retreat to the cellar",
+      "text": "Return to the Cellar",
       "actions": [
         {
           "type": "navigate",
