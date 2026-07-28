@@ -863,9 +863,9 @@
         engine.renderScene('home_bedroom');
         await until(() => cards('scene-options-actions').some(t => t.includes('Open Personal Chest')), 'the bedroom');
         assert(heading('scene-options-actions') === 'Actions', `acts are headed (got "${heading('scene-options-actions')}")`);
-        // "Sleep until morning" is conditional on the hour, so it may or may not
-        // be here — the full rest and the chest always are.
-        assert(cards('scene-options-actions').some(t => t === 'Sleep'), 'resting is an act');
+        // "Long Rest" is conditional on the hour, so it may or may not be
+        // here — the short rest and the chest always are.
+        assert(cards('scene-options-actions').some(t => t === 'Short Rest'), 'resting is an act');
         assert(cards('scene-options').length === 1 && cards('scene-options')[0].includes('Return to Living Room'),
           `the doors list is only the way out (got ${JSON.stringify(cards('scene-options'))})`);
 

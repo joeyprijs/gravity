@@ -16,8 +16,8 @@ description
   the foot of your bed.
 
 ────────────────────────────────────────────────────────────────────────
-Log line · Sleep until morning · full_rest
+Log line · Long Rest · full_rest
 options[1].actions[1].log
-→ audio/narration/player_home/bedroom__sleep_until_morning.webm  [no clip yet]
+→ audio/narration/player_home/bedroom__long_rest.webm  [no clip yet]
 
   actions.fullRestMorning

@@ -210,7 +210,7 @@ Rolled silently on the player's **first** entry, once per game, writing pass/fai
 | Luck skill + retry currency | Corridor rubble dig: d20 + Luck vs DC 12; retries cost a Luck Point, escalating failure lines |
 | Passive check | Grand Chamber ceiling shimmer → one-shot fail-forward climb |
 | One-shot dialogue check with tiers | Stranger's discount haggle (critical: 20% + a free healing potion; failure: marked-up prices) |
-| Time + sleep | Bedroom "Sleep until morning"; kitchen changes at night |
+| Time + sleep | Bedroom "Long Rest" (sleeps until morning); kitchen changes at night |
 
 ## Validation
 
