@@ -28,8 +28,7 @@
           "until": "morning"
         },
         {
-          "type": "full_rest",
-          "log": "actions.fullRestMorning"
+          "type": "full_rest"
         }
       ]
     },

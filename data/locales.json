@@ -165,7 +165,6 @@
   "actions": {
     "rested": "You rested and recovered HP.",
     "fullRest": "(HP restored)",
-    "fullRestMorning": "You sleep deeply and wake with the morning light. Health fully restored.",
     "heal": "({amount} HP)",
     "chestTook": "You retrieved the {name} from the chest.",
     "chestDeposited": "You placed the {name} in the chest.",
