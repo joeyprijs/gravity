@@ -81,6 +81,8 @@
     "skillsHeading": "Skills",
     "conversationsHeading": "NPCs",
     "actionsHeading": "Actions",
+    "shortRest": "Short Rest",
+    "shortRestRemaining": "Remaining: {current}/{max}",
     "tabInventory": "Inventory",
     "tabQuests": "Quests",
     "tabAttributes": "Sheet",
@@ -118,7 +120,8 @@
     "notEnoughGold": "Not enough gold!",
     "timeChipDay": "Day {day}",
     "resources": {
-      "luckPoints": "Luck Points"
+      "luckPoints": "Luck Points",
+      "shortRests": "Short Rests"
     }
   },
   "time": {
@@ -165,7 +168,8 @@
   "actions": {
     "rested": "You rested and recovered HP.",
     "fullRest": "(HP restored)",
-    "heal": "({amount} HP)",
+    "heal": "({amount} HP{rollSuffix})",
+    "shortRestExhausted": "You're too worn to rest again — you need a proper night's sleep.",
     "chestTook": "You retrieved the {name} from the chest.",
     "chestDeposited": "You placed the {name} in the chest.",
     "displayTook": "You retrieved the {name} from the {display}.",

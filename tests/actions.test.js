@@ -193,6 +193,50 @@ test('a negative heal amends with a signed yield: "(-2 HP)", never "(+-2 HP)"', 
   assert.deepEqual(calls.amends, ['actions.heal:-2', 'actions.heal:+2']);
 });
 
+// ── short_rest ────────────────────────────────────────────────────────────────
+
+// Rules with the short-rest pool declared: 2 uses, flat 4 HP per draw (a
+// number, so the roll suffix stays empty and assertions stay deterministic).
+const SHORT_REST_RULES = {
+  ...TEST_RULES,
+  playerDefaults: {
+    ...TEST_RULES.playerDefaults,
+    resources: { ...TEST_RULES.playerDefaults.resources, shortRests: { current: 2, max: 2 } },
+  },
+  shortRest: { resource: 'shortRests', heal: 4, timeCost: 1 },
+};
+
+test('short_rest: heals, spends one pool use, and amends the act line with the yield', () => {
+  gameState.init(SHORT_REST_RULES);
+  const { run, calls } = makeEngine({ rules: SHORT_REST_RULES });
+  gameState.modifyPlayerStat('hp', -8);
+  run({ type: ACTIONS.SHORT_REST });
+  assert.equal(hp(), 6);
+  assert.equal(gameState.getPlayer().resources.shortRests.current, 1);
+  assert.deepEqual(calls.amends, ['actions.heal']);
+});
+
+test('short_rest: an empty pool refuses in the world\'s voice and heals nothing', () => {
+  gameState.init(SHORT_REST_RULES);
+  const { run, calls } = makeEngine({ rules: SHORT_REST_RULES });
+  gameState.modifyPlayerStat('shortRests', -2);
+  gameState.modifyPlayerStat('hp', -8);
+  run({ type: ACTIONS.SHORT_REST });
+  assert.equal(hp(), 2);
+  assert.ok(calls.logs.some(l => l.message === 'actions.shortRestExhausted'));
+  assert.equal(calls.amends.length, 0);
+});
+
+test('full_rest refills the short-rest pool along with HP', () => {
+  gameState.init(SHORT_REST_RULES);
+  const { run } = makeEngine({ rules: SHORT_REST_RULES });
+  gameState.modifyPlayerStat('shortRests', -2);
+  gameState.modifyPlayerStat('hp', -6);
+  run({ type: ACTIONS.FULL_REST });
+  assert.equal(hp(), gameState.getPlayer().resources.hp.max);
+  assert.equal(gameState.getPlayer().resources.shortRests.current, 2);
+});
+
 test('log overrides resolve through t(): a locale key translates, a one-off line logs as-is', () => {
   const { engine, run, calls } = makeEngine();
   engine.t = (key) => key === 'actions.fullRestMorning' ? 'You wake with the morning light.' : key;

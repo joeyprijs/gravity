@@ -298,6 +298,7 @@ export class SceneRenderer {
     navOpts.forEach(opt => renderOptionBtn(opt));
     talkOpts.forEach(opt => renderOptionBtn(opt, talkContainer));
     actionOpts.forEach(opt => renderOptionBtn(opt, actionsContainer));
+    this._renderShortRest(actionsContainer);
 
     const skillBtns = [];
     const sceneId = this.engine.state.getCurrentSceneId();
@@ -337,6 +338,28 @@ export class SceneRenderer {
     backOpts.forEach(opt => renderOptionBtn(opt));
     sweepSection(talkContainer);
     sweepSection(actionsContainer);
+  }
+
+  // The standing Short Rest option, in every scene's Actions section while
+  // rules.shortRest is configured — resting is something the player carries
+  // with them, not something a scene offers. One button per render: the act,
+  // with the pool's remaining uses as its stat line. It disables (rather than
+  // hides) at an empty pool, so what a full rest would give back stays visible.
+  _renderShortRest(actionsContainer) {
+    const config = this.engine.data.rules?.shortRest;
+    if (!config?.resource) return;
+    const pool = this.engine.state.getPlayer().resources?.[config.resource];
+    if (!(pool && typeof pool === 'object' && 'current' in pool)) return;
+
+    const text = this.engine.t('ui.shortRest');
+    const btn = buildOptionButton(text, this.engine.t('ui.shortRestRemaining', { current: pool.current, max: pool.max }));
+    if (pool.current < 1) btn.disabled = true;
+    btn.onclick = () => this.handleOption({
+      text,
+      timeCost: config.timeCost ?? 0,
+      actions: [{ type: 'short_rest' }],
+    });
+    actionsContainer.appendChild(btn);
   }
 
   /**

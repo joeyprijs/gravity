@@ -12,14 +12,6 @@
   "description": "You enter the bedroom. It's surprisingly tidy, with a plush feather bed tucked in the corner. A heavy iron-bound personal chest rests at the foot of your bed.",
   "options": [
     {
-      "text": "Short Rest",
-      "actions": [
-        {
-          "type": "full_rest"
-        }
-      ]
-    },
-    {
       "text": "Long Rest",
       "timeCost": 0,
       "actions": [

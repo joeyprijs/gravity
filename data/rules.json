@@ -64,6 +64,10 @@
       "luckPoints": {
         "current": 3,
         "max": 3
+      },
+      "shortRests": {
+        "current": 3,
+        "max": 3
       }
     },
     "attributes": {
@@ -225,6 +229,11 @@
     "resource": "luckPoints",
     "cost": 1,
     "restRestore": 3
+  },
+  "shortRest": {
+    "resource": "shortRests",
+    "heal": "1d8",
+    "timeCost": 1
   },
   "headerResources": [
     {

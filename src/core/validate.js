@@ -407,6 +407,24 @@ function validateRules(ctx) {
   if (rules?.levelUpHpBonus !== undefined && !Number.isFinite(rules.levelUpHpBonus))
     ctx.add(group, `levelUpHpBonus must be a number (got ${JSON.stringify(rules.levelUpHpBonus)}) — omit it for no HP growth on level-up`);
 
+  // rules.shortRest wires the standing Short Rest option: its pool must be a
+  // declared { current, max } resource (not hp/ap — the pool is what a rest
+  // SPENDS, not what it restores), and heal is dice notation or a number.
+  const shortRest = rules?.shortRest;
+  if (shortRest !== undefined) {
+    const pool = rules?.playerDefaults?.resources?.[shortRest?.resource];
+    if (!shortRest?.resource)
+      ctx.add(group, 'shortRest needs a "resource" — the { current, max } pool each rest spends one use of');
+    else if (shortRest.resource === 'hp' || shortRest.resource === 'ap')
+      ctx.add(group, `shortRest.resource cannot be "${shortRest.resource}" — the pool is what a rest spends, not a stat it moves`);
+    else if (!(pool && typeof pool === 'object' && 'current' in pool))
+      ctx.add(group, `shortRest.resource "${shortRest.resource}" is not a declared { current, max } resource in playerDefaults.resources`);
+    if (shortRest?.heal !== undefined && typeof shortRest.heal !== 'string' && !(shortRest.heal > 0))
+      ctx.add(group, `shortRest.heal must be dice notation ("1d8") or a positive number (got ${JSON.stringify(shortRest.heal)})`);
+    if (shortRest?.timeCost !== undefined && !(Number.isFinite(shortRest.timeCost) && shortRest.timeCost >= 0))
+      ctx.add(group, `shortRest.timeCost must be a non-negative number (got ${JSON.stringify(shortRest.timeCost)})`);
+  }
+
   for (const role of ['player', 'enemy']) {
     const fallback = rules?.fallbackWeapons?.[role];
     if (fallback && !items[fallback])

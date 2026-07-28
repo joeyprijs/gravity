@@ -1,4 +1,5 @@
 import { LOG, ACTIONS, FLAG_KEYS, GOLD_ITEM_ID } from "../core/config.js";
+import { parseDamage } from "./dice.js";
 import { ticksUntilSegment } from "./time.js";
 
 // Built-in action handlers for the scene option action pipeline.
@@ -70,6 +71,10 @@ function handleFullRest(action, engine) {
   if (retry?.resource && retry.restRestore > 0) {
     engine.state.modifyPlayerStat(retry.resource, retry.restRestore);
   }
+  // And the short-rest pool, D&D-style: short rests spend it out in the
+  // world, only a full rest brings it back (see handleShortRest).
+  const shortRest = engine.data.rules?.shortRest;
+  if (shortRest?.resource) engine.state.modifyPlayerStat(shortRest.resource, 'full');
   if (action.log !== false) {
     // A string override is authored prose — the world's answer, narrated. The
     // default is the act's yield, amended onto the [Player] option line that
@@ -79,6 +84,46 @@ function handleFullRest(action, engine) {
       const yieldLine = engine.t('actions.fullRest');
       if (!engine.amendLog(yieldLine)) engine.log(LOG.PLAYER, yieldLine, 'choice');
     }
+  }
+}
+
+// { type: "short_rest" } — one draw on the short-rest pool: heals
+// rules.shortRest.heal (dice notation or a flat number) and spends one use of
+// rules.shortRest.resource. The pool only refills on a full rest (see
+// handleFullRest), so each draw spends something real — the D&D Hit Dice
+// rhythm. The scene renderer offers this as a standing option in every
+// scene's Actions section while the config exists; the button disables at an
+// empty pool, and the guard here mirrors it for pipelines that slip past.
+function handleShortRest(action, engine) {
+  const config = engine.data.rules?.shortRest;
+  if (!config?.resource) {
+    console.warn('[Gravity] short_rest: no rules.shortRest.resource configured — skipped');
+    return;
+  }
+  const pool = engine.state.getPlayer().resources?.[config.resource];
+  if (!(pool && typeof pool === 'object' && 'current' in pool)) {
+    console.warn(`[Gravity] short_rest: "${config.resource}" is not a declared { current, max } resource — skipped`);
+    return;
+  }
+  if (pool.current < 1) {
+    engine.log(LOG.SYSTEM, engine.t('actions.shortRestExhausted'));
+    return;
+  }
+
+  let amount = config.heal ?? 1;
+  let rollSuffix = '';
+  if (typeof amount === 'string') {
+    const result = parseDamage(amount);
+    rollSuffix = engine.t('player.rollSuffix', { dice: amount, roll: result.string });
+    amount = result.total;
+  }
+  engine.state.modifyPlayerStat('hp', amount);
+  engine.state.modifyPlayerStat(config.resource, -1);
+
+  if (action.log !== false) {
+    // The yield amends the act's line, roll and all: "Short Rest (+6 HP, 1d8: 6)".
+    const yieldLine = engine.t('actions.heal', { amount: `+${amount}`, rollSuffix });
+    if (!engine.amendLog(yieldLine)) engine.log(LOG.PLAYER, yieldLine, 'choice');
   }
 }
 
@@ -127,7 +172,7 @@ function handleHeal(action, engine) {
     // amends the act's line. Signed so a harmful heal reads "(-2 HP)".
     if (typeof action.log === 'string') engine.log(LOG.SYSTEM, engine.t(action.log), 'loot');
     else {
-      const yieldLine = engine.t('actions.heal', { amount: amount >= 0 ? `+${amount}` : `${amount}` });
+      const yieldLine = engine.t('actions.heal', { amount: amount >= 0 ? `+${amount}` : `${amount}`, rollSuffix: '' });
       if (!engine.amendLog(yieldLine)) engine.log(LOG.PLAYER, yieldLine, 'choice');
     }
   }
@@ -193,6 +238,7 @@ export function registerBuiltinActions(engine) {
   engine.registerAction(ACTIONS.DIALOGUE,        handleDialogue);
   engine.registerAction(ACTIONS.RETURN,          handleReturn);
   engine.registerAction(ACTIONS.FULL_REST,       handleFullRest);
+  engine.registerAction(ACTIONS.SHORT_REST,      handleShortRest);
   engine.registerAction(ACTIONS.HEAL,            handleHeal);
   engine.registerAction(ACTIONS.MODIFY_RESOURCE, handleModifyResource);
   engine.registerAction(ACTIONS.NAVIGATE,        handleNavigate);

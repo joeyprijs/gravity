@@ -492,6 +492,26 @@ test('levelUpHpBonus: optional, but a malformed value is flagged', () => {
   assert.ok(issuesFor(bad).some(m => m.includes('levelUpHpBonus must be a number')));
 });
 
+test('shortRest: pool must be a declared resource, never hp/ap; heal and timeCost sanity-checked', () => {
+  const ok = makeToolkitData();
+  ok.rules.playerDefaults.resources = { shortRests: { current: 3, max: 3 } };
+  ok.rules.shortRest = { resource: 'shortRests', heal: '1d8', timeCost: 1 };
+  assert.ok(!issuesFor(ok).some(m => m.includes('shortRest')), 'a well-formed config passes');
+
+  const undeclared = makeToolkitData();
+  undeclared.rules.shortRest = { resource: 'shortRests' };
+  assert.ok(issuesFor(undeclared).some(m => m.includes('not a declared { current, max } resource')));
+
+  const spendsAp = makeToolkitData();
+  spendsAp.rules.shortRest = { resource: 'ap' };
+  assert.ok(issuesFor(spendsAp).some(m => m.includes('shortRest.resource cannot be "ap"')));
+
+  const badHeal = makeToolkitData();
+  badHeal.rules.playerDefaults.resources = { shortRests: { current: 3, max: 3 } };
+  badHeal.rules.shortRest = { resource: 'shortRests', heal: -2 };
+  assert.ok(issuesFor(badHeal).some(m => m.includes('shortRest.heal')));
+});
+
 test('flags the removed AP economy: rules.apEconomy, and apCost on options, checks, and dialogue responses', () => {
   const data = makeToolkitData();
   data.rules.apEconomy = { skillAttemptCost: 2 };

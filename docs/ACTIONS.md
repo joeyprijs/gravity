@@ -26,12 +26,12 @@ Actions are the mutation half of the engine: the ordered pipeline a scene option
 
 ### The `log` convention
 
-The state-changing actions — `loot`, `heal`, `full_rest`, `modify_resource`, and `advance_time` — write a default sentence to the narrative log. Two optional controls, shared by all of them:
+The state-changing actions — `loot`, `heal`, `full_rest`, `short_rest`, `modify_resource`, and `advance_time` — write a default line to the narrative log. Two optional controls, shared by all of them:
 
 - `"log": false` — silence the default message entirely.
 - `"log": "Some text."` — replace the default with your own line.
 
-Override strings resolve through the locale table first: `"log": "actions.fullRestMorning"` prints that key's prose (keeping the line translatable — prefer this for anything that is a variant of an existing message), while a string that matches no key logs as-is (the allowance for genuinely one-off narrative lines).
+Override strings resolve through the locale table first: a key like `"log": "actions.heal"` prints that key's prose (keeping the line translatable — prefer this for anything that is a variant of an existing message), while a string that matches no key logs as-is (the allowance for genuinely one-off narrative lines). Voice follows STYLE.md's log rule: a string override is the world's answer (narrated), while `heal`, `full_rest`, and `short_rest` defaults are the act's *yield* — `(+2 HP)`, `(HP restored)` — amended onto the `[Player]` option line that ran the pipeline.
 
 `advance_time` is the one exception in shape: it has **no** default message and logs *only* when you pass a string (its day/segment-change narration is produced separately by the clock). The other action types (`navigate`, `set_flag`, `combat`, `dialogue`, timers, …) don't take `log` at all.
 
@@ -126,9 +126,17 @@ Change the player's HP.
 
 ### `full_rest`
 
-Restore the player at a resting point. Takes no effect parameters. Sets HP to full and refills the retry currency by `rules.skillRetry.restRestore` (clamped to its max) when one is configured. AP is not restored here — it is a per-combat budget that resets on its own when the next fight begins.
+Restore the player at a resting point. Takes no effect parameters. Sets HP to full, refills the retry currency by `rules.skillRetry.restRestore` (clamped to its max) when one is configured, and tops up the short-rest pool when `rules.shortRest` is configured. AP is not restored here — it is a per-combat budget that resets on its own when the next fight begins.
 
 - `log` — see [The `log` convention](#the-log-convention).
+
+### `short_rest`
+
+One draw on the short-rest pool: heals `rules.shortRest.heal` (dice notation like `"1d8"`, or a flat number) and spends one use of `rules.shortRest.resource` — a declared `{ current, max }` resource that only `full_rest` refills, so each draw spends something real (the D&D Hit Dice rhythm). An empty pool refuses in the world's voice and heals nothing.
+
+You rarely author this action yourself: while `rules.shortRest` is configured, the scene renderer offers a standing Short Rest option in every scene's Actions section (with the pool's remaining uses as its stat line, disabled at zero), charging `rules.shortRest.timeCost` like any option. The action type exists so a scene or dialogue can also grant a rest as part of a pipeline.
+
+- `log` — see [The `log` convention](#the-log-convention). The default yield includes the roll: `(+6 HP, 1d8: 6)`.
 
 ### `modify_resource`
 

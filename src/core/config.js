@@ -36,6 +36,7 @@ export const ACTIONS = {
   DIALOGUE:        'dialogue',
   RETURN:          'return',
   FULL_REST:       'full_rest',
+  SHORT_REST:      'short_rest',
   HEAL:            'heal',
   MODIFY_RESOURCE: 'modify_resource',
   NAVIGATE:        'navigate',
