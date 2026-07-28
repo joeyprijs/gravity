@@ -278,7 +278,7 @@
     "Narrator": "Narrator"
   },
   "quest": {
-    "started": "{name}: {description}",
+    "started": "A new goal takes shape — {name}. {description}",
     "completed": "Quest complete: {name}!",
     "earnedXP": "Earned {amount} XP.",
     "earnedGold": "Earned {amount} Gold."
