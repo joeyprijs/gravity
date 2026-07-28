@@ -840,7 +840,7 @@
       await step('options sort by what they do: doors unheaded, talk and acts under headings', async () => {
         // The panel's sections come from the action pipelines, not the wording:
         // anything that navigates stays in the unheaded first list, dialogue goes
-        // under Conversations, and every other act — resting, chests, starting a
+        // under NPCs, and every other act — resting, chests, starting a
         // fight — goes under Actions, whatever action type it is built from.
         const engine = window.gameEngine;
         const section = (id) => document.getElementById(id);
@@ -853,7 +853,7 @@
 
         engine.renderScene('home_living_room');
         await until(() => cards('scene-options').some(t => t.includes('Enter Kitchen')), 'the living room');
-        assert(heading('scene-options-conversations') === 'Conversations', `talking is headed (got "${heading('scene-options-conversations')}")`);
+        assert(heading('scene-options-conversations') === 'NPCs', `talking is headed (got "${heading('scene-options-conversations')}")`);
         assert(cards('scene-options-conversations').length === 2, 'both NPCs are in it');
         assert(!cards('scene-options').some(t => t.includes('Talk to')), 'and no longer among the doors');
         assert(gone('scene-options-actions'), 'nothing to do in the living room, and no box for it');
