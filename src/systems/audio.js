@@ -255,6 +255,14 @@ export class AudioSystem {
   _getBuffer(path) {
     if (!this._buffers.has(path)) {
       const promise = fetch(path)
+        .catch(err => {
+          // A failed FETCH (offline, flaky network) is transient — drop the
+          // cache entry so a later scene entry retries, instead of the clip
+          // staying silent for the whole session. A missing file (HTTP error)
+          // or an undecodable one keeps its cached null: warn once, not per entry.
+          this._buffers.delete(path);
+          throw err;
+        })
         .then(res => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           return res.arrayBuffer();

@@ -153,9 +153,9 @@
         assert($('#inventory-tab').hidden, 'inventory panel hidden');
       });
 
-      await step('sheet sections start expanded', () => {
-        assert(!$('[data-section-body="character"]').hidden, 'character body visible');
-        assert(!$('[data-section-body="skills"]').hidden, 'skills body visible');
+      await step('sheet sections start collapsed', () => {
+        assert($('[data-section-body="character"]').hidden, 'character body starts hidden');
+        assert($('[data-section-body="skills"]').hidden, 'skills body starts hidden');
       });
 
       await step('character section: rows, plugin row, bound values', () => {
@@ -185,12 +185,12 @@
         assert(rows.every(r => r.querySelector('.attr-list__label svg.icon')), 'every skill row shows its rules.customAttributes[].icon');
       });
 
-      await step('section headings toggle collapse and expand', () => {
+      await step('section headings toggle expand and collapse', () => {
         const body = $('[data-section-body="character"]');
         $('[data-section="character"]').click();
-        assert(body.hidden, 'character body hidden after collapse click');
+        assert(!body.hidden, 'character body visible after expand click');
         $('[data-section="character"]').click();
-        assert(!body.hidden, 'character body visible again after expand click');
+        assert(body.hidden, 'character body hidden again after collapse click');
       });
 
       await step('collapse state is in-memory only, never persisted', () => {
@@ -214,7 +214,11 @@
         assert($('#scene-narrative .scene'), 'a scene block rendered');
         assert($$('#scene-options .card').length >= 1, 'at least one option card');
         const badge = text($('#scene-options-skills .card .card__stats'));
-        assert(badge.includes('Bonus:'), `skill badge "${badge}" shows the modifier`);
+        // "Uses:", the same word a weapon card uses for the attribute its
+        // attack rolls with — never "Bonus:", which on a card means a bonus
+        // the item grants.
+        assert(badge.includes('Uses:'), `skill badge "${badge}" shows the modifier`);
+        assert(!badge.includes('Bonus:'), `skill badge "${badge}" does not borrow the item card's word`);
         assert(badge.includes('Difficulty Check'), `skill badge "${badge}" shows the DC`);
       });
 
@@ -235,11 +239,11 @@
 
       await step('tab notifier: card dot always; heading dot only while its section is collapsed', () => {
         // Sheet tab is active (from the previous step) so inventory is inactive.
-        const heading = () => $$('#inventory-tab .section-toggle').find(h => h.textContent.includes('Consumables'));
+        // Special is collapsed already — every section starts that way.
+        const heading = () => $$('#inventory-tab .section-toggle').find(h => h.textContent.includes('Special'));
         $('[data-tab="inventory-tab"]').click();
-        heading().click();                                        // collapse Consumables
         $('[data-tab="attributes-tab"]').click();                 // leave — acknowledges earlier gains
-        window.gameEngine.state.addToInventory('home_rune', 1);   // a distinct new Consumable
+        window.gameEngine.state.addToInventory('home_rune', 1);   // the first item of a distinct new type
         $('[data-tab="inventory-tab"]').click();                  // open — the gain hides in the collapsed section
         assert(heading().classList.contains('section-toggle--notify'), 'collapsed section heading is dotted');
         heading().click();                                        // expand — the contents are revealed
@@ -285,6 +289,75 @@
         await new Promise(r => setTimeout(r, 400));
         window.gameEngine.state.notifyListeners('inventory');   // would drop a spent dot
         assert(potion().classList.contains('card--new'), 'a re-render mid-dwell leaves the dot alone');
+      });
+
+      await step('leaving a tab shuts every section, in that tab and the others', () => {
+        const collapsed = (h) => h.classList.contains('section-toggle--collapsed');
+        const invHeadings = () => $$('#inventory-tab .section-toggle');
+        const sheetHeadings = () => $$('#attributes-tab .section-toggle');
+
+        $('[data-tab="inventory-tab"]').click();
+        invHeadings().filter(collapsed).forEach(h => h.click());
+        assert(invHeadings().length > 0 && !invHeadings().some(collapsed), 'every inventory section is open');
+
+        // The sheet's sections are the other group, and they're opened in a
+        // panel that isn't re-rendered on the way back in — so the switch has
+        // to shut them in place, not just forget they were open.
+        $('[data-tab="attributes-tab"]').click();
+        sheetHeadings().filter(collapsed).forEach(h => h.click());
+        assert(sheetHeadings().length > 0 && !sheetHeadings().some(collapsed), 'every sheet section is open');
+
+        $('[data-tab="quests-tab"]').click();
+        assert(invHeadings().every(collapsed), 'the inventory shut behind us');
+        assert(sheetHeadings().every(collapsed), 'and so did the sheet');
+        assert(!$$('#attributes-tab [data-section-body]').some(b => !b.hidden),
+          'the sheet bodies are hidden too, not just their headings restyled');
+
+        // Re-entering shows the headings-only shape a first visit shows.
+        $('[data-tab="inventory-tab"]').click();
+        assert(invHeadings().length > 0 && invHeadings().every(collapsed), 'and it opens closed');
+      });
+
+      await step('an item card states every fact as a label/value stat row', () => {
+        $('[data-tab="inventory-tab"]').click();
+        window.gameEngine.state.addToInventory('eagle_eye_amulet', 1);
+        window.gameEngine.state.addToInventory('leather_armor', 1);
+        // Open every section — switching into the tab shut them all.
+        $$('#inventory-tab .section-toggle')
+          .forEach(h => { if (h.classList.contains('section-toggle--collapsed')) h.click(); });
+        const card = (name) => $$('#inventory-tab .card').find(c => text(c).includes(name));
+        // A row is a label span and a value span, so the grid can align them.
+        const rows = (name) => [...card(name).querySelectorAll('.card__stats > *')].map(li => [
+          text(li.querySelector('.card__stat-label')), text(li.querySelector('.card__stat-value')),
+        ]);
+
+        // Worn bonuses read the same however they were authored — the amulet's
+        // attributeBonuses and the armor's legacy armorClassBonus both say
+        // "Bonus:", and neither uses the attribute name as its label.
+        assert(rows('Eagle-Eye Amulet').some(([l, v]) => l === 'Slot:' && v === 'Amulet'),
+          `the slot is a stat row, not a body line (got ${JSON.stringify(rows('Eagle-Eye Amulet'))})`);
+        assert(!text(card('Eagle-Eye Amulet').querySelector('.card__body')).includes('Slot'),
+          'and no longer a body line');
+        assert(rows('Eagle-Eye Amulet').some(([l, v]) => l === 'Bonus:' && v === '+1 Perception'),
+          `the worn bonus reads "Bonus: +1 Perception" (got ${JSON.stringify(rows('Eagle-Eye Amulet'))})`);
+        assert(rows('Leather Armor').some(([l, v]) => l === 'Bonus:' && v === '+2 Armor Class'),
+          `armorClassBonus reads the same way (got ${JSON.stringify(rows('Leather Armor'))})`);
+
+        // The weapon row is a different fact — the wielder's accuracy, not a
+        // worn bonus — so it no longer borrows the word "Bonus".
+        assert(rows('Rusty Sword').some(([l, v]) => l === 'Uses:' && v === 'Strength +0'),
+          `a weapon states what it rolls with (got ${JSON.stringify(rows('Rusty Sword'))})`);
+        assert(!rows('Rusty Sword').some(([l]) => l === 'Slot:'),
+          'and never claims a slot — the engine picks the hand');
+
+        // Worn, the amulet states its slot once: the "Equipped:" line owns it.
+        window.gameEngine.equipItem('eagle_eye_amulet');
+        const worn = $$('#inventory-tab .panel-section')
+          .find(s => text(s.querySelector('.section-toggle')).includes('Equipped'))
+          .querySelector('.card');
+        assert(text(worn.querySelector('.card__body')) === 'Equipped: Amulet', 'the equipped card names its slot');
+        assert(![...worn.querySelectorAll('.card__stat-label')].some(l => text(l) === 'Slot:'),
+          'and does not repeat it as a stat row');
       });
 
       await step('tab notifier: a quest dot is spent the same way', async () => {
@@ -382,7 +455,7 @@
         const audio = window.gameEngine.audio;
         const real = audio.playNarration.bind(audio);
         audio.playNarration = (path) => played.push(path);
-        const option = $$('#scene-options .card').find(c => text(c).includes('closer look'));
+        const option = $$('#scene-options-actions .card').find(c => text(c).includes('closer look'));
         assert(option, 'the "take a closer look" option is on screen');
         option.click();
         await until(() => played.length > 0, 'a narration clip to be requested');
@@ -424,6 +497,10 @@
         assert(text($('#scene-location-reminder')).includes('Relic Wing'),
           `the room names itself (got "${text($('#scene-location-reminder'))}")`);
         assert(!text($('#scene-location-reminder')).includes('Curate the exhibits'), 'and not the panel');
+        // The cases are the panel's to show — the room's description says what
+        // the room is and nothing about what stands in it.
+        assert(!$$('#scene-narrative .scene__body').pop().querySelector('.contents-table, .exhibits-table'),
+          'the room description tables no exhibits');
         assert($('#scene-location-reminder .curator-scene-rep'), 'the reputation line stands with the panel open');
         assert($$('.curator-scene-rep').length === 1, 'shown once, not twice');
         assert(text($('.curator-scene-rep__value')) === '12 Points', `value reads "${text($('.curator-scene-rep__value'))}"`);
@@ -431,7 +508,7 @@
         // A same-scene re-render swaps the panel back out for the room's own
         // options, and must NOT reopen it.
         window.gameEngine.renderScene('home_museum_relics');
-        await until(() => $$('#scene-options .card').some(c => text(c).includes('Curate the exhibits')), 'the room\'s own options');
+        await until(() => $$('#scene-options-actions .card').some(c => text(c).includes('Curate the exhibits')), 'the room\'s own options');
         assert(!openPanel(), 'a re-render leaves the panel closed');
         assert(text($('.curator-scene-rep__value')) === '12 Points', 'the line reads the same either way');
       });
@@ -444,9 +521,10 @@
         $$('#scene-options-panel button.card').find(b => text(b).includes('Enter the Relic Wing')).click();
         await until(() => $$('#scene-options-panel button.card').some(b => text(b).includes('Install New Display Case')), 'the wing\'s panel');
 
-        const exit = $$('#scene-options-panel button.card').find(b => text(b).includes('Go back to Museum Lobby'));
+        const exit = $$('#scene-options-panel button.card').find(b => text(b).includes('Return to Museum Lobby'));
         assert(exit, 'the panel offers the room\'s exit');
-        assert(!$$('#scene-options-panel button.card').some(b => text(b) === 'Done'), 'and no Done in front of it');
+        assert(!$$('#scene-options-panel button.card').some(b => text(b) === 'Leave the exhibits'),
+          'and no second way out in front of it');
         exit.click();
         await until(() => text($('#scene-location-reminder')).includes('Museum Lobby'), 'the lobby, in one click');
         assert(window.gameEngine.state.getCurrentSceneId() === 'home_museum', 'no stop-off in the wing\'s options');
@@ -471,9 +549,9 @@
         const heading = () => text($('#scene-location-reminder'));
         assert(heading().startsWith('Relic Wing'), `the dashboard names the room (got "${heading()}")`);
 
-        // A filled case: the card is terse, the log line carries the act.
+        // A filled case: the button carries the verb, the log spells the case out.
         card('Glass Case').click();
-        await until(() => card('Back'), 'the inspect screen');
+        await until(() => card('Step back'), 'the inspect screen');
         assert(lastLogText() === 'Step up to the Glass Case', `approaching is an act (got "${lastLogText()}")`);
         assert(lastLog().classList.contains('scene__log--choice'), 'logged as the player\'s choice');
         assert(heading().startsWith('Glass Case'), `the panel names the case (got "${heading()}")`);
@@ -481,18 +559,19 @@
         assert(!$$('#scene-options-panel .section-heading')
           .some(h => h.id !== 'scene-location-reminder' && text(h) === 'Glass Case'),
           'and does not repeat the name as a section heading');
-        card('Back').click();
+        card('Step back').click();
         await until(() => card('Install New Display Case'), 'the dashboard');
         assert(lastLogText() === 'Step back from the Glass Case', `leaving is an act too (got "${lastLogText()}")`);
         assert(heading().startsWith('Relic Wing'), `the room takes its heading back (got "${heading()}")`);
 
-        // An empty stand reads differently, and Cancel leaves it standing.
+        // An empty stand reads differently. The way out is worded the same as
+        // the filled case's — only the log line tells the two apart.
         card('Mahogany Pedestal').click();
-        await until(() => card('Cancel'), 'the artifact picker');
+        await until(() => card('Step back'), 'the artifact picker');
         assert(lastLogText() === 'Step up to the empty Mahogany Pedestal',
           `an empty stand reads differently (got "${lastLogText()}")`);
         assert(heading().startsWith('Mahogany Pedestal'), `the picker names the stand (got "${heading()}")`);
-        card('Cancel').click();
+        card('Step back').click();
         await until(() => card('Install New Display Case'), 'the dashboard');
         assert(lastLogText() === 'Leave the Mahogany Pedestal empty',
           `cancelling is an act too (got "${lastLogText()}")`);
@@ -501,14 +580,19 @@
         // Moving a relic is the world's response, not a choice — narrated,
         // exactly like taking a stack out of a chest.
         card('Mahogany Pedestal').click();
-        await until(() => card('Cancel'), 'the artifact picker');
+        await until(() => card('Step back'), 'the artifact picker');
+        // Special items are never exhibited. The Hearthstone has been in the
+        // bag since the notifier step, and the picker still doesn't offer it.
+        assert(window.gameEngine.state.countPlayerItem('home_rune', { includeEquipped: false }) === 1,
+          'the Hearthstone is in the bag');
+        assert(!card('Hearthstone'), 'a Special item is not offered to a display case');
         card('Healing Potion').click();
         await until(() => card('Install New Display Case'), 'the dashboard');
         assert(lastLogText() === 'You arranged the Healing Potion in the Mahogany Pedestal.',
           `placing is narrated (got "${lastLogText()}")`);
         assert(lastLog().classList.contains('scene__log--system'), 'in the narrator\'s voice, not the player\'s');
         card('Mahogany Pedestal').click();
-        await until(() => card('Back'), 'the inspect screen');
+        await until(() => card('Step back'), 'the inspect screen');
         card('Healing Potion').click();
         await until(() => card('Install New Display Case'), 'the dashboard');
         assert(lastLogText() === 'You retrieved the Healing Potion from the Mahogany Pedestal.',
@@ -528,11 +612,11 @@
         try {
           window.gameEngine.renderScene('home_museum');
           await until(() => panelCards().some(b => text(b).includes('Build a New Wing')), 'the hall\'s panel');
-          panelCards().find(b => text(b) === 'Done').click();
-          await until(() => $$('#scene-options .card').some(c => text(c).includes('Curate the exhibits')), 'the room\'s options');
+          panelCards().find(b => text(b) === 'Leave the exhibits').click();
+          await until(() => $$('#scene-options-actions .card').some(c => text(c).includes('Curate the exhibits')), 'the room\'s options');
           assert(lastLogText() === 'Leave the exhibits', `closing is an act (got "${lastLogText()}")`);
 
-          $$('#scene-options .card').find(c => text(c).includes('Curate the exhibits')).click();
+          $$('#scene-options-actions .card').find(c => text(c).includes('Curate the exhibits')).click();
           await until(() => panelCards().some(b => text(b).includes('Build a New Wing')), 'the panel again');
           assert(lastLogText() === 'Curate the exhibits', `and so is opening (got "${lastLogText()}")`);
         } finally {
@@ -545,106 +629,80 @@
         const panelCards = () => $$('#scene-options-panel button.card');
         const row = (name) => panelCards().find(b => text(b).includes(name));
 
-        // The chest's contents are a block of their own in the log, written when
-        // it opens — so it reads click, then result — and kept current after that
-        // without the rows moving about.
-        const chestTable = () => $$('#scene-narrative .scene__contents .contents-table').pop();
-
         window.gameEngine.renderScene('home_bedroom');
-        await until(() => $$('#scene-options .card').some(c => text(c).includes('Personal Chest')), 'the bedroom');
-        assert(!chestTable(), 'a shut chest keeps its contents to itself');
-        // The bedroom's own description — museum blocks further up the log do
-        // carry tables, and should.
-        assert(!$$('#scene-narrative .scene__body').pop().querySelector('.contents-table'),
-          'the room description never tables the chest');
-        $$('#scene-options .card').find(c => text(c).includes('Personal Chest')).click();
+        await until(() => $$('#scene-options-actions .card').some(c => text(c).includes('Personal Chest')), 'the bedroom');
+        $$('#scene-options-actions .card').find(c => text(c).includes('Personal Chest')).click();
         await until(() => row('Rusty Sword'), 'the chest panel with an inventory row');
         // The panel names the chest while it owns the screen.
         assert(text($('#scene-location-reminder')) === 'Personal Chest',
           `the heading names the chest (got "${text($('#scene-location-reminder'))}")`);
-        // The table breaks the run of [Player] lines: whatever is logged next
-        // starts a fresh group, with its label and the full gap — a continuation
-        // would tuck itself right under the table.
-        const firstAfterBlock = () => {
-          const block = $('#scene-narrative .scene__contents');
-          let el = block?.nextElementSibling;
-          while (el && !el.classList.contains('scene__log')) el = el.nextElementSibling;
-          return el;
-        };
 
-        // Opening it is a thing the player did, so the log says so — and the
-        // contents land AFTER that line, the way a room's block follows the
-        // choice that walked you in.
-        const openLine = $$('#scene-narrative .scene__log').find(p => text(p).includes('Open Personal Chest'));
-        assert(openLine, 'the log records the opening');
-        const block = $('#scene-narrative .scene__contents');
-        assert(block, 'the contents block is in the log');
-        assert(openLine.compareDocumentPosition(block) & Node.DOCUMENT_POSITION_FOLLOWING,
-          'the contents come after the [Player] line, not before it');
+        // Opening it is a thing the player did, so the log says so — and that
+        // is ALL the log says. The panel is the view of what's inside; the
+        // narrative never carries a standing table of it.
+        assert($$('#scene-narrative .scene__log').some(p => text(p).includes('Open Personal Chest')),
+          'the log records the opening');
+        assert(!$('#scene-narrative .contents-table, #scene-narrative .contents-table__empty'),
+          'and writes no contents table');
 
         // Every row is a plain item card: the item's stats, no action verb.
         assert(text(row('Rusty Sword')).includes('Damage:'), `stats on the row (got "${text(row('Rusty Sword'))}")`);
         assert(!panelCards().some(b => /\b(Take|Deposit)\b/.test(text(b))), 'no Take/Deposit labels anywhere in the panel');
 
+        // A Special item can't be stowed and forgotten: the Hearthstone is in
+        // the bag, and the chest's inventory section still doesn't list it.
+        assert(state.countPlayerItem('home_rune', { includeEquipped: false }) === 1, 'the Hearthstone is in the bag');
+        assert(!row('Hearthstone'), 'a Special item is not offered to the chest');
+
         // Clicking an inventory row puts one in, and the chest row takes it out.
         const inBag = () => state.countPlayerItem('rusty_sword', { includeEquipped: false });
         const inChest = () => state.getChest('personal').find(s => s.item === 'rusty_sword')?.amount ?? 0;
         const bagBefore = inBag();
-        const rowCount = () => $$('#scene-narrative .scene__contents tbody tr').length;
+        const contentsRows = () => {
+          const section = $$('#scene-options-panel .panel-section')
+            .find(s => text(s.querySelector('.section-heading')) === 'Contents');
+          return [...section.querySelectorAll('button.card')].filter(b => !b.disabled);
+        };
         row('Rusty Sword').click();
         await until(() => inChest() === 1, 'the sword to land in the chest');
         assert(inBag() === bagBefore - 1, 'and to leave the bag');
-        await until(() => text(chestTable()).includes('Rusty Sword'), 'the table to keep up');
+        // The panel is what keeps up now — the sword appears in Contents.
+        await until(() => contentsRows().some(b => text(b).includes('Rusty Sword')), 'the Contents section to keep up');
         const depositLine = $$('#scene-narrative .scene__log').find(p => text(p).includes('You placed the Rusty Sword'));
         assert(depositLine, 'the deposit is narrated');
-        assert(firstAfterBlock() === depositLine, 'it is the first line under the table');
-        assert(!depositLine.classList.contains('scene__log--grouped'), 'not tucked under it as a continuation');
         assert(depositLine.querySelector('.scene__log-prefix'), 'and it keeps its [Narrator] label');
-        assert($('#scene-narrative .scene__contents').compareDocumentPosition(depositLine) & Node.DOCUMENT_POSITION_FOLLOWING,
-          'and lands under the table');
 
         // Two rows read "Rusty Sword" now (chest + bag), so take the chest's.
-        const chestSection = $$('#scene-options-panel .panel-section')
-          .find(s => text(s.querySelector('.section-heading')) === 'Contents');
-        const rowsWithSword = rowCount();
-        [...chestSection.querySelectorAll('button.card')].find(b => text(b).includes('Rusty Sword')).click();
+        const rowsWithSword = contentsRows().length;
+        contentsRows().find(b => text(b).includes('Rusty Sword')).click();
         await until(() => inChest() === 0, 'the sword to come back out');
         assert(inBag() === bagBefore, 'and to be back in the bag');
         // The last one out takes the row with it — no 0 rows left behind.
-        assert(rowCount() === rowsWithSword - 1, `the row is gone (${rowsWithSword} → ${rowCount()})`);
-        assert(!text(chestTable()).includes('Rusty Sword'), 'and the sword is not listed');
+        assert(contentsRows().length === rowsWithSword - 1,
+          `the row is gone (${rowsWithSword} → ${contentsRows().length})`);
 
-        // Empty it out completely: the table gives way to an empty-chest line.
-        const emptyOut = () => {
-          const section = $$('#scene-options-panel .panel-section')
-            .find(s => text(s.querySelector('.section-heading')) === 'Contents');
-          const next = [...section.querySelectorAll('button.card')].find(b => !b.disabled);
-          if (next) { next.click(); return true; }
-          return false;
-        };
-        while (emptyOut()) await new Promise(r => setTimeout(r, 30));
-        await until(() => $('#scene-narrative .scene__contents .contents-table__empty'), 'the empty-chest line');
-        assert(!chestTable(), 'and no table over nothing');
-        assert(text($('#scene-narrative .scene__contents')) === 'Chest is empty.',
-          `the empty message reads right (got "${text($('#scene-narrative .scene__contents'))}")`);
+        // Empty it out completely: the section says so in place of its rows.
+        while (contentsRows().length) { contentsRows()[0].click(); await new Promise(r => setTimeout(r, 30)); }
+        const contentsSection = () => $$('#scene-options-panel .panel-section')
+          .find(s => text(s.querySelector('.section-heading')) === 'Contents');
+        assert(text(contentsSection()).includes('Chest is empty.'),
+          `the empty message reads right (got "${text(contentsSection())}")`);
+        assert(!$('#scene-narrative .contents-table, #scene-narrative .contents-table__empty'),
+          'and the narrative still holds no table of any of it');
 
-        // Put something back, then shut the chest: closing is logged too, and
-        // the block stays in the log.
+        // Put something back, then shut the chest: closing is logged too.
         row('Healing Potion').click();
         await until(() => state.getChest('personal').some(s => s.item === 'healing_potion'), 'the potion in the chest');
-        panelCards().find(b => text(b) === 'Done').click();
+        panelCards().find(b => text(b) === 'Close Chest').click();
         await until(() => text($('#scene-location-reminder')).includes('Bedroom'), 'the bedroom again');
         const closeLine = $$('#scene-narrative .scene__log').pop();
         assert(text(closeLine).includes('Close Chest'), `closing is logged (got "${text(closeLine)}")`);
         assert(text(closeLine).startsWith('[Player]'), `in the player's voice (got "${text(closeLine)}")`);
-        assert($('#scene-narrative .scene__contents'), 'the opening block stays in the log');
 
-        // Opening it again writes a fresh block — this one showing the potion,
-        // since that is what is in there now.
-        $$('#scene-options .card').find(c => text(c).includes('Personal Chest')).click();
-        await until(() => $$('#scene-narrative .scene__contents').length === 2, 'a second contents block');
-        assert(text(chestTable()).includes('Healing Potion'), 'the new snapshot shows what is in there now');
-        panelCards().find(b => text(b) === 'Done').click();
+        // Re-opening shows what's in there now — in the panel, not the log.
+        $$('#scene-options-actions .card').find(c => text(c).includes('Personal Chest')).click();
+        await until(() => contentsRows().some(b => text(b).includes('Healing Potion')), 'the potion listed in Contents');
+        panelCards().find(b => text(b) === 'Close Chest').click();
         await until(() => text($('#scene-location-reminder')).includes('Bedroom'), 'the bedroom');
       });
 
@@ -672,7 +730,7 @@
         const glassCase = state.getDisplaysForScene('home_museum_relics').find(d => d.name === 'Glass Case');
         assert(glassCase.item === null, `the case is empty (holds ${glassCase.item})`);
 
-        panelCards().find(b => text(b).includes('Go back to Museum Lobby')).click();
+        panelCards().find(b => text(b).includes('Return to Museum Lobby')).click();
         await until(() => text($('#scene-location-reminder')).includes('Museum Lobby'), 'the lobby');
       });
 
@@ -686,7 +744,8 @@
         window.gameEngine.renderScene('home_museum_relics');
         await until(() => layout().includes('Current Exhibits'), 'the wing\'s panel');
         let order = layout();
-        assert(order[0].includes('Go back to'), `the exit comes first (got "${order[0]}")`);
+        // Every exit in the game reads "Return to …", wing or house.
+        assert(order[0].startsWith('Return to'), `the exit comes first (got "${order[0]}")`);
         assert(order.indexOf('Current Exhibits') < order.indexOf('Construction'), 'contents before construction');
         assert(order[order.length - 1].includes('Install New Display Case'), `building is last (got "${order[order.length - 1]}")`);
         assert(!order.some(l => l.startsWith('+')), 'no + prefixes on the buttons');
@@ -757,7 +816,7 @@
         assert($('#scene-location-reminder .curator-scene-rep'), 'a built wing carries the reputation line');
         assert(text($('#scene-narrative')).includes('plaster is new'), 'the room describes itself as newly built');
 
-        $$('#scene-options-panel button.card').find(b => text(b).includes('Go back to Museum Lobby')).click();
+        $$('#scene-options-panel button.card').find(b => text(b).includes('Return to Museum Lobby')).click();
         await until(() => text($('#scene-location-reminder')).includes('Museum Lobby'), 'the hall again');
       });
 
@@ -776,6 +835,48 @@
         window.gameEngine.renderScene('home_museum');
         await until(() => $$('#scene-options-panel button.card').some(b => text(b).includes('Enter the Pottery Wing')),
           'its door in the hall again');
+      });
+
+      await step('options sort by what they do: doors unheaded, talk and acts under headings', async () => {
+        // The panel's sections come from the action pipelines, not the wording:
+        // anything that navigates stays in the unheaded first list, dialogue goes
+        // under Conversations, and every other act — resting, chests, starting a
+        // fight — goes under Actions, whatever action type it is built from.
+        const engine = window.gameEngine;
+        const section = (id) => document.getElementById(id);
+        const cards = (id) => $$(`#${id} button.card`).map(b => text(b));
+        const heading = (id) => text(section(id).querySelector('.section-heading'));
+        // Computed display, not the `hidden` property: .panel-section sets
+        // display:flex, which outranks the UA's [hidden] rule, so an empty
+        // section can carry the attribute and still take up space.
+        const gone = (id) => getComputedStyle(section(id)).display === 'none';
+
+        engine.renderScene('home_living_room');
+        await until(() => cards('scene-options').some(t => t.includes('Enter Kitchen')), 'the living room');
+        assert(heading('scene-options-conversations') === 'Conversations', `talking is headed (got "${heading('scene-options-conversations')}")`);
+        assert(cards('scene-options-conversations').length === 2, 'both NPCs are in it');
+        assert(!cards('scene-options').some(t => t.includes('Talk to')), 'and no longer among the doors');
+        assert(gone('scene-options-actions'), 'nothing to do in the living room, and no box for it');
+        assert(gone('scene-options-skills'), 'and no skill checks');
+
+        // Sleeping and a chest are acts, not doors — and the way out still isn't.
+        engine.renderScene('home_bedroom');
+        await until(() => cards('scene-options-actions').some(t => t.includes('Open Personal Chest')), 'the bedroom');
+        assert(heading('scene-options-actions') === 'Actions', `acts are headed (got "${heading('scene-options-actions')}")`);
+        // "Sleep until morning" is conditional on the hour, so it may or may not
+        // be here — the full rest and the chest always are.
+        assert(cards('scene-options-actions').some(t => t.includes('Sleep (Full Rest)')), 'resting is an act');
+        assert(cards('scene-options').length === 1 && cards('scene-options')[0].includes('Return to Living Room'),
+          `the doors list is only the way out (got ${JSON.stringify(cards('scene-options'))})`);
+
+        // The hallway's fight is an act too, sitting above the stealth and
+        // charisma checks that are the other ways through the same standoff.
+        engine.renderScene('dungeon_hallway');
+        await until(() => cards('scene-options-actions').some(t => t.includes('Prepare to fight')), 'the hallway');
+        assert(!cards('scene-options').some(t => t.includes('Prepare to fight')), 'the fight is not a door');
+        assert(cards('scene-options').some(t => t.includes('Return to the Corridor')), 'which is what that list holds');
+        assert(heading('scene-options-skills') === 'Skills', 'and the checks keep their own section');
+        assert(gone('scene-options-conversations'), 'nobody to talk to here, and no gap where they would be');
       });
 
       await step('a chosen solo fight introduces its enemy', async () => {
@@ -812,10 +913,10 @@
           'the scene description before it did the framing');
       });
 
-      await step('a log saved before the table rename still renders styled', async () => {
+      await step('a log saved back when rooms tabled their exhibits still renders styled', async () => {
         // A save stores its narrative log as rendered HTML, so old entries carry
-        // the pre-rename class names for good. Restore one and check the CSS
-        // aliases still reach it — scrollback must not turn into bare tables.
+        // tables no room writes any more. Restore one and check the CSS still
+        // reaches it — scrollback must not turn into bare markup.
         const legacy = {
           type: 'scene', title: 'Museum Armor Room',
           desc: 'An old hall.<div class="exhibits-table-container"><table class="exhibits-table">'

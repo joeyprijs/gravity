@@ -468,6 +468,30 @@ test('modify_resource: flags "ap" — a combat-only budget no narrative action m
   assert.ok(issuesFor(data).some(m => m.includes('modify_resource cannot move "ap"')));
 });
 
+test('item modifyResource effect: flags "ap", a missing resource, and an undeclared one; declared is clean', () => {
+  const data = makeToolkitData();
+  data.rules.playerDefaults.resources = { ap: { current: 3, max: 3 }, luckPoints: { current: 3, max: 3 } };
+  data.items.ap_flask   = { name: 'AP Flask',   attributes: { modifyResource: { resource: 'ap', amount: 2 } } };
+  data.items.odd_flask  = { name: 'Odd Flask',  attributes: { modifyResource: { amount: 2 } } };
+  data.items.gold_flask = { name: 'Gold Flask', attributes: { modifyResource: { resource: 'gold', amount: 2 } } };
+  data.items.luck_flask = { name: 'Luck Flask', attributes: { modifyResource: { resource: 'luckPoints', amount: 1 } } };
+  const messages = issuesFor(data);
+  assert.ok(messages.some(m => m.includes('attributes.modifyResource cannot move "ap"')));
+  assert.ok(messages.some(m => m.includes('attributes.modifyResource needs a "resource"')));
+  assert.ok(messages.some(m => m.includes('attributes.modifyResource resource "gold" is not a declared')));
+  assert.ok(!messages.some(m => m.includes('"luckPoints" is not a declared')));
+});
+
+test('levelUpHpBonus: optional, but a malformed value is flagged', () => {
+  const clean = makeToolkitData();
+  delete clean.rules.levelUpHpBonus;
+  assert.ok(!issuesFor(clean).some(m => m.includes('levelUpHpBonus')), 'omitting it is a valid choice');
+
+  const bad = makeToolkitData();
+  bad.rules.levelUpHpBonus = '5';
+  assert.ok(issuesFor(bad).some(m => m.includes('levelUpHpBonus must be a number')));
+});
+
 test('flags the removed AP economy: rules.apEconomy, and apCost on options, checks, and dialogue responses', () => {
   const data = makeToolkitData();
   data.rules.apEconomy = { skillAttemptCost: 2 };

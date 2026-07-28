@@ -310,6 +310,27 @@ test('addXP: does not hang when xpPerLevel is 0 — banks XP without leveling', 
   assert.equal(p.xp, 50);
 });
 
+test('addXP: a missing levelUpHpBonus means no HP growth on level-up — never NaN', () => {
+  const { levelUpHpBonus, ...rules } = TEST_RULES;
+  gameState.init(rules);
+  gameState.addXP(100);
+  const p = gameState.getPlayer();
+  assert.equal(p.level, 2);
+  assert.equal(maxHp(), 10);
+  assert.equal(hp(), 10);
+});
+
+test("modifyPlayerStat: the 'full' sentinel resolves before handler dispatch", () => {
+  // A handler expects numeric deltas; 'full' has no meaning for a derived
+  // stat that isn't a { current, max } resource, so it must no-op — never
+  // reach the handler as the raw string.
+  const received = [];
+  gameState.registerStatHandler('favor', (amount) => received.push(amount));
+  gameState.modifyPlayerStat('favor', 3);
+  gameState.modifyPlayerStat('favor', 'full');
+  assert.deepEqual(received, [3]);
+});
+
 // ── Level-up stat points (rules.levelUp.statPoints) ───────────────────────────
 
 test('addXP banks stat points per level when rules.levelUp.statPoints is set', () => {
@@ -416,18 +437,46 @@ test('spendStatPoint: charCreation.stats targets apply bonusPerPoint with creati
   assert.equal(p.statPoints, 0);
 });
 
-// ── registerMigration collision guard ─────────────────────────────────────────
-// Registered at the END of this file on purpose: a registered extra migration
-// persists on the singleton and would raise maxVersion for every
+// ── registerMigration guards ──────────────────────────────────────────────────
+// Registered at the END of this file on purpose: a registered plugin migration
+// persists on the singleton and would run (and stamp its version) for every
 // loadFromObject test that runs after it.
 
-test('registerMigration: rejects core-version collisions and duplicate versions', () => {
-  assert.throws(() => gameState.registerMigration(4, () => {}), /collides with a core migration/);
-  gameState.registerMigration(77, () => {});
-  assert.throws(() => gameState.registerMigration(77, () => {}), /already registered/);
+test('registerMigration: requires a plugin id and a positive integer version, rejects duplicates', () => {
+  assert.throws(() => gameState.registerMigration(4, () => {}), /plugin id string is required/);
+  assert.throws(() => gameState.registerMigration('demo', 0, () => {}), /positive integer/);
+  gameState.registerMigration('demo', 1, (data) => { (data.plugins ??= {}).demo = { seeded: true }; });
+  assert.throws(() => gameState.registerMigration('demo', 1, () => {}), /already registered/);
+});
+
+test('plugin migrations run on their own version line, partitioned from the core counter', () => {
+  const ok = gameState.loadFromObject({ player: {}, log: [] }); // v0 save
+  assert.equal(ok, true);
+  assert.equal(gameState.state.saveVersion, 4);                    // core line untouched by the plugin
+  assert.equal(gameState.state.pluginSaveVersions.demo, 1);        // plugin line stamped separately
+  assert.deepEqual(gameState.state.plugins.demo, { seeded: true }); // and the migration ran
+
+  // A save already at the plugin's version must not re-run its migration.
+  gameState.loadFromObject({
+    saveVersion: 4, pluginSaveVersions: { demo: 1 },
+    player: {}, plugins: { demo: { seeded: 'already' } }, log: [],
+  });
+  assert.equal(gameState.state.plugins.demo.seeded, 'already');
+});
+
+test('migrate: a pre-partition save stamped 5 by a plugin adopts the core version back', () => {
+  // Before the partition, plugin migrations stamped the CORE counter (the
+  // curator wrote 5). Such a save is core-current; left at 5 it would skip a
+  // future core v5 migration.
+  gameState.loadFromObject({ saveVersion: 5, player: { name: 'x' }, log: [] });
+  assert.equal(gameState.state.saveVersion, 4);
+  assert.equal(gameState.state.pluginSaveVersions.demo, 1); // the plugin line still catches up
 });
 
 test('loadFromObject: legacy check bookkeeping moves from flags into checkState', () => {
+  // Earlier tests registered scene flags on the singleton; pin them to a
+  // known set — loads seed declared flags the save predates (see below).
+  gameState.registerSceneFlags({ door_open: false });
   const ok = gameState.loadFromObject({
     saveVersion: 4,
     player: {
@@ -450,7 +499,8 @@ test('loadFromObject: legacy check bookkeeping moves from flags into checkState'
   assert.deepEqual(gameState.state.flags, {
     cellar_unlocked: true,
     merchant_stock_stranger_potion: 2,
-  }, 'authored and scalar flags stay in the flag namespace');
+    door_open: false,
+  }, 'authored and scalar flags stay in the flag namespace; declared scene flags are seeded');
   assert.deepEqual(gameState.getCheckState('skill_dc_perception_dungeon_start'), { tries_0: 2 });
   assert.deepEqual(gameState.getCheckState('dialogue_dc_innkeeper'), { tries_charm_start_0: 1 });
   assert.deepEqual(gameState.getCheckState('dialogue_resolved_innkeeper'), { resolved_charm_start_0: true });
@@ -459,4 +509,16 @@ test('loadFromObject: legacy check bookkeeping moves from flags into checkState'
   const again = JSON.parse(JSON.stringify(gameState.state));
   gameState.loadFromObject(again);
   assert.deepEqual(gameState.getCheckState('skill_dc_perception_dungeon_start'), { tries_0: 2 });
+});
+
+test('loadFromObject: seeds declared scene flags the save predates, never overwriting saved ones', () => {
+  // A flag shipped after the player's save, defaulting TRUE — without the
+  // backfill getFlag's false fallback would hide whatever it gates.
+  gameState.registerSceneFlags({ gate_raised: true, door_open: false });
+  gameState.loadFromObject({
+    saveVersion: 4, player: { name: 'x' }, log: [],
+    flags: { door_open: true }, // the save's own value must win
+  });
+  assert.equal(gameState.getFlag('gate_raised'), true, 'declared default seeded into the old save');
+  assert.equal(gameState.getFlag('door_open'), true, 'saved values are preserved');
 });

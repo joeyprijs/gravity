@@ -169,6 +169,15 @@ test('full_rest: restores hp to full and leaves AP alone (combat-only)', () => {
   assert.equal(ap(), 1); // AP is a per-combat budget; rest doesn't touch it
 });
 
+test('log overrides resolve through t(): a locale key translates, a one-off line logs as-is', () => {
+  const { engine, run, calls } = makeEngine();
+  engine.t = (key) => key === 'actions.fullRestMorning' ? 'You wake with the morning light.' : key;
+  run({ type: ACTIONS.FULL_REST, log: 'actions.fullRestMorning' });
+  assert.ok(calls.logs.some(l => l.message === 'You wake with the morning light.'));
+  run({ type: ACTIONS.FULL_REST, log: 'A one-off narrative line.' });
+  assert.ok(calls.logs.some(l => l.message === 'A one-off narrative line.'));
+});
+
 test('heal: explicit amount takes precedence', () => {
   const { run } = makeEngine();
   gameState.modifyPlayerStat('hp', -8);

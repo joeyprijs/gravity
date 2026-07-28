@@ -1,4 +1,4 @@
-import { buildCard, buildContentsTable, createElement, buildOptionButton, getItemLabel, itemCardStats, resetOptionsPanel } from "../core/utils.js";
+import { buildCard, createElement, buildOptionButton, getItemLabel, isSpecialItem, itemCardStats, resetOptionsPanel } from "../core/utils.js";
 import { CSS, LOG } from "../core/config.js";
 
 // ChestUI renders the deposit/withdraw panel for a chest (opened by the
@@ -6,6 +6,8 @@ import { CSS, LOG } from "../core/config.js";
 // two sections, one card per stack. A card IS the control — clicking a chest
 // row takes it out, clicking an inventory row puts it in — and it carries the
 // item's stat lines, the same card the inventory and the curator's cases show.
+// The panel IS the view of the contents; the narrative log only records what
+// moved, never a standing inventory of what's inside.
 export class ChestUI {
   constructor(engine, chestId) {
     this.engine = engine;
@@ -26,22 +28,6 @@ export class ChestUI {
     return resolved === specific ? this.engine.t(`actions.chest${key}`, params) : resolved;
   }
 
-  // What the chest holds, as a contents table in the narrative — written after
-  // the [Player] line that opened it, then kept current as stacks move: a row
-  // per stack, gone when the last one leaves, and an empty-chest message when
-  // nothing is left. Re-opening writes a fresh table further down the log.
-  _renderContents(chest) {
-    this._contentsEl ??= this.engine.narrative.appendBlock();
-    this._contentsEl.innerHTML = buildContentsTable(
-      [this.tChest('TableItem'), this.tChest('TableAmount')],
-      chest.map(stack => ({
-        label: getItemLabel(this.engine.data.items, stack.item),
-        value: String(stack.amount ?? 1),
-      })),
-      this.tChest('Empty'),
-    );
-  }
-
   // One stack as a clickable card: its label, and the item's own stat lines.
   _itemCard(stack) {
     const itemData = this.engine.data.items[stack.item];
@@ -56,25 +42,29 @@ export class ChestUI {
 
   render() {
     const chest = this.engine.state.getChest(this.chestId);
-    const pInv = this.engine.state.getPlayer().inventory;
-
-    this._renderContents(chest);
+    // Special items are never offered: a story relic stays on the player, so
+    // it can't be stowed and forgotten in a chest (see isSpecialItem).
+    const pInv = this.engine.state.getPlayer().inventory
+      .filter(stack => !isSpecialItem(this.engine.data.items[stack.item]));
 
     // The panel names the chest, the way a museum room's panel names the room —
     // it has taken the screen over, so the heading should say what you are
     // looking at. Closing hands the heading back to the scene.
     const { panel, container, skillsContainer } = resetOptionsPanel(this.tChest('Title'));
 
-    const doneBtn = buildOptionButton(this.tChest('Done'));
-    doneBtn.onclick = () => {
+    // The button names the act, and the log records the words the player
+    // clicked — one phrase, the way "Open Personal Chest" reads on the way in.
+    const close = this.tChest('Close');
+    const closeBtn = buildOptionButton(close);
+    closeBtn.onclick = () => {
       // Shutting it is a choice the player made, logged in their voice like the
       // "Open Personal Chest" that started the visit — not narration.
-      this.engine.log(LOG.PLAYER, this.tChest('Close'), 'choice');
+      this.engine.log(LOG.PLAYER, close, 'choice');
       this.engine.setCustomUIOpen(false);
       const scene = this.engine.data.scenes[this.engine.state.getCurrentSceneId()];
       if (scene) this.engine.scene.renderOptions(scene);
     };
-    container.appendChild(doneBtn);
+    container.appendChild(closeBtn);
 
     const chestSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
     chestSection.appendChild(createElement('div', CSS.SECTION_HEADING, this.tChest('Contents')));

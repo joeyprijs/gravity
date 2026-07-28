@@ -1,4 +1,4 @@
-import { createElement, buildSceneDescription, buildOptionButton, getItemLabel, narratorLabelHtml, resetOptionsPanel, wrapLogPrefix } from "../core/utils.js";
+import { clearElement, createElement, buildSceneDescription, buildOptionButton, getItemLabel, narratorLabelHtml, resetOptionsPanel, wrapLogPrefix } from "../core/utils.js";
 import { CHECK_KEYS, CSS, FLAG_KEYS, GOLD_ITEM_ID, LOG, MAX_D20_ROLL } from "../core/config.js";
 import { evaluateCondition } from "./condition.js";
 import { formatList } from "../core/i18n.js";
@@ -44,8 +44,10 @@ export class SceneRenderer {
     const scene = this.engine.data.scenes[sceneId];
     if (scene) {
       // Loading into a location should sound like it — but stay quiet:
-      // ambience only, no narration replay.
+      // ambience only, no narration replay. That includes a clip already
+      // mid-sentence from before the load — the null stops it.
       this.engine.audio?.syncAmbience(scene);
+      this.engine.audio?.playNarration(null);
       this.renderOptions(scene);
     }
   }
@@ -59,8 +61,12 @@ export class SceneRenderer {
    * @param {boolean} [opts.skipAutoAttack=false] - Suppresses the scene's
    *   autoAttack encounter. Used by the post-victory re-render so winning a
    *   fight on an auto-attack scene doesn't immediately restart it.
+   * @param {boolean} [opts.skipNarration=false] - Renders the description
+   *   without starting its narration clip. Used by the post-victory re-render:
+   *   combat reset the description cache, so the block re-appends — but the
+   *   narrator already read this room on the way in.
    */
-  render(sceneId, { skipAutoAttack = false } = {}) {
+  render(sceneId, { skipAutoAttack = false, skipNarration = false } = {}) {
     if (this.engine.inCombat) return;
 
     const scene = this.engine.data.scenes[sceneId];
@@ -96,7 +102,7 @@ export class SceneRenderer {
     // (where currentSceneId is pre-seeded, so isEntry is false) while
     // skipping skill-check re-renders and save restores.
     this.engine.audio?.syncAmbience(scene);
-    if (appended) this.engine.audio?.playNarration(this._resolveNarration(scene));
+    if (appended && !skipNarration) this.engine.audio?.playNarration(this._resolveNarration(scene));
 
     passiveTexts.forEach(text => this.engine.log(LOG.NARRATOR, text));
     if (isEntry) this._resetSkillAttempts(scene, sceneId);
@@ -218,10 +224,12 @@ export class SceneRenderer {
   }
 
   renderOptions(scene) {
-    const { container: optionsContainer, skillsContainer } = resetOptionsPanel(scene.title || scene.name);
+    const { container: optionsContainer, talkContainer, actionsContainer, skillsContainer } = resetOptionsPanel(scene.title || scene.name);
 
-    const standardOpts = [];
+    const navOpts = [];
     const backOpts = [];
+    const talkOpts = [];
+    const actionOpts = [];
 
     // A "back" option is sorted to the bottom of the list. Detected by the
     // `return` action type or an explicit `"isBack": true` flag — never by
@@ -231,18 +239,30 @@ export class SceneRenderer {
       return opt.actions?.some(a => a.type === 'return') ?? false;
     };
 
+    // Which section an option lands in follows from what its pipeline does, for
+    // the same reason isBackOption does — the action type says so in every
+    // locale. The unheaded first list is where the player can GO: anything that
+    // navigates. Talking to somebody is its own section. Everything left is an
+    // act performed here — resting, eating, opening a chest, starting a fight —
+    // and lands under Actions, whatever action type it is built from.
+    const startsAction = (opt, type) => opt.actions?.some(a => a.type === type) ?? false;
+
     (scene.options || []).forEach(opt => {
       const cond = opt.condition ?? null;
       if (!evaluateCondition(cond, this.engine.state)) return;
 
       if (isBackOption(opt)) {
         backOpts.push(opt);
+      } else if (startsAction(opt, 'navigate')) {
+        navOpts.push(opt);
+      } else if (startsAction(opt, 'dialogue')) {
+        talkOpts.push(opt);
       } else {
-        standardOpts.push(opt);
+        actionOpts.push(opt);
       }
     });
 
-    const renderOptionBtn = (opt) => {
+    const renderOptionBtn = (opt, target = optionsContainer) => {
       let reqText = null;
       let disabled = false;
       if (opt.requirements?.item) {
@@ -256,10 +276,28 @@ export class SceneRenderer {
       const btn = buildOptionButton(opt.text, reqText);
       if (disabled) btn.disabled = true;
       btn.onclick = () => this.handleOption(opt);
-      optionsContainer.appendChild(btn);
+      target.appendChild(btn);
     };
 
-    standardOpts.forEach(renderOptionBtn);
+    // Both headed option sections are opened up front and swept at the end, so
+    // a plugin decorator can append to one without having to know whether this
+    // scene filled it: a section nobody put a button in loses its heading again.
+    const openSection = (container, headingKey) => {
+      container.appendChild(createElement('div', CSS.SECTION_HEADING, this.engine.t(headingKey)));
+      container.removeAttribute('hidden');
+    };
+    const sweepSection = (container) => {
+      if (container.querySelector('button')) return;
+      clearElement(container);
+      container.setAttribute('hidden', '');
+    };
+
+    openSection(talkContainer, 'ui.conversationsHeading');
+    openSection(actionsContainer, 'ui.actionsHeading');
+
+    navOpts.forEach(opt => renderOptionBtn(opt));
+    talkOpts.forEach(opt => renderOptionBtn(opt, talkContainer));
+    actionOpts.forEach(opt => renderOptionBtn(opt, actionsContainer));
 
     const skillBtns = [];
     const sceneId = this.engine.state.getCurrentSceneId();
@@ -288,13 +326,17 @@ export class SceneRenderer {
       skillsContainer.removeAttribute('hidden');
     }
 
-    // Plugin-registered decorators may append extra option buttons (e.g. the
-    // curator plugin's exhibit-management button).
+    // Plugin-registered decorators may append extra option buttons. They get the
+    // panel's headed sections too, so a plugin's own act (the curator's "Curate
+    // the exhibits") sits with the scene's acts instead of among its doors.
+    const sections = { conversations: talkContainer, actions: actionsContainer };
     for (const decorator of this.engine.sceneDecorators) {
-      if (decorator.options) decorator.options(scene, optionsContainer, this.engine);
+      if (decorator.options) decorator.options(scene, optionsContainer, this.engine, sections);
     }
 
-    backOpts.forEach(renderOptionBtn);
+    backOpts.forEach(opt => renderOptionBtn(opt));
+    sweepSection(talkContainer);
+    sweepSection(actionsContainer);
   }
 
   /**

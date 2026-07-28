@@ -321,7 +321,7 @@ Valid only inside conversation nodes:
 | `makeFriendly` | — | Mark the active NPC friendly — future `combat` actions skip it. |
 | `questTrigger` | `mission`, `status` | Start (`"active"`) or complete (`"complete"`) a mission. |
 
-The state-changing actions (`loot`, `heal`, `full_rest`, `modify_resource`, `advance_time`) take an optional `log`: `false` silences the default message, a string replaces it. Timer pipelines are restricted to *quiet* actions (`set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`) — a timer changes the world through flags, never by navigating or starting combat. Plugins register their own types (the curator plugin adds `manage_exhibits` and `add_display`) — see the [Plugin API](#plugin-api). Every parameter above is documented in full in [`docs/ACTIONS.md`](docs/ACTIONS.md).
+The state-changing actions (`loot`, `heal`, `full_rest`, `modify_resource`, `advance_time`) take an optional `log`: `false` silences the default message, a string replaces it (resolved through the locale table first, so a locale key stays translatable; any other string logs as-is). Timer pipelines are restricted to *quiet* actions (`set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`) — a timer changes the world through flags, never by navigating or starting combat. Plugins register their own types (the curator plugin adds `manage_exhibits`, `add_display`, and `build_wing`) — see the [Plugin API](#plugin-api). Every parameter above is documented in full in [`docs/ACTIONS.md`](docs/ACTIONS.md).
 
 ### Scenes
 
@@ -599,7 +599,9 @@ Weapons, spells, armor, and consumables. All mechanical stats live inside `attri
 }
 ```
 
-Item `type` is one of `Weapon`, `Spell`, `Armor`, `Consumable`, or `Flavour` (the default when omitted — keepsakes and key items). The type drives behavior: weapons and spells equip to a hand and attack; armor equips to its `slot`; consumables are drunk/used; flavour items just sit in the pack. In the inventory the card *is* the control — clicking an item equips, uses or unequips it, with no per-item buttons.
+Item `type` is one of `Weapon`, `Spell`, `Armor`, `Consumable`, `Special`, or `Flavour` (the default when omitted — keepsakes and key items). The type drives behavior: weapons and spells equip to a hand and attack; armor equips to its `slot`; consumables are drunk/used; flavour items just sit in the pack. In the inventory the card *is* the control — clicking an item equips, uses or unequips it, with no per-item buttons.
+
+`Special` is the story/required category (the demo's Hearthstone). A Special item never leaves the pack by the player's hand: it's filtered out of the merchant's sell list, the display-case artifact picker, and the chest deposit list, so give it no `value`. It is still *used* like a consumable when it declares a use (`teleportScene`, `healingAmount`, …) and is otherwise an inert card. Scripted effects — a quest turn-in, a scene that consumes it — remove it normally; the rule governs the player's choices, not the engine's reach.
 
 Equipment `slot` names are **game-defined** — whatever keys appear in `rules.playerDefaults.equipment` (the demo uses `Head`, `Amulet`, `Torso`, `Left Hand`, `Right Hand`, `Legs`). Only the two hand slots are engine-fixed, because combat reads weapons from them. A weapon or spell goes to a hand by virtue of its `type`, so the engine picks the hand and the item's own `slot` is ignored (most weapons declare none): an empty hand first, left before right, and otherwise alternating left, right, left… Both `type` and `slot` are validated at boot.
 
@@ -761,7 +763,7 @@ The deeper tour — boot flow, the mode machine, state contracts, events, hooks,
 ## Testing
 
 *   **`npm test`** — 350+ synchronous unit tests on Node's native runner: state and saves, combat math, the condition AST, dice, checks and their attempt machine, scene and dialogue logic, the world clock, the validator, the curator plugin, and a data-integrity suite over the shipped demo.
-*   **`tests/smoke.html`** — a zero-dependency browser smoke test that boots the real game and drives the UI like a player: character creation, tabs, the sheet, the top bar, inventory markup invariants, a live skill check, the audio controls, and the combat framing rules. `scripts/run-smoke.sh` runs it in headless Chrome and is part of CI, so the surfaces Node cannot reach are covered there too.
+*   **`tests/smoke.html`** — a zero-dependency browser smoke test that boots the real game and drives the UI like a player: character creation, tabs, the sheet, the top bar, the new-content notifier dots, inventory markup invariants and equipping, a live skill check, the scene panel's option sections, the audio controls, the museum's curator flows (wings, display cases, building, a save/load round trip), the combat framing rules, and merchant trade. `scripts/run-smoke.sh` runs it in headless Chrome and is part of CI, so the surfaces Node cannot reach are covered there too.
 *   **CI** — GitHub Actions runs the test suite and verifies the manifest is in sync with the data tree on every push and pull request.
 
 ---

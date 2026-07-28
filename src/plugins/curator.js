@@ -1,4 +1,4 @@
-import { buildCard, buildContentsTable, buildOptionButton, createElement, escapeHtml, getItemLabel, itemCardStats, resetOptionsPanel } from "../core/utils.js";
+import { buildCard, buildOptionButton, createElement, escapeHtml, getItemLabel, isSpecialItem, itemCardStats, resetOptionsPanel } from "../core/utils.js";
 import { CSS, EL, LOG } from "../core/config.js";
 
 // The curator's reputation model: a permanent score (earned by acquiring
@@ -10,17 +10,19 @@ import { CSS, EL, LOG } from "../core/config.js";
 // (museumReputation, obtainedItems) lives in the sanctioned plugin bag,
 // state.pluginState('curator').
 
-// Set by registerCuratorState(). Module-level because the hook callbacks need
-// them: the engine's StateManager and the loaded item database. curatorEngine
-// is set by the plugin's register function only — the state-level tests call
-// registerCuratorState on its own, and room synthesis stays out of their way.
+// Hook registrations are per-StateManager: each registered manager gets its
+// own record holding the item database and (when the full plugin runs) the
+// engine, and the hook callbacks read through that record — so two engines
+// booted in one page (a manual-boot harness, the test suite) each keep their
+// own reputation current instead of the first registration winning forever.
+// Repeat registrations only refresh the record (the test suite re-inits state
+// per test). curatorState tracks the most recent registration for the
+// module-level getMuseumReputation() export.
+const registrations = new WeakMap(); // StateManager → { items, engine }
 let curatorState = null;
-let curatorItems = {};
-let curatorEngine = null;
-let hooksRegistered = false;
 
 // The curator's save-data bag ({ museumReputation, obtainedItems, rooms }).
-const bag = () => curatorState.pluginState('curator');
+const bagOf = (state) => state.pluginState('curator');
 
 // What building a wing costs when the game's config doesn't say — the demo's
 // configured price. One constant because two places must agree on it: the
@@ -35,45 +37,54 @@ export function getMuseumReputation() {
 
 // Recomputes the derived reputation attribute from the permanent score plus
 // the reputation of every relic currently on display.
-function updateReputation() {
-  let rep = bag().museumReputation ?? 0;
-  const displays = curatorState.getAllDisplays();
+function updateReputation(state, items) {
+  let rep = bagOf(state).museumReputation ?? 0;
+  const displays = state.getAllDisplays();
   for (const sceneId in displays) {
     for (const display of displays[sceneId]) {
-      if (display.item && curatorItems[display.item]) {
-        rep += curatorItems[display.item].attributes?.reputation ?? 0;
+      if (display.item && items[display.item]) {
+        rep += items[display.item].attributes?.reputation ?? 0;
       }
     }
   }
-  curatorState.setPlayerAttribute('reputation', rep);
+  state.setPlayerAttribute('reputation', rep);
 }
 
 // First-time acquisition of a reputation-bearing item awards its reputation
 // permanently. obtainedItems tracks which items have already been counted.
-function handleAcquisition(itemId) {
-  const itemData = curatorItems[itemId];
+function handleAcquisition(state, items, itemId) {
+  const itemData = items[itemId];
   if (!itemData?.attributes?.reputation) return;
-  const obtained = (bag().obtainedItems ??= []);
+  const obtained = (bagOf(state).obtainedItems ??= []);
   if (obtained.includes(itemId)) return;
   obtained.push(itemId);
-  curatorState.modifyPlayerStat('reputation', itemData.attributes.reputation);
+  state.modifyPlayerStat('reputation', itemData.attributes.reputation);
 }
 
 // Registers the curator's state integrations: the reputation stat handler,
 // the mutation hooks that keep the derived attribute current, and the save
-// migration for the plugin's fields. Idempotent — repeat calls only refresh
-// the state/item references (the test suite re-inits state per test).
-export function registerCuratorState(state, items = {}) {
+// migration for the plugin's fields. Idempotent per StateManager — repeat
+// calls only refresh the registration's item/engine references (the test
+// suite re-inits state per test). The engine reference is optional: the
+// state-level tests call this on its own, and room synthesis stays out of
+// their way.
+export function registerCuratorState(state, items = {}, engine = null) {
   curatorState = state;
-  curatorItems = items;
-  if (hooksRegistered) return;
-  hooksRegistered = true;
+  const existing = registrations.get(state);
+  if (existing) {
+    existing.items = items;
+    if (engine) existing.engine = engine;
+    return;
+  }
+  const reg = { items, engine };
+  registrations.set(state, reg);
 
   // modifyPlayerStat('reputation', delta) adjusts the permanent score; the
   // visible attribute is recomputed (and notified) from updateReputation.
   state.registerStatHandler('reputation', (amount) => {
-    bag().museumReputation = (bag().museumReputation ?? 0) + amount;
-    updateReputation();
+    const bag = bagOf(state);
+    bag.museumReputation = (bag.museumReputation ?? 0) + amount;
+    updateReputation(state, reg.items);
   });
 
   state.onMutation((method, info) => {
@@ -83,25 +94,26 @@ export function registerCuratorState(state, items = {}) {
       case 'reset':
         // Rooms first: a loaded save's wings must be on the map (and their
         // display cases addressable) before anything reads the museum.
-        syncMuseumRooms(curatorEngine);
-        updateReputation();
+        syncMuseumRooms(reg.engine);
+        updateReputation(state, reg.items);
         break;
       case 'addToInventory':
-        handleAcquisition(info.itemId);
+        handleAcquisition(state, reg.items, info.itemId);
         break;
       case 'placeItemInDisplay':
       case 'takeItemFromDisplay':
-        updateReputation();
+        updateReputation(state, reg.items);
         break;
     }
   });
 
-  // Migration v5: curator save data. v5 because plugin migrations must sit
-  // above the core SAVE_VERSION (4) — registering at a core version would
-  // shadow that core migration (registerMigration throws). Adopts the
-  // pre-bag top-level fields older saves carried, and seeds defaults for
-  // saves that predate the curator entirely.
-  state.registerMigration(5, (data) => {
+  // The curator's save data, version 1 on the plugin's own migration line
+  // (state.pluginSaveVersions.curator — partitioned from the core
+  // saveVersion). Adopts the pre-bag top-level fields older saves carried,
+  // and seeds defaults for saves that predate the curator entirely.
+  // Idempotent on purpose: saves stamped 5 by the pre-partition version line
+  // re-run it once when they adopt the partitioned form.
+  state.registerMigration('curator', 1, (data) => {
     if (!data.plugins) data.plugins = {};
     const saved = data.plugins.curator ?? (data.plugins.curator = {});
     saved.museumReputation ??= data.museumReputation ?? 0;
@@ -125,22 +137,6 @@ export function registerCuratorState(state, items = {}) {
     delete data.museumReputation;
     delete data.obtainedItems;
   });
-}
-
-// The exhibits table appended to the description of any scene that has display
-// cases — the same contents table the engine gives a chest (buildContentsTable),
-// so a museum room and a chest read alike. Every case is listed, filled or not:
-// an empty stand is the museum's standing invitation.
-function buildExhibitsTable(engine, sceneId) {
-  const displays = engine.state.getDisplaysForScene(sceneId);
-  return buildContentsTable(
-    [engine.t('plugin.curator.curatorTableStand'), engine.t('plugin.curator.curatorTableRelic')],
-    displays.map(d => ({
-      label: d.name,
-      value: d.item ? getItemLabel(engine.data.items, d.item) : engine.t('plugin.curator.curatorEmpty'),
-      empty: !d.item,
-    })),
-  );
 }
 
 // Pins the museum's reputation under the scene name in the options panel, for
@@ -268,7 +264,7 @@ function syncMuseumRooms(engine) {
   const hall = findHall(engine);
   if (!hall) return;
 
-  const rooms = bag().rooms ?? [];
+  const rooms = bagOf(engine.state).rooms ?? [];
   const wanted = new Map(rooms.map(r => [r.id, r]));
   for (const [id, scene] of Object.entries(engine.data.scenes)) {
     if (scene.museumBuilt && !wanted.has(id)) delete engine.data.scenes[id];
@@ -281,8 +277,7 @@ function syncMuseumRooms(engine) {
 
 export default function curatorPlugin(engine) {
   // 1. Register state integrations (stat handler, mutation hooks, migration)
-  curatorEngine = engine;
-  registerCuratorState(engine.state, engine.data.items);
+  registerCuratorState(engine.state, engine.data.items, engine);
   layoutMuseum(engine);
 
   // Reputation is a curator concept: flag the deprecated top-level item shape
@@ -300,24 +295,25 @@ export default function curatorPlugin(engine) {
     }
   });
 
-  // 2. Decorate every scene that has display cases: exhibits table appended to
-  // the description, plus the curator-panel option button. Scenes flagged
-  // `showsReputation` also get the standing reputation line.
+  // 2. Decorate every scene that has display cases with the curator-panel
+  // option button. What stands in each case is the panel's job to show — the
+  // description doesn't table it, the way a chest doesn't table its contents.
+  // Scenes flagged `showsReputation` also get the standing reputation line.
   engine.registerSceneDecorator({
-    description: (scene, sceneId) => buildExhibitsTable(engine, sceneId),
-    options: (scene, optionsContainer) => {
+    options: (scene, optionsContainer, _engine, sections) => {
       if (scene.showsReputation) showReputationLine(engine);
       const sceneId = engine.state.getCurrentSceneId();
       const hasDisplays = engine.state.getDisplaysForScene(sceneId).length > 0;
       if (!isMuseumRoom(scene, hasDisplays)) return;
       // Named for the act, not the panel: this is the museum's "Open Personal
-      // Chest", and handleOption logs its text as the player's choice.
+      // Chest", and handleOption logs its text as the player's choice. It sits
+      // in the panel's Actions section for the same reason the chest does.
       const btn = buildOptionButton(engine.t('plugin.curator.curatorOpen'));
       btn.onclick = () => engine.scene.handleOption({
         text: engine.t('plugin.curator.curatorOpen'),
         actions: [{ type: "manage_exhibits" }]
       });
-      optionsContainer.appendChild(btn);
+      (sections?.actions ?? optionsContainer).appendChild(btn);
     }
   });
 
@@ -353,7 +349,7 @@ export default function curatorPlugin(engine) {
     engine.state.modifyPlayerStat('gold', -cost);
     // The save carries the wing, not its scene: the scene is rebuilt from this
     // on every load (see syncMuseumRooms), and pluginState persists it.
-    (bag().rooms ??= []).push({ id: `${hall.id}_wing_${slot}`, name, slot });
+    (bagOf(engine.state).rooms ??= []).push({ id: `${hall.id}_wing_${slot}`, name, slot });
     syncMuseumRooms(engine);
 
     // The hall just got wider and the wing is on the map — but neither the
@@ -404,11 +400,6 @@ export class CuratorUI {
     this.engine = engine;
   }
 
-  _refreshSceneDesc() {
-    const scene = this.engine.data.scenes[this.engine.state.getCurrentSceneId()];
-    if (scene) this.engine.scene.refreshDescription(scene);
-  }
-
   render(screen = 'dashboard', context = null) {
     const sceneId = this.engine.state.getCurrentSceneId();
     const scene = this.engine.data.scenes[sceneId];
@@ -442,22 +433,23 @@ export class CuratorUI {
   }
 
   // The way out of the panel. When curating is ALL there is to do in the room,
-  // that's the room's own exit — the panel opens on arrival, so a "Done" that
-  // revealed nothing but a single "Go back" was a step for its own sake. A room
-  // with anything else to do keeps Done, or those options would be unreachable
-  // while the panel is up.
+  // that's the room's own exit — the panel opens on arrival, so a "Leave the
+  // exhibits" that revealed nothing but a single "Return to…" was a step for
+  // its own sake. A room with anything else to do keeps its own exit button,
+  // or those options would be unreachable while the panel is up.
   _exitButton(scene) {
     const isBack = (o) => o.isBack === true || (o.actions ?? []).some(a => a.type === 'return');
     const options = scene.options ?? [];
     const back = options.length === 1 && isBack(options[0]) ? options[0] : null;
 
     if (!back) {
-      const doneBtn = buildOptionButton(this.engine.t('plugin.curator.curatorDone'));
+      // The button carries the words the log records, as the chest's "Close
+      // Chest" does. The back-button path below needs no line of its own:
+      // walking out through handleOption logs the option's own text.
+      const close = this.engine.t('plugin.curator.curatorClose');
+      const doneBtn = buildOptionButton(close);
       doneBtn.onclick = () => {
-        // Terse button, act-shaped log line — the chest's "Done" logs "Close
-        // Chest" the same way. The back-button path below needs none: walking
-        // out through handleOption logs the option's own text.
-        this.engine.log(LOG.PLAYER, this.engine.t('plugin.curator.curatorClose'), 'choice');
+        this.engine.log(LOG.PLAYER, close, 'choice');
         this.engine.setCustomUIOpen(false);
         this.engine.scene.renderOptions(scene);
       };
@@ -595,7 +587,6 @@ export class CuratorUI {
         name: name
       });
       this.engine.log(LOG.SYSTEM, this.engine.t('plugin.curator.curatorInstallSuccess', { cost: installCost, name }));
-      this._refreshSceneDesc();
       this.render('dashboard');
     };
     installSection.appendChild(installBtn);
@@ -614,7 +605,8 @@ export class CuratorUI {
     const itemData = this.engine.data.items[itemId];
     const name = getItemLabel(this.engine.data.items, itemId);
 
-    // 1. Back button
+    // 1. The way out. The panel heading names the case right above this, so
+    // the button carries the verb alone; the log line spells the case out.
     const backBtn = buildOptionButton(this.engine.t('plugin.curator.curatorBack'));
     backBtn.onclick = () => {
       this.engine.log(LOG.PLAYER, this.engine.t('plugin.curator.displayLeave', { display: display.name }), 'choice');
@@ -641,7 +633,6 @@ export class CuratorUI {
     itemCard.onclick = () => {
       this.engine.state.takeItemFromDisplay(sceneId, displayId);
       this.engine.log(LOG.SYSTEM, this.engine.t('actions.displayTook', { name, display: display.name }));
-      this._refreshSceneDesc();
       this.render('dashboard');
     };
     detailSection.appendChild(itemCard);
@@ -657,10 +648,13 @@ export class CuratorUI {
       return;
     }
 
-    // 1. Cancel button
-    const cancelBtn = buildOptionButton(this.engine.t('plugin.curator.curatorCancel'));
+    // 1. The way out. The same words as the filled case's — stepping away is
+    // stepping away, whatever is or isn't standing there. The log line is the
+    // one that distinguishes them: this one records the case left empty.
+    const cancelBtn = buildOptionButton(this.engine.t('plugin.curator.curatorBack'));
     cancelBtn.onclick = () => {
-      this.engine.log(LOG.PLAYER, this.engine.t('plugin.curator.displayLeaveEmpty', { display: display.name }), 'choice');
+      this.engine.log(LOG.PLAYER,
+        this.engine.t('plugin.curator.displayLeaveEmpty', { display: display.name }), 'choice');
       this.render('dashboard');
     };
     container.appendChild(cancelBtn);
@@ -673,10 +667,16 @@ export class CuratorUI {
     const player = this.engine.state.getPlayer();
     const isEquipped = (itemId) => Object.values(player.equipment).includes(itemId);
 
-    // Filter inventory to show all non-equipped items
+    // Filter inventory to show all non-equipped items. Special items are never
+    // exhibited — a story relic belongs in the pack, not behind glass. A case
+    // with allowedTypes only offers what it accepts (placeItemInDisplay
+    // enforces the same gate).
     let eligibleItems = player.inventory.filter(invItem => {
       if (isEquipped(invItem.item)) return false;
-      return !!this.engine.data.items[invItem.item];
+      const itemData = this.engine.data.items[invItem.item];
+      if (isSpecialItem(itemData)) return false;
+      if (display.allowedTypes && !display.allowedTypes.includes(itemData?.type)) return false;
+      return !!itemData;
     });
 
     if (eligibleItems.length > 0) {
@@ -689,7 +689,6 @@ export class CuratorUI {
         btn.onclick = () => {
           this.engine.state.placeItemInDisplay(sceneId, displayId, invItem.item);
           this.engine.log(LOG.SYSTEM, this.engine.t('actions.displayDeposited', { name, display: display.name }));
-          this._refreshSceneDesc();
           this.render('dashboard');
         };
         selectSection.appendChild(btn);

@@ -58,7 +58,7 @@ skills[1].outcomes.partial.text
 
 ────────────────────────────────────────────────────────────────────────
 Log line · Slip past the goblins undetected. · heal
-skills[1].outcomes.partial.actions[1].log
+skills[1].outcomes.partial.actions[2].log
 → audio/narration/dungeon/hallway__slip_past_goblins_undetected.webm  [no clip yet]
 
   The graze burns. (-2 HP)

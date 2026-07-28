@@ -165,3 +165,17 @@ test('config.ITEM_TYPES matches the item.schema.json type enum', () => {
   assert.deepEqual(new Set(ITEM_TYPES), schemaTypes,
     'config.ITEM_TYPES and schemas/item.schema.json disagree — update whichever is wrong');
 });
+
+test('every item type has a section label, and Special items carry no sell price', () => {
+  const items = loadMap(index.items);
+  for (const type of ITEM_TYPES) {
+    assert.ok(locale.itemTypes?.[type], `itemTypes.${type} has no label — its inventory section would read as a raw key`);
+    assert.ok(rules.itemTypeOrder?.[type] !== undefined, `itemTypeOrder.${type} is unset — the section would sort to the end`);
+  }
+  // A Special item can never be sold, so a "Value: N Gold" line on its card
+  // would advertise gold the player has no way to collect.
+  for (const [id, item] of Object.entries(items)) {
+    if (item.type !== 'Special') continue;
+    assert.ok(!item.value, `${id} is Special but declares a value — Special items are unsellable`);
+  }
+});

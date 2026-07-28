@@ -34,7 +34,7 @@
         },
         {
           "type": "full_rest",
-          "log": "You sleep deeply and wake with the morning light. Health and Actions fully restored."
+          "log": "actions.fullRestMorning"
         }
       ]
     },

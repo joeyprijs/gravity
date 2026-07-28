@@ -8,6 +8,8 @@ import { ticksUntilSegment } from "./time.js";
 // Handlers are responsible only for their side-effect; navigation is a separate
 // "navigate" action in the pipeline. Log output can be suppressed or overridden
 // by setting action.log = false (silent) or action.log = "custom message".
+// Override strings resolve through engine.t(), so a locale key keeps the prose
+// translatable; a string that isn't a key logs as-is (the one-off allowance).
 //
 // Register additional actions at runtime: window.gameEngine.registerAction(name, fn)
 
@@ -20,7 +22,7 @@ function handleLoot(action, engine) {
     engine.state.modifyPlayerStat('gold', amount);
     if (action.log !== false) {
       const key = action.received ? 'loot.receivedGold' : 'loot.foundGold';
-      const msg = typeof action.log === 'string' ? action.log : engine.t(key, { amount });
+      const msg = typeof action.log === 'string' ? engine.t(action.log) : engine.t(key, { amount });
       engine.log(LOG.SYSTEM, msg, 'loot');
     }
   } else {
@@ -28,7 +30,7 @@ function handleLoot(action, engine) {
     if (action.log !== false) {
       const key = action.received ? 'loot.receivedItem' : 'loot.foundItem';
       const msg = typeof action.log === 'string'
-        ? action.log
+        ? engine.t(action.log)
         : engine.t(key, { name: engine.data.items[action.item]?.name || action.item });
       engine.log(LOG.SYSTEM, msg, 'loot');
     }
@@ -69,7 +71,7 @@ function handleFullRest(action, engine) {
     engine.state.modifyPlayerStat(retry.resource, retry.restRestore);
   }
   if (action.log !== false) {
-    const msg = typeof action.log === 'string' ? action.log : engine.t('actions.fullRest');
+    const msg = typeof action.log === 'string' ? engine.t(action.log) : engine.t('actions.fullRest');
     engine.log(LOG.SYSTEM, msg);
   }
 }
@@ -105,7 +107,7 @@ function handleModifyResource(action, engine) {
     const labelKey = `ui.resources.${action.resource}`;
     const label = engine.t(labelKey) !== labelKey ? engine.t(labelKey) : action.resource;
     const msg = typeof action.log === 'string'
-      ? action.log
+      ? engine.t(action.log)
       : engine.t(amount < 0 ? 'actions.resourceLoss' : 'actions.resourceGain', { amount: Math.abs(amount), resource: label });
     engine.log(LOG.SYSTEM, msg, amount < 0 ? 'system' : 'loot');
   }
@@ -115,7 +117,7 @@ function handleHeal(action, engine) {
   const amount = action.amount ?? engine.data.rules?.snackHealAmount ?? 2;
   engine.state.modifyPlayerStat('hp', amount);
   if (action.log !== false) {
-    const msg = typeof action.log === 'string' ? action.log : engine.t('actions.heal', { amount });
+    const msg = typeof action.log === 'string' ? engine.t(action.log) : engine.t('actions.heal', { amount });
     engine.log(LOG.SYSTEM, msg, 'loot');
   }
 }
@@ -131,7 +133,7 @@ function handleSetFlag(action, engine) {
 }
 
 function handleLog(action, engine) {
-  engine.log(LOG.SYSTEM, action.message || '');
+  engine.log(LOG.SYSTEM, action.message ? engine.t(action.message) : '');
 }
 
 function handleManageChest(action, engine) {
@@ -155,7 +157,7 @@ function handleAdvanceTime(action, engine) {
     amount = derived;
   }
   engine.advanceTime(amount);
-  if (typeof action.log === 'string') engine.log(LOG.SYSTEM, action.log);
+  if (typeof action.log === 'string') engine.log(LOG.SYSTEM, engine.t(action.log));
 }
 
 // { type: "set_timer", id, afterTicks: 12, actions: [...] } — when the clock

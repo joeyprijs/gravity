@@ -3,12 +3,8 @@
   "museumReputationValue":   "{value} Points",
   "curatorOpen":             "Curate the exhibits",
   "curatorClose":            "Leave the exhibits",
-  "curatorDone":             "Done",
-  "curatorBack":             "Back",
-  "curatorCancel":           "Cancel",
+  "curatorBack":             "Step back",
   "curatorEmpty":            "(Empty)",
-  "curatorTableStand":       "Display Stand",
-  "curatorTableRelic":       "Showcased Relic",
   "curatorInstall":          "Install New Display Case ({cost} Gold)",
   "curatorHeadingExhibits":  "Current Exhibits",
   "constructionHeading":     "Construction",
@@ -29,6 +25,6 @@
   "wingDefaultName":         "Wing {count}",
   "wingBuiltLog":            "You spent {cost} Gold. Builders knock through the hall and the \"{name}\" opens off it.",
   "wingEnter":               "Enter the {name}",
-  "wingBack":                "Go back to {name}",
+  "wingBack":                "Return to {name}",
   "wingDescription":         "You step into the {name}. The plaster is new, the lights are hung, and the floor is bare — whatever stands here, you will be the one to put it there."
 }

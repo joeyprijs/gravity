@@ -19,7 +19,7 @@ A scene's `skills` array (and an NPC's dialogue `responses`) supports five check
 | **Item discovery** | `skillCheck` + `items` | One roll vs every still-hidden item's own DC; found items persist. |
 | **Passive** | scene-level `passiveChecks` | Auto-rolled silently on first entry, once per game, into an author-named flag. |
 
-Check buttons always show the player what they're weighing: their modifier ("Bonus: Perception +2", from the `actions.skillBadge.*` locale strings) and the DC on its own line (`actions.skillBadgeDc`). Informed decisions are the point — hidden math is a slot machine.
+Check buttons always show the player what they're weighing: their modifier ("Uses: Perception +2", from the `actions.skillBadge.*` locale strings) and the DC on its own line (`actions.skillBadgeDc`). Informed decisions are the point — hidden math is a slot machine. `Uses:` is the same row a weapon card shows for the attribute its attack rolls with (`itemStats.hit`) — one word for "what this roll leans on", wherever the roll is offered. It is deliberately not `Bonus:`, which on an item card means a bonus the thing *grants* while worn.
 
 ## Outcome tiers
 
@@ -202,16 +202,20 @@ Rolled silently on the player's **first** entry, once per game, writing pass/fai
 
 | Tool | Demo location |
 |---|---|
-| Attempt budget + authored way out | Cellar "Look Around" (`maxAttempts: 4` → force the lock with the rusty sword) |
+| Attempt budget + authored way out | Cellar "Look Around" (`maxAttempts: 4` → exhaustion closes the search with a line; the door key comes from the separate "Take a closer look" option) |
 | Timer + world reaction | Opening the cellar door arms `dungeon_alarm` (12 ticks → hallway description changes) |
 | Partial / critical tiers | Hallway stealth check (graze through / pickpocket on a critical) |
 | Budgeted persuasion → consequence | Hallway goblin charm (3 tries, then they attack) |
 | Narrative check | Kitchen "Sneak a taste of the stew" (repeatable, escalating resultText) |
 | Luck skill + retry currency | Corridor rubble dig: d20 + Luck vs DC 12; retries cost a Luck Point, escalating failure lines |
 | Passive check | Grand Chamber ceiling shimmer → one-shot fail-forward climb |
-| One-shot dialogue check with tiers | Stranger's discount haggle (critical: 20% + a clover; failure: marked-up prices) |
+| One-shot dialogue check with tiers | Stranger's discount haggle (critical: 20% + a free healing potion; failure: marked-up prices) |
 | Time + sleep | Bedroom "Sleep until morning"; kitchen changes at night |
 
 ## Validation
 
 `validateGameData` checks all of it: leftover `increment` and removed luck-subsystem fields, unknown outcome tiers, doubly-defined tier pipelines, `resolveOnce`+`maxAttempts` redundancy, inert `onExhausted`, unsafe timer actions, unknown segments, day/segment conditions without their backing config, malformed `defaultCosts`, missing segment locale keys, and passive checks missing `flag` or `skillCheck`.
+
+## A caveat for content updates
+
+Check bookkeeping is keyed by **position**: attempt counters, resolution markers, and discovery progress are stored per entry index within a scene's `skills` (and a dialogue node's `responses`) — `tries_0`, `disc_1`, and so on. Inserting or reordering entries in a shipped scene shifts that state in existing saves: a retired check un-retires, a fresh one inherits a neighbour's attempt count. When updating shipped content, append new checks after the existing ones — or accept that in-flight attempt state misattributes once for players mid-visit.

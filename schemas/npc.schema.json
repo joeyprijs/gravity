@@ -50,7 +50,7 @@
     },
     "attributes": {
       "type": "object",
-      "description": "Combat characteristics for aggressive NPC entities (enemies).",
+      "description": "Combat characteristics for aggressive NPC entities (enemies). Also holds the NPC's attack attributes (e.g. strength): an equipped weapon's attackAttribute must name a stat declared here, or its attacks roll +0.",
       "properties": {
         "healthPoints": {
           "type": "integer",
@@ -78,7 +78,10 @@
         "armorClass",
         "actionPoints"
       ],
-      "additionalProperties": false
+      "additionalProperties": {
+        "type": "number",
+        "description": "An attack attribute (e.g. strength, intelligence) a wielded weapon's attackAttribute references."
+      }
     },
     "equipment": {
       "type": "object",

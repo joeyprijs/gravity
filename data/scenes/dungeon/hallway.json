@@ -47,6 +47,10 @@
           {
             "flag": "goblins_pacified",
             "value": false
+          },
+          {
+            "flag": "goblins_snuck_past",
+            "value": false
           }
         ]
       },
@@ -124,7 +128,7 @@
       ]
     },
     {
-      "text": "Retreat to the corridor",
+      "text": "Return to the Corridor",
       "actions": [
         {
           "type": "navigate",
@@ -199,6 +203,11 @@
               "type": "set_flag",
               "flag": "goblins_snuck_past",
               "value": true
+            },
+            {
+              "type": "loot",
+              "item": "home_rune",
+              "amount": 1
             },
             {
               "type": "heal",
@@ -306,6 +315,10 @@
           },
           {
             "flag": "goblins_pacified",
+            "value": false
+          },
+          {
+            "flag": "goblins_snuck_past",
             "value": false
           }
         ]

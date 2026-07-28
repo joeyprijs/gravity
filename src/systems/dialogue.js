@@ -1,4 +1,4 @@
-import { createElement, buildSceneDescription, buildOptionButton, resetOptionsPanel } from "../core/utils.js";
+import { createElement, buildSceneDescription, buildOptionButton, isSpecialItem, resetOptionsPanel } from "../core/utils.js";
 import { ACTIONS, CHECK_KEYS, CSS, FLAG_KEYS, LOG } from "../core/config.js";
 import { evaluateCondition } from "./condition.js";
 import {
@@ -408,6 +408,7 @@ export class DialogueSystem {
     const sellRatio = this.engine.data.rules?.merchantSellRatio ?? 0.5;
     const sellItems = player.inventory.filter(invItem => {
       const item = this.engine.data.items[invItem.item];
+      if (isSpecialItem(item)) return false;
       return item && item.value > 0 && Math.floor(item.value * sellRatio) > 0;
     });
 

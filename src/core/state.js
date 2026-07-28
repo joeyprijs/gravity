@@ -33,18 +33,44 @@ const MIGRATIONS = {
   },
 };
 
-function migrate(data, extraMigrations = {}) {
-  const from = data.saveVersion ?? 0;
-  const allMigrations = { ...MIGRATIONS, ...extraMigrations };
-  const maxVersion = Math.max(SAVE_VERSION, ...Object.keys(extraMigrations).map(Number));
-  // A save from a newer engine (from >= maxVersion) is already current or ahead;
-  // leave it untouched rather than re-running migrations or rewriting its
-  // version backwards.
-  if (from >= maxVersion) return;
-  for (let v = from + 1; v <= maxVersion; v++) {
-    if (allMigrations[v]) allMigrations[v](data);
+// Saves written before plugin migrations had their own version line (see
+// registerMigration) carried the curator's stamp — 5 — on the core counter.
+const LEGACY_PLUGIN_STAMP = 5;
+
+function migrate(data, pluginMigrations = {}) {
+  // Adopt pre-partition saves back onto the core line: they are core-current
+  // (core migrations never went past 4), and left at 5 they would silently
+  // skip a future core v5. Detectable exactly — partitioned saves always
+  // carry pluginSaveVersions, pre-partition saves never do.
+  if (data.saveVersion === LEGACY_PLUGIN_STAMP && !('pluginSaveVersions' in data)) {
+    data.saveVersion = SAVE_VERSION;
   }
-  data.saveVersion = maxVersion;
+
+  const from = data.saveVersion ?? 0;
+  // A save from a newer engine (from >= SAVE_VERSION) is already current or
+  // ahead; leave it untouched rather than re-running migrations or rewriting
+  // its version backwards.
+  if (from < SAVE_VERSION) {
+    for (let v = from + 1; v <= SAVE_VERSION; v++) {
+      if (MIGRATIONS[v]) MIGRATIONS[v](data);
+    }
+    data.saveVersion = SAVE_VERSION;
+  }
+
+  // Plugin migrations run on their own per-plugin version line
+  // (data.pluginSaveVersions[pluginId]), so a plugin stamping its save data
+  // can never make the core version number lie, or the reverse. Same
+  // forward-only rule as the core line.
+  for (const [pluginId, line] of Object.entries(pluginMigrations)) {
+    const versions = Object.keys(line).map(Number).sort((a, b) => a - b);
+    const max = versions[versions.length - 1];
+    const current = data.pluginSaveVersions?.[pluginId] ?? 0;
+    if (current >= max) continue;
+    for (const v of versions) {
+      if (v > current) line[v](data);
+    }
+    (data.pluginSaveVersions ??= {})[pluginId] = max;
+  }
 }
 
 function makeDefaultState(rules) {
@@ -56,6 +82,7 @@ function makeDefaultState(rules) {
   player.statPoints = 0;
   return {
     saveVersion: SAVE_VERSION,
+    pluginSaveVersions: {},
     player,
     flags: {},
     checkState: {},
@@ -85,6 +112,7 @@ class StateManager {
     // and registerSceneFlags() which are called during data loading.
     this.state = {
       saveVersion: SAVE_VERSION,
+      pluginSaveVersions: {},
       player: {},
       flags: {},
       checkState: {},
@@ -101,7 +129,7 @@ class StateManager {
     this.listeners = [];
     this._rules = null;
     this._items = {};
-    this._extraMigrations = {};
+    this._pluginMigrations = {};
     this._mutationHooks = [];
     this._statHandlers = {};
   }
@@ -175,28 +203,44 @@ class StateManager {
     this._rules = rules;
     this._items = items;
     this.state = makeDefaultState(rules);
+    this._stampPluginVersions();
     this._emitMutation('init', { rules, items });
   }
 
+  // Fresh states are current: stamp every registered plugin's latest version
+  // so saving and reloading a new game doesn't re-run plugin migrations.
+  _stampPluginVersions() {
+    for (const [pluginId, line] of Object.entries(this._pluginMigrations)) {
+      this.state.pluginSaveVersions[pluginId] = Math.max(...Object.keys(line).map(Number));
+    }
+  }
+
   /**
-   * Plugin hook: registers a migration for a version above the core SAVE_VERSION.
-   * Plugins that change their own save data call this during their register() fn.
+   * Plugin hook: registers a save migration on the plugin's own version line.
+   * Plugins that change their own save data call this during their register()
+   * fn. Core and plugin versions are partitioned — state.saveVersion never
+   * carries a plugin's number (and vice versa: plugin lines live under
+   * state.pluginSaveVersions[pluginId]), so a plugin stamping its data can
+   * never make a save silently skip a future core migration.
    *
-   * Throws on a version collision: a plugin migration registered at (or below)
-   * a core version would silently shadow the core migration in migrate()'s
-   * merge, so saves would skip core steps — fail loudly at registration instead.
-   *
-   * @param {number} version - The save version this migration produces.
+   * @param {string} pluginId - The plugin id (e.g. 'curator') — the
+   *   pluginSaveVersions key the migration line lives under.
+   * @param {number} version - The plugin save version this migration produces
+   *   (a positive integer; each plugin's line starts at 1).
    * @param {(data: object) => void} fn - Mutates the raw parsed save object in place.
    */
-  registerMigration(version, fn) {
-    if (version <= SAVE_VERSION) {
-      throw new Error(`[Gravity] registerMigration: version ${version} collides with a core migration (core SAVE_VERSION is ${SAVE_VERSION}) — use a higher version`);
+  registerMigration(pluginId, version, fn) {
+    if (typeof pluginId !== 'string' || !pluginId) {
+      throw new Error('[Gravity] registerMigration: a plugin id string is required — plugin migrations run on their own per-plugin version line (registerMigration(pluginId, version, fn))');
     }
-    if (version in this._extraMigrations) {
-      throw new Error(`[Gravity] registerMigration: version ${version} is already registered`);
+    if (!Number.isInteger(version) || version < 1) {
+      throw new Error(`[Gravity] registerMigration: version must be a positive integer (got ${version})`);
     }
-    this._extraMigrations[version] = fn;
+    const line = (this._pluginMigrations[pluginId] ??= {});
+    if (version in line) {
+      throw new Error(`[Gravity] registerMigration: "${pluginId}" version ${version} is already registered`);
+    }
+    line[version] = fn;
   }
 
   /**
@@ -239,7 +283,10 @@ class StateManager {
     }
 
     // Run schema migrations so older saves stay compatible.
-    migrate(parsedData, this._extraMigrations);
+    migrate(parsedData, this._pluginMigrations);
+    // Every post-partition save carries the plugin version map, even an empty
+    // one — the legacy-stamp detection in migrate() relies on its presence.
+    parsedData.pluginSaveVersions ??= {};
 
     // Seed resources the rules declare but the save predates (e.g. a game
     // that adds a resource after players already have saves). Rules-driven
@@ -265,6 +312,16 @@ class StateManager {
     }
     // And the banked stat-point counter (added with rules.levelUp).
     parsedData.player.statPoints ??= 0;
+
+    // And the flags data/flags declares but the save predates — getFlag falls
+    // back to false, so without this a flag added after release with a true
+    // default would read false on old saves, hiding whatever it gates.
+    // (registerSceneFlags ran at boot against the pre-load state; this is its
+    // counterpart for the state that replaces it.)
+    if (!parsedData.flags) parsedData.flags = {};
+    for (const [flag, value] of Object.entries(this.sceneFlags ?? {})) {
+      if (!(flag in parsedData.flags)) parsedData.flags[flag] = value;
+    }
 
     // Check bookkeeping lives in state.checkState, not state.flags. Older
     // saves stored it under prefixed flag keys — move those over. Done as an
@@ -317,6 +374,7 @@ class StateManager {
   // the initial option visibility is correct immediately after a restart.
   reset() {
     this.state = makeDefaultState(this._rules);
+    this._stampPluginVersions();
     if (this.sceneFlags) Object.assign(this.state.flags, this.sceneFlags);
     this._emitMutation('reset');
     this.notifyListeners();
@@ -403,6 +461,16 @@ class StateManager {
    *   refill idiom at combat boundaries and rest.
    */
   modifyPlayerStat(stat, amount) {
+    // Resolve the 'full' sentinel BEFORE any handler dispatch: handlers expect
+    // numeric deltas ('full' has no meaning for a derived stat), and only a
+    // declared { current, max } resource can be topped up.
+    const p = this.state.player;
+    if (amount === 'full') {
+      const res = p.resources?.[stat];
+      if (!(res && typeof res === 'object' && 'current' in res)) return;
+      amount = res.max - res.current;
+    }
+
     // A registered stat handler fully replaces the default behavior.
     const handler = this._statHandlers[stat];
     if (handler) {
@@ -410,12 +478,6 @@ class StateManager {
       return;
     }
 
-    const p = this.state.player;
-    if (amount === 'full') {
-      const res = p.resources?.[stat];
-      if (!(res && typeof res === 'object' && 'current' in res)) return;
-      amount = res.max - res.current;
-    }
     this._applyStatDelta(stat, amount);
     this._emitMutation('modifyPlayerStat', { stat, amount });
     this.notifyListeners('stats');
@@ -498,11 +560,14 @@ class StateManager {
     // XP still banks; validate.js flags the misconfiguration on boot.
     if (xpPerLevel > 0) {
       const statPointsPerLevel = this._rules.levelUp?.statPoints ?? 0;
+      // A missing (or non-numeric) levelUpHpBonus means no HP growth — never
+      // NaN'd HP. validate.js flags a malformed value on boot.
+      const hpBonus = Number.isFinite(this._rules.levelUpHpBonus) ? this._rules.levelUpHpBonus : 0;
       let threshold = p.level * xpPerLevel;
       while (p.xp >= threshold) {
         p.xp -= threshold;
         p.level++;
-        p.resources.hp.max += this._rules.levelUpHpBonus;
+        p.resources.hp.max += hpBonus;
         p.resources.hp.current = p.resources.hp.max;
         // Bank point-buy currency (spent via spendStatPoint / the stats panel).
         if (statPointsPerLevel > 0) p.statPoints = (p.statPoints ?? 0) + statPointsPerLevel;
@@ -838,6 +903,12 @@ class StateManager {
     if (!display) return false;
 
     if (this.countPlayerItem(itemId, { includeEquipped: false }) <= 0) return false;
+
+    // The case's allowedTypes gate. Enforced only when an item database was
+    // provided to init() — headless tests may use ad-hoc IDs, like
+    // addToInventory's unknown-item check.
+    if (display.allowedTypes && Object.keys(this._items).length
+        && !display.allowedTypes.includes(this._items[itemId]?.type)) return false;
 
     display.item = itemId;
     this.removeFromInventory(itemId, 1, { silent: true });

@@ -74,9 +74,6 @@ export const CSS = {
   SCENE_BODY_TEXT:        'scene__body-text',
   SCENE_LOG:              'scene__log',
   SCENE_LOG_PREFIX:       'scene__log-prefix',
-  // A block appended after the log so far, showing what a click revealed —
-  // a chest's contents table (see NarrativeLog.appendBlock).
-  SCENE_CONTENTS:         'scene__contents',
   // Generic section container and heading — used by the scene options panel,
   // the player tabs (inventory/quests/sheet/map), and the chest/merchant/
   // curator panels.
@@ -152,6 +149,8 @@ export const EL = {
   SCENE_NARRATIVE:         'scene-narrative',
   SCENE_OPTIONS_PANEL:     'scene-options-panel',
   SCENE_OPTIONS:           'scene-options',
+  SCENE_OPTIONS_TALK:      'scene-options-conversations',
+  SCENE_OPTIONS_ACTIONS:   'scene-options-actions',
   SCENE_OPTIONS_SKILLS:    'scene-options-skills',
   SCENE_LOCATION_REMINDER: 'scene-location-reminder',
 
@@ -227,7 +226,7 @@ export const WEAPON_SLOTS = ['Left Hand', 'Right Hand'];
 // inventory grouping). Data may omit type (treated as Flavour); a declared
 // type outside this set is an authoring typo — validateGameData flags it.
 // Keep in sync with the enum in schemas/item.schema.json (a test cross-checks).
-export const ITEM_TYPES = new Set(['Weapon', 'Spell', 'Armor', 'Consumable', 'Flavour']);
+export const ITEM_TYPES = new Set(['Weapon', 'Spell', 'Armor', 'Consumable', 'Special', 'Flavour']);
 
 // Fallback item ID used when an enemy has no weapon equipped. Must match an
 // entry in data/items/ and data/index.json. Overridable via rules.fallbackWeapons.enemy.

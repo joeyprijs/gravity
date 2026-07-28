@@ -93,7 +93,7 @@ test('exhibiting relics: dynamically updates museum reputation', () => {
   assert.equal(getMuseumReputation(), 35);
 });
 
-test('migration: a v3 save gains the core clock (v4) and curator fields (v5)', () => {
+test('migration: a v3 save gains the core clock (v4) and the curator fields (plugin line v1)', () => {
   const legacySave = {
     saveVersion: 3,
     player: {
@@ -125,11 +125,14 @@ test('migration: a v3 save gains the core clock (v4) and curator fields (v5)', (
 
   gameState.loadFromObject(legacySave);
 
-  assert.equal(gameState.state.saveVersion, 5);
+  // Core and plugin versions are partitioned: core stops at its own number,
+  // the curator stamps its own line.
+  assert.equal(gameState.state.saveVersion, 4);
+  assert.equal(gameState.state.pluginSaveVersions.curator, 1);
   assert.equal(gameState.pluginState('curator').museumReputation, 0);
 
-  // The core v4 migration must run too — before the collision guard, the
-  // curator's migration (then also registered at 4) silently shadowed it.
+  // The core v4 migration must run too — before the partition, a colliding
+  // curator migration silently shadowed it.
   assert.deepEqual(gameState.state.time, { ticks: 0 });
   assert.deepEqual(gameState.state.timers, []);
 

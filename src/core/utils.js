@@ -79,55 +79,92 @@ export function escapeHtml(str) {
     .replaceAll("'", '&#39;');
 }
 
-// Section collapse state, held in memory only — deliberately not persisted.
-// Sections start collapsed on every fresh load; a player's expansions last
-// only until they reload or restart the game (restart reloads the page). The
-// map is keyed by group so the state survives panel re-renders and tab
-// switches within a single session.
-const sectionCollapseState = new Map();
+// Section expand state, held in memory only — deliberately not persisted.
+// A section is collapsed until the player opens it, and an expansion lasts
+// only as long as they stay in the tab — switching tabs shuts every section
+// again (see collapseAllSections), so a panel is always entered as the short
+// list of headings it starts as. The map is keyed by group so the state
+// survives the panel re-renders within one visit.
+const sectionExpandState = new Map();
+
+// Every toggle group built this session, so collapseAllSections can reach a
+// panel that isn't re-rendered when it opens (the sheet). A group is created
+// once per UI object and the game reloads on restart, so this never grows.
+const sectionGroups = new Set();
 
 /**
- * Collapse/expand wiring for section-toggle headings. The collapsed-key set
- * lives in memory (see sectionCollapseState) — a per-session UI preference,
- * never saved. `defaultCollapsed` seeds the group the first time it's seen
- * this session, so sections start collapsed after every load. Collapsing
- * hides the body element in place — no re-render, so its bindings and buttons
- * survive. Used by the inventory panel and the sheet tab, each with its own
- * group key.
+ * Shuts every section in every panel — what tab switching does. Opening a tab
+ * should present it the way it presents itself the first time: headings only,
+ * and what's behind them is the player's next choice, not a leftover from the
+ * last visit.
+ */
+export function collapseAllSections() {
+  for (const group of sectionGroups) group.collapseAll();
+}
+
+/**
+ * Collapse/expand wiring for section-toggle headings. The expanded-key set
+ * lives in memory (see sectionExpandState) — a per-session UI preference,
+ * never saved, and dropped entirely on a tab switch. Every section starts
+ * collapsed: the panel opens as a short list of headings that names what it
+ * holds, so its shape is legible before the player has learned it, and opening
+ * one is their choice. Collapsing hides the body element in place — no
+ * re-render, so its bindings and buttons survive. Used by the inventory panel
+ * and the sheet tab, each with its own group key.
  *
  * @param {string} groupKey - Identifies this section group's in-memory state.
- * @param {string[]} [defaultCollapsed] - Keys collapsed on a fresh load.
- * @returns {{wire: function(HTMLElement, HTMLElement, string): void}}
+ * @returns {{isCollapsed: function(string): boolean,
+ *   wire: function(HTMLElement, HTMLElement, string): void,
+ *   collapseAll: function(): void}}
  */
-export function createSectionToggles(groupKey, defaultCollapsed = []) {
-  let collapsed = sectionCollapseState.get(groupKey);
-  if (!collapsed) {
-    collapsed = new Set(defaultCollapsed);
-    sectionCollapseState.set(groupKey, collapsed);
+export function createSectionToggles(groupKey) {
+  let expanded = sectionExpandState.get(groupKey);
+  if (!expanded) {
+    expanded = new Set();
+    sectionExpandState.set(groupKey, expanded);
   }
-  return {
+  // The heading/body pair currently on screen for each key, so collapseAll can
+  // shut a panel that won't be re-rendered. Re-wiring after a render overwrites
+  // the entry, so this holds live nodes rather than accumulating detached ones.
+  const wired = new Map();
+  const group = {
     // Whether a section is currently collapsed — render decisions that hinge
-    // on visibility (e.g. the heading's new-content dot) read this.
-    isCollapsed(key) { return collapsed.has(key); },
+    // on visibility (e.g. the heading's new-content dot) read this. A section
+    // this session hasn't opened counts as collapsed, which is how a first
+    // render already knows to flag new content behind a heading.
+    isCollapsed(key) { return !expanded.has(key); },
     // Applies the current state to a heading/body pair and flips it on heading
     // clicks. onclick, not addEventListener, so re-wiring after a re-render
     // replaces the handler instead of stacking.
     wire(heading, body, key) {
+      wired.set(key, { heading, body });
       const applyState = (isCollapsed) => {
         body.hidden = isCollapsed;
         heading.classList.toggle(CSS.SECTION_TOGGLE_COLLAPSED, isCollapsed);
       };
-      applyState(collapsed.has(key));
+      applyState(!expanded.has(key));
       heading.onclick = () => {
-        const nowCollapsed = !collapsed.delete(key);
-        if (nowCollapsed) collapsed.add(key);
+        const nowCollapsed = expanded.delete(key);
+        if (!nowCollapsed) expanded.add(key);
         // Expanding reveals the contents — the heading's new-content dot has
         // done its job.
         if (!nowCollapsed) heading.classList.remove(CSS.SECTION_TOGGLE_NOTIFY);
         applyState(nowCollapsed);
       };
     },
+    // Forgets every expansion and shuts what's on screen now. The DOM pass is
+    // what a hidden, un-re-rendered panel needs; clearing the set is what the
+    // next render needs.
+    collapseAll() {
+      expanded.clear();
+      for (const { heading, body } of wired.values()) {
+        body.hidden = true;
+        heading.classList.add(CSS.SECTION_TOGGLE_COLLAPSED);
+      }
+    },
   };
+  sectionGroups.add(group);
+  return group;
 }
 
 /**
@@ -152,6 +189,20 @@ export function clearElement(elementOrId) {
 export function getItemLabel(itemsData, itemId, amount = 1) {
   const name = itemsData[itemId]?.name || itemId;
   return amount > 1 ? `${name} (x${amount})` : name;
+}
+
+/**
+ * True for a Special item — the story/required category that never leaves the
+ * pack by the player's hand: it can't be sold to a merchant, put in a display
+ * case, or stowed in a chest. Every surface that parts the player from an item
+ * filters on this. Scripted effects (a quest turn-in, a scene that consumes it)
+ * still remove it normally — the rule is about the player's choices, not the
+ * engine's reach.
+ * @param {object|null} itemData - The item definition from data/items.
+ * @returns {boolean}
+ */
+export function isSpecialItem(itemData) {
+  return itemData?.type === 'Special';
 }
 
 /**
@@ -222,7 +273,7 @@ export function itemStatLines(t, itemData, attributes = {}) {
     for (const k in itemData.attributes) {
       if (HIDDEN_ITEM_ATTRS.has(k)) continue;
       const v = itemData.attributes[k];
-      // attributeBonuses renders one line per worn bonus ("Perception: +1").
+      // attributeBonuses renders one line per worn bonus ("Bonus: +1 Perception").
       if (k === 'attributeBonuses' && v && typeof v === 'object') {
         for (const [attr, amt] of Object.entries(v)) {
           const value = amt >= 0 ? `+${amt}` : `${amt}`;
@@ -249,78 +300,67 @@ export function itemStatLines(t, itemData, attributes = {}) {
 }
 
 /**
- * The stat lines of an item CARD — itemStatLines plus what the item is worth.
- * Worth is a card thing, not an attack-button thing: it's what a merchant pays
- * for the item, nothing combat needs. An item a merchant won't pay for
- * (value 0, the quest keys) stays quiet about it. Shared by every surface that
+ * The stat lines of an item CARD — itemStatLines wrapped in where the thing is
+ * worn and what it is worth. Both are card things, not attack-button things:
+ * the slot is gear bookkeeping and worth is what a merchant pays, neither of
+ * which combat needs. An item a merchant won't pay for (value 0, the Special
+ * items, the quest keys) stays quiet about it. Shared by every surface that
  * presents an item as a card (inventory, the curator's exhibits) so the same
  * item reads the same in all of them.
  *
  * @param {function} t - The engine's translate function.
  * @param {object} itemData - The item definition from data/items.
  * @param {Object<string, number>} [attributes] - The wielder's attributes.
+ * @param {object} [options]
+ * @param {boolean} [options.slot=true] - Whether to lead with the slot row. The
+ *   equipped list passes false: its cards already say "Equipped: Torso", and a
+ *   card must not state the same fact twice.
  * @returns {string[]|undefined} Stat lines, or undefined if the item has none
  *   (buildCard's `stats` takes undefined for "no stat block").
  */
-export function itemCardStats(t, itemData, attributes = {}) {
+export function itemCardStats(t, itemData, attributes = {}, { slot = true } = {}) {
   const lines = itemStatLines(t, itemData, attributes);
+  // Where it's worn leads, because it's what the player checks first on gear.
+  // Only armor's slot is shown: a weapon or spell goes to whichever hand is
+  // free whatever it declares (see pickHand), so printing its slot would lie.
+  if (slot && itemData.type === 'Armor' && itemData.slot) {
+    lines.unshift(t('itemStats.slot', { value: itemData.slot }));
+  }
   if (itemData.value > 0) lines.push(t('itemStats.value', { value: itemData.value }));
   return lines.length > 0 ? lines : undefined;
 }
 
 /**
- * A two-column table of what a container holds, for appending to a scene's
- * description: a chest's stacks, a museum room's display cases. One builder so
- * every container reads the same in the narrative — and so nothing has to write
- * table HTML by hand. Values are escaped: rows carry item names and
- * player-typed labels (a display case's name comes from a prompt).
- *
- * @param {[string, string]} headers - The two column headings, already translated.
- * @param {Array<{label: string, value: string, empty?: boolean}>} rows - One per
- *   entry; `empty` styles the value as a placeholder (an unfilled display case).
- * @param {?string} [emptyMessage=null] - Shown in place of the table when there
- *   are no rows ("Chest is empty."). Without one, an empty container renders
- *   nothing at all.
- * @returns {string} The table's HTML, the empty message, or ''.
- */
-export function buildContentsTable([leftHeader, rightHeader], rows, emptyMessage = null) {
-  if (!rows.length) {
-    return emptyMessage
-      ? `<div class="contents-table-container"><p class="contents-table__empty">${escapeHtml(emptyMessage)}</p></div>`
-      : '';
-  }
-  const head = `<thead><tr><th>${escapeHtml(leftHeader)}</th><th>${escapeHtml(rightHeader)}</th></tr></thead>`;
-  const body = rows.map(({ label, value, empty }) => {
-    const valueClass = empty ? 'contents-table__value--empty' : 'contents-table__value--filled';
-    return `<tr><td>${escapeHtml(label)}</td><td class="${valueClass}">${escapeHtml(value)}</td></tr>`;
-  }).join('');
-  return `<div class="contents-table-container"><table class="contents-table">${head}<tbody>${body}</tbody></table></div>`;
-}
-
-/**
  * Resets the scene options panel to an empty state: clears the option button
- * container, removes injected option sections, and clears + hides the skills
- * container. The location reminder is re-appended as the container's first
- * child; pass reminderText to also update its text.
+ * container, removes injected option sections, and clears + hides the headed
+ * sections (conversations, actions, skills). The location reminder is
+ * re-appended as the container's first child; pass reminderText to also update
+ * its text.
  * @param {string|null} [reminderText=null] - New text for the location reminder.
- * @returns {{panel: HTMLElement, container: HTMLElement, skillsContainer: HTMLElement, reminder: HTMLElement|null}}
+ * @returns {{panel: HTMLElement, container: HTMLElement, talkContainer: HTMLElement, actionsContainer: HTMLElement, skillsContainer: HTMLElement, reminder: HTMLElement|null}}
  */
 export function resetOptionsPanel(reminderText = null) {
   const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
   const container = document.getElementById(EL.SCENE_OPTIONS);
+  const talkContainer = document.getElementById(EL.SCENE_OPTIONS_TALK);
+  const actionsContainer = document.getElementById(EL.SCENE_OPTIONS_ACTIONS);
   const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
   const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
 
   clearElement(container);
-  clearElement(skillsContainer);
-  skillsContainer.setAttribute('hidden', '');
+  // Every headed section starts empty and hidden: its heading is only earned
+  // once something lands in it (see renderOptions).
+  [talkContainer, actionsContainer, skillsContainer].forEach(section => {
+    clearElement(section);
+    section.setAttribute('hidden', '');
+  });
   panel.querySelectorAll(`.${CSS.PANEL_SECTION_DYNAMIC}`).forEach(el => el.remove());
 
   if (reminder) {
     if (reminderText !== null) reminder.innerText = reminderText;
     container.appendChild(reminder);
   }
-  return { panel, container, skillsContainer, reminder };
+  return { panel, container, talkContainer, actionsContainer, skillsContainer, reminder };
 }
 
 /**

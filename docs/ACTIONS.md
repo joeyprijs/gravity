@@ -31,6 +31,8 @@ The state-changing actions — `loot`, `heal`, `full_rest`, `modify_resource`, a
 - `"log": false` — silence the default message entirely.
 - `"log": "Some text."` — replace the default with your own line.
 
+Override strings resolve through the locale table first: `"log": "actions.fullRestMorning"` prints that key's prose (keeping the line translatable — prefer this for anything that is a variant of an existing message), while a string that matches no key logs as-is (the allowance for genuinely one-off narrative lines).
+
 `advance_time` is the one exception in shape: it has **no** default message and logs *only* when you pass a string (its day/segment-change narration is produced separately by the clock). The other action types (`navigate`, `set_flag`, `combat`, `dialogue`, timers, …) don't take `log` at all.
 
 ### The `narration` convention
@@ -220,7 +222,7 @@ The same block can be attached to a scene as `questTrigger` (fired on entry) rat
 
 ## Plugin-provided actions
 
-Plugins register their own action types on the same registry, usable in any pipeline. The shipped curator plugin adds two:
+Plugins register their own action types on the same registry, usable in any pipeline. The shipped curator plugin adds three:
 
 ### `manage_exhibits`
 
@@ -233,5 +235,14 @@ Install a display case in a scene.
 - `scene` *(string, optional, default: the current scene)* — the scene to add the case to.
 - `cost` *(number, default `0`)* — gold charged to install it; the action refuses and warns when the player can't afford it.
 - `name` *(string, optional)* — the case's label; falls back to a default name.
+
+### `build_wing`
+
+Build a new museum wing off the hall (the scene flagged `museumHall`).
+
+- `name` *(string, optional)* — the wing's player-facing name; falls back to a numbered default.
+- `cost` *(number, optional)* — gold charged; defaults to the plugin config's `wingCost`, then `250`. The action refuses and warns when the player can't afford it.
+
+It also refuses when the game has no hall, or no `museumLayout` in the curator's plugin config — a wing's map geometry is derived from the layout, so without one it would land nowhere. The save carries the wing as data (`{ id, name, slot }`); its scene is rebuilt from that on every load.
 
 To add your own action type from a plugin, see [Plugin API](../README.md#plugin-api): `engine.registerAction('my_action', (action, engine) => { ... })`. Custom types are validated against the live registry, so they get the same boot-time typo checking as the built-ins.

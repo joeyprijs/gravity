@@ -1,10 +1,16 @@
 import { createElement, buildCard, createSectionToggles, getItemLabel, itemCardStats } from "../core/utils.js";
 import { EL, CSS } from "../core/config.js";
+import { itemHasUse } from "../systems/items.js";
 
 // Group key for the inventory's in-memory section collapse state — a
 // per-session UI preference reset on reload, not saved (see
 // createSectionToggles).
 const INVENTORY_SECTION_GROUP = 'inventory';
+
+// Item types used straight from the pack rather than equipped. A Special item
+// often carries a use (the Hearthstone's teleport) but need not — hence the
+// itemHasUse check at the call site, which keeps a story key an inert card.
+const USABLE_TYPES = new Set(['Consumable', 'Special']);
 
 // InventoryUI renders the inventory and equipment sidebar panels. Every item
 // renders as a standard card (see buildCard) and an item you can act on IS
@@ -46,7 +52,10 @@ export class InventoryUI {
         ul.appendChild(this._itemRow({
           title: itemData.name,
           body: this.engine.t('ui.equippedTo', { slot }),
-          stats: this._itemStats(itemData),
+          // No slot row here — "Equipped: Torso" above it already said so, and
+          // it names the slot the item is actually IN, which for a hand item
+          // is the one the engine picked rather than the one it declares.
+          stats: this._itemStats(itemData, { slot: false }),
         }, { action: 'unequip', slot }));
       });
     }
@@ -83,15 +92,14 @@ export class InventoryUI {
       // picks for it (hand items alternate left/right — see systems/items.js),
       // so the card carries the item, never a slot.
       let dataset = null;
-      if (itemData.type === 'Consumable') dataset = { action: 'consume', item: invItem.item };
+      if (USABLE_TYPES.has(itemData.type) && itemHasUse(itemData)) dataset = { action: 'consume', item: invItem.item };
       else if (['Weapon', 'Spell', 'Armor'].includes(itemData.type)) dataset = { action: 'equip', item: invItem.item };
 
       const spec = {
         title: getItemLabel(this.engine.data.items, invItem.item, invItem.amount),
-        body: [
-          itemData.description,
-          itemData.type === 'Armor' && itemData.slot ? this.engine.t('ui.armorSlot', { slot: itemData.slot }) : null,
-        ],
+        // The slot used to sit here as a body line; it's a stat row now, so it
+        // lines up with the rest of the item's facts (see itemCardStats).
+        body: itemData.description,
         stats: this._itemStats(itemData),
         // A freshly-gained item wears a dot until the player rests the pointer
         // on its card (see UIManager.setup) or leaves the tab.
@@ -147,7 +155,7 @@ export class InventoryUI {
 
   // The card's stat lines (see itemCardStats), bound to the engine's
   // translator and the player's current attributes.
-  _itemStats(itemData) {
-    return itemCardStats(this.engine.t.bind(this.engine), itemData, this.engine.state.getPlayer().attributes);
+  _itemStats(itemData, options) {
+    return itemCardStats(this.engine.t.bind(this.engine), itemData, this.engine.state.getPlayer().attributes, options);
   }
 }

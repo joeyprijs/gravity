@@ -57,6 +57,19 @@ test('addDisplayToScene: respects pre-defined display ID and attributes', () => 
   assert.deepEqual(displays[0].allowedTypes, ['Flavour']);
 });
 
+test('placeItemInDisplay: allowedTypes gates what a case accepts (when the item db is known)', () => {
+  const items = {
+    rusty_sword:    { name: 'Rusty Sword',    type: 'Weapon' },
+    healing_potion: { name: 'Healing Potion', type: 'Consumable' },
+  };
+  gameState.init(TEST_RULES, items);
+  const displayId = gameState.addDisplayToScene('home_museum', { name: 'Case', allowedTypes: ['Consumable'] });
+
+  assert.equal(gameState.placeItemInDisplay('home_museum', displayId, 'rusty_sword'), false);
+  assert.equal(gameState.getDisplaysForScene('home_museum')[0].item, null, 'a refused type never lands in the case');
+  assert.equal(gameState.placeItemInDisplay('home_museum', displayId, 'healing_potion'), true);
+});
+
 test('placeItemInDisplay: puts inventory item in display case, removing it from player inventory', () => {
   const displayId = gameState.addDisplayToScene('home_museum', { name: 'Main Stand' });
 
