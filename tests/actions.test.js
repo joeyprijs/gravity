@@ -2,7 +2,7 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { gameState } from '../src/core/state.js';
 import { registerBuiltinActions } from '../src/systems/actions.js';
-import { ACTIONS, FLAG_KEYS } from '../src/core/config.js';
+import { ACTIONS, FLAG_KEYS, LOG } from '../src/core/config.js';
 
 // Minimal rules required by gameState.init() — mirrors the key values from rules.json.
 const TEST_RULES = {
@@ -35,12 +35,16 @@ const ap   = () => gameState.getPlayer().resources.ap.current;
 // t() echoes the locale key, so log assertions compare against keys directly.
 function makeEngine({ rules = TEST_RULES, items = TEST_ITEMS } = {}) {
   const registry = new Map();
-  const calls = { logs: [], renderedScenes: [], combat: [], dialogue: [], chests: [], customUI: [] };
+  const calls = { logs: [], amends: [], renderedScenes: [], combat: [], dialogue: [], chests: [], customUI: [] };
   const engine = {
     data: { items, rules },
     state: gameState,
     t: (key) => key,
     log: (type, message, variant) => calls.logs.push({ type, message, variant }),
+    // Amendable by default (as if a [Player] option line was just logged);
+    // tests flip it to false to exercise the standalone-yield fallback.
+    amendable: true,
+    amendLog(suffix) { if (this.amendable) calls.amends.push(suffix); return this.amendable; },
     registerAction: (name, fn) => registry.set(name, fn),
     combatSystem: { startCombat: (enemies, action) => calls.combat.push({ enemies, action }) },
     dialogueSystem: { startDialogue: (npcId) => calls.dialogue.push(npcId) },
@@ -167,6 +171,26 @@ test('full_rest: restores hp to full and leaves AP alone (combat-only)', () => {
   run({ type: ACTIONS.FULL_REST });
   assert.equal(hp(), gameState.getPlayer().resources.hp.max);
   assert.equal(ap(), 1); // AP is a per-combat budget; rest doesn't touch it
+});
+
+test('default yields amend the act line: heal and full_rest extend the [Player] entry, no second line', () => {
+  const { engine, run, calls } = makeEngine();
+  run({ type: ACTIONS.HEAL, amount: 4 });
+  run({ type: ACTIONS.FULL_REST });
+  assert.deepEqual(calls.amends, ['actions.heal', 'actions.fullRest']);
+  assert.equal(calls.logs.length, 0);
+  // With nothing to amend (no choice line preceding), the yield stands alone.
+  engine.amendable = false;
+  run({ type: ACTIONS.HEAL, amount: 4 });
+  assert.ok(calls.logs.some(l => l.type === LOG.PLAYER && l.variant === 'choice'));
+});
+
+test('a negative heal amends with a signed yield: "(-2 HP)", never "(+-2 HP)"', () => {
+  const { engine, run, calls } = makeEngine();
+  engine.t = (key, params) => params ? `${key}:${params.amount}` : key;
+  run({ type: ACTIONS.HEAL, amount: -2 });
+  run({ type: ACTIONS.HEAL, amount: 2 });
+  assert.deepEqual(calls.amends, ['actions.heal:-2', 'actions.heal:+2']);
 });
 
 test('log overrides resolve through t(): a locale key translates, a one-off line logs as-is', () => {

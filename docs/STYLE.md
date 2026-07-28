@@ -47,10 +47,16 @@ The test for every rule here: it must describe what the codebase actually does. 
 
 ### The narrative log's two voices
 
-Every line in the log is either a choice the player made or the world's answer to one. Which it is decides the log type, the grammar, and the string's home:
+**The user's acts are the player's lines; the world's speech is the narrator's.** Everything the user chose to do — a scene option, equipping, drinking a potion, resting, using the Hearthstone — logs as `LOG.PLAYER`. The narrator speaks only as the world: scene descriptions and passive text, NPC speech, quests, skill and roll results, the passage of time, flavor, and refusals (`You're too spent for that.`).
 
-- **`LOG.PLAYER`, variant `'choice'` — the act.** Written as a label, imperative, no "You": `Open Personal Chest`, `Enter the Relic Wing`, `Step up to the Glass Case`, `Leave the exhibits`. Used for clicks that change what the player is looking at — scene options, and the buttons that open, close, or back out of a panel. The button itself may be terser than the line (`Done` logs `Close Chest`); the log records the act, the button only has to be pressable.
-- **`LOG.SYSTEM` — the outcome.** Second person, full sentence: `You retrieved the Rusty Sword from the chest.`, `You equipped the Simple Dagger to your Left Hand.` Used for the panel cards and buttons whose click changes the world rather than the view — moving an item, buying, equipping, building. These log the result only; a `[Player]` line naming the card that was clicked would be noise.
+Each voice has its grammar:
+
+- **`LOG.PLAYER`, variant `'choice'` — the act.** Imperative label, no "You", with any mechanical detail — including the part the engine decided — riding in trailing parens: `Open Personal Chest`, `Equip the Rusty Sword (Left Hand)`, `Use the Health Potion (+4 HP, 1d4: 4)`. The button may be terser than the line (`Done` logs `Close Chest`); the log records the act, the button only has to be pressable. A handler's default log for a user act is the act's *yield* in the same voice — `(+2 HP)`, `(HP restored)` — amended onto the `[Player]` option line that ran it (`NarrativeLog.amendLast`), so the act and what it paid out are one line: `Eat a Snack (+2 HP)`.
+- **`LOG.SYSTEM` — the world's answer.** Second person, full prose: `You found a Cellar Key.`, `The graze burns. (-2 HP)`. A `log:` string override on an action is always this voice — an author writing prose is writing the world's answer, and it replaces the default yield line.
+
+The rule players learn: a `[Player]` block is what they did (and what it got them, in parens); everything else is the world talking. Chest, merchant, and curator *transactions* — moving possessions between containers rather than changing the character — keep the world's voice (`You retrieved the Rusty Sword from the chest.`): the acts there are the panel crossings (`Open Personal Chest`, `Leave the exhibits`), not each card shuffle.
+
+Scene authors never pick a voice: `handleOption` logs the option's text as the player's choice, handlers log their defaults in the right voice, and a `log:` override is always the world's answer. Only engine and plugin code ever chooses, once per surface.
 
 Combat is the one exception, and deliberate: attacks are logged under their actor, `LOG.PLAYER` for the player's and `enemy.name` for the enemy's, so the exchange reads as two combatants trading blows.
 

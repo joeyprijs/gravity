@@ -44,7 +44,7 @@
       ]
     },
     {
-      "text": "Rest here (Restore HP)",
+      "text": "Rest here",
       "condition": {
         "flag": "chamber_rested",
         "value": false

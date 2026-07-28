@@ -71,8 +71,14 @@ function handleFullRest(action, engine) {
     engine.state.modifyPlayerStat(retry.resource, retry.restRestore);
   }
   if (action.log !== false) {
-    const msg = typeof action.log === 'string' ? engine.t(action.log) : engine.t('actions.fullRest');
-    engine.log(LOG.SYSTEM, msg);
+    // A string override is authored prose — the world's answer, narrated. The
+    // default is the act's yield, amended onto the [Player] option line that
+    // ran this pipeline (see STYLE.md, the narrative log's two voices).
+    if (typeof action.log === 'string') engine.log(LOG.SYSTEM, engine.t(action.log));
+    else {
+      const yieldLine = engine.t('actions.fullRest');
+      if (!engine.amendLog(yieldLine)) engine.log(LOG.PLAYER, yieldLine, 'choice');
+    }
   }
 }
 
@@ -117,8 +123,13 @@ function handleHeal(action, engine) {
   const amount = action.amount ?? engine.data.rules?.snackHealAmount ?? 2;
   engine.state.modifyPlayerStat('hp', amount);
   if (action.log !== false) {
-    const msg = typeof action.log === 'string' ? engine.t(action.log) : engine.t('actions.heal', { amount });
-    engine.log(LOG.SYSTEM, msg, 'loot');
+    // Same split as full_rest: authored prose narrates, the default yield
+    // amends the act's line. Signed so a harmful heal reads "(-2 HP)".
+    if (typeof action.log === 'string') engine.log(LOG.SYSTEM, engine.t(action.log), 'loot');
+    else {
+      const yieldLine = engine.t('actions.heal', { amount: amount >= 0 ? `+${amount}` : `${amount}` });
+      if (!engine.amendLog(yieldLine)) engine.log(LOG.PLAYER, yieldLine, 'choice');
+    }
   }
 }
 

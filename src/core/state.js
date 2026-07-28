@@ -348,6 +348,23 @@ class StateManager {
       this.state.log.shift();
     }
   }
+
+  // Extends the newest choice entry in place — the yield-amend path (see
+  // NarrativeLog.amendLast), so a reloaded save shows the act and its yield
+  // as the one line they were live. Reaches past narrator entries (time
+  // ticks, timers land between an act and its yield) but never across a
+  // scene boundary, mirroring amendLast's in-DOM scope.
+  amendLog(suffix) {
+    for (let i = this.state.log.length - 1; i >= 0; i--) {
+      const entry = this.state.log[i];
+      if (entry.type === 'scene') return;
+      if (entry.variant === 'choice') {
+        entry.message += suffix;
+        return;
+      }
+    }
+  }
+
   getLog() { return this.state.log; }
 
   // Called once on startup to ensure every mission ID exists in state.

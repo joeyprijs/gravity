@@ -39,6 +39,7 @@ export class NarrativeLog {
     this.scrollToBottom();
     this.currentSceneEl = scene;
     this._lastLogType = null;
+    this._lastChoice = null;
     return scene;
   }
 
@@ -75,9 +76,31 @@ export class NarrativeLog {
     }
     p.append(` ${message}`);
     this._lastLogType = type;
+    if (variant === 'choice') this._lastChoice = { el: p, persisted: persist };
     this.currentSceneEl.appendChild(p);
     this.scrollToBottom();
     if (persist) this.state?.appendLog({ type, message, variant });
+  }
+
+  /**
+   * Extends the current scene block's newest choice line in place with
+   * ` suffix` — how an act and its yield stay one line ("Eat a Snack
+   * (+2 HP)"): the option's [Player] line is already written when its
+   * pipeline runs, so the handler amends it rather than logging a second
+   * entry. Narrator lines may land in between (an act that advances time
+   * logs the tick and any due timers first), so the amend reaches back to
+   * the choice line — but never past the scene block it lives in. With no
+   * choice line to amend, the caller logs the yield as its own line instead.
+   *
+   * @param {string} suffix - The yield, already translated ("(+2 HP)").
+   * @returns {boolean} True if a line was amended.
+   */
+  amendLast(suffix) {
+    if (!this._lastChoice) return false;
+    this._lastChoice.el.append(` ${suffix}`);
+    if (this._lastChoice.persisted) this.state?.amendLog(` ${suffix}`);
+    this.scrollToBottom();
+    return true;
   }
 
   /**

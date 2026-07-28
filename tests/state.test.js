@@ -148,6 +148,19 @@ test('removeFromInventory: removes entry when amount hits 0', () => {
   assert.equal(entry, undefined);
 });
 
+test('amendLog extends the newest choice entry, past narrator lines, never across a scene', () => {
+  gameState.amendLog(' (+2 HP)'); // empty log — no-op
+  gameState.appendLog({ type: 'Player', message: 'Eat a Snack', variant: 'choice' });
+  gameState.appendLog({ type: 'Narrator', message: 'Day 2: Night.', variant: 'system' });
+  gameState.amendLog(' (+2 HP)');
+  assert.equal(gameState.getLog().at(-2).message, 'Eat a Snack (+2 HP)');
+  assert.equal(gameState.getLog().at(-1).message, 'Day 2: Night.');
+  // A scene boundary seals the block: the choice behind it is out of reach.
+  gameState.appendLog({ type: 'scene', title: 'Kitchen', desc: 'd' });
+  gameState.amendLog(' (+2 HP)');
+  assert.equal(gameState.getLog().at(-3).message, 'Eat a Snack (+2 HP)');
+});
+
 test('appendLog caps at 200 entries', () => {
   for (let i = 0; i < 250; i++) {
     gameState.appendLog({ type: 'test', message: `msg${i}` });

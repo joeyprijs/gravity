@@ -383,6 +383,9 @@ export class RPGEngine {
     const label = this.t(localeKey) !== localeKey ? this.t(localeKey) : type;
     return this.narrative.log(label, message, variant, persist);
   }
+  // Amend-or-false: extends the last player choice line with the act's yield
+  // (see NarrativeLog.amendLast). Callers log a standalone line on false.
+  amendLog(suffix) { return this.narrative.amendLast(suffix); }
   /**
    * Runs an action pipeline through the registered action handlers.
    * Shared by SceneRenderer, CombatSystem, DialogueSystem, and plugins.

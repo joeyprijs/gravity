@@ -402,12 +402,12 @@
         equipCard('Rusty Sword').click();
         assert(equipment()['Left Hand'] === 'rusty_sword', `first equip went to ${JSON.stringify(equipment())}`);
 
-        // The click is the act; the line is what came of it, so it is narrated
-        // — the same split as taking a stack out of a chest.
+        // The click is the user's act, so the line is the player's — the act
+        // in imperative, with the engine-picked hand riding in the parens.
         const lastLog = () => $$('#scene-narrative .scene__log').at(-1);
-        assert(text(lastLog()).endsWith('You equipped the Rusty Sword to your Left Hand.'),
-          `equipping is narrated (got "${text(lastLog())}")`);
-        assert(lastLog().classList.contains('scene__log--system'), 'in the narrator\'s voice, not the player\'s');
+        assert(text(lastLog()).endsWith('Equip the Rusty Sword (Left Hand)'),
+          `equipping logs as the act (got "${text(lastLog())}")`);
+        assert(lastLog().classList.contains('scene__log--choice'), 'in the player\'s voice, not the narrator\'s');
 
         equipCard('Flames').click();
         assert(equipment()['Right Hand'] === 'flames', `second equip went to ${JSON.stringify(equipment())}`);
@@ -420,8 +420,8 @@
           off = $('#inventory-tab button.card[data-action="unequip"]');
         }
         assert(Object.values(equipment()).every(id => !id), 'every slot empty after unequipping by click');
-        assert(text(lastLog()).endsWith('from your Right Hand.'),
-          `unequipping is narrated to match (got "${text(lastLog())}")`);
+        assert(text(lastLog()).includes('Unequip the') && text(lastLog()).endsWith('(Right Hand)'),
+          `unequipping logs as the act to match (got "${text(lastLog())}")`);
       });
 
       await step('options tab holds save/load/restart', () => {
@@ -865,7 +865,7 @@
         assert(heading('scene-options-actions') === 'Actions', `acts are headed (got "${heading('scene-options-actions')}")`);
         // "Sleep until morning" is conditional on the hour, so it may or may not
         // be here — the full rest and the chest always are.
-        assert(cards('scene-options-actions').some(t => t.includes('Sleep (Full Rest)')), 'resting is an act');
+        assert(cards('scene-options-actions').some(t => t === 'Sleep'), 'resting is an act');
         assert(cards('scene-options').length === 1 && cards('scene-options')[0].includes('Return to Living Room'),
           `the doors list is only the way out (got ${JSON.stringify(cards('scene-options'))})`);
 

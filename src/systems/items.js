@@ -18,7 +18,11 @@ function applyStatEffect(engine, itemData, value, stat, msgKey, extraParams = {}
     amount = result.total;
   }
   engine.state.modifyPlayerStat(stat, amount);
-  engine.log(LOG.SYSTEM, engine.t(msgKey, { name: itemData.name, amount, rollSuffix, ...extraParams }), 'loot');
+  // The user's act, in their voice — the yield rides along in the parens
+  // (see STYLE.md, the narrative log's two voices). Signed here so a
+  // harmful consumable reads "(-2 HP)", not "(+-2 HP)".
+  const signed = amount >= 0 ? `+${amount}` : `${amount}`;
+  engine.log(LOG.PLAYER, engine.t(msgKey, { name: itemData.name, amount: signed, rollSuffix, ...extraParams }), 'choice');
   return true;
 }
 
@@ -73,7 +77,7 @@ function teleport(engine, itemData) {
   const curScene = engine.state.getCurrentSceneId();
   if (curScene !== itemData.attributes.teleportScene) {
     engine.state.setReturnSceneId(curScene);
-    engine.log(LOG.SYSTEM, engine.t('player.teleported', { name: itemData.name }));
+    engine.log(LOG.PLAYER, engine.t('player.teleported', { name: itemData.name }), 'choice');
     engine.renderScene(itemData.attributes.teleportScene);
   } else {
     engine.log(LOG.SYSTEM, engine.t('player.alreadyHere'));
@@ -184,9 +188,9 @@ export function equipItem(engine, itemId) {
   }
   engine.state.modifyPlayerStats(deltas);
   if (WEAPON_SLOTS.includes(targetSlot)) engine._lastEquippedHand = targetSlot;
-  // Narrated: the click on the inventory card is the player's act, this line
-  // is what came of it — the same split every other card in the game follows.
-  engine.log(LOG.SYSTEM, engine.t('player.equipped', { name: itemData.name, slot: targetSlot }));
+  // The user's act, in their voice — the engine-picked hand rides along in
+  // the parens (see STYLE.md, the narrative log's two voices).
+  engine.log(LOG.PLAYER, engine.t('player.equipped', { name: itemData.name, slot: targetSlot }), 'choice');
   engine._spendAP(apCost);
 }
 
@@ -212,6 +216,6 @@ export function unequipItem(engine, slot) {
   engine.state.modifyPlayerStats(Object.fromEntries(
     Object.entries(bonuses).map(([key, bonus]) => [key, -bonus])
   ));
-  engine.log(LOG.SYSTEM, engine.t('player.unequipped', { name: itemName, slot }));
+  engine.log(LOG.PLAYER, engine.t('player.unequipped', { name: itemName, slot }), 'choice');
   engine._spendAP(unequipCost);
 }
