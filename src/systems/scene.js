@@ -297,8 +297,11 @@ export class SceneRenderer {
 
     navOpts.forEach(opt => renderOptionBtn(opt));
     talkOpts.forEach(opt => renderOptionBtn(opt, talkContainer));
-    actionOpts.forEach(opt => renderOptionBtn(opt, actionsContainer));
+    // The standing rest leads the section: it is the one act the player
+    // carries everywhere, so it keeps one fixed place ahead of whatever a
+    // scene happens to offer (the bedroom's Long Rest, a chest, a fight).
     this._renderShortRest(actionsContainer);
+    actionOpts.forEach(opt => renderOptionBtn(opt, actionsContainer));
 
     const skillBtns = [];
     const sceneId = this.engine.state.getCurrentSceneId();

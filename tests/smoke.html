@@ -869,8 +869,8 @@
         assert(heading('scene-options-actions') === 'Actions', `acts are headed (got "${heading('scene-options-actions')}")`);
         // Both rests are always offered, whatever the hour — a Long Rest in
         // the morning sleeps to the next one (ticksUntilSegment never says 0).
-        assert(cards('scene-options-actions').some(t => t.includes('Short Rest')), 'resting is an act');
-        assert(cards('scene-options-actions').some(t => t === 'Long Rest'), 'and so is sleeping until morning');
+        assert(cards('scene-options-actions')[0].includes('Short Rest'), 'the standing rest leads the section');
+        assert(cards('scene-options-actions').some(t => t === 'Long Rest'), 'sleeping until morning is an act too');
         assert(cards('scene-options').length === 1 && cards('scene-options')[0].includes('Return to Living Room'),
           `the doors list is only the way out (got ${JSON.stringify(cards('scene-options'))})`);
 
