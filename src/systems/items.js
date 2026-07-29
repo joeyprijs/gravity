@@ -33,23 +33,6 @@ function applyStatEffect(engine, itemData, value, stat, msgKey, extraParams = {}
 const CONSUMABLE_EFFECTS = {
   healingAmount: (engine, itemData, value) =>
     applyStatEffect(engine, itemData, value, 'hp', 'player.usedItem'),
-  apRestore: (engine, itemData, value) =>
-    applyStatEffect(engine, itemData, value, 'ap', 'player.usedItemAp'),
-  modifyResource: (engine, itemData, mod) => {
-    if (!mod?.resource) return false;
-    // Same guard as the modify_resource action (see systems/actions.js): AP
-    // is a combat-only budget the fight refills, so no item may move it
-    // through this route either. apRestore above is the sanctioned AP
-    // consumable. (validate.js also flags this at boot.)
-    if (mod.resource === 'ap') {
-      console.warn('[Gravity] modifyResource: "ap" is a combat-only budget — use apRestore for an AP consumable');
-      return false;
-    }
-    const labelKey = `ui.resources.${mod.resource}`;
-    return applyStatEffect(engine, itemData, mod.amount, mod.resource, 'player.usedItemResource', {
-      resource: engine.t(labelKey) !== labelKey ? engine.t(labelKey) : mod.resource,
-    });
-  },
 };
 
 /**

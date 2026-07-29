@@ -38,20 +38,6 @@ export function getDay(ticks, timeRules) {
   return Math.floor((ticks + start) / timeRules.ticksPerDay) + 1;
 }
 
-// getSegment runs on every UI update, but rules.time.segments is static after
-// load — cache the sorted copy per segments array (weakly, so a swapped rules
-// object never serves a stale ordering).
-const sortedSegmentsCache = new WeakMap();
-
-function sortedSegments(segments) {
-  let sorted = sortedSegmentsCache.get(segments);
-  if (!sorted) {
-    sorted = [...segments].sort((a, b) => a.from - b.from);
-    sortedSegmentsCache.set(segments, sorted);
-  }
-  return sorted;
-}
-
 /**
  * The id of the day segment an absolute tick count falls into. A tick-of-day
  * before the earliest segment's `from` belongs to the latest segment (it
@@ -63,7 +49,7 @@ function sortedSegments(segments) {
 export function getSegment(ticks, timeRules) {
   const tickOfDay = getTickOfDay(ticks, timeRules);
   if (tickOfDay === null || !timeRules.segments?.length) return null;
-  const sorted = sortedSegments(timeRules.segments);
+  const sorted = [...timeRules.segments].sort((a, b) => a.from - b.from);
   let current = sorted[sorted.length - 1]; // pre-dawn wraps to the last segment
   for (const seg of sorted) {
     if (tickOfDay >= seg.from) current = seg;

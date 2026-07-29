@@ -150,44 +150,6 @@ function collectActionLines(node, jsonPath, owner, slug, lines, push) {
   }
 }
 
-// ── Shared locale prose ─────────────────────────────────────────────────────
-
-// Namespaces that are UI chrome by construction — labels, headings, stat
-// values. Nothing in them is ever read aloud.
-const CHROME_NAMESPACES = ['ui.', 'charCreation.', 'itemTypes.', 'itemStats.', 'inventory.', 'stats.', 'log.', 'time.segments.'];
-
-// Individually excluded: prose-shaped strings that are still buttons or
-// developer-facing errors.
-const CHROME_KEYS = new Set([
-  'dialogue.neverMind', 'dialogue.comeAgain', 'combat.loadLastSave', 'combat.restartGame',
-  'combat.gameOverTitle', 'system.dataError',
-]);
-
-/**
- * The engine's own narrator lines — the shared outcomes a scene doesn't author,
- * like the generic "Look Around" miss. Candidates, not a final list: a string
- * qualifies if it reads as a sentence (a space, terminal punctuation) and
- * carries no `{placeholder}`, since an interpolated line can't be one clip.
- *
- * @param {object} locale - A parsed locale file.
- * @returns {Array<{key: string, text: string}>}
- */
-export function collectSharedLines(locale) {
-  const out = [];
-  const walk = (node, path) => {
-    if (node && typeof node === 'object') {
-      for (const [key, value] of Object.entries(node)) walk(value, path ? `${path}.${key}` : key);
-      return;
-    }
-    if (typeof node !== 'string') return;
-    if (CHROME_NAMESPACES.some(ns => path.startsWith(ns)) || CHROME_KEYS.has(path)) return;
-    if (node.includes('{') || !node.includes(' ') || !/[.!?…]$/.test(node)) return;
-    out.push({ key: path, text: node });
-  };
-  walk(locale, '');
-  return out;
-}
-
 // ── Naming ──────────────────────────────────────────────────────────────────
 
 /** A button label as a filename fragment: four significant words, snake_case. */
@@ -304,36 +266,10 @@ function formatScene({ id, path, title, lines }) {
   return `${head.join('\n')}\n\n${body.join('\n')}`;
 }
 
-function formatShared(lines) {
-  const head = [
-    'Shared narrator lines',
-    'data/locales.json — the engine\'s own outcomes, used wherever a scene',
-    'authors none of its own (the generic Look Around miss, and friends).',
-    '',
-    `${lines.length} candidates.`,
-    '',
-    `${GENERATED_BY} — edits here are lost.`,
-    'CANDIDATES, not a final list: these are locale strings that read as whole',
-    'sentences and carry no {placeholder}. Skip any that turn out to be chrome.',
-    'The engine has no hook for narrating a locale key yet — recording these',
-    'is ahead of the engine.',
-  ];
-  const body = lines.map(({ key, text, clip }) => [
-    '─'.repeat(WRAP),
-    key,
-    `→ ${clip}  [no clip yet — no engine hook for this kind]`,
-    '',
-    wrap(text, WRAP - 2, '  '),
-    '',
-  ].join('\n'));
-  return `${head.join('\n')}\n\n${body.join('\n')}`;
-}
-
 // ── Main ────────────────────────────────────────────────────────────────────
 
 function build() {
   const index = JSON.parse(readFileSync(join(root, 'data', 'index.json'), 'utf8'));
-  const localePath = index.locales?.[index.defaultLanguage ?? 'en'] ?? 'data/locales.json';
   const files = new Map(); // output path (relative to OUT_DIR) → contents
   const stats = { total: 0, wired: 0, unhooked: 0 };
   const count = (kind, wired) => {
@@ -355,13 +291,6 @@ function build() {
       title: scene.title ?? scene.name ?? id,
       lines,
     }));
-  }
-
-  const shared = collectSharedLines(JSON.parse(readFileSync(join(root, localePath), 'utf8')))
-    .map(line => ({ ...line, clip: `audio/narration/shared/${line.key}.${CLIP_EXT}` }));
-  if (shared.length) {
-    for (const line of shared) count('shared', false);
-    files.set('shared.txt', formatShared(shared));
   }
 
   return { files, stats };

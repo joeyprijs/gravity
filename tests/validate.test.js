@@ -211,23 +211,6 @@ test('toolkit fixture validates cleanly', () => {
   assert.deepEqual(issuesFor(makeToolkitData()), []);
 });
 
-test('flags the removed increment field on checks and discovery items', () => {
-  const data = makeToolkitData();
-  data.scenes.cave.skills[0].items[0].increment = 2;
-  data.npcs.elder.conversations.start.responses[0].skillCheck = 'perception';
-  data.npcs.elder.conversations.start.responses[0].dc = 10;
-  data.npcs.elder.conversations.start.responses[0].increment = 1;
-  const messages = issuesFor(data);
-  assert.equal(messages.filter(m => m.includes('"increment" (DC escalation) was removed')).length, 2);
-});
-
-test('flags luckCheck as a removed mechanic', () => {
-  const data = makeToolkitData();
-  data.scenes.cave.skills.push({ text: 'Gamble', luckCheck: true });
-  const messages = issuesFor(data);
-  assert.ok(messages.some(m => m.includes('"luckCheck" (the 2d6 Test-Your-Luck gamble) was removed')));
-});
-
 test('flags a startTick outside [0, ticksPerDay)', () => {
   for (const bad of [-1, 24, 'noon']) {
     const data = makeToolkitData();
@@ -297,20 +280,6 @@ test('flags day/segment conditions without time config and unknown segments', ()
   assert.ok(messages.some(m => m.includes('uses "day" but rules.time.ticksPerDay')));
   assert.ok(messages.some(m => m.includes('uses "segment" but rules.time.segments')));
 });
-
-test('flags the removed luck subsystem rules keys and the restore_luck action', () => {
-  const data = makeToolkitData();
-  data.rules.luck = { retryCost: 1 };
-  data.rules.combatLuck = true;
-  data.rules.playerDefaults.resources = { luck: { current: 7, max: 9 } };
-  data.scenes.cave.options.push({ text: 'Pray', actions: [{ type: 'restore_luck', amount: 1 }] });
-  const messages = issuesFor(data);
-  assert.ok(messages.some(m => m.includes('rules.luck belongs to the removed 2d6 luck subsystem')));
-  assert.ok(messages.some(m => m.includes('rules.combatLuck belongs to the removed 2d6 luck subsystem')));
-  assert.ok(messages.some(m => m.includes('playerDefaults.resources.luck belongs to the removed 2d6 luck subsystem')));
-  assert.ok(messages.some(m => m.includes('"restore_luck" was removed')));
-});
-
 
 test('flags a farmable check: success loots but nothing retires it', () => {
   const data = makeToolkitData();
@@ -445,43 +414,6 @@ test('warns when every weapon and spell costs 0 AP', () => {
   assert.ok(issuesFor(data).some(m => m.includes('combat turns will never end automatically')));
 });
 
-test('modify_resource: flags a missing or undeclared resource; declared is clean', () => {
-  const data = makeToolkitData();
-  data.rules.playerDefaults.resources = { hp: { current: 10, max: 10 }, luckPoints: { current: 3, max: 3 } };
-  data.scenes.cave.options.push(
-    { text: 'Pray', actions: [{ type: 'modify_resource', amount: 1 }] },
-    { text: 'Tithe', actions: [{ type: 'modify_resource', resource: 'gold', amount: -5 }] },
-    { text: 'Wish', actions: [{ type: 'modify_resource', resource: 'luckPoints', amount: 1 }] },
-  );
-  const messages = issuesFor(data);
-  assert.ok(messages.some(m => m.includes('modify_resource needs a "resource"')));
-  assert.ok(messages.some(m => m.includes('resource "gold" is not a declared')));
-  assert.ok(!messages.some(m => m.includes('"luckPoints" is not a declared')));
-});
-
-test('modify_resource: flags "ap" — a combat-only budget no narrative action may move', () => {
-  const data = makeToolkitData();
-  data.rules.playerDefaults.resources = { ap: { current: 3, max: 3 } };
-  data.scenes.cave.options.push(
-    { text: 'Strain', actions: [{ type: 'modify_resource', resource: 'ap', amount: -2 }] },
-  );
-  assert.ok(issuesFor(data).some(m => m.includes('modify_resource cannot move "ap"')));
-});
-
-test('item modifyResource effect: flags "ap", a missing resource, and an undeclared one; declared is clean', () => {
-  const data = makeToolkitData();
-  data.rules.playerDefaults.resources = { ap: { current: 3, max: 3 }, luckPoints: { current: 3, max: 3 } };
-  data.items.ap_flask   = { name: 'AP Flask',   attributes: { modifyResource: { resource: 'ap', amount: 2 } } };
-  data.items.odd_flask  = { name: 'Odd Flask',  attributes: { modifyResource: { amount: 2 } } };
-  data.items.gold_flask = { name: 'Gold Flask', attributes: { modifyResource: { resource: 'gold', amount: 2 } } };
-  data.items.luck_flask = { name: 'Luck Flask', attributes: { modifyResource: { resource: 'luckPoints', amount: 1 } } };
-  const messages = issuesFor(data);
-  assert.ok(messages.some(m => m.includes('attributes.modifyResource cannot move "ap"')));
-  assert.ok(messages.some(m => m.includes('attributes.modifyResource needs a "resource"')));
-  assert.ok(messages.some(m => m.includes('attributes.modifyResource resource "gold" is not a declared')));
-  assert.ok(!messages.some(m => m.includes('"luckPoints" is not a declared')));
-});
-
 test('levelUpHpBonus: optional, but a malformed value is flagged', () => {
   const clean = makeToolkitData();
   delete clean.rules.levelUpHpBonus;
@@ -512,17 +444,6 @@ test('shortRest: pool must be a declared resource, never hp/ap; heal and timeCos
   assert.ok(issuesFor(badHeal).some(m => m.includes('shortRest.heal')));
 });
 
-test('flags the removed AP economy: rules.apEconomy, and apCost on options, checks, and dialogue responses', () => {
-  const data = makeToolkitData();
-  data.rules.apEconomy = { skillAttemptCost: 2 };
-  data.scenes.cave.options[0].apCost = 3;
-  data.scenes.cave.skills[0].apCost = 1;
-  data.npcs.elder.conversations.start.responses[0].apCost = 2;
-  const messages = issuesFor(data);
-  assert.ok(messages.some(m => m.includes('rules.apEconomy was removed')));
-  assert.equal(messages.filter(m => m.includes('"apCost" was removed')).length, 3);
-});
-
 test('flags bad levelUp.statPoints, customAttributes max, and item attribute references', () => {
   const data = makeToolkitData();
   data.rules.levelUp = { statPoints: -1 };
@@ -530,13 +451,11 @@ test('flags bad levelUp.statPoints, customAttributes max, and item attribute ref
   data.locale.actions.skillBadge.grit = 'Grit {dc}';
   data.locale.actions.skillBadgeFree.grit = 'Grit';
   data.items.wand = { name: 'Wand', type: 'Spell', attributes: { attackAttribute: 'sorcery' } };
-  data.items.oldWand = { name: 'Old Wand', type: 'Spell', attackAttribute: 'perception' };
   data.items.ring = { name: 'Ring', type: 'Armor', attributes: { attributeBonuses: { agility: 1 } } };
   const messages = issuesFor(data);
   assert.ok(messages.some(m => m.includes('levelUp.statPoints must be a non-negative integer')));
   assert.ok(messages.some(m => m.includes('"grit": max must be a number')));
   assert.ok(messages.some(m => m.includes('attackAttribute "sorcery" is not a declared attribute')));
-  assert.ok(messages.some(m => m.includes('attackAttribute moved into the attributes object')));
   assert.ok(messages.some(m => m.includes('attributeBonuses key "agility" is not a declared attribute')));
 });
 

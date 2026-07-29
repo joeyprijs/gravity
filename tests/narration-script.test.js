@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { collectSceneLines, collectSharedLines, assignClips, slugify, pathSegment, looksGenerated, CLIP_EXT } from '../scripts/generate-narration-script.js';
+import { collectSceneLines, assignClips, slugify, pathSegment, looksGenerated, CLIP_EXT } from '../scripts/generate-narration-script.js';
 
 // A scene carrying every prose shape the extractor has to cope with, plus the
 // button labels it must leave alone.
@@ -159,20 +159,4 @@ test('looksGenerated only claims files this tool wrote', () => {
   // Someone's own note in the output tree is not ours to delete.
   assert.ok(!looksGenerated('my recording plan\n- do the corridor first\n'));
   assert.ok(!looksGenerated(''));
-});
-
-// ── Shared locale prose ─────────────────────────────────────────────────────
-
-test('collectSharedLines keeps narrator sentences and drops chrome', () => {
-  const shared = collectSharedLines({
-    actions: {
-      lookAroundFail: 'Nothing reveals itself.',      // prose → kept
-      lookAround: 'Look Around',                       // no terminal punctuation
-      skillFail: '{skill} check: {roll}, failure.',    // interpolated, unrecordable
-    },
-    ui: { inventoryEmpty: 'Inventory is empty.' },     // chrome namespace
-    combat: { avoided: 'They regard you peacefully.' },
-    stats: { hp: '{current}/{max}' },
-  });
-  assert.deepEqual(shared.map(l => l.key), ['actions.lookAroundFail', 'combat.avoided']);
 });

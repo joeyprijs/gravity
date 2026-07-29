@@ -46,7 +46,6 @@ test('CHAR_CREATION: every stat entry has required fields', () => {
     assert.ok(typeof stat.id === 'string', `${stat.id}: id must be string`);
     assert.ok(typeof stat.bonusPerPoint === 'number', `${stat.id}: bonusPerPoint must be number`);
     assert.ok(stat.bonusPerPoint > 0, `${stat.id}: bonusPerPoint must be positive`);
-    assert.ok(typeof stat.min === 'number', `${stat.id}: min must be number`);
     assert.ok(stat.id in PLAYER_DEFAULTS, `${stat.id}: must exist in PLAYER_DEFAULTS`);
   }
 });

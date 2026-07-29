@@ -110,8 +110,6 @@ test('equipItem/unequipItem: the worn armor bonus goes on and comes back off', (
 
 test('itemHasUse: true for anything useItem can act on, false for inert gear', () => {
   assert.ok(itemHasUse({ attributes: { healingAmount: 4 } }), 'a consumable effect');
-  assert.ok(itemHasUse({ attributes: { apRestore: '1d4' } }), 'dice notation counts');
-  assert.ok(itemHasUse({ attributes: { modifyResource: { resource: 'luckPoints', amount: 1 } } }));
   assert.ok(itemHasUse({ attributes: { teleportScene: 'home_door' } }), 'a teleport is a use');
 
   assert.ok(!itemHasUse({ attributes: { damageRoll: '1d6' } }), 'a weapon is equipped, not used');

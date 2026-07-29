@@ -99,7 +99,7 @@ Combat is the one exception, and deliberate: attacks are logged under their acto
 - All ids and flags are `snake_case`: `cellar_key`, `door_unlocked`, `escape_dungeon`. Filenames match their id (`cellar_key.json`).
 - Scene ids carry their region prefix and declare it in a top-level `"id"` field (`"id": "home_kitchen"` in `data/scenes/player_home/kitchen.json`).
 - Flags are *semantic facts*, not display text: name what is true about the world (`guard_distracted`), never what the UI should say. Player-facing wording lives in authored prose fields and locale files.
-- The engine owns the prefixes `merchant_stock_`, `trade_discount_`, `friendly_`, `passive_done_`, `xp_awarded_` (flags) and `skill_dc_`, `dialogue_dc_`, `dialogue_resolved_` (check state). Never author keys with these shapes.
+- The engine owns the prefixes `merchant_stock_`, `trade_discount_`, `passive_done_`, `xp_awarded_` (flags) and `skill_dc_`, `dialogue_dc_`, `dialogue_resolved_` (check state). Never author keys with these shapes.
 
 ### Content rules
 

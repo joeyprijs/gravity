@@ -364,20 +364,6 @@ export default function curatorPlugin(engine) {
     new CuratorUI(engine).render();
   });
 
-  engine.registerAction("add_display", (action, engine) => {
-    const sceneId = action.scene || engine.state.getCurrentSceneId();
-    const cost = action.cost ?? 0;
-    const p = engine.state.getPlayer();
-    if (p.resources.gold < cost) {
-      engine.log(LOG.SYSTEM, engine.t('ui.notEnoughGold'));
-      return;
-    }
-    engine.state.modifyPlayerStat('gold', -cost);
-    const displayName = action.name || engine.t('plugin.curator.displayDefaultName');
-    engine.state.addDisplayToScene(sceneId, { name: displayName });
-    engine.log(LOG.SYSTEM, engine.t('plugin.curator.displayAddedLog', { name: displayName }));
-  });
-
   // 4. Surface the reputation stat as a sheet row — rendered by the sheet
   // build itself (see engine.registerSheetRow), so no DOM injection here.
   engine.registerSheetRow({

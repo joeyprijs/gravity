@@ -35,23 +35,8 @@ export function formatMod(mod) {
  * @returns {string}
  */
 export function rollBreakdown(base, mod, label) {
-  return rollBreakdownParts(base, [{ mod, label }]);
-}
-
-/**
- * Multi-modifier variant of rollBreakdown: each part names its own source,
- * zero modifiers are skipped ("1d20: 12 + 2 Strength + 1 Rusty Sword").
- * @param {number} base - The natural die result.
- * @param {Array<{mod: number, label: string}>} parts - Modifiers in display order.
- * @returns {string}
- */
-export function rollBreakdownParts(base, parts) {
-  let out = `1d20: ${base}`;
-  for (const { mod, label } of parts) {
-    if (!mod) continue;
-    out += ` ${mod < 0 ? '-' : '+'} ${Math.abs(mod)} ${label}`;
-  }
-  return out;
+  if (!mod) return `1d20: ${base}`;
+  return `1d20: ${base} ${mod < 0 ? '-' : '+'} ${Math.abs(mod)} ${label}`;
 }
 
 /**
@@ -67,6 +52,20 @@ export function skillLabel(engine, skillId) {
 }
 
 /**
+ * Resolves authored text that may be a single string (shown every time) or an
+ * array walked per use so repeats escalate ("Nothing." → "Still nothing." →
+ * …), clamping to the last entry. The shared shape behind retryText, tier
+ * text, and narrative resultText.
+ * @param {string|string[]|undefined} text - The authored text field.
+ * @param {number} n - Uses so far (0 picks the first entry).
+ * @returns {string|undefined}
+ */
+export function pickVariant(text, n) {
+  if (!Array.isArray(text)) return text;
+  return text[Math.min(n, text.length - 1)];
+}
+
+/**
  * Resolves the display/log text for a check that has been attempted before.
  * Once at least one attempt has been made, an optional `retryText` takes over:
  * a string, or an array walked per attempt (clamping to the last entry).
@@ -76,22 +75,7 @@ export function skillLabel(engine, skillId) {
  */
 export function resolveRetryText(opt, attempts) {
   if (!attempts || !opt.retryText) return opt.text;
-  const variants = Array.isArray(opt.retryText) ? opt.retryText : [opt.retryText];
-  return variants[Math.min(attempts - 1, variants.length - 1)];
-}
-
-/**
- * Resolves a tier's narration for the current attempt. A tier `text` may be a
- * single string (shown every time) or an array walked per failed attempt so
- * repeated failures escalate ("Nothing." → "Still nothing." → …), clamping to
- * the last entry.
- * @param {string|string[]|undefined} text - The tier's `text` field.
- * @param {number} attempts - Failed attempts before this one (0 on first try).
- * @returns {string|undefined}
- */
-export function resolveTierText(text, attempts) {
-  if (!Array.isArray(text)) return text;
-  return text[Math.min(attempts, text.length - 1)];
+  return pickVariant(opt.retryText, attempts - 1);
 }
 
 /**
@@ -179,7 +163,7 @@ export function performSkillCheck(engine, skillId, dc, outcomes = null, attempts
   );
   // Tier narration may be an array walked per attempt so repeated failures
   // escalate; a plain string shows every time.
-  const tierText = resolveTierText(tiers[tier]?.text, attempts);
+  const tierText = pickVariant(tiers[tier]?.text, attempts);
   if (tierText) engine.log(LOG.NARRATOR, tierText);
   return { rolled, mod, margin, tier, success };
 }

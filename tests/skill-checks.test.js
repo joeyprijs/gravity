@@ -4,7 +4,7 @@ import { gameState } from '../src/core/state.js';
 import {
   normalizeOutcomes, pickTier, performSkillCheck, formatMod, resolveRetryText,
   getAttempts, recordAttempt, isResolved, markResolved, resetAttempts,
-  rollBreakdown, rollBreakdownParts, skillLabel, resolveTierText, retryCost, retryGate, applyRetryGate, spendRetryCost,
+  rollBreakdown, skillLabel, pickVariant, retryCost, retryGate, applyRetryGate, spendRetryCost,
 } from '../src/systems/skill-checks.js';
 
 const TEST_RULES = {
@@ -187,14 +187,14 @@ test('resolveRetryText: walks the variants per attempt and clamps to the last', 
   assert.equal(resolveRetryText({ text: 'Try' }, 3), 'Try');
 });
 
-test('resolveTierText: plain string shows every time; array walks per attempt and clamps', () => {
-  assert.equal(resolveTierText('Nothing.', 0), 'Nothing.');
-  assert.equal(resolveTierText('Nothing.', 4), 'Nothing.');
+test('pickVariant: plain string shows every time; array walks per use and clamps', () => {
+  assert.equal(pickVariant('Nothing.', 0), 'Nothing.');
+  assert.equal(pickVariant('Nothing.', 4), 'Nothing.');
   const arr = ['first', 'second', 'third'];
-  assert.equal(resolveTierText(arr, 0), 'first');
-  assert.equal(resolveTierText(arr, 1), 'second');
-  assert.equal(resolveTierText(arr, 5), 'third'); // clamps to last
-  assert.equal(resolveTierText(undefined, 0), undefined);
+  assert.equal(pickVariant(arr, 0), 'first');
+  assert.equal(pickVariant(arr, 1), 'second');
+  assert.equal(pickVariant(arr, 5), 'third'); // clamps to last
+  assert.equal(pickVariant(undefined, 0), undefined);
 });
 
 test('performSkillCheck: failure narration walks per attempt', () => {
@@ -312,13 +312,10 @@ test('performSkillCheck: passes breakdown parameters to translation engine', () 
   assert.equal(params.breakdown, '1d20: 11 + 2 Perception');
 });
 
-// ── rollBreakdownParts ────────────────────────────────────────────────────────
+// ── rollBreakdown ─────────────────────────────────────────────────────────────
 
-test('rollBreakdownParts: names each modifier, skips zeros, handles negatives', () => {
-  assert.equal(rollBreakdownParts(12, [{ mod: 2, label: 'Strength' }, { mod: 1, label: 'Sword' }]),
-    '1d20: 12 + 2 Strength + 1 Sword');
-  assert.equal(rollBreakdownParts(12, [{ mod: 0, label: 'Strength' }, { mod: 1, label: 'Sword' }]),
-    '1d20: 12 + 1 Sword');
-  assert.equal(rollBreakdownParts(12, [{ mod: -1, label: 'Cursed' }]), '1d20: 12 - 1 Cursed');
-  assert.equal(rollBreakdownParts(12, []), '1d20: 12');
+test('rollBreakdown: names the modifier, skips zero, handles negatives', () => {
+  assert.equal(rollBreakdown(12, 2, 'Strength'), '1d20: 12 + 2 Strength');
+  assert.equal(rollBreakdown(12, 0, 'Strength'), '1d20: 12');
+  assert.equal(rollBreakdown(12, -1, 'Cursed'), '1d20: 12 - 1 Cursed');
 });

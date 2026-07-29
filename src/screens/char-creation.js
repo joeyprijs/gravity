@@ -123,7 +123,7 @@ export class CharCreationScreen {
     decrementBtn.className = `${CSS.BTN} ${CSS.CC_STAT_BTN}`;
     decrementBtn.textContent = '−';
     decrementBtn.onclick = () => {
-      if (this.spent[stat.id] > (stat.min ?? 0)) {
+      if (this.spent[stat.id] > 0) {
         this.spent[stat.id]--;
         this._updateStatRow(stat, valueEl, decrementBtn, incrementBtn);
         this._updatePointsDisplay();
@@ -190,7 +190,7 @@ export class CharCreationScreen {
 
   _updateStatRow(stat, valueEl, decrementBtn, incrementBtn) {
     this._setStatValueText(valueEl, stat);
-    decrementBtn.disabled = this.spent[stat.id] <= (stat.min ?? 0);
+    decrementBtn.disabled = this.spent[stat.id] <= 0;
     incrementBtn.disabled = this.pointsRemaining <= 0;
   }
 

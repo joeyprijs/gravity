@@ -190,14 +190,12 @@ Player defaults, attributes, progression, economy, and the UI tabs:
       {
         "id": "resources.hp.max",
         "localeKey": "maxHp",
-        "bonusPerPoint": 2,
-        "min": 0
+        "bonusPerPoint": 2
       },
       {
         "id": "attributes.perception",
         "localeKey": "perception",
-        "bonusPerPoint": 1,
-        "min": 0
+        "bonusPerPoint": 1
       }
     ]
   },
@@ -297,18 +295,17 @@ Available everywhere (scene options, `onVictory`, dialogue responses):
 | Action | Parameters | Effect |
 |---|---|---|
 | `loot` | `item`, `amount?`, `received?`, `xpReward?` | Give an item — or gold, with `"item": "gold"` — to the player. `received: true` reads as "handed over" rather than "found". |
-| `combat` | `enemies`, `onVictory?` | Start a fight; `onVictory` runs on win. Enemies marked friendly are skipped. |
+| `combat` | `enemies`, `onVictory?` | Start a fight; `onVictory` runs on win. |
 | `dialogue` | `npc` | Open a conversation. |
 | `navigate` | `destination` | Move to a scene. |
 | `return` | — | Return to the scene the player teleported from, else the starting scene. |
 | `heal` | `amount?` | Change HP by `amount` (default `rules.snackHealAmount`; negative damages). |
 | `full_rest` | — | Restore HP and the retry currency (AP is a per-combat budget and resets on its own). |
-| `modify_resource` | `resource`, `amount?` | Move any declared `{ current, max }` resource: a number, negative to drain, or `"full"`/omitted to top up. |
 | `set_flag` | `flag`, `value` | Write a flag. |
 | `log` | `message` | Print a narrator line. |
 | `manage_chest` | `chest` | Open a chest's deposit/withdraw panel. |
 | `advance_time` | `amount` **or** `until` | Advance the world clock by ticks, or to the next start of a named segment (needs `rules.time`). |
-| `set_timer` | `id`, `afterTicks?` / `atTick?`, `actions` | Arm a timer; its pipeline fires at the deadline. Re-arming an `id` replaces it. |
+| `set_timer` | `id`, `afterTicks?`, `actions` | Arm a timer; its pipeline fires at the deadline. Re-arming an `id` replaces it. |
 | `cancel_timer` | `id` | Disarm a timer. |
 
 Valid only inside conversation nodes:
@@ -318,10 +315,9 @@ Valid only inside conversation nodes:
 | `goToConversation` | `node` | Render another node of the current conversation. |
 | `trade` | `tradeDiscount?`, `persistDiscount?` | Open the merchant store, optionally repriced. |
 | `leave` | — | Leave the conversation, back to the scene. |
-| `makeFriendly` | — | Mark the active NPC friendly — future `combat` actions skip it. |
 | `questTrigger` | `mission`, `status` | Start (`"active"`) or complete (`"complete"`) a mission. |
 
-The state-changing actions (`loot`, `heal`, `full_rest`, `modify_resource`, `advance_time`) take an optional `log`: `false` silences the default message, a string replaces it (resolved through the locale table first, so a locale key stays translatable; any other string logs as-is). Timer pipelines are restricted to *quiet* actions (`set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`) — a timer changes the world through flags, never by navigating or starting combat. Plugins register their own types (the curator plugin adds `manage_exhibits`, `add_display`, and `build_wing`) — see the [Plugin API](#plugin-api). Every parameter above is documented in full in [`docs/ACTIONS.md`](docs/ACTIONS.md).
+The state-changing actions (`loot`, `heal`, `full_rest`, `advance_time`) take an optional `log`: `false` silences the default message, a string replaces it (resolved through the locale table first, so a locale key stays translatable; any other string logs as-is). Timer pipelines are restricted to *quiet* actions (`set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`) — a timer changes the world through flags, never by navigating or starting combat. Plugins register their own types (the curator plugin adds `manage_exhibits` and `build_wing`) — see the [Plugin API](#plugin-api). Every parameter above is documented in full in [`docs/ACTIONS.md`](docs/ACTIONS.md).
 
 ### Scenes
 
@@ -607,7 +603,7 @@ Equipment `slot` names are **game-defined** — whatever keys appear in `rules.p
 
 *   `attackAttribute` names the attribute whose modifier the wielder adds to attack rolls — accuracy belongs to the character, not the weapon.
 *   Armor and relics use `attributes.attributeBonuses` (e.g. `{ "perception": 1 }`) and/or `armorClassBonus` to raise attributes while worn.
-*   Consumable effects are independent and combinable: `healingAmount` (number or dice notation), `apRestore`, and `modifyResource` (any declared resource) consume the item; `teleportScene` makes a reusable travel item.
+*   Consumable effects: `healingAmount` (number or dice notation) consumes the item; `teleportScene` makes a reusable travel item.
 
 ### Loot Tables, Flags, Missions
 

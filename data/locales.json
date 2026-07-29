@@ -149,11 +149,9 @@
     "hit": "Uses: {attribute} {value}",
     "damageRoll": "Damage: {value}",
     "healingAmount": "Healing: {value}",
-    "apRestore": "Restores Action Points: {value}",
     "armorClassBonus": "Bonus: +{value} Armor Class",
     "reputation": "Reputation: {value}",
     "attributeBonus": "Bonus: {value} {attribute}",
-    "modifyResource": "{resource}: {value}",
     "value": "Value: {value} Gold"
   },
   "loot": {
@@ -203,16 +201,12 @@
     "lookAroundFoundMore": "Your keen eye spots something, though you sense the area still holds more.",
     "lookAroundFail": "Nothing reveals itself, yet you sense there's something you're missing.",
     "badgeRetryCost": "Retry: {cost} Luck Point",
-    "resourceGain": "You gain {amount} {resource}.",
-    "resourceLoss": "You lose {amount} {resource}.",
     "retrySpent": "You spend {cost} Luck Point to press your luck. ({remaining} remaining)"
   },
   "player": {
     "equipped": "Equip the {name} ({slot})",
     "unequipped": "Unequip the {name} ({slot})",
     "usedItem": "Use the {name} ({amount} HP{rollSuffix})",
-    "usedItemAp": "Use the {name} ({amount} AP{rollSuffix})",
-    "usedItemResource": "Use the {name} ({amount} {resource}{rollSuffix})",
     "rollSuffix": ", {dice}: {roll}",
     "teleported": "Use the {name}",
     "alreadyHere": "You are already here.",
@@ -250,7 +244,6 @@
     "victoryXp": "You defeated {names}! (+{xp} XP)",
     "gameOverTitle": "Game Over",
     "gameOverBody": "Your adventure ends here.",
-    "avoided": "They regard you peacefully.",
     "loadLastSave": "Load Last Save",
     "restartGame": "Restart Game"
   },

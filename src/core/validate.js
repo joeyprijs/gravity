@@ -22,13 +22,6 @@ const RESERVED_CONDITION_KEYS = new Set([
   'time', 'day', 'segment',
 ]);
 
-// The removed 2d6 Test-Your-Luck subsystem's authoring surface. Luck is a
-// plain custom attribute now (d20 + luck vs DC, like every other check);
-// these fields are flagged so old data gets a pointer instead of silence.
-const REMOVED_LUCK_RULE_KEYS = [
-  'luck', 'combatLuck', 'combatLuckMinDamage', 'skillRetryLuckCost', 'fullRestLuckRestore',
-];
-
 // The outcome tier names a check's `outcomes` object may define.
 const OUTCOME_TIERS = new Set(['critical', 'success', 'partial', 'failure']);
 
@@ -101,28 +94,9 @@ function validateItems(ctx) {
     const attackAttr = item.attributes?.attackAttribute;
     if (attackAttr && !ctx.knownSkills.has(attackAttr))
       ctx.add(group, `attributes.attackAttribute "${attackAttr}" is not a declared attribute (playerDefaults.attributes or customAttributes)`);
-    if (item.attackAttribute !== undefined)
-      ctx.add(group, 'attackAttribute moved into the attributes object — write attributes.attackAttribute');
-    if (item.actionPoints !== undefined)
-      ctx.add(group, 'actionPoints moved into the attributes object — write attributes.actionPoints');
-    if (item.bonusHitChance !== undefined)
-      ctx.add(group, 'bonusHitChance was removed — accuracy comes from the wielder\'s attackAttribute; model an accurate weapon as attributeBonuses on the governing attribute');
     for (const key of Object.keys(item.attributes?.attributeBonuses ?? {})) {
       if (!ctx.knownSkills.has(key))
         ctx.add(group, `attributeBonuses key "${key}" is not a declared attribute (playerDefaults.attributes or customAttributes)`);
-    }
-    // The consumable modifyResource effect mirrors the modify_resource
-    // action's rules: never AP (a combat-only budget — apRestore is the
-    // sanctioned AP consumable), and only declared { current, max } resources.
-    const mod = item.attributes?.modifyResource;
-    if (mod !== undefined) {
-      const res = ctx.rules?.playerDefaults?.resources?.[mod?.resource];
-      if (!mod?.resource)
-        ctx.add(group, 'attributes.modifyResource needs a "resource" — the currency it moves');
-      else if (mod.resource === 'ap')
-        ctx.add(group, 'attributes.modifyResource cannot move "ap" — AP is a combat-only budget the fight refills; use attributes.apRestore for an AP consumable');
-      else if (!(res && typeof res === 'object' && 'current' in res))
-        ctx.add(group, `attributes.modifyResource resource "${mod.resource}" is not a declared { current, max } resource in playerDefaults.resources`);
     }
   }
 }
@@ -209,17 +183,6 @@ function validateActions(ctx, group, actions, where) {
       }
       validateActions(ctx, group, action.actions, `${where}: set_timer "${action.id}"`);
     }
-    if (action.type === 'restore_luck')
-      ctx.add(group, `${where}: "restore_luck" was removed with the 2d6 luck subsystem — model luck as a custom attribute instead`);
-    if (action.type === 'modify_resource') {
-      const res = ctx.rules?.playerDefaults?.resources?.[action.resource];
-      if (!action.resource)
-        ctx.add(group, `${where}: modify_resource needs a "resource" — the currency it moves`);
-      else if (action.resource === 'ap')
-        ctx.add(group, `${where}: modify_resource cannot move "ap" — AP is a combat-only budget the fight refills; out of combat nothing would ever restore a drain`);
-      else if (!(res && typeof res === 'object' && 'current' in res))
-        ctx.add(group, `${where}: modify_resource resource "${action.resource}" is not a declared { current, max } resource in playerDefaults.resources`);
-    }
   }
 }
 
@@ -255,12 +218,6 @@ function warnIfSuccessFarmable(ctx, group, check, where) {
 // responses: outcome tiers, one-shot markers, attempt budgets.
 function validateCheck(ctx, group, check, where) {
   warnIfSuccessFarmable(ctx, group, check, where);
-  if (check.luckCheck)
-    ctx.add(group, `${where}: "luckCheck" (the 2d6 Test-Your-Luck gamble) was removed — use a d20 check against a luck custom attribute ("skillCheck": "luck" with a dc) instead`);
-  if ('increment' in check || (check.items || []).some(l => 'increment' in l))
-    ctx.add(group, `${where}: "increment" (DC escalation) was removed — use maxAttempts, resolveOnce, or time pressure instead`);
-  if (check.apCost !== undefined)
-    ctx.add(group, `${where}: "apCost" was removed with the AP economy — attempts no longer spend AP; use maxAttempts, time costs, or a retry currency (rules.skillRetry) for pressure`);
   if (check.resolveOnce && check.maxAttempts)
     ctx.add(group, `${where}: resolveOnce makes maxAttempts redundant (one roll IS the budget)`);
   if (check.onExhausted && !check.maxAttempts)
@@ -321,8 +278,6 @@ function validateScenes(ctx) {
 
     for (const opt of (scene.options || [])) {
       const where = `option "${opt.text}"`;
-      if (opt.apCost !== undefined)
-        ctx.add(group, `${where}: "apCost" was removed with the AP economy — options no longer spend AP; use time costs (advance_time or rules.time.defaultCosts) for pacing`);
       validateCondition(ctx, group, opt.condition, where);
       if (opt.requirements?.item && !ctx.items[opt.requirements.item])
         ctx.add(group, `${where} requires unknown item "${opt.requirements.item}"`);
@@ -491,16 +446,6 @@ function validateRules(ctx) {
     }
   }
 
-  // The 2d6 luck subsystem was removed — its rules knobs and resource are
-  // inert. Point authors at the replacements (a luck custom attribute for
-  // rolls; rules.skillRetry for a spend-to-retry currency).
-  for (const key of REMOVED_LUCK_RULE_KEYS) {
-    if (rules?.[key] !== undefined)
-      ctx.add(group, `rules.${key} belongs to the removed 2d6 luck subsystem — model luck as a custom attribute (d20 vs DC), or a retry currency via rules.skillRetry`);
-  }
-  if (rules?.playerDefaults?.resources?.luck !== undefined)
-    ctx.add(group, 'playerDefaults.resources.luck belongs to the removed 2d6 luck subsystem — declare luck in customAttributes, or a retry-currency resource named something else');
-
   const declaredResources = rules?.playerDefaults?.resources ?? {};
   const isResource = (id) => {
     const r = declaredResources[id];
@@ -550,12 +495,6 @@ function validateRules(ctx) {
     if (tab?.icon !== undefined && !ICON_NAMES.includes(tab.icon))
       ctx.add(group, `tabs "${tab.id}": icon "${tab.icon}" is not a known icon (${ICON_NAMES.join(', ')})`);
   }
-
-  // The AP economy was removed — AP is a combat-only budget refilled at fight
-  // start, each round, and at fight end. The old knobs are inert; flag them
-  // so authored pacing doesn't silently vanish.
-  if (rules?.apEconomy !== undefined)
-    ctx.add(group, 'rules.apEconomy was removed — AP is a combat-only budget now (refills each fight); pace out-of-combat play with time costs (rules.time.defaultCosts) or a retry currency (rules.skillRetry)');
 
   // Every weapon/spell at 0 AP means combat turns never end on their own —
   // the End Turn button becomes the only handoff. Usually an authoring slip.

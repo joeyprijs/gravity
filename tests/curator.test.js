@@ -70,7 +70,6 @@ test('plugin registers its scene decorator, action handlers, and sheet row', () 
   // is spliced into the room's narrative description.
   assert.equal(decorators[0].description, undefined);
   assert.ok(registry.has('manage_exhibits'));
-  assert.ok(registry.has('add_display'));
   assert.deepEqual(sheetRows, [{ label: 'plugin.curator.reputationLabel', bind: 'attributes.reputation', icon: 'thumbs_up' }]);
 });
 
@@ -100,39 +99,6 @@ test('plugin validator flags the removed rules.curator block', () => {
   assert.equal(issues.length, 1);
   assert.equal(issues[0].group, 'Rules');
   assert.match(issues[0].message, /rules\.curator was removed/);
-});
-
-test('add_display: installs a named display and charges the cost', () => {
-  const { engine, registry } = makeEngine();
-  curatorPlugin(engine);
-  gameState.setCurrentSceneId('home_museum');
-  registry.get('add_display')({ type: 'add_display', name: 'Oak Pedestal', cost: 40 }, engine);
-
-  const displays = gameState.getDisplaysForScene('home_museum');
-  assert.equal(displays.length, 1);
-  assert.equal(displays[0].name, 'Oak Pedestal');
-  assert.equal(gameState.getPlayer().resources.gold, 60);
-});
-
-test('add_display: refuses when the player cannot afford it', () => {
-  const { engine, registry, calls } = makeEngine();
-  curatorPlugin(engine);
-  gameState.setCurrentSceneId('home_museum');
-  registry.get('add_display')({ type: 'add_display', cost: 500 }, engine);
-
-  assert.equal(gameState.getDisplaysForScene('home_museum').length, 0);
-  assert.equal(gameState.getPlayer().resources.gold, 100);
-  assert.equal(calls.logs[0].message, 'ui.notEnoughGold');
-});
-
-test('add_display: an explicit target scene overrides the current scene', () => {
-  const { engine, registry } = makeEngine();
-  curatorPlugin(engine);
-  gameState.setCurrentSceneId('home_museum');
-  registry.get('add_display')({ type: 'add_display', scene: 'home_museum_armor', cost: 0 }, engine);
-
-  assert.equal(gameState.getDisplaysForScene('home_museum').length, 0);
-  assert.equal(gameState.getDisplaysForScene('home_museum_armor').length, 1);
 });
 
 // Arriving in a room with cases opens the curator panel. Only the cases that

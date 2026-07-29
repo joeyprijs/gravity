@@ -141,56 +141,47 @@
       {
         "id": "resources.hp.max",
         "localeKey": "maxHp",
-        "bonusPerPoint": 2,
-        "min": 0
+        "bonusPerPoint": 2
       },
       {
         "id": "attributes.ac",
         "localeKey": "ac",
-        "bonusPerPoint": 1,
-        "min": 0
+        "bonusPerPoint": 1
       },
       {
         "id": "attributes.initiative",
         "localeKey": "initiative",
-        "bonusPerPoint": 1,
-        "min": 0
+        "bonusPerPoint": 1
       },
       {
         "id": "attributes.strength",
         "localeKey": "strength",
-        "bonusPerPoint": 1,
-        "min": 0
+        "bonusPerPoint": 1
       },
       {
         "id": "attributes.intelligence",
         "localeKey": "intelligence",
-        "bonusPerPoint": 1,
-        "min": 0
+        "bonusPerPoint": 1
       },
       {
         "id": "attributes.perception",
         "localeKey": "perception",
-        "bonusPerPoint": 1,
-        "min": 0
+        "bonusPerPoint": 1
       },
       {
         "id": "attributes.stealth",
         "localeKey": "stealth",
-        "bonusPerPoint": 1,
-        "min": 0
+        "bonusPerPoint": 1
       },
       {
         "id": "attributes.charisma",
         "localeKey": "charisma",
-        "bonusPerPoint": 1,
-        "min": 0
+        "bonusPerPoint": 1
       },
       {
         "id": "attributes.luck",
         "localeKey": "luck",
-        "bonusPerPoint": 1,
-        "min": 0
+        "bonusPerPoint": 1
       }
     ]
   },

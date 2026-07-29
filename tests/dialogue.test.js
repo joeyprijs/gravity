@@ -131,7 +131,7 @@ test('startDialogue: resets store state from a previous conversation', () => {
 test('constructor registers the dialogue actions on the engine registry', () => {
   const { registry } = makeDS();
   for (const type of [ACTIONS.GO_TO_CONVERSATION, ACTIONS.TRADE, ACTIONS.LEAVE,
-                      ACTIONS.MAKE_FRIENDLY, ACTIONS.QUEST_TRIGGER]) {
+                      ACTIONS.QUEST_TRIGGER]) {
     assert.ok(registry.has(type), `expected "${type}" to be registered`);
   }
 });
@@ -156,13 +156,6 @@ test('leave: renders the current scene', () => {
   gameState.setCurrentSceneId('town_square');
   registry.get(ACTIONS.LEAVE)({ type: ACTIONS.LEAVE }, engine);
   assert.deepEqual(calls.renderedScenes, ['town_square']);
-});
-
-test('makeFriendly: sets the friendly flag for the active NPC', () => {
-  const { ds, registry, engine } = makeDS();
-  ds.startDialogue('talker');
-  registry.get(ACTIONS.MAKE_FRIENDLY)({ type: ACTIONS.MAKE_FRIENDLY }, engine);
-  assert.equal(gameState.getFlag(FLAG_KEYS.friendly('talker')), true);
 });
 
 test('questTrigger: forwards the action to the engine', () => {

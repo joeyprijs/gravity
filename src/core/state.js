@@ -73,6 +73,27 @@ function migrate(data, pluginMigrations = {}) {
   }
 }
 
+// The empty state shape — every field a save file carries. The constructor's
+// skeleton (player {}, no scene) until init(rules) fills in the player.
+function makeSkeletonState() {
+  return {
+    saveVersion: SAVE_VERSION,
+    pluginSaveVersions: {},
+    player: {},
+    flags: {},
+    checkState: {},
+    missions: {},
+    currentSceneId: null,
+    returnSceneId: null,
+    chests: {},
+    displays: {},
+    visitedScenes: [],
+    time: { ticks: 0 },
+    timers: [],
+    log: []
+  };
+}
+
 function makeDefaultState(rules) {
   const player = structuredClone(rules.playerDefaults);
   (rules.customAttributes ?? []).forEach(attr => {
@@ -81,20 +102,9 @@ function makeDefaultState(rules) {
   // Banked level-up stat points (rules.levelUp.statPoints per level).
   player.statPoints = 0;
   return {
-    saveVersion: SAVE_VERSION,
-    pluginSaveVersions: {},
+    ...makeSkeletonState(),
     player,
-    flags: {},
-    checkState: {},
-    missions: {},
     currentSceneId: rules.startingScene || null,
-    returnSceneId: null,
-    chests: {},
-    displays: {},
-    visitedScenes: [],
-    time: { ticks: 0 },
-    timers: [],
-    log: []
   };
 }
 
@@ -110,22 +120,7 @@ class StateManager {
     // Minimal skeleton state. Properly initialized by init(rules) once
     // rules.json is loaded. This skeleton is sufficient for registerMissions()
     // and registerSceneFlags() which are called during data loading.
-    this.state = {
-      saveVersion: SAVE_VERSION,
-      pluginSaveVersions: {},
-      player: {},
-      flags: {},
-      checkState: {},
-      missions: {},
-      currentSceneId: null,
-      returnSceneId: null,
-      chests: {},
-      displays: {},
-      visitedScenes: [],
-      time: { ticks: 0 },
-      timers: [],
-      log: []
-    };
+    this.state = makeSkeletonState();
     this.listeners = [];
     this._rules = null;
     this._items = {};

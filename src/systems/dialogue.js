@@ -77,10 +77,6 @@ export class DialogueSystem {
       engine.renderScene(this.engine.state.getCurrentSceneId());
     });
 
-    this.engine.registerAction(ACTIONS.MAKE_FRIENDLY, requireNPC(ACTIONS.MAKE_FRIENDLY, () => {
-      this.engine.state.setFlag(FLAG_KEYS.friendly(this.currentNPCId), true);
-    }));
-
     this.engine.registerAction(ACTIONS.QUEST_TRIGGER, (action, engine) => {
       engine.handleQuestTrigger(action);
     });

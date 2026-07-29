@@ -50,8 +50,9 @@ export class MapManager {
     // the constructor).
     if (currentSceneId === this._minimapCacheKey) return;
 
+    // A scene without a region gets no minimap (regionScenes stays empty).
     const regionId = this.engine.data.scenes[currentSceneId]?.region;
-    const regionScenes = this._getVisitedScenesForRegion(regionId);
+    const regionScenes = regionId ? this._getVisitedMapScenes(regionId) : [];
 
     if (regionScenes.length === 0) {
       minimapEl.hidden = true;
@@ -101,7 +102,7 @@ export class MapManager {
     if (!overlay || !canvasEl || !scrollEl) return;
 
     const currentSceneId = this.engine.state.getCurrentSceneId();
-    const allScenes = this._getAllVisitedMapScenes();
+    const allScenes = this._getVisitedMapScenes();
     const { width, height } = this.engine.data.worldMapSize;
 
     if (titleEl) titleEl.textContent = this.engine.t('ui.worldMapTitle');
@@ -134,20 +135,12 @@ export class MapManager {
     this._minimapCacheKey = null;
   }
 
-  // Every visited scene that has mapDefinitions, as { id, scene } pairs.
-  _getAllVisitedMapScenes() {
+  // Every visited scene that has mapDefinitions, as { id, scene } pairs —
+  // optionally narrowed to one region (what the minimap shows).
+  _getVisitedMapScenes(regionId = null) {
     const visited = new Set(this.engine.state.getVisitedScenes());
     return Object.entries(this.engine.data.scenes)
-      .filter(([id, scene]) => visited.has(id) && scene.mapDefinitions)
-      .map(([id, scene]) => ({ id, scene }));
-  }
-
-  // The visited, mappable scenes of one region — what the minimap shows.
-  _getVisitedScenesForRegion(regionId) {
-    if (!regionId) return [];
-    const visited = new Set(this.engine.state.getVisitedScenes());
-    return Object.entries(this.engine.data.scenes)
-      .filter(([id, scene]) => scene?.region === regionId && visited.has(id) && scene.mapDefinitions)
+      .filter(([id, scene]) => (!regionId || scene?.region === regionId) && visited.has(id) && scene.mapDefinitions)
       .map(([id, scene]) => ({ id, scene }));
   }
 

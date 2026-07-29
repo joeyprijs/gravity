@@ -24,10 +24,6 @@
       "minimum": 1,
       "description": "One-time XP bonus awarded to the player upon their first entry."
     },
-    "descriptionHook": {
-      "type": "string",
-      "description": "Optional runtime callback hook name (registered via engine.registerDescriptionHook) to append dynamic text."
-    },
     "mapDefinitions": {
       "type": "object",
       "properties": {
@@ -573,11 +569,7 @@
             "integer",
             "string"
           ],
-          "description": "loot/heal: integer. modify_resource: integer (negative drains) or \"full\"."
-        },
-        "resource": {
-          "type": "string",
-          "description": "modify_resource: id of a resource declared in rules.playerDefaults.resources."
+          "description": "loot/heal: integer."
         },
         "xpReward": {
           "type": "integer"
@@ -634,11 +626,6 @@
           "minimum": 0,
           "description": "set_timer: deadline relative to the current tick."
         },
-        "atTick": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "set_timer: absolute deadline tick."
-        },
         "until": {
           "type": "string",
           "description": "advance_time: advance to the next start of this day segment."
@@ -667,7 +654,7 @@
         },
         "name": {
           "type": "string",
-          "description": "build_wing / add_display: the player-facing name of the new wing or display case."
+          "description": "build_wing: the player-facing name of the new wing."
         }
       },
       "required": [

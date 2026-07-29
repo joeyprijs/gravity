@@ -92,7 +92,7 @@ node scripts/generate-narration-script.js          # write audio/_scripts/
 node scripts/generate-narration-script.js --check  # exit 1 if stale (CI)
 ```
 
-Writes one plain-text recording script per scene — `audio/_scripts/<region>/<scene>.txt` — plus `shared.txt`. Each entry gives the line wrapped for reading aloud, where it lives in the JSON, and the clip path the take belongs at:
+Writes one plain-text recording script per scene — `audio/_scripts/<region>/<scene>.txt`. Each entry gives the line wrapped for reading aloud, where it lives in the JSON, and the clip path the take belongs at:
 
 ```
 ────────────────────────────────────────────────────────────────────────
@@ -106,11 +106,11 @@ options[1].actions[0].log
   other side. Whoever locked you in wanted you to let yourself out.
 ```
 
-What it extracts, per scene: the description (plain or every variant, labelled with the state that selects it), `passiveChecks[].text`, each skill's `resultText` and `outcomes.<tier>.text` — including the per-attempt array form, one entry per attempt — and every custom `log` / `message` string in any action pipeline, at any nesting depth. `shared.txt` holds the engine's own narrator lines from the locale file, like the generic Look Around miss.
+What it extracts, per scene: the description (plain or every variant, labelled with the state that selects it), `passiveChecks[].text`, each skill's `resultText` and `outcomes.<tier>.text` — including the per-attempt array form, one entry per attempt — and every custom `log` / `message` string in any action pipeline, at any nesting depth.
 
-Prose locations are an explicit allowlist, not a scan for `text`: `options[].text`, `skills[].text`, and `retryText` are button labels and are never narrated. `shared.txt` is heuristic and labelled as candidates — a locale string qualifies if it reads as a whole sentence and carries no `{placeholder}` (an interpolated line can't be one recording), which leaves a few chrome strings to skip by eye.
+Prose locations are an explicit allowlist, not a scan for `text`: `options[].text`, `skills[].text`, and `retryText` are button labels and are never narrated.
 
-Where the data already wires a `narration` path, the script shows that path. Where it doesn't, it suggests one by the rules above and marks the line `[no clip yet]`. Kinds the engine cannot play yet — outcome text, `resultText`, passive checks, shared locale lines — say so on the status line, so recording them is a deliberate choice to work ahead of the engine rather than a surprise silence.
+Where the data already wires a `narration` path, the script shows that path. Where it doesn't, it suggests one by the rules above and marks the line `[no clip yet]`. Kinds the engine cannot play yet — outcome text, `resultText`, passive checks — say so on the status line, so recording them is a deliberate choice to work ahead of the engine rather than a surprise silence.
 
 **The output is committed on purpose.** The script is a pure function of the data — it never looks at which clips are on disk — so `git diff` after editing prose is exactly the list of clips that no longer match their text. That is the answer to narration's real failure mode: a recording that quietly stops matching the line it reads. CI runs `--check` to keep the two in step.
 

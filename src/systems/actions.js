@@ -1,4 +1,4 @@
-import { LOG, ACTIONS, FLAG_KEYS, GOLD_ITEM_ID } from "../core/config.js";
+import { LOG, ACTIONS, GOLD_ITEM_ID } from "../core/config.js";
 import { parseDamage } from "./dice.js";
 import { ticksUntilSegment } from "./time.js";
 
@@ -43,15 +43,9 @@ function handleLoot(action, engine) {
 }
 
 function handleCombat(action, engine) {
-  const allEnemies = action.enemies || [];
-  const enemies = allEnemies.filter(id => !engine.state.getFlag(FLAG_KEYS.friendly(id)));
-  if (enemies.length === 0) {
-    engine.log(LOG.SYSTEM, engine.t('combat.avoided'), 'system');
-    return;
-  }
   // The action's onVictory pipeline (if any) runs on the win — the whole
   // action is passed through as originOption for endCombat to read it from.
-  engine.combatSystem.startCombat(enemies, action);
+  engine.combatSystem.startCombat(action.enemies || [], action);
 }
 
 function handleDialogue(action, engine) {
@@ -127,43 +121,6 @@ function handleShortRest(action, engine) {
   }
 }
 
-// Clamped delta for a { current, max } resource: 'full' (or omitted) tops it
-// up; a number moves it within [0, max]. Returns the amount actually applied.
-function resourceDelta(res, amount) {
-  return amount === undefined || amount === 'full'
-    ? res.max - res.current
-    : Math.max(Math.min(amount, res.max - res.current), -res.current);
-}
-
-// Moves any declared { current, max } resource in either direction —
-// { type: "modify_resource", resource: "luckPoints", amount: 1 }, negative
-// drains, "full" (also the default) tops it up. The authoring valve for
-// custom currencies (Luck Points, favor, ...). AP is off limits: it's a
-// combat-only budget the fight refills, so out of combat nothing would ever
-// restore a drain (validation also flags this at boot).
-function handleModifyResource(action, engine) {
-  if (action.resource === 'ap') {
-    console.warn('[Gravity] modify_resource: "ap" is a combat-only budget — skipped');
-    return;
-  }
-  const res = engine.state.getPlayer().resources[action.resource];
-  if (!res || typeof res !== 'object') {
-    console.warn(`[Gravity] modify_resource: "${action.resource}" is not a declared { current, max } resource — skipped`);
-    return;
-  }
-  const amount = resourceDelta(res, action.amount);
-  if (amount === 0) return;
-  engine.state.modifyPlayerStat(action.resource, amount);
-  if (action.log !== false) {
-    const labelKey = `ui.resources.${action.resource}`;
-    const label = engine.t(labelKey) !== labelKey ? engine.t(labelKey) : action.resource;
-    const msg = typeof action.log === 'string'
-      ? engine.t(action.log)
-      : engine.t(amount < 0 ? 'actions.resourceLoss' : 'actions.resourceGain', { amount: Math.abs(amount), resource: label });
-    engine.log(LOG.SYSTEM, msg, amount < 0 ? 'system' : 'loot');
-  }
-}
-
 function handleHeal(action, engine) {
   const amount = action.amount ?? engine.data.rules?.snackHealAmount ?? 2;
   engine.state.modifyPlayerStat('hp', amount);
@@ -217,14 +174,14 @@ function handleAdvanceTime(action, engine) {
 }
 
 // { type: "set_timer", id, afterTicks: 12, actions: [...] } — when the clock
-// passes the deadline, the (quiet-only) pipeline runs. atTick sets an
-// absolute deadline instead. Re-arming an id replaces the previous timer.
+// passes the deadline, the (quiet-only) pipeline runs. Re-arming an id
+// replaces the previous timer.
 function handleSetTimer(action, engine) {
   if (!action.id) {
     console.warn('[Gravity] set_timer: missing "id" — ignored');
     return;
   }
-  const deadline = action.atTick ?? (engine.state.getTicks() + (action.afterTicks ?? 0));
+  const deadline = engine.state.getTicks() + (action.afterTicks ?? 0);
   engine.state.setTimer({ id: action.id, deadline, actions: action.actions || [] });
 }
 
@@ -240,7 +197,6 @@ export function registerBuiltinActions(engine) {
   engine.registerAction(ACTIONS.FULL_REST,       handleFullRest);
   engine.registerAction(ACTIONS.SHORT_REST,      handleShortRest);
   engine.registerAction(ACTIONS.HEAL,            handleHeal);
-  engine.registerAction(ACTIONS.MODIFY_RESOURCE, handleModifyResource);
   engine.registerAction(ACTIONS.NAVIGATE,        handleNavigate);
   engine.registerAction(ACTIONS.SET_FLAG,        handleSetFlag);
   engine.registerAction(ACTIONS.LOG,             handleLog);

@@ -13,7 +13,6 @@ export const FLAG_KEYS = {
   passiveDone:   (sceneId, index) => `passive_done_${sceneId}_${index}`,
   merchantStock: (npcId, itemId)  => `merchant_stock_${npcId}_${itemId}`,
   tradeDiscount: (npcId)          => `trade_discount_${npcId}`,
-  friendly:      (npcId)          => `friendly_${npcId}`,
   xpAwarded:     (sceneId)        => `xp_awarded_${sceneId}`,
 };
 
@@ -38,7 +37,6 @@ export const ACTIONS = {
   FULL_REST:       'full_rest',
   SHORT_REST:      'short_rest',
   HEAL:            'heal',
-  MODIFY_RESOURCE: 'modify_resource',
   NAVIGATE:        'navigate',
   SET_FLAG:        'set_flag',
   LOG:             'log',
@@ -53,7 +51,6 @@ export const ACTIONS = {
   GO_TO_CONVERSATION: 'goToConversation',
   TRADE:              'trade',
   LEAVE:              'leave',
-  MAKE_FRIENDLY:      'makeFriendly',
   QUEST_TRIGGER:      'questTrigger',
 };
 

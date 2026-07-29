@@ -43,7 +43,7 @@ const TEST_ITEMS = {
 
 // Minimal engine mock — covers everything the headless SceneRenderer logic
 // touches. t() echoes the locale key so log assertions compare against keys.
-function makeEngine({ items = TEST_ITEMS, scenes = {}, tables = {}, hooks = {}, decorators = [] } = {}) {
+function makeEngine({ items = TEST_ITEMS, scenes = {}, tables = {}, decorators = [] } = {}) {
   const calls = { logs: [], renderedScenes: [], combat: [], emitted: [] };
   const engine = {
     data: { items, scenes, tables, npcs: {}, rules: null },
@@ -51,7 +51,6 @@ function makeEngine({ items = TEST_ITEMS, scenes = {}, tables = {}, hooks = {}, 
     t: (key) => key,
     log: (type, message, variant) => calls.logs.push({ type, message, variant }),
     emit: (event, data) => calls.emitted.push({ event, data }),
-    getDescriptionHook: (name) => hooks[name] || null,
     sceneDecorators: decorators,
     combatSystem: { startCombat: (enemies, cfg) => calls.combat.push({ enemies, cfg }) },
     renderScene: (sceneId) => calls.renderedScenes.push(sceneId),
@@ -109,12 +108,6 @@ test('_resolveDescription: first matching conditional entry wins', () => {
     { text: 'The door is shut.' },
   ]};
   assert.equal(sr._resolveDescription(scene), 'The door stands open.');
-});
-
-test('_resolveDescription: descriptionHook output is appended', () => {
-  const { sr } = makeSR({ hooks: { weather: () => ' Rain patters down.' } });
-  const scene = { description: 'A courtyard.', descriptionHook: 'weather' };
-  assert.equal(sr._resolveDescription(scene), 'A courtyard. Rain patters down.');
 });
 
 test('_resolveDescription: scene decorators append to every scene', () => {

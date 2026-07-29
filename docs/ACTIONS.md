@@ -26,7 +26,7 @@ Actions are the mutation half of the engine: the ordered pipeline a scene option
 
 ### The `log` convention
 
-The state-changing actions — `loot`, `heal`, `full_rest`, `short_rest`, `modify_resource`, and `advance_time` — write a default line to the narrative log. Two optional controls, shared by all of them:
+The state-changing actions — `loot`, `heal`, `full_rest`, `short_rest`, and `advance_time` — write a default line to the narrative log. Two optional controls, shared by all of them:
 
 - `"log": false` — silence the default message entirely.
 - `"log": "Some text."` — replace the default with your own line.
@@ -77,7 +77,7 @@ An unknown `item` is ignored with a console warning (and flagged at boot).
 
 Start a turn-based encounter.
 
-- `enemies` *(string[], required)* — the NPC ids to fight. Any id currently flagged friendly (via `makeFriendly`) is filtered out; if every enemy has been befriended, no fight starts and the encounter is narrated as avoided.
+- `enemies` *(string[], required)* — the NPC ids to fight.
 - `onVictory` *(action[], optional)* — a pipeline run when the player wins the fight. Loot, flags, and navigation for a defeated encounter live here, not on the NPC.
 
 ```json
@@ -138,14 +138,6 @@ You rarely author this action yourself: while `rules.shortRest` is configured, t
 
 - `log` — see [The `log` convention](#the-log-convention). The default yield includes the roll: `(+6 HP, 1d8: 6)`.
 
-### `modify_resource`
-
-Move any declared `{ current, max }` resource (a custom currency like luck points or favor).
-
-- `resource` *(string, required)* — the resource name. Must be a `{ current, max }` resource declared in `rules.playerDefaults.resources`; an undeclared name warns and does nothing (and is flagged at boot). `ap` is off limits — it is a combat-only budget the fight refills, so out of combat nothing would ever restore a drain (also flagged at boot).
-- `amount` *(number or `"full"`, default `"full"`)* — a number moves the resource within `[0, max]`; a negative number drains; `"full"` (or omitting `amount`) tops it up to max. If the resolved change is zero, the action is silent and does nothing.
-- `log` — see [The `log` convention](#the-log-convention). The resource's display name comes from the `ui.resources.<resource>` locale key.
-
 ### `set_flag`
 
 Write a persistent flag — the primary way an action records that something happened.
@@ -183,7 +175,6 @@ Arm a timer whose pipeline fires when the clock later passes a deadline.
 
 - `id` *(string, required)* — the timer's id. A missing id warns and is ignored. Arming an id that already exists **replaces** the previous timer.
 - `afterTicks` *(number)* — deadline = the current tick + this many.
-- `atTick` *(number)* — an absolute deadline tick instead. Takes precedence over `afterTicks`.
 - `actions` *(action[])* — the pipeline to run at the deadline, restricted to the **quiet** action types: `set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`. A timer changes the world through flags — it can never navigate or start combat from inside the clock advance. Non-quiet actions are stripped with a warning (and flagged at boot).
 
 ### `cancel_timer`
@@ -213,10 +204,6 @@ Open the merchant store for the current NPC.
 
 Leave the conversation and return to the current scene. Takes no parameters.
 
-### `makeFriendly`
-
-Mark the current NPC friendly. Takes no parameters. Subsequent `combat` actions naming this NPC skip it, so a talked-down guard stays talked down.
-
 ### `questTrigger`
 
 Drive a mission's lifecycle.
@@ -230,19 +217,11 @@ The same block can be attached to a scene as `questTrigger` (fired on entry) rat
 
 ## Plugin-provided actions
 
-Plugins register their own action types on the same registry, usable in any pipeline. The shipped curator plugin adds three:
+Plugins register their own action types on the same registry, usable in any pipeline. The shipped curator plugin adds two:
 
 ### `manage_exhibits`
 
 Open the curator dashboard (a custom UI). Takes no parameters.
-
-### `add_display`
-
-Install a display case in a scene.
-
-- `scene` *(string, optional, default: the current scene)* — the scene to add the case to.
-- `cost` *(number, default `0`)* — gold charged to install it; the action refuses and warns when the player can't afford it.
-- `name` *(string, optional)* — the case's label; falls back to a default name.
 
 ### `build_wing`
 

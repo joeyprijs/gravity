@@ -14,8 +14,6 @@
   "curatorInstallPrompt":    "Enter a name for your new display case:",
   "curatorInstallDefault":   "Display Case {count}",
   "curatorInstallSuccess":   "You spent {cost} Gold and installed the \"{name}\".",
-  "displayDefaultName":      "Display Pedestal",
-  "displayAddedLog":         "A new {name} has been added to the room.",
   "displayApproach":         "Step up to the {display}",
   "displayApproachEmpty":    "Step up to the empty {display}",
   "displayLeave":            "Step back from the {display}",

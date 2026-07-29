@@ -95,7 +95,7 @@ Numeric leaves accept a bare number (meaning *at least*) or an operator object: 
 Actions are the mutation pipeline: an array of `{ "type": ..., ...params }` objects executed in order by `engine.runActions()`. Every type — built-in or plugin — lives in one registry keyed by the strings in `config.js` `ACTIONS`; the built-ins are registered from `systems/actions.js`, the dialogue actions by `DialogueSystem` in its constructor. The **complete catalogue with parameters is in the README** ([Actions](../README.md#actions-mutations)); this section is the mechanism a contributor needs.
 
 - A handler receives `(action, engine)` and owns exactly one side effect. Navigation is its own `navigate` action, never a hidden consequence — this is what keeps pipelines composable and `snapshotNavigation` meaningful.
-- The conversation-bound actions (`goToConversation`, `trade`, `makeFriendly`) warn and no-op when no dialogue is active; they share the global registry so scene options and conversation nodes extend through one mechanism.
+- The conversation-bound actions (`goToConversation`, `trade`) warn and no-op when no dialogue is active; they share the global registry so scene options and conversation nodes extend through one mechanism.
 - `action.log` is a shared convention, not a per-handler feature: `false` silences the default message, a string replaces it.
 - Timer pipelines are filtered to the `TIMER_SAFE_ACTIONS` allowlist (`config.js`) before running, so a timer can't navigate or start combat from inside `advanceTime`.
 
@@ -103,7 +103,7 @@ Register a custom action from a plugin: `engine.registerAction('my_action', (act
 
 ## Events
 
-A minimal pub/sub bus on the engine: `engine.on(event, fn)`, `engine.off(event, fn)`, `engine.emit(event, data)`.
+A minimal pub/sub bus on the engine: `engine.on(event, fn)`, `engine.emit(event, data)`.
 
 Current events:
 
@@ -115,9 +115,6 @@ Events are notifications, not control flow — the combat turn handoff, for exam
 
 ## Scene Rendering Hooks
 
-Two mechanisms let dynamic content reach scene rendering:
-
-- **Description hooks** (`engine.registerDescriptionHook(name, fn)`) — *per-scene, opt-in*: a scene declares `"descriptionHook": "name"` in its JSON and the hook's return value (an HTML string) is appended to that scene's description.
 - **Scene decorators** (`engine.registerSceneDecorator({ description?, options? })`) — *global*: invoked for every rendered scene. `description(scene, sceneId, engine)` returns HTML appended to the description; `options(scene, optionsContainer, engine, sections)` may append extra option buttons, either to the unheaded container or to one of the panel's headed `sections` (`conversations`, `actions`) — a section left empty is hidden again afterwards. The curator plugin uses `options` to add its "Curate the exhibits" button, an act like any other, to the Actions section of any scene that has display cases; what stands in each case is the panel's to show, so nothing is spliced into the description.
 - **Sheet rows** (`engine.registerSheetRow({ label, bind, icon })`) — adds a row to the sheet tab's character section, filled by the same `data-stat-bind` loop as the built-in stats. Plugins load before the UI builds, so registered rows render as part of the sheet itself — no DOM injection or timing games. The curator plugin surfaces `attributes.reputation` this way; the row simply doesn't render in games whose tabs omit the attributes widget.
 
@@ -144,7 +141,7 @@ The optional `config` object holds the plugin's tunables, read back at runtime v
 
 - `engine.registerAction(name, fn)` — custom action types
 - `engine.registerValidator(fn)` — a boot-time data validator run after the core checks; `fn(data, { add })` calls `add(group, message)` per issue, so a plugin flags its own authoring mistakes (deprecated shapes, missing config) in the same report as the built-ins
-- `engine.registerDescriptionHook(name, fn)` / `engine.registerSceneDecorator(decorator)` — dynamic scene content
+- `engine.registerSceneDecorator(decorator)` — dynamic scene content
 - `engine.registerTabWidget(name, fn)` / `engine.registerSheetRow({ label, bind, icon })` — contribute a whole sidebar tab (referenced from `rules.tabs[].widget`) or a single sheet row
 - `engine.on(event, fn)` — react to engine events
 - `engine.setCustomUIOpen(bool)` — mark a custom panel (chest, curator dashboard, …) as open/closed so scene re-renders don't draw over it; read back via `engine.inCustomUI`

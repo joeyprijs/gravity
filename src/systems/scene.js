@@ -1,4 +1,4 @@
-import { clearElement, createElement, buildSceneDescription, buildOptionButton, getItemLabel, narratorLabelHtml, resetOptionsPanel, wrapLogPrefix } from "../core/utils.js";
+import { clearElement, createElement, buildSceneDescription, buildOptionButton, getItemLabel, resetOptionsPanel } from "../core/utils.js";
 import { CHECK_KEYS, CSS, FLAG_KEYS, GOLD_ITEM_ID, LOG, MAX_D20_ROLL } from "../core/config.js";
 import { evaluateCondition } from "./condition.js";
 import { formatList } from "../core/i18n.js";
@@ -7,7 +7,7 @@ import { resolveTimeCost } from "./time.js";
 import {
   runCheckAttempt, checkPresentation, normalizeOutcomes,
   getAttempts, isResolved, resetAttempts,
-  spendRetryCost,
+  spendRetryCost, pickVariant,
   rollBreakdown, skillLabel
 } from "./skill-checks.js";
 
@@ -21,16 +21,11 @@ export class SceneRenderer {
     // entries when re-rendering options without changing the scene body.
     this.lastRenderedSceneId = null;
     this.lastRenderedDesc = null;
-    // The <p> body of the most recently appended description — the in-place
-    // update target for refreshDescription. Cleared on reset so a stale
-    // (detached) node is never written into after a scene teardown.
-    this._lastDescBodyEl = null;
   }
 
   reset() {
     this.lastRenderedSceneId = null;
     this.lastRenderedDesc = null;
-    this._lastDescBodyEl = null;
   }
 
   // Called after a save is loaded. Syncs the cache to the restored state so
@@ -153,7 +148,6 @@ export class SceneRenderer {
     // Scene content comes from developer-authored JSON, not user input —
     // buildSceneDescription uses innerHTML for the body to allow basic formatting.
     const descEl = buildSceneDescription(scene.title || scene.name, currentDesc, this.engine.t.bind(this.engine));
-    this._lastDescBodyEl = descEl.querySelector(`.${CSS.SCENE_BODY}`);
     this.engine.currentSceneEl.appendChild(descEl);
     this.engine.state.appendLog({ type: 'scene', title: scene.title || scene.name, desc: currentDesc });
 
@@ -593,8 +587,7 @@ export class SceneRenderer {
       this.engine.log(LOG.PLAYER, opt.text, 'choice');
 
       if (opt.resultText) {
-        const variants = Array.isArray(opt.resultText) ? opt.resultText : [opt.resultText];
-        this.engine.log(LOG.NARRATOR, variants[Math.min(uses, variants.length - 1)]);
+        this.engine.log(LOG.NARRATOR, pickVariant(opt.resultText, uses));
       } else {
         this.engine.log(LOG.SYSTEM, this.engine.t('actions.lookAroundEmpty'));
       }
@@ -643,21 +636,15 @@ export class SceneRenderer {
   }
 
   // Returns the description string to display for a scene.
-  // Handles three cases:
+  // Handles two cases:
   //   1. Plain string description — returned as-is.
   //   2. Conditional array — first matching condition wins; the entry with
   //      no condition acts as the fallback.
-  //   3. descriptionHook — appends dynamic content after the base description.
   _resolveDescription(scene) {
     let desc = scene.description;
 
     if (Array.isArray(scene.description)) {
       desc = this._resolveDescriptionVariant(scene)?.text || '';
-    }
-
-    if (scene.descriptionHook) {
-      const hook = this.engine.getDescriptionHook(scene.descriptionHook);
-      if (hook) desc += hook(this.engine);
     }
 
     // Plugin-registered decorators may append dynamic HTML to any scene's
@@ -686,16 +673,5 @@ export class SceneRenderer {
   // plain-string descriptions). Null when neither is authored.
   _resolveNarration(scene) {
     return this._resolveDescriptionVariant(scene)?.narration ?? scene.narration ?? null;
-  }
-
-  // Updates the body of the most recently rendered scene description in place.
-  // Used by custom UIs (e.g. ChestUI) to reflect state changes without appending
-  // a new narrative block.
-  refreshDescription(scene) {
-    if (!this._lastDescBodyEl) return;
-    const desc = this._resolveDescription(scene);
-    this._lastDescBodyEl.innerHTML = wrapLogPrefix(
-      narratorLabelHtml(desc, this.engine.t.bind(this.engine))
-    );
   }
 }

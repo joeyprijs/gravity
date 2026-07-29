@@ -19,16 +19,14 @@ test('itemStatLines: AP, hit attribute with wielder modifier, then attributes in
   assert.deepEqual(itemStatLines(t, { attributes: {} }), []);
 });
 
-test('itemStatLines: attributeBonuses and modifyResource render one line per entry', () => {
+test('itemStatLines: attributeBonuses render one line per entry', () => {
   const lines = itemStatLines(t, {
     attributes: {
       attributeBonuses: { perception: 1, luck: -1 },
-      modifyResource: { resource: 'luckPoints', amount: 2 },
     },
   });
   assert.match(lines[0], /itemStats\.attributeBonus.*Perception.*\+1/);
   assert.match(lines[1], /itemStats\.attributeBonus.*Luck.*-1/);
-  assert.match(lines[2], /itemStats\.modifyResource.*\+2/);
 });
 
 test('itemStatLines: unknown scalar attributes fall back to key: value', () => {

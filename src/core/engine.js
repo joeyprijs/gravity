@@ -17,16 +17,12 @@ import curatorPlugin from "../plugins/curator.js";
 
 // Plugins that ship with the engine, statically imported so they load without
 // dynamic import() (e.g. on the file:// protocol). The manifest still declares
-// them like any other plugin; a manifest entry matching a key here — by id, or
-// by the basename of its src — runs the bundled module instead of fetching it.
-// Adding a built-in is one import above plus one entry here, not a change to
-// the boot control flow. A Map, not an object literal: a plugin named after
-// an Object.prototype key ("constructor", "toString") must not match.
+// them like any other plugin; a manifest entry whose id matches a key here
+// runs the bundled module instead of fetching it. Adding a built-in is one
+// import above plus one entry here, not a change to the boot control flow.
+// A Map, not an object literal: a plugin named after an Object.prototype key
+// ("constructor", "toString") must not match.
 const BUILT_IN_PLUGINS = new Map([['curator', curatorPlugin]]);
-
-// The trailing filename of a path/URL, minus its .js extension — used to match
-// a manifest plugin src against a BUILT_IN_PLUGINS key when no id is declared.
-const pluginBasename = (url) => String(url).split('/').pop().replace(/\.js$/, '');
 
 // The locale file loaded before anything else, and the fallback when the
 // manifest declares no locale for the resolved language.
@@ -63,7 +59,6 @@ export class RPGEngine {
     this._lastEquippedHand = null;
 
     this._actionRegistry = new Map();
-    this._descriptionHooks = new Map();
     this._sceneDecorators = [];
     this._sheetRows = [];
     this._validators = [];
@@ -94,14 +89,11 @@ export class RPGEngine {
     if (manifest?.plugins?.length) {
       await Promise.all(
         manifest.plugins.map(async pluginConfig => {
-          const isObject = typeof pluginConfig === 'object';
-          const url = isObject ? pluginConfig.src : pluginConfig;
-          const id = isObject ? pluginConfig.id : null;
-          const locales = isObject ? pluginConfig.locales : null;
+          const { src: url, id, locales } = pluginConfig;
 
           // Stash the plugin's manifest config before its module runs, so the
           // plugin can read it via engine.pluginConfig(id) at any point.
-          if (id) this._pluginConfigs[id] = (isObject && pluginConfig.config) || {};
+          if (id) this._pluginConfigs[id] = pluginConfig.config || {};
 
           // Load locales first if declared in manifest. Plugins that don't
           // ship the active language fall back to their English file.
@@ -121,10 +113,8 @@ export class RPGEngine {
 
           // A built-in plugin (see BUILT_IN_PLUGINS) is statically imported, so
           // run the bundled module instead of a dynamic import() that would
-          // fail on the file:// protocol. Match by id (object form) or the
-          // src's basename — never a loose substring that could catch an
-          // unrelated URL.
-          const builtin = BUILT_IN_PLUGINS.get(id) ?? BUILT_IN_PLUGINS.get(pluginBasename(url));
+          // fail on the file:// protocol.
+          const builtin = BUILT_IN_PLUGINS.get(id);
           if (builtin) {
             try {
               builtin(this);
@@ -208,18 +198,14 @@ export class RPGEngine {
           return fallback;
         });
 
-      // A manifest category may take three shapes:
+      // A manifest category may take two shapes:
       // - an object map of id → file path (one fetch per entry — the demo),
-      // - a bundle path (string): one JSON object holding id → definition,
-      // - an array of bundle paths, merged in order.
+      // - a bundle path (string): one JSON object holding id → definition.
       // Bundles keep a large game (thousands of scenes) to a handful of
       // requests at boot; scripts/generate-manifest.js maintains the map form.
       const loadCategory = async (category) => {
         if (!category) return {};
         if (typeof category === 'string') return fetchJson(category, {});
-        if (Array.isArray(category)) {
-          return Object.assign({}, ...await Promise.all(category.map(url => fetchJson(url, {}))));
-        }
         const results = {};
         const keys = Object.keys(category);
         const loadedData = await Promise.all(keys.map(key => fetchJson(category[key], null)));
@@ -485,19 +471,6 @@ export class RPGEngine {
   }
 
   /**
-   * Unsubscribes a handler previously registered with on().
-   *
-   * @param {string} event - Event name.
-   * @param {(data: object) => void} handler - The same function reference.
-   */
-  off(event, handler) {
-    const handlers = this._events.get(event);
-    if (!handlers) return;
-    const idx = handlers.indexOf(handler);
-    if (idx !== -1) handlers.splice(idx, 1);
-  }
-
-  /**
    * Emits an engine event to all subscribed handlers.
    *
    * @param {string} event - Event name.
@@ -506,9 +479,7 @@ export class RPGEngine {
   emit(event, data) {
     const handlers = this._events.get(event);
     if (!handlers) return;
-    // Snapshot handlers before iterating so a handler that calls off() on itself
-    // during emit doesn't cause the next handler to be skipped via splice mutation.
-    [...handlers].forEach(h => h(data));
+    handlers.forEach(h => h(data));
   }
 
   /**
@@ -560,29 +531,8 @@ export class RPGEngine {
   }
 
   /**
-   * Registers a named description hook. A scene opts in by declaring
-   * "descriptionHook": "name" in its JSON; the hook's return value is
-   * appended to that scene's description.
-   *
-   * @param {string} name - The hook name scenes reference.
-   * @param {(engine: RPGEngine) => string} fn - Returns an HTML string.
-   */
-  registerDescriptionHook(name, fn) {
-    this._descriptionHooks.set(name, fn);
-  }
-
-  /**
-   * @param {string} name - The hook name.
-   * @returns {((engine: RPGEngine) => string)|null}
-   */
-  getDescriptionHook(name) {
-    return this._descriptionHooks.get(name) || null;
-  }
-
-  /**
    * Registers a scene decorator, invoked for every rendered scene. Plugins use
-   * this to inject content into scenes they don't own; the per-scene
-   * descriptionHook covers content a scene declares explicitly in its JSON.
+   * this to inject content into scenes they don't own.
    *
    * @param {object} decorator
    * @param {(scene: object, sceneId: string, engine: RPGEngine) => string} [decorator.description]

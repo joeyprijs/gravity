@@ -160,7 +160,7 @@ Without `rules.time` the system is dormant: no HUD chip, no default costs (expli
 - **Spending time.** `timeCost` on any option, skill, or dialogue response (explicit always wins; `0` opts out of a default). Defaults from `defaultCosts`: options that navigate charge `navigate`, options that full-rest charge `fullRest`, check attempts charge `skillAttempt`. Dialogue and narrative checks are free unless authored otherwise.
 - **Actions.** `{ "type": "advance_time", "amount": 8 }`, or `{ "type": "advance_time", "until": "morning" }` for sleep-until-morning (never 0 ticks — in the morning it sleeps to tomorrow's).
 - **Reading time.** Condition leaves work everywhere conditions do: `{ "time": { "at_least": 120 } }`, `{ "day": { "at_least": 3 } }`, `{ "segment": "night" }`.
-- **Timers.** `{ "type": "set_timer", "id": "alarm", "afterTicks": 12, "actions": [ ... ] }` (or `atTick`); `cancel_timer` disarms. Timer pipelines are restricted to **quiet actions** (`set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`) — the world changes through flags, which scene re-renders and conditions already read, so a timer firing mid-anything is always safe. Re-arming an id replaces the old deadline.
+- **Timers.** `{ "type": "set_timer", "id": "alarm", "afterTicks": 12, "actions": [ ... ] }`; `cancel_timer` disarms. Timer pipelines are restricted to **quiet actions** (`set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`) — the world changes through flags, which scene re-renders and conditions already read, so a timer firing mid-anything is always safe. Re-arming an id replaces the old deadline.
 - **HUD.** With `ticksPerDay` set, the story panel's status bar shows the clock ("Day 2: Evening" — `ui.timeChipDay` for the day text, `time.segments.*` for the segment names). Games without segments show just the day.
 
 Combat does not advance the clock by default; author an `advance_time` in `onVictory` if a fight should cost time.
@@ -180,7 +180,7 @@ The validator warns if every weapon and spell has an AP cost of `0`, since comba
 
 Together they read as one theme — the skill is how good you are at being lucky, the points are how much luck you have left to push — while staying one resolution mechanic everywhere: d20 + modifier vs DC, never a parallel dice system. Either half works alone; a game can also skip luck entirely.
 
-*History: a Fighting-Fantasy-style 2d6 roll-under luck subsystem (depleting resource, Test Your Luck gambles, combat gambles) shipped briefly and was removed — a second resolution mechanic cost more in player legibility than it earned. The validator flags its leftover authoring surface (`luckCheck`, `restore_luck`, `rules.luck`, a `luck` resource) with pointers to these conventions.*
+*History: a Fighting-Fantasy-style 2d6 roll-under luck subsystem (depleting resource, Test Your Luck gambles, combat gambles) shipped briefly and was removed — a second resolution mechanic cost more in player legibility than it earned.*
 
 
 ## Passive checks

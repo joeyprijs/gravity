@@ -2,7 +2,7 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { gameState } from '../src/core/state.js';
 import { registerBuiltinActions } from '../src/systems/actions.js';
-import { ACTIONS, FLAG_KEYS, LOG } from '../src/core/config.js';
+import { ACTIONS, LOG } from '../src/core/config.js';
 
 // Minimal rules required by gameState.init() — mirrors the key values from rules.json.
 const TEST_RULES = {
@@ -118,21 +118,6 @@ test('combat: starts combat with the listed enemies and passes the action throug
   run(action);
   assert.deepEqual(calls.combat[0].enemies, ['goblin_grunt']);
   assert.equal(calls.combat[0].action, action);
-});
-
-test('combat: befriended enemies are filtered out', () => {
-  const { run, calls } = makeEngine();
-  gameState.setFlag(FLAG_KEYS.friendly('goblin_guard'), true);
-  run({ type: ACTIONS.COMBAT, enemies: ['goblin_guard', 'goblin_grunt'] });
-  assert.deepEqual(calls.combat[0].enemies, ['goblin_grunt']);
-});
-
-test('combat: avoided entirely when every enemy is friendly', () => {
-  const { run, calls } = makeEngine();
-  gameState.setFlag(FLAG_KEYS.friendly('goblin_guard'), true);
-  run({ type: ACTIONS.COMBAT, enemies: ['goblin_guard'] });
-  assert.equal(calls.combat.length, 0);
-  assert.equal(calls.logs[0].message, 'combat.avoided');
 });
 
 // ── dialogue / navigate / return ──────────────────────────────────────────────
@@ -295,43 +280,4 @@ test('registerBuiltinActions registers every built-in action type', () => {
                       ACTIONS.LOG, ACTIONS.MANAGE_CHEST]) {
     assert.ok(registry.has(type), `expected "${type}" to be registered`);
   }
-});
-
-// ── modify_resource ───────────────────────────────────────────────────────────
-
-const LUCK_RULES = {
-  ...TEST_RULES,
-  playerDefaults: {
-    ...TEST_RULES.playerDefaults,
-    resources: { ...TEST_RULES.playerDefaults.resources, luckPoints: { current: 1, max: 3 } },
-  },
-};
-const luck = () => gameState.getPlayer().resources.luckPoints.current;
-
-test('modify_resource: gains and drains a declared resource, clamped both ways', () => {
-  gameState.init(LUCK_RULES);
-  const { run, calls } = makeEngine({ rules: LUCK_RULES });
-
-  run({ type: ACTIONS.MODIFY_RESOURCE, resource: 'luckPoints', amount: 1 });
-  assert.equal(luck(), 2);
-  assert.equal(calls.logs[0].message, 'actions.resourceGain');
-
-  run({ type: ACTIONS.MODIFY_RESOURCE, resource: 'luckPoints', amount: -99 });
-  assert.equal(luck(), 0); // clamped at empty
-  assert.equal(calls.logs[1].message, 'actions.resourceLoss');
-
-  run({ type: ACTIONS.MODIFY_RESOURCE, resource: 'luckPoints' }); // default → full
-  assert.equal(luck(), 3);
-
-  run({ type: ACTIONS.MODIFY_RESOURCE, resource: 'luckPoints', amount: 1 }); // no-op at max
-  assert.equal(calls.logs.length, 3);
-});
-
-test('modify_resource: an undeclared or plain-number resource is a warned no-op', () => {
-  gameState.init(LUCK_RULES);
-  const { run, calls } = makeEngine({ rules: LUCK_RULES });
-  run({ type: ACTIONS.MODIFY_RESOURCE, resource: 'gold', amount: 5 });   // plain number
-  run({ type: ACTIONS.MODIFY_RESOURCE, resource: 'nonexistent', amount: 5 });
-  assert.equal(gameState.getPlayer().resources.gold, 0);
-  assert.equal(calls.logs.length, 0);
 });
