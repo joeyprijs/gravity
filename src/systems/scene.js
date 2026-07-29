@@ -256,7 +256,7 @@ export class SceneRenderer {
       }
     });
 
-    const renderOptionBtn = (opt, target = optionsContainer) => {
+    const renderOptionBtn = (opt, target = optionsContainer, extraStats = null) => {
       let reqText = null;
       let disabled = false;
       if (opt.requirements?.item) {
@@ -267,7 +267,8 @@ export class SceneRenderer {
         }
       }
 
-      const btn = buildOptionButton(opt.text, reqText);
+      const stats = [...(extraStats ?? []), ...(reqText ? [reqText] : [])];
+      const btn = buildOptionButton(opt.text, stats.length ? stats : null);
       if (disabled) btn.disabled = true;
       btn.onclick = () => this.handleOption(opt);
       target.appendChild(btn);
@@ -291,11 +292,11 @@ export class SceneRenderer {
 
     navOpts.forEach(opt => renderOptionBtn(opt));
     talkOpts.forEach(opt => renderOptionBtn(opt, talkContainer));
-    // The standing rest leads the section: it is the one act the player
-    // carries everywhere, so it keeps one fixed place ahead of whatever a
-    // scene happens to offer (the bedroom's Long Rest, a chest, a fight).
-    this._renderShortRest(actionsContainer);
-    actionOpts.forEach(opt => renderOptionBtn(opt, actionsContainer));
+    // A scene act that IS a rest (its pipeline full-rests) sinks with the
+    // standing Short Rest below, so the two rests read as a couple at the
+    // section's end — the bedroom's Long Rest directly above Short Rest.
+    const restOpts = actionOpts.filter(opt => startsAction(opt, 'full_rest'));
+    actionOpts.filter(opt => !restOpts.includes(opt)).forEach(opt => renderOptionBtn(opt, actionsContainer));
 
     const skillBtns = [];
     const sceneId = this.engine.state.getCurrentSceneId();
@@ -332,24 +333,38 @@ export class SceneRenderer {
       if (decorator.options) decorator.options(scene, optionsContainer, this.engine, sections);
     }
 
+    // The rests close the section: the scene's and plugins' own acts are
+    // the room's content and read first; resting sinks to a fixed place at
+    // the end — the same convention that sorts back options below a scene's
+    // destinations. A scene's own rest (the bedroom's Long Rest) sits
+    // directly above the standing Short Rest, and carries stat lines saying
+    // what a full rest gives back — the act says what it does, like an item.
+    restOpts.forEach(opt => renderOptionBtn(opt, actionsContainer, this._fullRestStats()));
+    this._renderShortRest(actionsContainer);
+
     backOpts.forEach(opt => renderOptionBtn(opt));
     sweepSection(talkContainer);
     sweepSection(actionsContainer);
   }
 
-  // The standing Short Rest option, in every scene's Actions section while
-  // rules.shortRest is configured — resting is something the player carries
-  // with them, not something a scene offers. One button per render: the act,
-  // with the pool's remaining uses as its stat line. It disables (rather than
-  // hides) at an empty pool, so what a full rest would give back stays visible.
+  // The standing Short Rest option, last in every scene's Actions section
+  // while rules.shortRest is configured — resting is something the player
+  // carries with them, not something a scene offers. One button per render:
+  // the act, with the pool's remaining uses as its stat line. It disables
+  // (rather than hides) at an empty pool, so what a full rest would give
+  // back stays visible.
   _renderShortRest(actionsContainer) {
     const config = this.engine.data.rules?.shortRest;
     if (!config?.resource) return;
     const pool = this.engine.state.getPlayer().resources?.[config.resource];
     if (!(pool && typeof pool === 'object' && 'current' in pool)) return;
 
+    const heal = config.heal ?? 1;
     const text = this.engine.t('ui.shortRest');
-    const btn = buildOptionButton(text, this.engine.t('ui.shortRestRemaining', { current: pool.current, max: pool.max }));
+    const btn = buildOptionButton(text, [
+      this.engine.t('ui.restHealing', { value: String(heal) }),
+      this.engine.t('ui.shortRestRemaining', { current: pool.current, max: pool.max }),
+    ]);
     if (pool.current < 1) btn.disabled = true;
     btn.onclick = () => this.handleOption({
       text,
@@ -357,6 +372,27 @@ export class SceneRenderer {
       actions: [{ type: 'short_rest' }],
     });
     actionsContainer.appendChild(btn);
+  }
+
+  // What a full rest gives back, as card stat lines — shown on any scene act
+  // whose pipeline full-rests (the bedroom's Long Rest). Derived from the
+  // same rules handleFullRest reads, so the lines can't drift from the act.
+  _fullRestStats() {
+    const t = this.engine.t.bind(this.engine);
+    const resourceLabel = (id) => {
+      const key = `ui.resources.${id}`;
+      return t(key) !== key ? t(key) : id;
+    };
+    const lines = [t('ui.restHealing', { value: t('ui.restFull') })];
+    const retry = this.engine.data.rules?.skillRetry;
+    if (retry?.resource && retry.restRestore > 0) {
+      lines.push(t('ui.restRestores', { resource: resourceLabel(retry.resource), value: `+${retry.restRestore}` }));
+    }
+    const shortRest = this.engine.data.rules?.shortRest;
+    if (shortRest?.resource) {
+      lines.push(t('ui.restRestores', { resource: resourceLabel(shortRest.resource), value: t('ui.restFull') }));
+    }
+    return lines;
   }
 
   /**

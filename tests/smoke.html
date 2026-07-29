@@ -869,15 +869,26 @@
         assert(heading('scene-options-actions') === 'Actions', `acts are headed (got "${heading('scene-options-actions')}")`);
         // Both rests are always offered, whatever the hour — a Long Rest in
         // the morning sleeps to the next one (ticksUntilSegment never says 0).
-        assert(cards('scene-options-actions')[0].includes('Short Rest'), 'the standing rest leads the section');
-        assert(cards('scene-options-actions').some(t => t === 'Long Rest'), 'sleeping until morning is an act too');
+        // They couple at the section's end: Long Rest directly above the
+        // standing Short Rest, after the room's other acts.
+        assert(cards('scene-options-actions').at(-1).includes('Short Rest'), 'the standing rest closes the section');
+        assert(cards('scene-options-actions').at(-2).startsWith('Long Rest'), 'the scene\'s own rest sits directly above it');
+        // Both rests say what they do, item-card style: the short rest its
+        // heal dice, the full rest everything it gives back.
+        assert(/Healing:\s*1d8/.test(cards('scene-options-actions').at(-1)), 'Short Rest shows its heal');
+        assert(/Healing:\s*Full/.test(cards('scene-options-actions').at(-2))
+          && /Luck Points:\s*\+3/.test(cards('scene-options-actions').at(-2))
+          && /Short Rests:\s*Full/.test(cards('scene-options-actions').at(-2)),
+          `Long Rest shows what a full rest restores (got "${cards('scene-options-actions').at(-2)}")`);
         assert(cards('scene-options').length === 1 && cards('scene-options')[0].includes('Return to Living Room'),
           `the doors list is only the way out (got ${JSON.stringify(cards('scene-options'))})`);
 
         // The standing rest is live: a click spends one pool use and its
         // yield lands on the act's own line, roll and all.
         assert(cards('scene-options-actions').some(t => /Remaining:\s*3\/3/.test(t)), 'the pool starts full');
-        $$('#scene-options-actions button.card').find(b => text(b).includes('Short Rest')).click();
+        // Match on the title span: the Long Rest card's stat lines now
+        // mention "Short Rests" too, so a whole-card text match is ambiguous.
+        $$('#scene-options-actions button.card').find(b => text(b.querySelector('.card__title')) === 'Short Rest').click();
         await until(() => cards('scene-options-actions').some(t => /Remaining:\s*2\/3/.test(t)), 'a use spent');
         const restLine = $$('#scene-narrative .scene__log').map(el => text(el)).reverse().find(t => t.includes('Short Rest'));
         assert(/Short Rest \(\+\d+ HP, 1d8: \d+\)$/.test(restLine), `the yield amends the act (got "${restLine}")`);
