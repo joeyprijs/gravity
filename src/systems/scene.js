@@ -272,6 +272,7 @@ export class SceneRenderer {
       if (disabled) btn.disabled = true;
       btn.onclick = () => this.handleOption(opt);
       target.appendChild(btn);
+      return btn;
     };
 
     // Both headed option sections are opened up front and swept at the end, so
@@ -292,11 +293,23 @@ export class SceneRenderer {
 
     navOpts.forEach(opt => renderOptionBtn(opt));
     talkOpts.forEach(opt => renderOptionBtn(opt, talkContainer));
-    // A scene act that IS a rest (its pipeline full-rests) sinks with the
-    // standing Short Rest below, so the two rests read as a couple at the
-    // section's end — the bedroom's Long Rest directly above Short Rest.
-    const restOpts = actionOpts.filter(opt => startsAction(opt, 'full_rest'));
-    actionOpts.filter(opt => !restOpts.includes(opt)).forEach(opt => renderOptionBtn(opt, actionsContainer));
+    // Acts render in authored order — where a rest sits in the section is the
+    // scene author's call, like whether the scene offers one at all. A rest's
+    // card says what it does, item-style: a full rest lists everything it
+    // gives back, a short rest its heal and the pool's remaining uses — and
+    // the short rest disables (rather than hides) at an empty pool, so what a
+    // full rest would give back stays visible.
+    actionOpts.forEach(opt => {
+      if (startsAction(opt, 'full_rest')) {
+        renderOptionBtn(opt, actionsContainer, this._fullRestStats());
+      } else if (startsAction(opt, 'short_rest')) {
+        const btn = renderOptionBtn(opt, actionsContainer, this._shortRestStats());
+        const pool = this.engine.state.getPlayer().resources?.[this.engine.data.rules?.shortRest?.resource];
+        if (pool?.current < 1) btn.disabled = true;
+      } else {
+        renderOptionBtn(opt, actionsContainer);
+      }
+    });
 
     const skillBtns = [];
     const sceneId = this.engine.state.getCurrentSceneId();
@@ -333,45 +346,25 @@ export class SceneRenderer {
       if (decorator.options) decorator.options(scene, optionsContainer, this.engine, sections);
     }
 
-    // The rests close the section: the scene's and plugins' own acts are
-    // the room's content and read first; resting sinks to a fixed place at
-    // the end — the same convention that sorts back options below a scene's
-    // destinations. A scene's own rest (the bedroom's Long Rest) sits
-    // directly above the standing Short Rest, and carries stat lines saying
-    // what a full rest gives back — the act says what it does, like an item.
-    restOpts.forEach(opt => renderOptionBtn(opt, actionsContainer, this._fullRestStats()));
-    this._renderShortRest(actionsContainer);
-
     backOpts.forEach(opt => renderOptionBtn(opt));
     sweepSection(talkContainer);
     sweepSection(actionsContainer);
   }
 
-  // The standing Short Rest option, last in every scene's Actions section
-  // while rules.shortRest is configured — resting is something the player
-  // carries with them, not something a scene offers. One button per render:
-  // the act, with the pool's remaining uses as its stat line. It disables
-  // (rather than hides) at an empty pool, so what a full rest would give
-  // back stays visible.
-  _renderShortRest(actionsContainer) {
+  // What a short rest does, as card stat lines — shown on any scene act whose
+  // pipeline short-rests: the configured heal, plus the pool's remaining
+  // uses. Null when rules.shortRest isn't wired to a declared pool, so a
+  // misconfigured act still renders as a plain button.
+  _shortRestStats() {
     const config = this.engine.data.rules?.shortRest;
-    if (!config?.resource) return;
+    if (!config?.resource) return null;
     const pool = this.engine.state.getPlayer().resources?.[config.resource];
-    if (!(pool && typeof pool === 'object' && 'current' in pool)) return;
+    if (!(pool && typeof pool === 'object' && 'current' in pool)) return null;
 
-    const heal = config.heal ?? 1;
-    const text = this.engine.t('ui.shortRest');
-    const btn = buildOptionButton(text, [
-      this.engine.t('ui.restHealing', { value: String(heal) }),
+    return [
+      this.engine.t('ui.restHealing', { value: String(config.heal ?? 1) }),
       this.engine.t('ui.shortRestRemaining', { current: pool.current, max: pool.max }),
-    ]);
-    if (pool.current < 1) btn.disabled = true;
-    btn.onclick = () => this.handleOption({
-      text,
-      timeCost: config.timeCost ?? 0,
-      actions: [{ type: 'short_rest' }],
-    });
-    actionsContainer.appendChild(btn);
+    ];
   }
 
   // What a full rest gives back, as card stat lines — shown on any scene act

@@ -81,7 +81,6 @@
     "skillsHeading": "Skills",
     "conversationsHeading": "NPCs",
     "actionsHeading": "Actions",
-    "shortRest": "Short Rest",
     "shortRestRemaining": "Remaining: {current}/{max}",
     "restHealing": "Healing: {value}",
     "restFull": "Full",

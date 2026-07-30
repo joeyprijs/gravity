@@ -211,7 +211,7 @@ Rolled silently on the player's **first** entry, once per game, writing pass/fai
 | Passive check | Grand Chamber ceiling shimmer → one-shot fail-forward climb |
 | One-shot dialogue check with tiers | Stranger's discount haggle (critical: 20% + a free healing potion; failure: marked-up prices) |
 | Time + sleep | Bedroom "Long Rest" (sleeps until morning); kitchen changes at night |
-| Short-rest pool | Standing "Short Rest" in every scene's Actions: 1d8 HP per draw, 3 draws, only a Long Rest refills (`rules.shortRest`) |
+| Short-rest pool | Authored "Short Rest" options (bedroom, quiet corridor): 1d8 HP per draw, 3 draws, only a Long Rest refills (`rules.shortRest`) |
 
 ## Validation
 

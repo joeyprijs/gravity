@@ -79,6 +79,19 @@
       ]
     },
     {
+      "text": "Short Rest",
+      "timeCost": 1,
+      "condition": {
+        "flag": "wanderer_defeated",
+        "value": true
+      },
+      "actions": [
+        {
+          "type": "short_rest"
+        }
+      ]
+    },
+    {
       "text": "Return to the Cellar",
       "actions": [
         {

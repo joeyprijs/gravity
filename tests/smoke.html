@@ -856,11 +856,9 @@
         assert(heading('scene-options-conversations') === 'NPCs', `talking is headed (got "${heading('scene-options-conversations')}")`);
         assert(cards('scene-options-conversations').length === 2, 'both NPCs are in it');
         assert(!cards('scene-options').some(t => t.includes('Talk to')), 'and no longer among the doors');
-        // The standing Short Rest (rules.shortRest) keeps the Actions section
-        // alive in every scene — even one with nothing else to do.
-        assert(cards('scene-options-actions').length === 1
-          && cards('scene-options-actions')[0].includes('Short Rest'),
-          `the living room's only act is the standing Short Rest (got ${JSON.stringify(cards('scene-options-actions'))})`);
+        // Resting is authored per scene, not engine-standing: the living room
+        // offers no acts, so its Actions section sweeps away entirely.
+        assert(gone('scene-options-actions'), 'no acts here, no Actions section');
         assert(gone('scene-options-skills'), 'and no skill checks');
 
         // Sleeping and a chest are acts, not doors — and the way out still isn't.
@@ -869,9 +867,9 @@
         assert(heading('scene-options-actions') === 'Actions', `acts are headed (got "${heading('scene-options-actions')}")`);
         // Both rests are always offered, whatever the hour — a Long Rest in
         // the morning sleeps to the next one (ticksUntilSegment never says 0).
-        // They couple at the section's end: Long Rest directly above the
-        // standing Short Rest, after the room's other acts.
-        assert(cards('scene-options-actions').at(-1).includes('Short Rest'), 'the standing rest closes the section');
+        // The bedroom authors them last, so they couple at the section's end
+        // in authored order: Long Rest directly above Short Rest.
+        assert(cards('scene-options-actions').at(-1).includes('Short Rest'), 'the authored Short Rest closes the section');
         assert(cards('scene-options-actions').at(-2).startsWith('Long Rest'), 'the scene\'s own rest sits directly above it');
         // Both rests say what they do, item-card style: the short rest its
         // heal dice, the full rest everything it gives back.
@@ -883,8 +881,8 @@
         assert(cards('scene-options').length === 1 && cards('scene-options')[0].includes('Return to Living Room'),
           `the doors list is only the way out (got ${JSON.stringify(cards('scene-options'))})`);
 
-        // The standing rest is live: a click spends one pool use and its
-        // yield lands on the act's own line, roll and all.
+        // The rest is live: a click spends one pool use and its yield lands
+        // on the act's own line, roll and all.
         assert(cards('scene-options-actions').some(t => /Remaining:\s*3\/3/.test(t)), 'the pool starts full');
         // Match on the title span: the Long Rest card's stat lines now
         // mention "Short Rests" too, so a whole-card text match is ambiguous.

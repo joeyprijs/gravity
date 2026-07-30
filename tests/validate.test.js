@@ -424,10 +424,10 @@ test('levelUpHpBonus: optional, but a malformed value is flagged', () => {
   assert.ok(issuesFor(bad).some(m => m.includes('levelUpHpBonus must be a number')));
 });
 
-test('shortRest: pool must be a declared resource, never hp/ap; heal and timeCost sanity-checked', () => {
+test('shortRest: pool must be a declared resource, never hp/ap; heal sanity-checked', () => {
   const ok = makeToolkitData();
   ok.rules.playerDefaults.resources = { shortRests: { current: 3, max: 3 } };
-  ok.rules.shortRest = { resource: 'shortRests', heal: '1d8', timeCost: 1 };
+  ok.rules.shortRest = { resource: 'shortRests', heal: '1d8' };
   assert.ok(!issuesFor(ok).some(m => m.includes('shortRest')), 'a well-formed config passes');
 
   const undeclared = makeToolkitData();

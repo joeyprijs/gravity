@@ -85,9 +85,10 @@ function handleFullRest(action, engine) {
 // rules.shortRest.heal (dice notation or a flat number) and spends one use of
 // rules.shortRest.resource. The pool only refills on a full rest (see
 // handleFullRest), so each draw spends something real — the D&D Hit Dice
-// rhythm. The scene renderer offers this as a standing option in every
-// scene's Actions section while the config exists; the button disables at an
-// empty pool, and the guard here mirrors it for pipelines that slip past.
+// rhythm. Where resting is on offer is the scene author's call: a scene
+// option built on this action renders with the pool's state as its stat
+// lines and disables at an empty pool, and the guard here mirrors that for
+// pipelines that slip past.
 function handleShortRest(action, engine) {
   const config = engine.data.rules?.shortRest;
   if (!config?.resource) {

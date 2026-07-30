@@ -223,8 +223,7 @@
   },
   "shortRest": {
     "resource": "shortRests",
-    "heal": "1d8",
-    "timeCost": 1
+    "heal": "1d8"
   },
   "headerResources": [
     {

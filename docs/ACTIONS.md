@@ -134,7 +134,7 @@ Restore the player at a resting point. Takes no effect parameters. Sets HP to fu
 
 One draw on the short-rest pool: heals `rules.shortRest.heal` (dice notation like `"1d8"`, or a flat number) and spends one use of `rules.shortRest.resource` — a declared `{ current, max }` resource that only `full_rest` refills, so each draw spends something real (the D&D Hit Dice rhythm). An empty pool refuses in the world's voice and heals nothing.
 
-You rarely author this action yourself: while `rules.shortRest` is configured, the scene renderer offers a standing Short Rest option in every scene's Actions section (with the pool's remaining uses as its stat line, disabled at zero), charging `rules.shortRest.timeCost` like any option. The action type exists so a scene or dialogue can also grant a rest as part of a pipeline.
+Where resting is on offer is yours to author: add a scene option whose pipeline runs this action (with a `timeCost` if resting should spend time, like any option). Such an option renders with the configured heal and the pool's remaining uses as its stat lines, and disables (rather than hides) at an empty pool.
 
 - `log` — see [The `log` convention](#the-log-convention). The default yield includes the roll: `(+6 HP, 1d8: 6)`.
 

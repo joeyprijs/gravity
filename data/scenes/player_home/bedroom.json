@@ -12,6 +12,15 @@
   "description": "You enter the bedroom. It's surprisingly tidy, with a plush feather bed tucked in the corner. A heavy iron-bound personal chest rests at the foot of your bed.",
   "options": [
     {
+      "text": "Open Personal Chest",
+      "actions": [
+        {
+          "type": "manage_chest",
+          "chest": "personal"
+        }
+      ]
+    },
+    {
       "text": "Long Rest",
       "timeCost": 0,
       "actions": [
@@ -25,11 +34,11 @@
       ]
     },
     {
-      "text": "Open Personal Chest",
+      "text": "Short Rest",
+      "timeCost": 1,
       "actions": [
         {
-          "type": "manage_chest",
-          "chest": "personal"
+          "type": "short_rest"
         }
       ]
     },

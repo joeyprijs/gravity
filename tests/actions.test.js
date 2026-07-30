@@ -188,7 +188,7 @@ const SHORT_REST_RULES = {
     ...TEST_RULES.playerDefaults,
     resources: { ...TEST_RULES.playerDefaults.resources, shortRests: { current: 2, max: 2 } },
   },
-  shortRest: { resource: 'shortRests', heal: 4, timeCost: 1 },
+  shortRest: { resource: 'shortRests', heal: 4 },
 };
 
 test('short_rest: heals, spends one pool use, and amends the act line with the yield', () => {
