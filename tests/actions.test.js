@@ -222,6 +222,16 @@ test('full_rest refills the short-rest pool along with HP', () => {
   assert.equal(gameState.getPlayer().resources.shortRests.current, 2);
 });
 
+test('short_rest: a string log override narrates instead of the default yield', () => {
+  gameState.init(SHORT_REST_RULES);
+  const { run, calls } = makeEngine({ rules: SHORT_REST_RULES });
+  gameState.modifyPlayerStat('hp', -6);
+  run({ type: ACTIONS.SHORT_REST, log: 'You doze against the wall.' });
+  assert.ok(calls.logs.some(l => l.message === 'You doze against the wall.'));
+  assert.equal(calls.amends.length, 0, 'the default yield line stays silent');
+  assert.equal(gameState.getPlayer().resources.shortRests.current, 1, 'the pool still spends');
+});
+
 test('log overrides resolve through t(): a locale key translates, a one-off line logs as-is', () => {
   const { engine, run, calls } = makeEngine();
   engine.t = (key) => key === 'actions.fullRestMorning' ? 'You wake with the morning light.' : key;

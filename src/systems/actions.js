@@ -116,9 +116,13 @@ function handleShortRest(action, engine) {
   engine.state.modifyPlayerStat(config.resource, -1);
 
   if (action.log !== false) {
-    // The yield amends the act's line, roll and all: "Short Rest (+6 HP, 1d8: 6)".
-    const yieldLine = engine.t('actions.heal', { amount: `+${amount}`, rollSuffix });
-    if (!engine.amendLog(yieldLine)) engine.log(LOG.PLAYER, yieldLine, 'choice');
+    // Same split as full_rest: authored prose narrates; the default yield
+    // amends the act's line, roll and all: "Short Rest (+6 HP, 1d8: 6)".
+    if (typeof action.log === 'string') engine.log(LOG.SYSTEM, engine.t(action.log));
+    else {
+      const yieldLine = engine.t('actions.heal', { amount: `+${amount}`, rollSuffix });
+      if (!engine.amendLog(yieldLine)) engine.log(LOG.PLAYER, yieldLine, 'choice');
+    }
   }
 }
 
