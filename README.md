@@ -248,6 +248,7 @@ Notes:
 
 *   `customAttributes` become skills: rollable in checks, readable in conditions, point-buyable at creation, and (with `levelUp.statPoints`) improvable on level-up from the Sheet, capped by `max`. Each one's `icon` marks its row on the Sheet.
 *   `skillRetry` makes retrying a failed check cost a resource; `headerResources` surfaces custom resources in the status bar (as an icon) and the Sheet (as an icon plus a label). Both optional — see [`docs/CHECKS.md`](docs/CHECKS.md).
+*   `shortRest` (optional) backs the `short_rest` action with a spendable pool: `{ "resource": "shortRests", "heal": "1d8" }` — each rest heals `heal` and spends one use of the declared `{ current, max }` resource, which only a full rest refills. Scenes offer resting by authoring an option that runs `short_rest` — see [`docs/ACTIONS.md`](docs/ACTIONS.md).
 *   `rules.time` (opt-in) enables the world clock; it is documented in [`docs/CHECKS.md`](docs/CHECKS.md).
 
 ### Conditions (Logic Gates)
@@ -300,7 +301,8 @@ Available everywhere (scene options, `onVictory`, dialogue responses):
 | `navigate` | `destination` | Move to a scene. |
 | `return` | — | Return to the scene the player teleported from, else the starting scene. |
 | `heal` | `amount?` | Change HP by `amount` (default `rules.snackHealAmount`; negative damages). |
-| `full_rest` | — | Restore HP and the retry currency (AP is a per-combat budget and resets on its own). |
+| `full_rest` | — | Restore HP, the retry currency, and the short-rest pool (AP is a per-combat budget and resets on its own). |
+| `short_rest` | — | One draw on the short-rest pool (`rules.shortRest`): heal a little, spend one use; only `full_rest` refills the pool. |
 | `set_flag` | `flag`, `value` | Write a flag. |
 | `log` | `message` | Print a narrator line. |
 | `manage_chest` | `chest` | Open a chest's deposit/withdraw panel. |
@@ -317,7 +319,7 @@ Valid only inside conversation nodes:
 | `leave` | — | Leave the conversation, back to the scene. |
 | `questTrigger` | `mission`, `status` | Start (`"active"`) or complete (`"complete"`) a mission. |
 
-The state-changing actions (`loot`, `heal`, `full_rest`, `advance_time`) take an optional `log`: `false` silences the default message, a string replaces it (resolved through the locale table first, so a locale key stays translatable; any other string logs as-is). Timer pipelines are restricted to *quiet* actions (`set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`) — a timer changes the world through flags, never by navigating or starting combat. Plugins register their own types (the curator plugin adds `manage_exhibits` and `build_wing`) — see the [Plugin API](#plugin-api). Every parameter above is documented in full in [`docs/ACTIONS.md`](docs/ACTIONS.md).
+The state-changing actions (`loot`, `heal`, `full_rest`, `short_rest`, `advance_time`) take an optional `log`: `false` silences the default message, a string replaces it (resolved through the locale table first, so a locale key stays translatable; any other string logs as-is). Timer pipelines are restricted to *quiet* actions (`set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`) — a timer changes the world through flags, never by navigating or starting combat. Plugins register their own types (the curator plugin adds `manage_exhibits` and `build_wing`) — see the [Plugin API](#plugin-api). Every parameter above is documented in full in [`docs/ACTIONS.md`](docs/ACTIONS.md).
 
 ### Scenes
 
