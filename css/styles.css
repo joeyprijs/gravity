@@ -443,7 +443,7 @@ button.section-toggle--collapsed .section-toggle__label::before {
   font-weight: 400;
 }
 
-/* A section holding a new item shows the accent dot right after its name, so a
+/* A section holding a new item shows the accent dot beside its count, so a
    collapsed section still flags there's something new inside. Same dot as the
    tab nav and item cards. */
 /* .btn--item — an inventory item card you can act on: clicking it uses,
@@ -607,7 +607,7 @@ button.section-toggle--collapsed .section-toggle__label::before {
 }
 
 .tabs__btn--notify::after,
-.section-toggle--notify .section-toggle__label::after,
+.section-toggle--notify .section-toggle__count::after,
 .card--new::after {
   content: "";
   width: 7px;
@@ -628,10 +628,11 @@ button.section-toggle--collapsed .section-toggle__label::before {
   right: 7px;
 }
 
-.section-toggle--notify .section-toggle__label::after {
+/* Top-aligned at the count's right shoulder, like the tab dot's corner. */
+.section-toggle--notify .section-toggle__count::after {
   display: inline-block;
   margin-left: calc(var(--spacing) * 1);
-  vertical-align: middle;
+  vertical-align: top;
 }
 
 /* Every dot is static — the mark itself is the signal, at the tab, the heading
