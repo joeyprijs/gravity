@@ -655,7 +655,7 @@ button.section-toggle--collapsed .section-toggle__label::before {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: calc(var(--spacing) * -4) calc(var(--spacing) * -4) calc(var(--spacing) * 3);
+  margin: calc(var(--spacing) * -4) calc(var(--spacing) * -4) 0;
   padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 4);
   background: var(--list-item-bg);
   border-bottom: 1px solid var(--panel-border);
@@ -695,6 +695,10 @@ button.section-toggle--collapsed .section-toggle__label::before {
   overflow-y: auto;
   flex-grow: 1;
   min-height: 0;
+  /* The gap under the topbar is OUR padding, not the topbar's margin: a
+     scroll container paints scrolled content through its padding, so text
+     clips flush at the topbar's border instead of at a floating line. */
+  padding-top: calc(var(--spacing) * 3);
   padding-bottom: 20vh;
   margin-bottom: calc(var(--spacing) * 2.5);
 }
