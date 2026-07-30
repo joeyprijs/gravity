@@ -2,7 +2,7 @@
 
 *The authoring guide for the two-channel audio layer: what the engine plays, and where the files live.*
 
-**Everything here is optional.** A game that authors no audio fields never touches the Web Audio API — no context is created, no file is fetched. Audio is opt-in per scene and per action.
+**Everything here is optional.** A game that authors no audio fields never fetches or decodes a byte of audio — an `AudioContext` still opens on the first user gesture (the unlock listener is unconditional), but nothing ever plays through it. Audio is opt-in per scene and per action.
 
 ---
 
@@ -12,12 +12,12 @@ The engine mixes two channels, each with its own volume slider in the Options ta
 
 | Channel | What it plays | Overlap |
 |---|---|---|
-| **ambience** | A looping bed for the player's location, resolved on every scene render. | One loop at a time; crossfades over 1.5s when the location changes. |
+| **ambience** | A looping bed for the player's location, resolved on every scene render. | One loop at a time; 1.5s fades when the location changes — a true crossfade when the incoming bed is already decoded, outgoing-fade-then-incoming-fade on a cold fetch. |
 | **narration** | One-shot read-alouds of authored text. | One clip at a time; a new clip replaces the previous. |
 
 Browsers block audio until a user gesture, so the `AudioContext` is created on the first `pointerdown`/`keydown`. Paths resolved before that (the opening scene's bed and narration) are remembered and started at unlock — nothing is lost, it just waits for the first click.
 
-A missing or undecodable file warns once in the console and is otherwise silent: the loop stays quiet, the game plays on. **Clips can be referenced before they are recorded** — author the data first, drop the files in later. `npm test` asserts that every path in the shipped data resolves to a real file, so a typo fails locally instead of shipping as silence (in a checkout with no clips at all it has nothing to check and skips — see [File layout](#file-layout)).
+A missing or undecodable file warns once in the console and is otherwise silent: the loop stays quiet, the game plays on. **Clips can be referenced before they are recorded** — author the data first, drop the files in later. `npm test` asserts that every `ambience`/`narration` path authored on the shipped regions and scenes resolves to a real file, so a typo fails locally instead of shipping as silence (paths authored anywhere else — an NPC pipeline, an item — aren't swept; in a checkout with no clips at all it has nothing to check and skips — see [File layout](#file-layout)).
 
 ## Ambience
 
@@ -39,11 +39,7 @@ Re-syncing to the same path is a no-op, so walking between rooms of one region n
 
 ## Narration
 
-Three places can carry a `narration` path, in resolution order:
-
-1. **A description variant** — read when that variant is the one that matched.
-2. **The scene** — the fallback, and the only option for a plain-string `description`.
-3. **An action** — see [The `narration` convention](ACTIONS.md#the-narration-convention) in the action reference.
+A scene's read-aloud resolves two-deep: a **description variant**'s `narration` wins when that variant is the one that matched, else the **scene**'s own (the only option for a plain-string `description`), else silence. Separately, any **action** may carry a clip of its own, played whenever the pipeline runs it — see [The `narration` convention](ACTIONS.md#the-narration-convention) in the action reference.
 
 ```json
 "description": [
@@ -69,8 +65,6 @@ audio/
     dungeon/
       start.webm               #   data/scenes/dungeon/start.json — its description
       start__closer_look.webm  #   …and a clip for one action inside it
-    shared/                    # the engine's own lines, named for the locale key
-      actions.lookAroundFail.webm
   _masters/                    # lossless sources + superseded takes — gitignored
   _scripts/                    # generated recording scripts — committed
 ```
@@ -82,7 +76,7 @@ The rules behind it:
 - **Top level is the channel.** A file's path says which channel plays it and which volume slider governs it.
 - **Ambience is flat**, named for the id that declares it — a region id, or a scene id where a scene overrides its region. This class is bounded by the number of regions; nesting would be ceremony.
 - **Narration mirrors `data/scenes/<region>/<scene>`.** This is the class that grows with content, and its whole maintenance problem is *which clip belongs to which line* — mirroring makes the path derivable from the JSON and back again, with no lookup.
-- **A second clip for the same scene takes a `__suffix` naming the beat it narrates** — `start__closer_look` for an action, or the condition flag for a description variant (`start__door_open`). Never the option's button text: labels get reworded during polish, the beat doesn't.
+- **A second clip for the same scene takes a `__suffix`.** For a description variant the generator names the beat — the condition flag that selects it (`corridor__wanderer_defeated`); for an action or check line it suggests a slug of the owning option's text (`start__closer_look`). The suggestion is only that: a path already wired in the data wins outright, so relabeling a button never moves a recorded take.
 - **`snake_case`**, matching data filenames and ids. The schema field is spelled `ambience` — keep the files spelled the same way so one grep finds both.
 
 ## Recording scripts

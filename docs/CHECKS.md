@@ -4,13 +4,13 @@
 
 **Everything here is optional.** A game that configures none of it plays like classic Gravity: d20 vs DC, retry at will. Each tool below is an independent knob an author turns per game (in `rules.json`) or per check (in scene/NPC data).
 
-**DC escalation (`increment`) is gone.** It punished retries without informing the player, soft-locked content, and the scene re-entry reset made it exploitable. The validator flags any `increment` left in data. Its replacements — attempt budgets, one-shot resolution, retry costs, and time pressure — are all below.
+**DC escalation (`increment`) is gone.** It punished retries without informing the player, soft-locked content, and the scene re-entry reset made it exploitable. An `increment` left in data is simply ignored. Its replacements — attempt budgets, one-shot resolution, retry costs, and time pressure — are all below.
 
 ---
 
 ## The check flavors
 
-A scene's `skills` array (and an NPC's dialogue `responses`) supports five check flavors, dispatched by shape:
+A scene's `skills` array (and an NPC's dialogue `responses`) supports four check flavors, dispatched by shape:
 
 | Flavor | Shape | What happens |
 |---|---|---|
@@ -19,7 +19,7 @@ A scene's `skills` array (and an NPC's dialogue `responses`) supports five check
 | **Item discovery** | `skillCheck` + `items` | One roll vs every still-hidden item's own DC; found items persist. |
 | **Passive** | scene-level `passiveChecks` | Auto-rolled silently on first entry, once per game, into an author-named flag. |
 
-Check buttons always show the player what they're weighing: their modifier ("Uses: Perception +2", from the `actions.skillBadge.*` locale strings) and the DC on its own line (`actions.skillBadgeDc`). Informed decisions are the point — hidden math is a slot machine. `Uses:` is the same row a weapon card shows for the attribute its attack rolls with (`itemStats.hit`) — one word for "what this roll leans on", wherever the roll is offered. It is deliberately not `Bonus:`, which on an item card means a bonus the thing *grants* while worn.
+Rolled check buttons always show the player what they're weighing: their modifier ("Uses: Perception +2", from the `actions.skillBadge.*` locale strings) and the DC on its own line (`actions.skillBadgeDc`); a narrative check, having no roll, shows just the skill's name. Informed decisions are the point — hidden math is a slot machine. `Uses:` is the same row a weapon card shows for the attribute its attack rolls with (`itemStats.hit`) — one word for "what this roll leans on", wherever the roll is offered. It is deliberately not `Bonus:`, which on an item card means a bonus the thing *grants* while worn.
 
 ## Outcome tiers
 
@@ -215,7 +215,7 @@ Rolled silently on the player's **first** entry, once per game, writing pass/fai
 
 ## Validation
 
-`validateGameData` checks all of it: leftover `increment` and removed luck-subsystem fields, unknown outcome tiers, doubly-defined tier pipelines, `resolveOnce`+`maxAttempts` redundancy, inert `onExhausted`, unsafe timer actions, unknown segments, day/segment conditions without their backing config, malformed `defaultCosts`, missing segment locale keys, and passive checks missing `flag` or `skillCheck`.
+`validateGameData` checks all of it: unknown outcome tiers, doubly-defined tier pipelines, `resolveOnce`+`maxAttempts` redundancy, inert `onExhausted`, unsafe timer actions, unknown segments, day/segment conditions without their backing config, malformed `defaultCosts`, missing segment locale keys, and passive checks missing `flag` or `skillCheck`.
 
 ## A caveat for content updates
 

@@ -8,9 +8,10 @@
 //              new clip (or entering a scene without one) stops the previous.
 //
 // Everything is opt-in via game data — a game that authors no audio fields
-// never touches the Web Audio API. Browsers block audio until a user gesture,
-// so the AudioContext is created on the first pointerdown/keydown; paths
-// resolved before that are remembered and started at unlock. Web Audio (not
+// never fetches or decodes a single byte of audio. Browsers block audio until
+// a user gesture, so the AudioContext is created on the first
+// pointerdown/keydown (data or not); paths resolved before that are
+// remembered and started at unlock. Web Audio (not
 // <audio loop>) because buffer sources loop gaplessly. Safari caveats:
 // callback-form decodeAudioData, no connect() chaining.
 
@@ -130,7 +131,6 @@ export class AudioSystem {
    * that failed to load) waits for nothing.
    *
    * @returns {Promise<number>} A time on the AudioContext clock.
-   * @private
    */
   _narrationStartTime() {
     if (!this._ambiencePath) return Promise.resolve(this._ctx.currentTime);

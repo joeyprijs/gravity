@@ -4,7 +4,7 @@ Actions are the mutation half of the engine: the ordered pipeline a scene option
 
 ## How pipelines run
 
-- **Order matters.** Actions execute top to bottom. Every action in the array runs, but a *navigating* action (`navigate`, `return`, `dialogue`, `combat`, `manage_chest`, and dialogue's `trade`/`leave`) hands the interactions panel to a new surface — so the caller stops re-rendering the old one once navigation has happened. The practical rule: **put state changes before navigation**, so the destination sees them.
+- **Order matters.** Actions execute top to bottom. Every action in the array runs, but a *navigating* action (`navigate`, `return`, `dialogue`, `combat`, `manage_chest`, and dialogue's `goToConversation`/`trade`/`leave`) hands the interactions panel to a new surface — so the caller stops re-rendering the old one once navigation has happened. The practical rule: **put state changes before navigation**, so the destination sees them.
 
   ```json
   "actions": [
@@ -71,7 +71,7 @@ Give an item — or gold — to the player.
 - `xpReward` *(number, optional)* — also award this much XP, logged on its own line.
 - `log` — see [The `log` convention](#the-log-convention).
 
-An unknown `item` is ignored with a console warning (and flagged at boot).
+An unknown `item` is refused with a console warning (and flagged at boot) — nothing enters the inventory, though the found/received line still prints, with the raw id standing in for the name.
 
 ### `combat`
 
@@ -151,7 +151,7 @@ Silent by design — flags surface through the scene re-renders and condition ga
 
 Print a line to the narrative log.
 
-- `message` *(string)* — the text to print, as a System line. This is **literal text**, not a locale key — it is the one action that emits a raw authored string, so it does not localize.
+- `message` *(string)* — the text to print, in the narrator's voice (the `System` label, which the demo locale renders as `[Narrator]`). It resolves the same way as a `log` override: a locale key prints that key's prose, a string that matches no key prints as-is.
 
 ### `manage_chest`
 
@@ -161,7 +161,7 @@ Open a chest's deposit/withdraw panel (a custom UI that takes over the interacti
 
 ### `advance_time`
 
-Advance the world clock (requires `rules.time`; without it the clock stays dormant and this is a no-op). Provide **one** of:
+Advance the world clock. The tick counter always advances and due timers always fire, even without `rules.time` — what needs the config is everything derived from it: days, segments, the `until` form, and the clock's own passage narration. Provide **one** of:
 
 - `amount` *(number, default `0`)* — advance by this many ticks.
 - `until` *(string)* — advance to the next start of this day segment instead (e.g. `"morning"`). Needs `rules.time.segments`; an unknown segment warns and does nothing. Asking during the segment itself sleeps to its next occurrence, never zero ticks. When present, `until` takes precedence over `amount`.
@@ -174,7 +174,7 @@ Timers that come due during the advance fire here (see `set_timer`).
 Arm a timer whose pipeline fires when the clock later passes a deadline.
 
 - `id` *(string, required)* — the timer's id. A missing id warns and is ignored. Arming an id that already exists **replaces** the previous timer.
-- `afterTicks` *(number)* — deadline = the current tick + this many.
+- `afterTicks` *(number, default `0`)* — deadline = the current tick + this many. The default arms a timer that fires on the very next advance.
 - `actions` *(action[])* — the pipeline to run at the deadline, restricted to the **quiet** action types: `set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`. A timer changes the world through flags — it can never navigate or start combat from inside the clock advance. Non-quiet actions are stripped with a warning (and flagged at boot).
 
 ### `cancel_timer`
@@ -187,7 +187,7 @@ Disarm a timer.
 
 ## Conversation actions
 
-These are valid **only inside conversation nodes** (an NPC's `actions` or a response's `actions`). Used outside a dialogue they warn and no-op.
+These live in conversation nodes (an NPC's `actions` or a response's `actions`), with different guards: `goToConversation` and `trade` warn and no-op outside an active dialogue; `leave` outside one just re-renders the current scene. `questTrigger` is the exception — it runs from any pipeline (scene options, timers, `onVictory`) and sits here only because dialogue is where it is most often authored.
 
 ### `goToConversation`
 
@@ -228,7 +228,7 @@ Open the curator dashboard (a custom UI). Takes no parameters.
 Build a new museum wing off the hall (the scene flagged `museumHall`).
 
 - `name` *(string, optional)* — the wing's player-facing name; falls back to a numbered default.
-- `cost` *(number, optional)* — gold charged; defaults to the plugin config's `wingCost`, then `250`. The action refuses and warns when the player can't afford it.
+- `cost` *(number, optional)* — gold charged; defaults to the plugin config's `wingCost`, then `250`. When the player can't afford it, the action refuses with an in-game line (`ui.notEnoughGold`).
 
 It also refuses when the game has no hall, or no `museumLayout` in the curator's plugin config — a wing's map geometry is derived from the layout, so without one it would land nowhere. The save carries the wing as data (`{ id, name, slot }`); its scene is rebuilt from that on every load.
 

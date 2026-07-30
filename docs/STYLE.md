@@ -51,8 +51,8 @@ The test for every rule here: it must describe what the codebase actually does. 
 
 Each voice has its grammar:
 
-- **`LOG.PLAYER`, variant `'choice'` — the act.** Imperative label, no "You", with any mechanical detail — including the part the engine decided — riding in trailing parens: `Open Personal Chest`, `Equip the Rusty Sword (Left Hand)`, `Use the Health Potion (+4 HP, 1d4: 4)`. The button may be terser than the line (`Done` logs `Close Chest`); the log records the act, the button only has to be pressable. A handler's default log for a user act is the act's *yield* in the same voice — `(+2 HP)`, `(HP restored)` — amended onto the `[Player]` option line that ran it (`NarrativeLog.amendLast`), so the act and what it paid out are one line: `Eat a Snack (+2 HP)`.
-- **`LOG.SYSTEM` — the world's answer.** Second person, full prose: `You found a Cellar Key.`, `The graze burns. (-2 HP)`. A `log:` string override on an action is always this voice — an author writing prose is writing the world's answer, and it replaces the default yield line.
+- **`LOG.PLAYER`, variant `'choice'` — the act.** Imperative label, no "You", with any mechanical detail — including the part the engine decided — riding in trailing parens: `Open Personal Chest`, `Equip the Rusty Sword (Left Hand)`, `Use the Healing Potion (+7 HP, 1d8+2: 7)`. The button may be terser than the line (the curator's `Step back` logs `Leave the Mahogany Pedestal empty`); the log records the act, the button only has to be pressable. A handler's default log for a user act is the act's *yield* in the same voice — `(+2 HP)`, `(HP restored)` — amended onto the `[Player]` option line that ran it (`NarrativeLog.amendLast`), so the act and what it paid out are one line: `Eat a Snack (+2 HP)`.
+- **`LOG.SYSTEM` — the world's answer.** Second person, full prose: `You found the Cellar Key.`, `The graze burns. (-2 HP)`. A `log:` string override on an action is always this voice — an author writing prose is writing the world's answer, and it replaces the default yield line.
 
 The rule players learn: a `[Player]` block is what they did (and what it got them, in parens); everything else is the world talking. Chest, merchant, and curator *transactions* — moving possessions between containers rather than changing the character — keep the world's voice (`You retrieved the Rusty Sword from the chest.`): the acts there are the panel crossings (`Open Personal Chest`, `Leave the exhibits`), not each card shuffle.
 
@@ -121,6 +121,7 @@ Check design (tiers, budgets, retry costs, the clock) has its own guide: [`CHECK
 - `docs/ARCHITECTURE.md` — contributor contracts: boot flow, state, the mode machine, events, hooks, the plugin surface.
 - `docs/CHECKS.md` — the check-authoring guide.
 - `docs/ACTIONS.md` — the action-pipeline reference.
+- `docs/AUDIO.md` — the audio authoring guide.
 - `docs/STYLE.md` — this file.
 - Authoring and reference guides may be added as the surface grows (a vocabulary deep enough to need its own page earns one — `CHECKS.md` and `ACTIONS.md` did). But **no roadmaps, changelogs, or archives**: git history is the record, and docs describe only what exists today.
 
@@ -141,5 +142,6 @@ Check design (tiers, budgets, retry costs, the clock) has its own guide: [`CHECK
 | Unit + data-integrity tests | `npm test` | ✔ |
 | Manifest in sync with data tree | `node scripts/generate-manifest.js --check` | ✔ |
 | Canonical data formatting | `node scripts/format-data.js --check` | ✔ |
-| Browser UI smoke test | open `tests/smoke.html` | manual |
+| Narration scripts match the authored prose | `node scripts/generate-narration-script.js --check` | ✔ |
+| Browser UI smoke test | `scripts/run-smoke.sh` (or open `tests/smoke.html`) | ✔ |
 | Everything else in this guide | review | — |

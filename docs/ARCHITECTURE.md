@@ -7,17 +7,17 @@ This document explains how the engine boots, how the modules fit together, and �
 1. **Zero dependencies.** The engine runs as native ES Modules in the browser; tests run on Node's built-in test runner. Nothing is compiled or bundled.
 2. **Data-driven.** All game content (scenes, NPCs, items, quests, rules, loot tables) lives in JSON under `data/`. Authoring a game requires no JavaScript.
 3. **Unidirectional reactive state.** All mutations go through the engine's `StateManager` (`engine.state`); the UI re-renders via listeners. Game logic never touches DOM values directly, and UI code never owns game rules. Subsystems receive their state dependency through the engine — no module imports the state singleton directly (only `engine.js` does, to own it).
-4. **Decoupled subsystems.** Stateful subsystems (combat, dialogue, scene, quests, narrative) never import each other — they communicate through the engine's delegate methods or its event bus. The exception is the pure, stateless helper modules `dice.js`, `condition.js`, and `skill-checks.js`: they hold no state and touch neither the engine nor the DOM, so subsystems import them directly the way they would any library function. The rule that prevents tangling is "no subsystem reaches into another subsystem's state," not "no file imports another."
+4. **Decoupled subsystems.** Stateful subsystems (combat, dialogue, scene, quests, narrative, audio) never import each other — they communicate through the engine's delegate methods or its event bus. The exception is the stateless helper modules `dice.js`, `time.js`, `condition.js`, and `skill-checks.js`: they hold no state of their own, so subsystems import them directly the way they would any library function (`dice`, `time`, and `condition` touch neither the engine nor the DOM; `skill-checks` receives the engine as a parameter rather than owning any of it). The rule that prevents tangling is "no subsystem reaches into another subsystem's state," not "no file imports another."
 
 ## Boot Flow
 
 `index.html` loads a single entry point, `src/core/engine.js`. It constructs `RPGEngine` on `DOMContentLoaded`:
 
-1. **Construct subsystems** — combat, dialogue, quests, narrative log, scene renderer, UI manager. Each receives the engine instance.
+1. **Construct subsystems** — narrative log, combat, dialogue, quests, UI manager, scene renderer, audio. Each receives the engine instance, except the narrative log, which takes only what it needs (`t`, `state`).
 2. **`init()`** registers the built-in actions, then loads `data/index.json` (the manifest), resolves the active language (see *Localisation*), and fetches every registered asset in parallel. NPC `carriedItems` are normalized at load to `{ item, amount }` objects (`amount: null` = unlimited), so data files may use the string shorthand but consumers only ever see one shape.
 3. **Plugins load next** — *before* state initialisation, so they can register save migrations. Plugin locales declared in the manifest are loaded into a namespaced `plugin.<id>.*` locale tree, using the active language (falling back to the plugin's `en` file).
 4. **Data validation** (`core/validate.js`, invoked via `_validateData`) checks all loaded data: dangling IDs (items, scenes, enemies, NPCs, tables, conversation nodes), unknown action types and `skillCheck` names, enemies missing the attributes combat requires, and missing locale keys. Issues are printed to the console grouped per source entity. Developer tooling only — it never blocks the game.
-5. **`engine.state.init(rules)`** replaces the skeleton state with defaults derived from `rules.json`; missions and scene flags are registered on top.
+5. **`engine.state.init(rules, items)`** replaces the skeleton state with defaults derived from `rules.json`; missions and scene flags are registered on top.
 6. **UI setup + subscription** — `engine.state.subscribe((_, hint) => ui.update(hint))` makes every state change reactively re-render the relevant UI region.
 7. **Character creation** is shown for a fresh state; otherwise the starting scene renders.
 
@@ -37,8 +37,10 @@ engine.js (orchestrator, mode machine, delegate API, event bus, registries)
 │   ├── dialogue.js    conversation trees, merchant shops
 │   ├── quests.js      mission lifecycle (listens to scene:entered)
 │   ├── narrative.js   scrollable narrative log
+│   ├── audio.js       two-channel audio: region ambience loops + narration clips
 │   ├── actions.js     built-in action handlers
 │   ├── items.js       item use / equip / unequip (consumable-effect table)
+│   ├── time.js        world-clock math: days, segments, time costs (pure)
 │   ├── condition.js   condition AST evaluator (pure)
 │   ├── skill-checks.js d20 checks, outcome tiers, runCheckAttempt, bookkeeping
 │   └── dice.js        roll(), damage parsing, weighted tables (pure)
@@ -48,14 +50,14 @@ engine.js (orchestrator, mode machine, delegate API, event bus, registries)
 └── plugins/           optional modules loaded via the manifest
 ```
 
-There are no circular imports. Stateful subsystems reach each other only through `engine.*` delegates (`engine.renderScene()`, `engine.log()`, `engine.runActions()`, …) or events. The pure helpers (`dice.js`, `condition.js`, `skill-checks.js`) are leaf modules: they import nothing from `systems/` and are imported freely by the subsystems that need their math.
+There are no circular imports. Stateful subsystems reach each other only through `engine.*` delegates (`engine.renderScene()`, `engine.log()`, `engine.runActions()`, …) or events. The stateless helpers (`dice.js`, `time.js`, `condition.js`, `skill-checks.js`) sit at the bottom of the graph: they import only each other (`condition` reads the clock through `time`, `skill-checks` rolls through `dice`) and `core` utilities, never a stateful subsystem, and are imported freely by the subsystems that need their math.
 
 ## State Management
 
 `StateManager` (in `core/state.js`, owned by the engine as `engine.state`) is the single source of truth. Key contracts:
 
 - **Inventory/chest entries** have the shape `{ item: string, amount: number }`.
-- **Mutations notify listeners** with an optional *hint* (`'stats'`, `'inventory'`, `'quests'`, `'map'`, `'displays'`, `'time'`) so the UI can re-render only the affected region. No hint means "update everything". `modifyPlayerStat` accepts `'full'` to top a `{ current, max }` resource up to its cap; `modifyPlayerStats(deltas)` applies a whole map (the equip/unequip bonus swap) with a single notification.
+- **Mutations notify listeners** with an optional *hint* (`'stats'`, `'inventory'`, `'quests'`, `'map'`, `'time'`) so the UI can re-render only the affected region (the display mutators also emit a `'displays'` hint, which no UI region currently binds to). No hint means "update everything". `modifyPlayerStat` accepts `'full'` to top a `{ current, max }` resource up to its cap; `modifyPlayerStats(deltas)` applies a whole map (the equip/unequip bonus swap) with a single notification.
 - **`setFlag` and `setCheckState` deliberately do not notify.** Their effects surface through scene re-renders, option gating, and dialogue visibility, which their callers already drive; notifying on every write would double-render every skill-check click. Don't "fix" this — it's a convention, not an oversight.
 - **Flags** are a flat, author-facing key→scalar map: static flags declared in `data/flags/`, plus engine-written world state (merchant stock, friendliness, one-time markers) built by the `FLAG_KEYS` builders in `config.js`. Anything here is fair game for an authored condition.
 - **Check bookkeeping lives in `state.checkState`**, not in flags: the object-valued skill-check maps (attempt counts, resolution markers, discovery progress), keyed by the `CHECK_KEYS` builders and accessed via `getCheckState`/`setCheckState`. Engine-private — conditions never read it. Older saves stored these under prefixed flag keys; `loadFromObject` normalizes them over unconditionally (idempotent, version-independent).
@@ -109,7 +111,7 @@ Current events:
 
 | Event | Payload | Emitted when |
 |---|---|---|
-| `scene:entered` | `{ sceneId, scene }` | A scene with a `questTrigger` is actually entered (not on option re-renders or save restores) |
+| `scene:entered` | `{ sceneId, scene, isEntry, startsCombat }` | Every scene render except save restores. `isEntry` distinguishes a true arrival from a same-scene re-render — listeners that act on arrival must check it (the quest system does, and filters for scenes with a `questTrigger` itself) |
 
 Events are notifications, not control flow — the combat turn handoff, for example, is an explicit `notePlayerSpentAP` call, not an event (see *The Mode Machine*).
 
@@ -155,7 +157,7 @@ The optional `config` object holds the plugin's tunables, read back at runtime v
 
 Do **not** replace or wrap StateManager/engine methods on the live instances — two plugins doing that will trample each other. The curator's `museumReputation`/`obtainedItems` live in `pluginState('curator')`, introduced via its `registerMigration` (which also adopts the older top-level fields those saves carried).
 
-**Trust boundary:** plugins are trusted code. They load via dynamic `import()` and run with full access to the page — the DOM, storage, the whole engine and game state. That is deliberate: the plugin API's value is direct, synchronous engine access, and the author of a game is the author of its plugins. The corollary: never load a campaign (manifest + plugins) from a source you don't trust, and don't host third-party campaigns on an origin whose storage or cookies matter. Sandboxing plugins (iframe/worker + `postMessage`) is intentionally out of scope until untrusted user-generated campaigns become a real use case — it would turn every hook into async RPC.
+**Trust boundary:** plugins are trusted code. They load via dynamic `import()` (except an id in `BUILT_IN_PLUGINS` — the shipped curator — which short-circuits to its statically imported module so the demo also boots from `file://`) and run with full access to the page — the DOM, storage, the whole engine and game state. That is deliberate: the plugin API's value is direct, synchronous engine access, and the author of a game is the author of its plugins. The corollary: never load a campaign (manifest + plugins) from a source you don't trust, and don't host third-party campaigns on an origin whose storage or cookies matter. Sandboxing plugins (iframe/worker + `postMessage`) is intentionally out of scope until untrusted user-generated campaigns become a real use case — it would turn every hook into async RPC.
 
 `src/plugins/curator.js` (museum curation + reputation) is the reference implementation.
 
@@ -194,12 +196,12 @@ The game is three panels — player (left), story (center), interactions (right)
 - **Player panel:** tabs generated from `rules.tabs`. Each entry names a locale key, an `icon`, and an optional `widget` — `attributes` (the character sheet: stat and skill sections as collapsible icon/label/value rows, the skills' icons coming from `rules.customAttributes[].icon`), `map` (the minimap), or `options` (the save/load/restart buttons, which exist *only* here; `validate.js` warns when a tabs list omits the widget). Collapse state persists per section via `createSectionToggles` in `core/utils.js`, shared with the inventory panel's groups.
 - **Story panel:** the narrative log, with a pinned top bar (`scene__topbar`) showing HP/AC/AP/Gold, every `rules.headerResources` entry, and the world clock. Each stat shows an icon in place of its label — the label survives as the hover title and as `.visually-hidden` text, so the accessible reading is still "HP: 10/10". The bar never scrolls — the log is the panel's internal scroll container.
 - **Interactions panel:** the scene options, skill checks, dialogue responses, or combat controls. A scene's options are split by what their pipelines do, never by their wording: an option that `navigate`s stays in the unheaded first list (where the player can *go*), a `dialogue` action puts one under **NPCs**, anything else is an act performed here — resting, eating, opening a chest, starting a `combat` — and lands under **Actions**; skill checks keep their own **Skills** section. A headed section stays hidden until something lands in it. The panel is reset through `resetOptionsPanel()` in `core/utils.js` — every system that takes over it (scene, combat, dialogue, store, chest, curator) goes through it.
-- **Reactive updates:** `UIManager.update(hint)` re-renders the hinted region (`'stats'`, `'inventory'`, `'quests'`, `'map'`); `[data-stat-bind="path"]` elements anywhere in the document are filled from player state by dot-path on every stats change. The sheet, the top bar, and plugin-registered sheet rows all ride this one loop.
+- **Reactive updates:** `UIManager.update(hint)` re-renders the hinted region (`'stats'`, `'inventory'`, `'quests'`, `'map'`, `'time'`); `[data-stat-bind="path"]` elements anywhere in the document are filled from player state by dot-path on every stats change. The sheet, the top bar, and plugin-registered sheet rows all ride this one loop.
 - **Shared DOM vocabulary:** `buildCard` in `core/utils.js` is the single builder for every titled box (options, checks, attacks, inventory items, quests, chest rows); `attrRowHtml` is the single builder for sheet rows, icon included. Restyle `.card` and `.attr-list__row` and the whole game follows.
 - **Text vs HTML policy:** `createElement(tag, class, text)` sets `textContent` — game data is always treated as plain text. The only sanctioned HTML channels are scene description bodies (`buildSceneDescription`) and engine-authored structural templates; any dynamic value embedded in those must pass through `escapeHtml()`.
 
 ## Testing
 
-`npm test` runs `node --test tests/*.test.js` — synchronous unit tests against the real modules, no DOM required. One suite per logic module covers the engine's surface: state, combat math, the condition AST, dice, the action registry, scene and dialogue logic, skill checks, the world clock, displays and reputation (curator), character creation, i18n resolution, the validator itself, and a data-integrity suite that checks the shipped demo content.
+`npm test` runs `node --test tests/*.test.js` — synchronous unit tests against the real modules, no DOM required. One suite per logic module covers the engine's surface: state, combat math, the condition AST, dice, the action registry, scene and dialogue logic, skill checks (scene and dialogue), the world clock, audio resolution, items and equipping, the DOM utils, displays and reputation (curator), character creation, i18n resolution, the narration-script generator, the validator itself, and a data-integrity suite that checks the shipped demo content.
 
 The DOM-rendering layer is covered by a browser smoke test, `tests/smoke.html` (serve the repo, open the page): it injects the real skeleton from `index.html`, boots the engine against the shipped demo through `new RPGEngine()` (setting `window.GRAVITY_MANUAL_BOOT` so the production `DOMContentLoaded` boot stands down), then drives the UI like a player — character creation, tabs, the sheet's sections and bound values, the top bar, the new-content notifier dots, inventory markup invariants and equipping, the options tab (save/load/restart and the audio controls), the scene panel's option sections, a skill-check click, the museum's curator flows end to end (reputation line, wings, display cases, building, a save/load round trip), combat framing, and merchant trade. Results render on the page; `window.__SMOKE__` and the document title (`SMOKE: PASS/FAIL`) carry the verdict for automation. Zero dependencies, like everything else. Run it after UI-layer changes — the working policy stays "keep rendering thin and the logic in testable modules", with the smoke page catching what the Node suites structurally can't.

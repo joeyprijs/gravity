@@ -55,7 +55,7 @@ A browser-native, zero-dependency, data-driven text RPG engine. Define your enti
 *   **Localisation** — Every player-facing string resolves through locale files; the engine matches the browser's language, and list/plural grammar goes through `Intl`, never through code.
 *   **Load-Time Validation** — The engine validates all game data on boot and prints authoring mistakes (dangling IDs, missing locale keys, unreachable UI) to the console, grouped per entity.
 *   **Versioned Saves with Migrations** — Saves are Base64-encoded state snapshots downloaded as files; a guarded migration chain (core + plugin) keeps older saves playable on newer engine versions.
-*   **A Generated Manifest** — Content files register themselves: drop a JSON file in `data/`, run one script, done. CI fails if the manifest drifts from the data tree.
+*   **A Generated Manifest** — Content files register themselves: drop a JSON file in `data/`, run the format and manifest scripts, done. CI fails if either drifts from the data tree.
 
 The shipped demo under `data/` is a deliberate kitchen sink — it exercises every feature above and doubles as the reference for all of them.
 
@@ -112,9 +112,9 @@ Data files use canonical expanded JSON — one property per line, nothing inline
 
 Each entry's key is the file's top-level `"id"` field when present, otherwise its filename stem (`moon_pendant`). Scenes declare explicit ids (their keys carry region prefixes, like `home_kitchen`). CI runs `generate-manifest.js --check`, so a stale manifest fails the build instead of shipping.
 
-Hand-authored manifest fields — `rules`, `locales`, `plugins`, `regions`, `worldMapSize` — are preserved untouched by the generator.
+Hand-authored manifest fields — `rules`, `locales`, `defaultLanguage`, `plugins`, `regions`, `worldMapSize` — are preserved untouched by the generator.
 
-**Scaling note:** each category also accepts a *bundle* (a single JSON file, or an array of them, holding many `id → definition` entries), so a game with thousands of scenes boots in a handful of requests instead of one per file. The demo uses the per-file form because it diffs better.
+**Scaling note:** each category also accepts a *bundle* (a single JSON file holding many `id → definition` entries), so a game with thousands of scenes boots in a handful of requests instead of one per file. The demo uses the per-file form because it diffs better.
 
 ---
 
@@ -285,7 +285,7 @@ Leaf shapes:
 | `{ "time": { "at_least": 120 } }` | Elapsed world-clock ticks |
 | `{ "day": { "at_least": 3 } }` / `{ "segment": "night" }` | Derived day / segment (requires `rules.time`) |
 
-Numeric leaves accept a bare number (*at least*) or an operator object: `at_least`, `more_than`, `at_most`, `less_than`, `is`.
+Numeric leaves accept a bare number (*at least*) or an operator object: `at_least`, `more_than`, `at_most`, `less_than`, `is`. The one exception is the item leaf's `count`, which is a bare at-least number only.
 
 ### Actions (Mutations)
 
@@ -310,7 +310,7 @@ Available everywhere (scene options, `onVictory`, dialogue responses):
 | `set_timer` | `id`, `afterTicks?`, `actions` | Arm a timer; its pipeline fires at the deadline. Re-arming an `id` replaces it. |
 | `cancel_timer` | `id` | Disarm a timer. |
 
-Valid only inside conversation nodes:
+Conversation actions (`goToConversation` and `trade` warn and no-op outside an active dialogue; `questTrigger` also runs from scenes and timers):
 
 | Action | Parameters | Effect |
 |---|---|---|
@@ -319,7 +319,7 @@ Valid only inside conversation nodes:
 | `leave` | — | Leave the conversation, back to the scene. |
 | `questTrigger` | `mission`, `status` | Start (`"active"`) or complete (`"complete"`) a mission. |
 
-The state-changing actions (`loot`, `heal`, `full_rest`, `short_rest`, `advance_time`) take an optional `log`: `false` silences the default message, a string replaces it (resolved through the locale table first, so a locale key stays translatable; any other string logs as-is). Timer pipelines are restricted to *quiet* actions (`set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`) — a timer changes the world through flags, never by navigating or starting combat. Plugins register their own types (the curator plugin adds `manage_exhibits` and `build_wing`) — see the [Plugin API](#plugin-api). Every parameter above is documented in full in [`docs/ACTIONS.md`](docs/ACTIONS.md).
+The state-changing actions (`loot`, `heal`, `full_rest`, `short_rest`, `advance_time`) take an optional `log`: `false` silences the default message, a string replaces it (resolved through the locale table first, so a locale key stays translatable; any other string logs as-is). `advance_time` has no default line, so only its string form does anything. Timer pipelines are restricted to *quiet* actions (`set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`) — a timer changes the world through flags, never by navigating or starting combat. Plugins register their own types (the curator plugin adds `manage_exhibits` and `build_wing`) — see the [Plugin API](#plugin-api). Every parameter above is documented in full in [`docs/ACTIONS.md`](docs/ACTIONS.md).
 
 ### Scenes
 
