@@ -74,7 +74,7 @@ npx serve .
 ```
 
 *   **Play:** open `http://localhost:3000`.
-*   **Test:** `npm test` — Node's native test runner, no dependencies, 350+ tests.
+*   **Test:** `npm test` — Node's native test runner, no dependencies, 300+ tests.
 *   **UI smoke test:** `scripts/run-smoke.sh` (headless Chrome, no dependencies), or open `http://localhost:3000/tests/smoke.html` by hand — boots the real game and drives the UI through its assertions; the tab title reports `SMOKE: PASS/FAIL`. Runs in CI.
 
 ---
@@ -760,7 +760,7 @@ The deeper tour — boot flow, the mode machine, state contracts, events, hooks,
 
 ## Testing
 
-*   **`npm test`** — 350+ synchronous unit tests on Node's native runner: state and saves, combat math, the condition AST, dice, checks and their attempt machine, scene and dialogue logic, the world clock, the validator, the curator plugin, and a data-integrity suite over the shipped demo.
+*   **`npm test`** — 300+ synchronous unit tests on Node's native runner: state and saves, combat math, the condition AST, dice, checks and their attempt machine, scene and dialogue logic, the world clock, the validator, the curator plugin, and a data-integrity suite over the shipped demo.
 *   **`tests/smoke.html`** — a zero-dependency browser smoke test that boots the real game and drives the UI like a player: character creation, tabs, the sheet, the top bar, the new-content notifier dots, inventory markup invariants and equipping, a live skill check, the scene panel's option sections, the audio controls, the museum's curator flows (wings, display cases, building, a save/load round trip), the combat framing rules, and merchant trade. `scripts/run-smoke.sh` runs it in headless Chrome and is part of CI, so the surfaces Node cannot reach are covered there too.
 *   **CI** — GitHub Actions runs the test suite and verifies the manifest is in sync with the data tree on every push and pull request.
 
