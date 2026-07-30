@@ -44,7 +44,7 @@ A browser-native, zero-dependency, data-driven text RPG engine. Define your enti
 
 *   **Zero-Dependency Vanilla JS** — Runs natively in any modern browser via ES Modules. No bundlers, no compilers, no `npm install`.
 *   **Data-Driven Everything** — Scenes, items, enemies, dialogue, quests, rules, even the sidebar tabs are static JSON. Authoring a game requires no JavaScript.
-*   **One Resolution Mechanic** — d20 + attribute modifier vs DC, everywhere: scene checks, dialogue persuasion, combat attacks. No parallel dice systems.
+*   **One Resolution Mechanic** — whenever the dice decide success, it's d20 + attribute modifier: against a DC for scene checks, dialogue persuasion, and combat attacks; head-to-head for initiative. Effect sizes — weapon and spell damage, a short rest's healing — are flat numbers or dice notation; they measure an outcome, never decide one.
 *   **Outcome-Tiered Skill Checks** — Margin-based tiers (critical / success / partial / failure), one-shot fail-forward gambles, attempt budgets with authored exhaustion routes, passive checks, retry costs, and free narrative beats. Full authoring guide: [`docs/CHECKS.md`](docs/CHECKS.md).
 *   **Turn-Based Combat** — Initiative order, HP / Armor Class / Action Point budgets, multi-enemy encounters, and auto-combat scene entries. AP is a per-combat tactical budget: full at the start of every fight and refreshed each round.
 *   **Character Progression** — Point-buy character creation, XP levels that bank spendable stat points, weapons governed by a wielder attribute (`attackAttribute`), and equipment that raises any attribute (`attributeBonuses`).
