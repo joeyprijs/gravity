@@ -717,8 +717,8 @@ button.section-toggle--collapsed .section-toggle__label::before {
 /* The story column reads like a book page: a capped measure centered in
    the panel, and generous leading. */
 .scene {
-  font-size: var(--font-lg);
-  max-width: 68ch;
+  font-size: var(--font-xl);
+  max-width: 62ch;
   margin-inline: auto;
 }
 
@@ -797,8 +797,8 @@ button.section-toggle--collapsed .section-toggle__label::before {
 .scene__description {  }
 
 .scene__body {
-  line-height: 1.65;
-  margin-top: calc(var(--spacing) * 3);
+  line-height: 1.6;
+  margin-top: calc(var(--spacing) * 3.5);
 }
 
 .scene__body-text {
@@ -810,8 +810,8 @@ button.section-toggle--collapsed .section-toggle__label::before {
 }
 
 .scene__log {
-  margin-top: calc(var(--spacing) * 3);
-  line-height: 1.65;
+  margin-top: calc(var(--spacing) * 3.5);
+  line-height: 1.6;
 }
 
 /* No opacity dimming here: log variants are colored (damage red, loot gold),
@@ -820,7 +820,6 @@ button.section-toggle--collapsed .section-toggle__label::before {
   display: block;
   font-weight: 600;
   font-family: var(--font-ui);
-  font-size: var(--font-md);
   /* Same gap as between grouped output lines (.scene__log--grouped). */
   margin-bottom: var(--spacing);
 }

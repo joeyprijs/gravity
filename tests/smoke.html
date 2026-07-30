@@ -539,7 +539,7 @@
         const lastLog = () => $$('#scene-narrative .scene__log').at(-1);
         // A run of same-source lines drops the repeated [Player] after the
         // first, so the prefix is stripped rather than asserted on.
-        const lastLogText = () => text(lastLog()).replace(/^\[\w+\]\s*/, '');
+        const lastLogText = () => { const el = lastLog().cloneNode(true); el.querySelector('.scene__log-prefix')?.remove(); return text(el); };
 
         window.gameEngine.renderScene('home_museum_relics');
         await until(() => card('Install New Display Case'), 'the wing\'s panel');
@@ -605,7 +605,7 @@
         // the room's exit instead of a Done — a second option is added here to
         // reach the Done path, then taken away again.
         const panelCards = () => $$('#scene-options-panel button.card');
-        const lastLogText = () => text($$('#scene-narrative .scene__log').at(-1)).replace(/^\[\w+\]\s*/, '');
+        const lastLogText = () => { const el = $$('#scene-narrative .scene__log').at(-1).cloneNode(true); el.querySelector('.scene__log-prefix')?.remove(); return text(el); };
         const lobby = window.gameEngine.data.scenes['home_museum'];
         lobby.options.push({ text: 'Admire the mosaic', actions: [] });
 
@@ -697,7 +697,7 @@
         await until(() => text($('#scene-location-reminder')).includes('Bedroom'), 'the bedroom again');
         const closeLine = $$('#scene-narrative .scene__log').pop();
         assert(text(closeLine).includes('Close Chest'), `closing is logged (got "${text(closeLine)}")`);
-        assert(text(closeLine).startsWith('[Player]'), `in the player's voice (got "${text(closeLine)}")`);
+        assert(text(closeLine).startsWith('Player'), `in the player's voice (got "${text(closeLine)}")`);
 
         // Re-opening shows what's in there now — in the panel, not the log.
         $$('#scene-options-actions .card').find(c => text(c).includes('Personal Chest')).click();
@@ -969,7 +969,7 @@
         const engine = window.gameEngine;
         const cards = () => $$('#scene-options-panel button.card');
         const lastLog = () => $$('#scene-narrative .scene__log').at(-1);
-        const lastLogText = () => text(lastLog()).replace(/^\[\w+\]\s*/, '');
+        const lastLogText = () => { const el = lastLog().cloneNode(true); el.querySelector('.scene__log-prefix')?.remove(); return text(el); };
 
         engine.state.modifyPlayerStat('gold', 500);
         engine.dialogueSystem.startDialogue('mysterious_stranger');

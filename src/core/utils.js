@@ -358,7 +358,8 @@ export function resetOptionsPanel(reminderText = null) {
  * Wraps a leading "[label]" prefix in a styling span so it can be themed
  * separately from the body that follows. Only a prefix at the very start is
  * matched (the engine treats a leading bracket as a speaker/log label); a
- * no-op when the text has no leading prefix.
+ * no-op when the text has no leading prefix. The brackets are marker syntax,
+ * not display — the rendered label drops them (weight and color carry it).
  *
  * @param {string} html - Trusted HTML that may start with a "[label]" prefix.
  * @returns {string} The HTML with any leading prefix wrapped in a span.
@@ -366,7 +367,7 @@ export function resetOptionsPanel(reminderText = null) {
 export function wrapLogPrefix(html) {
   return String(html).replace(
     /^(\s*)\[([^\]]*)\]/,
-    `$1<span class="${CSS.SCENE_LOG_PREFIX}">[$2]</span>`
+    `$1<span class="${CSS.SCENE_LOG_PREFIX}">$2</span>`
   );
 }
 

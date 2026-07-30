@@ -72,7 +72,7 @@ export class NarrativeLog {
     if (type === this._lastLogType) {
       p.classList.add(`${CSS.SCENE_LOG}--grouped`);
     } else {
-      p.appendChild(createElement('span', CSS.SCENE_LOG_PREFIX, `[${type}]`));
+      p.appendChild(createElement('span', CSS.SCENE_LOG_PREFIX, type));
     }
     p.append(` ${message}`);
     this._lastLogType = type;
@@ -124,7 +124,7 @@ export class NarrativeLog {
         if (entry.type === this._lastLogType) {
           p.classList.add(`${CSS.SCENE_LOG}--grouped`);
         } else {
-          p.appendChild(createElement('span', CSS.SCENE_LOG_PREFIX, `[${entry.type}]`));
+          p.appendChild(createElement('span', CSS.SCENE_LOG_PREFIX, entry.type));
         }
         p.append(` ${entry.message}`);
         this._lastLogType = entry.type;
