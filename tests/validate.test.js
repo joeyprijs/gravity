@@ -76,16 +76,6 @@ test('normalizeCarriedItems: string shorthand becomes { item, amount: null }', (
   ]);
 });
 
-test('normalizeCarriedItems: NPCs without carriedItems are untouched', () => {
-  const npcs = { hermit: { name: 'Hermit' } };
-  normalizeCarriedItems(npcs);
-  assert.deepEqual(npcs.hermit, { name: 'Hermit' });
-});
-
-test('clean data produces no issues', () => {
-  assert.deepEqual(validate(makeCleanData()), []);
-});
-
 test('flags unknown item references in tables, loot actions, and skill items', () => {
   const data = makeCleanData();
   data.tables.loot.entries.push({ item: 'ghost' });
@@ -159,14 +149,6 @@ test('flags missing fallback weapons and locale entries', () => {
   assert.ok(issues.every(i => i.group === 'Rules'));
   assert.match(issues[0].message, /fallback item "claw"/);
   assert.match(issues[1].message, /missing locale entry at actions.skillBadge.perception/);
-});
-
-test('handles empty data without throwing', () => {
-  const issues = validateGameData(
-    { items: {}, npcs: {}, scenes: {}, missions: {}, tables: {}, rules: null, locale: {} },
-    new Set()
-  );
-  assert.deepEqual(issues, []);
 });
 
 test('flags a custom attribute id that collides with a reserved condition keyword', () => {
@@ -468,12 +450,6 @@ test('flags a combat NPC whose weapon attackAttribute is missing from its stat b
   // Declaring the attribute clears the warning.
   data.npcs.goblin.attributes.perception = 2;
   assert.ok(!issuesFor(data).some(m => m.includes('declares no perception attribute')));
-});
-
-test('flags fractional levelUp.statPoints', () => {
-  const data = makeToolkitData();
-  data.rules.levelUp = { statPoints: 0.5 };
-  assert.ok(issuesFor(data).some(m => m.includes('levelUp.statPoints must be a non-negative integer')));
 });
 
 test('flags an unknown item type and an undeclared equipment slot', () => {

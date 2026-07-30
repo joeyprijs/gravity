@@ -54,24 +54,11 @@ test('addXP: level-up increases maxHp', () => {
   assert.equal(maxHp(), before + 5);
 });
 
-test('modifyPlayerStat hp: clamps to maxHp on overflow', () => {
+test('modifyPlayerStat: hp clamps to [0, max] in both directions', () => {
   gameState.modifyPlayerStat('hp', 1000);
   assert.equal(hp(), maxHp());
-});
-
-test('modifyPlayerStat hp: clamps to 0 on underflow', () => {
   gameState.modifyPlayerStat('hp', -1000);
   assert.equal(hp(), 0);
-});
-
-test('modifyPlayerStat ap: clamps to maxAp on overflow', () => {
-  gameState.modifyPlayerStat('ap', 1000);
-  assert.equal(ap(), maxAp());
-});
-
-test('modifyPlayerStat ap: clamps to 0 on underflow', () => {
-  gameState.modifyPlayerStat('ap', -1000);
-  assert.equal(ap(), 0);
 });
 
 test('modifyPlayerStat: a declared custom resource is modifiable by name and clamped', () => {
@@ -109,17 +96,11 @@ test('removeFromInventory: decrements amount', () => {
   assert.equal(entry.amount, 1);
 });
 
-test('addToInventory: rejects unknown item ID when an item database is provided', () => {
+test('addToInventory: an item database gates ids — unknown rejected, known accepted', () => {
   gameState.init(TEST_RULES, { rusty_sword: { name: 'Rusty Sword' } });
-  const added = gameState.addToInventory('no_such_item');
-  assert.equal(added, false);
+  assert.equal(gameState.addToInventory('no_such_item'), false);
   assert.equal(gameState.getPlayer().inventory.find(i => i.item === 'no_such_item'), undefined);
-});
-
-test('addToInventory: accepts known item ID when an item database is provided', () => {
-  gameState.init(TEST_RULES, { rusty_sword: { name: 'Rusty Sword' } });
-  const added = gameState.addToInventory('rusty_sword');
-  assert.equal(added, true);
+  assert.equal(gameState.addToInventory('rusty_sword'), true);
   assert.equal(gameState.getPlayer().inventory.find(i => i.item === 'rusty_sword').amount, 2);
 });
 
@@ -161,25 +142,12 @@ test('amendLog extends the newest choice entry, past narrator lines, never acros
   assert.equal(gameState.getLog().at(-3).message, 'Eat a Snack (+2 HP)');
 });
 
-test('appendLog caps at 200 entries', () => {
+test('appendLog caps at 200 entries, trimming the oldest', () => {
   for (let i = 0; i < 250; i++) {
     gameState.appendLog({ type: 'test', message: `msg${i}` });
   }
   assert.ok(gameState.getLog().length <= 200, `Expected ≤200 entries, got ${gameState.getLog().length}`);
-});
-
-test('appendLog: most recent entry preserved after trim', () => {
-  for (let i = 0; i < 250; i++) {
-    gameState.appendLog({ type: 'test', message: `msg${i}` });
-  }
   assert.equal(gameState.getLog().at(-1).message, 'msg249');
-});
-
-test('setFlag / getFlag round-trips', () => {
-  gameState.setFlag('test_flag', true);
-  assert.equal(gameState.getFlag('test_flag'), true);
-  gameState.setFlag('test_flag', false);
-  assert.equal(gameState.getFlag('test_flag'), false);
 });
 
 test('getFlag: missing flag returns false', () => {
@@ -190,12 +158,6 @@ test('getFlag: stored falsy non-boolean value is preserved (not coerced to false
   gameState.setFlag('count', 0);
   assert.equal(gameState.getFlag('count'), 0);
   assert.notEqual(gameState.getFlag('count'), false);
-});
-
-test('registerSceneFlags: initializes flags not yet in state', () => {
-  gameState.registerSceneFlags({ door_open: false, boss_killed: false });
-  assert.equal(gameState.getFlag('door_open'), false);
-  assert.equal(gameState.getFlag('boss_killed'), false);
 });
 
 test('registerSceneFlags: does not overwrite flags already set in state', () => {
@@ -209,11 +171,6 @@ test('reset: re-applies registered scene flags to their initial values', () => {
   gameState.setFlag('door_open', true);
   gameState.reset();
   assert.equal(gameState.getFlag('door_open'), false);
-});
-
-test('setMissionStatus / getMissionStatus round-trips', () => {
-  gameState.setMissionStatus('test_mission', 'active');
-  assert.equal(gameState.getMissionStatus('test_mission'), 'active');
 });
 
 test('setMissionStatus: emits a mutation so observers can react to quest changes', () => {

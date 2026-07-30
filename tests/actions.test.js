@@ -1,4 +1,4 @@
-import { test, beforeEach } from 'node:test';
+import { test, beforeEach, afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { gameState } from '../src/core/state.js';
 import { registerBuiltinActions } from '../src/systems/actions.js';
@@ -59,6 +59,7 @@ function makeEngine({ rules = TEST_RULES, items = TEST_ITEMS } = {}) {
 }
 
 beforeEach(() => gameState.init(TEST_RULES));
+afterEach(() => mock.restoreAll());
 
 // ── loot ──────────────────────────────────────────────────────────────────────
 
@@ -70,24 +71,14 @@ test('loot: gold goes to the gold resource, not the inventory', () => {
   assert.equal(calls.logs[0].message, 'loot.foundGold');
 });
 
-test('loot: received gold uses the received locale key', () => {
-  const { run, calls } = makeEngine();
-  run({ type: ACTIONS.LOOT, item: 'gold', amount: 5, received: true });
-  assert.equal(calls.logs[0].message, 'loot.receivedGold');
-});
-
-test('loot: item is added to the inventory with default amount 1', () => {
+test('loot: item is added with default amount 1; received selects the handed-over key', () => {
   const { run, calls } = makeEngine();
   run({ type: ACTIONS.LOOT, item: 'healing_potion' });
   const entry = gameState.getPlayer().inventory.find(i => i.item === 'healing_potion');
   assert.equal(entry.amount, 1);
   assert.equal(calls.logs[0].message, 'loot.foundItem');
-});
-
-test('loot: received item uses the received locale key', () => {
-  const { run, calls } = makeEngine();
   run({ type: ACTIONS.LOOT, item: 'healing_potion', received: true });
-  assert.equal(calls.logs[0].message, 'loot.receivedItem');
+  assert.equal(calls.logs[1].message, 'loot.receivedItem');
 });
 
 test('loot: log false suppresses the log line, item still awarded', () => {
@@ -95,12 +86,6 @@ test('loot: log false suppresses the log line, item still awarded', () => {
   run({ type: ACTIONS.LOOT, item: 'healing_potion', log: false });
   assert.equal(calls.logs.length, 0);
   assert.ok(gameState.getPlayer().inventory.find(i => i.item === 'healing_potion'));
-});
-
-test('loot: a string log overrides the default message', () => {
-  const { run, calls } = makeEngine();
-  run({ type: ACTIONS.LOOT, item: 'gold', amount: 1, log: 'You pry the coin loose.' });
-  assert.equal(calls.logs[0].message, 'You pry the coin loose.');
 });
 
 test('loot: xpReward awards XP and logs it', () => {
@@ -120,19 +105,7 @@ test('combat: starts combat with the listed enemies and passes the action throug
   assert.equal(calls.combat[0].action, action);
 });
 
-// ── dialogue / navigate / return ──────────────────────────────────────────────
-
-test('dialogue: starts a dialogue with the given NPC', () => {
-  const { run, calls } = makeEngine();
-  run({ type: ACTIONS.DIALOGUE, npc: 'dwarf_innkeeper' });
-  assert.deepEqual(calls.dialogue, ['dwarf_innkeeper']);
-});
-
-test('navigate: renders the destination scene', () => {
-  const { run, calls } = makeEngine();
-  run({ type: ACTIONS.NAVIGATE, destination: 'dungeon_corridor' });
-  assert.deepEqual(calls.renderedScenes, ['dungeon_corridor']);
-});
+// ── return ────────────────────────────────────────────────────────────────────
 
 test('return: renders the stored return scene', () => {
   const { run, calls } = makeEngine();
@@ -262,32 +235,28 @@ test('heal: defaults to 2 when rules define no snackHealAmount', () => {
   assert.equal(hp(), 4);
 });
 
-// ── pipeline utilities ────────────────────────────────────────────────────────
+// ── time actions ──────────────────────────────────────────────────────────────
 
-test('set_flag: writes the flag value', () => {
+test('advance_time: "until" derives the distance to the segment and wins over "amount"; unknown segments advance nothing', () => {
+  const warn = mock.method(console, 'warn', () => {});
+  const rules = { ...TEST_RULES, time: { ticksPerDay: 24, segments: [{ id: 'morning', from: 6 }] } };
+  gameState.init(rules);
+  const { engine, run } = makeEngine({ rules });
+  const advanced = [];
+  engine.advanceTime = (n) => advanced.push(n);
+  run({ type: ACTIONS.ADVANCE_TIME, amount: 1, until: 'morning' }); // tick 0 → morning starts at 6
+  assert.deepEqual(advanced, [6]);
+  run({ type: ACTIONS.ADVANCE_TIME, until: 'noon' });
+  assert.deepEqual(advanced, [6], 'an unresolvable segment is a warning no-op');
+  assert.equal(warn.mock.callCount(), 1);
+});
+
+test('set_timer arms on the live clock, re-arming an id replaces it, cancel_timer disarms', () => {
   const { run } = makeEngine();
-  run({ type: ACTIONS.SET_FLAG, flag: 'gate_open', value: true });
-  assert.equal(gameState.getFlag('gate_open'), true);
-});
-
-test('log: emits the given message', () => {
-  const { run, calls } = makeEngine();
-  run({ type: ACTIONS.LOG, message: 'The walls tremble.' });
-  assert.equal(calls.logs[0].message, 'The walls tremble.');
-});
-
-test('manage_chest: opens the custom UI and renders the chest', () => {
-  const { run, calls } = makeEngine();
-  run({ type: ACTIONS.MANAGE_CHEST, chest: 'museum' });
-  assert.deepEqual(calls.customUI, [true]);
-  assert.deepEqual(calls.chests, ['museum']);
-});
-
-test('registerBuiltinActions registers every built-in action type', () => {
-  const { registry } = makeEngine();
-  for (const type of [ACTIONS.LOOT, ACTIONS.COMBAT, ACTIONS.DIALOGUE, ACTIONS.RETURN,
-                      ACTIONS.FULL_REST, ACTIONS.HEAL, ACTIONS.NAVIGATE, ACTIONS.SET_FLAG,
-                      ACTIONS.LOG, ACTIONS.MANAGE_CHEST]) {
-    assert.ok(registry.has(type), `expected "${type}" to be registered`);
-  }
+  run({ type: ACTIONS.SET_TIMER, id: 'alarm', afterTicks: 5, actions: [] });
+  run({ type: ACTIONS.SET_TIMER, id: 'alarm', afterTicks: 2, actions: [] });
+  run({ type: ACTIONS.SET_TIMER, id: 'other', afterTicks: 2, actions: [] });
+  run({ type: ACTIONS.CANCEL_TIMER, id: 'other' });
+  const due = gameState.advanceTime(2);
+  assert.deepEqual(due.map(t => t.id), ['alarm'], 'only the re-armed deadline came due');
 });

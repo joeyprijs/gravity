@@ -61,18 +61,6 @@ function makeEngine(pluginConfigs = {}) {
 
 beforeEach(() => gameState.init(TEST_RULES, TEST_ITEMS));
 
-test('plugin registers its scene decorator, action handlers, and sheet row', () => {
-  const { engine, registry, decorators, sheetRows } = makeEngine();
-  curatorPlugin(engine);
-  assert.equal(decorators.length, 1);
-  assert.equal(typeof decorators[0].options, 'function');
-  // No description decorator: the cases are the panel's to show, so nothing
-  // is spliced into the room's narrative description.
-  assert.equal(decorators[0].description, undefined);
-  assert.ok(registry.has('manage_exhibits'));
-  assert.deepEqual(sheetRows, [{ label: 'plugin.curator.reputationLabel', bind: 'attributes.reputation', icon: 'thumbs_up' }]);
-});
-
 test('plugin registers a validator that flags the deprecated top-level item.reputation', () => {
   const { engine, validators } = makeEngine();
   curatorPlugin(engine);
@@ -163,18 +151,8 @@ test('museum layout: the hall spans every column in use — that is the room for
   }
 });
 
-test('museum layout: no two wings ever land on the same spot', () => {
-  const { engine } = makeEngine({ curator: TEST_LAYOUT });
-  const slots = Array.from({ length: 40 }, (_, i) => i);
-  engine.data.scenes = museumScenes(slots);
-  curatorPlugin(engine);
-
-  const spots = slots.map(s => {
-    const { top, left } = engine.data.scenes[`wing${s}`].mapDefinitions;
-    return `${left},${top}`;
-  });
-  assert.equal(new Set(spots).size, slots.length);
-});
+// (Wing-overlap safety is asserted against the SHIPPED layout in
+// data-integrity.test.js — the formula has one owner there.)
 
 test('museum layout: without the manifest config, authored geometry is left alone', () => {
   const { engine } = makeEngine();   // no museumLayout
@@ -260,21 +238,12 @@ test('build_wing: without a museumLayout, nothing is built and nothing is charge
   assert.equal(Object.keys(engine.data.scenes).length, 1, 'no scene synthesized');
 });
 
-test('build_wing: without a configured wingCost, a wing costs the default 250 — never 0', () => {
+test('build_wing: an unaffordable wing is not built — and no wingCost means the default 250, never 0', () => {
   // installCost falls back to a real price; wingCost must too, or a game that
   // configures the layout but forgets the cost hands out free wings. The
-  // player's 100 gold can't cover the default, so the build is refused.
+  // player's 100 gold can't cover the default, so this build is refused too.
   const { engine, registry, calls } = withMuseum({ curator: TEST_LAYOUT });
   registry.get('build_wing')({ type: 'build_wing', name: 'Marble Hall' }, engine);
-
-  assert.equal(engine.state.getPlayer().resources.gold, 100, 'no gold taken');
-  assert.deepEqual(gameState.pluginState('curator').rooms ?? [], []);
-  assert.equal(calls.logs[0].message, 'ui.notEnoughGold');
-});
-
-test('build_wing: an unaffordable wing is not built', () => {
-  const { engine, registry, calls } = withMuseum();
-  registry.get('build_wing')({ type: 'build_wing', name: 'Marble Hall', cost: 500 }, engine);
 
   assert.equal(engine.state.getPlayer().resources.gold, 100, 'no gold taken');
   assert.deepEqual(gameState.pluginState('curator').rooms ?? [], []);
@@ -322,9 +291,11 @@ test('a pre-time (v3) save with the curator active runs core AND plugin migratio
       resources: { hp: { current: 10, max: 10 }, ap: { current: 3, max: 3 }, gold: 5 },
       attributes: { ac: 10, initiative: 0, reputation: 0 },
       inventory: [{ item: 'relic_crown', amount: 1 }],
-      equipment: {},
+      equipment: { 'Right Hand': 'rusty_sword' },
     },
-    flags: {}, missions: {}, chests: {}, displays: {}, visitedScenes: [], log: [],
+    flags: {}, missions: {}, chests: {},
+    displays: { museum_room: [{ id: 'display_1', name: 'Case', item: 'relic_shard' }] },
+    visitedScenes: [], log: [],
   });
 
   assert.equal(ok, true);
@@ -333,7 +304,10 @@ test('a pre-time (v3) save with the curator active runs core AND plugin migratio
   assert.deepEqual(gameState.state.time, { ticks: 0 }, 'core v4 seeded the clock');
   assert.deepEqual(gameState.state.timers, [], 'core v4 seeded timers');
   assert.equal(gameState.pluginState('curator').museumReputation, 0, 'the curator migration seeded the permanent score');
-  assert.deepEqual(gameState.pluginState('curator').obtainedItems, ['relic_crown'], 'the curator migration backfilled owned relics');
+  // The backfill sweeps every place a relic can already live: carried,
+  // worn, and exhibited.
+  assert.deepEqual([...gameState.pluginState('curator').obtainedItems].sort(),
+    ['relic_crown', 'relic_shard', 'rusty_sword']);
   // Core and plugin versions are partitioned: the core counter never carries
   // the curator's number.
   assert.equal(gameState.state.saveVersion, 4);

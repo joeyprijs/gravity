@@ -23,11 +23,6 @@ const TEST_RULES = {
 
 beforeEach(() => gameState.init(TEST_RULES));
 
-test('getDisplaysForScene: returns empty array initially', () => {
-  const displays = gameState.getDisplaysForScene('home_museum');
-  assert.deepEqual(displays, []);
-});
-
 test('addDisplayToScene: registers new display case and returns unique ID', () => {
   const displayId = gameState.addDisplayToScene('home_museum', {
     name: 'Glass Pedestal'

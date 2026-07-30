@@ -460,7 +460,8 @@ export class RPGEngine {
 
   /**
    * Subscribes a handler to an engine event. Current events:
-   *   'scene:entered'  { sceneId, scene } — a questTrigger scene was entered
+   *   'scene:entered'  { sceneId, scene, isEntry, startsCombat } — every scene
+   *   render except save restores; isEntry separates arrivals from re-renders
    *
    * @param {string} event - Event name.
    * @param {(data: object) => void} handler

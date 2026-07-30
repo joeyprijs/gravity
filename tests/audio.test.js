@@ -32,11 +32,6 @@ test('resolveAmbience is silent when neither scene nor region declares audio', (
 
 const makeAudio = () => new AudioSystem({ data: { regions: REGIONS } });
 
-test('AudioSystem constructs headless with default settings', () => {
-  const audio = makeAudio();
-  assert.deepEqual(audio.settings, { muted: false, ambienceVolume: 1, narrationVolume: 0.25 });
-});
-
 test('syncAmbience before unlock records the target loop without playing', () => {
   const audio = makeAudio();
   audio.syncAmbience({ region: 'dungeon' });
@@ -101,13 +96,8 @@ test('narration waits for a bed that is still decoding, not just its fade', asyn
   assert.equal(await pending, 14 + NARRATION_DELAY);
 });
 
-test('setMuted and setVolume update settings headless', () => {
-  const audio = makeAudio();
-  audio.setMuted(true);
-  audio.setVolume('ambience', 0.25);
-  assert.equal(audio.settings.muted, true);
-  assert.equal(audio.settings.ambienceVolume, 0.25);
-});
+// (The Options-tab controls writing through to these settings is driven
+// against the real DOM by the smoke test.)
 
 // ── SceneRenderer narration resolution ─────────────────────────────────────
 

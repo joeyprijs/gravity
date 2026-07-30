@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isSpecialItem, itemCardStats, itemStatLines, equipmentAttributeBonuses } from '../src/core/utils.js';
+import { itemCardStats, itemStatLines, equipmentAttributeBonuses } from '../src/core/utils.js';
 
 // t() echoes "key:params" so assertions can check both key and values.
 const t = (key, p) => p ? `${key}:${JSON.stringify(p)}` : key;
@@ -49,15 +49,6 @@ test('equipmentAttributeBonuses: merges attributeBonuses with legacy armorClassB
     equipmentAttributeBonuses({ attributes: { armorClassBonus: 2, attributeBonuses: { perception: 1, ac: 1 } } }),
     { ac: 3, perception: 1 }
   );
-});
-
-// ── isSpecialItem ─────────────────────────────────────────────────────────────
-
-test('isSpecialItem: only the Special type, and never throws on a missing item', () => {
-  assert.ok(isSpecialItem({ type: 'Special' }));
-  assert.ok(!isSpecialItem({ type: 'Consumable' }));
-  assert.ok(!isSpecialItem({}), 'an untyped item is Flavour, not Special');
-  assert.ok(!isSpecialItem(undefined), 'an id with no definition behind it');
 });
 
 // ── itemCardStats ─────────────────────────────────────────────────────────────

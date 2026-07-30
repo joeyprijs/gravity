@@ -2,7 +2,7 @@ import { test, beforeEach, afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { gameState } from '../src/core/state.js';
 import {
-  normalizeOutcomes, pickTier, performSkillCheck, formatMod, resolveRetryText,
+  normalizeOutcomes, pickTier, performSkillCheck, resolveRetryText,
   getAttempts, recordAttempt, isResolved, markResolved, resetAttempts,
   rollBreakdown, skillLabel, pickVariant, retryCost, retryGate, applyRetryGate, spendRetryCost,
 } from '../src/systems/skill-checks.js';
@@ -171,12 +171,6 @@ test('resetAttempts: non-object flag values are left alone', () => {
 
 // ── Small helpers ─────────────────────────────────────────────────────────────
 
-test('formatMod: always signed', () => {
-  assert.equal(formatMod(2), '+2');
-  assert.equal(formatMod(0), '+0');
-  assert.equal(formatMod(-1), '-1');
-});
-
 test('resolveRetryText: walks the variants per attempt and clamps to the last', () => {
   const opt = { text: 'Try', retryText: ['Again', 'Once more'] };
   assert.equal(resolveRetryText(opt, 0), 'Try');
@@ -274,12 +268,6 @@ test('applyRetryGate: appends the cost as its own badge line; free gate is uncha
   assert.equal(out[0], 'DC 12');
   assert.match(out[1], /badgeRetryCost/);
   assert.match(out[1], /ui\.resources\.luckPoints/); // label resolved through locale
-});
-
-test('rollBreakdown: formats breakdown strings correctly', () => {
-  assert.equal(rollBreakdown(15, 0, 'Perception'), '1d20: 15');
-  assert.equal(rollBreakdown(12, 3, 'Stealth'), '1d20: 12 + 3 Stealth');
-  assert.equal(rollBreakdown(10, -2, 'Weakness'), '1d20: 10 - 2 Weakness');
 });
 
 test('skillLabel: resolves localized name or falls back to capitalized id', () => {

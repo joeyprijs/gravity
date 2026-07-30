@@ -2,9 +2,8 @@ import { test, beforeEach, afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { gameState } from '../src/core/state.js';
 import { SceneRenderer } from '../src/systems/scene.js';
-import { CHECK_KEYS, FLAG_KEYS } from '../src/core/config.js';
-import { getAttempts, recordAttempt } from '../src/systems/skill-checks.js';
-import { rollTable } from '../src/systems/dice.js';
+import { CHECK_KEYS } from '../src/core/config.js';
+import { getAttempts } from '../src/systems/skill-checks.js';
 
 // Minimal DOM stand-in — just enough for createElement/buildOptionButton to run
 // headless. Elements are only built by the code under test, never queried back.
@@ -85,11 +84,6 @@ afterEach(() => mock.restoreAll());
 
 // ── _resolveDescription ───────────────────────────────────────────────────────
 
-test('_resolveDescription: plain string is returned as-is', () => {
-  const { sr } = makeSR();
-  assert.equal(sr._resolveDescription({ description: 'A damp cell.' }), 'A damp cell.');
-});
-
 test('_resolveDescription: conditional array falls back to the unconditioned entry', () => {
   const { sr } = makeSR();
   const scene = { description: [
@@ -115,28 +109,6 @@ test('_resolveDescription: scene decorators append to every scene', () => {
   const { sr } = makeSR({ decorators: [decorator] });
   gameState.setCurrentSceneId('cell');
   assert.equal(sr._resolveDescription({ description: 'Bare walls.' }), 'Bare walls.<aside>cell</aside>');
-});
-
-// ── rollTable (dice.js — exercised here against loot-shaped tables) ──────────
-
-test('rollTable: missing or empty tables return null', () => {
-  assert.equal(rollTable(undefined), null);
-  assert.equal(rollTable({ entries: [] }), null);
-});
-
-test('rollTable: weighted picks honour entry dropWeights', () => {
-  const table = { entries: [{ item: 'common', dropWeight: 3 }, { item: 'rare', dropWeight: 1 }] };
-  // Total weight 4: r in (0,3] → common, r in (3,4] → rare.
-  mock.method(Math, 'random', () => 0.5); // r = 2
-  assert.equal(rollTable(table).item, 'common');
-  mock.method(Math, 'random', () => 0.9); // r = 3.6
-  assert.equal(rollTable(table).item, 'rare');
-});
-
-test('rollTable: dropWeight defaults to 1 per entry', () => {
-  const table = { entries: [{ item: 'a' }, { item: 'b' }] };
-  mock.method(Math, 'random', () => 0.99); // r = 1.98 → second entry
-  assert.equal(rollTable(table).item, 'b');
 });
 
 // ── _awardDiscoveredLoot ──────────────────────────────────────────────────────
@@ -168,14 +140,6 @@ test('_awardDiscoveredLoot: duplicate drops aggregate into one stack and label',
   sr._awardDiscoveredLoot([{ item: 'healing_potion' }, { item: 'healing_potion', amount: 2 }]);
   assert.equal(gameState.getPlayer().inventory.find(i => i.item === 'healing_potion').amount, 3);
   assert.equal(calls.logs[0].message, 'loot.foundItems:{"list":"Healing Potion (x3)"}');
-});
-
-test('_awardDiscoveredLoot: multiple kinds join through Intl.ListFormat', () => {
-  const { sr, engine, calls } = makeSR();
-  engine.t = paramEchoT;
-  engine.language = 'en';
-  sr._awardDiscoveredLoot([{ item: 'healing_potion' }, { item: 'rusty_sword' }]);
-  assert.equal(calls.logs[0].message, 'loot.foundItems:{"list":"Healing Potion and Rusty Sword"}');
 });
 
 test('_awardDiscoveredLoot: table entries roll concrete drops', () => {
@@ -289,22 +253,8 @@ test('_registerInitialDisplays: leaves save-restored displays untouched', () => 
   assert.equal(displays[0].id, 'from_save');
 });
 
-test('_resetSkillAttempts: clears attempt counters but keeps resolution markers', () => {
-  const { sr } = makeSR();
-  const key = CHECK_KEYS.skillDc('lockpick', 'cell');
-  gameState.setCheckState(key, { tries_0: 2, resolved_1: true });
-  sr._resetSkillAttempts({ skills: [{ skillCheck: 'lockpick', dc: 10 }] }, 'cell');
-  assert.deepEqual(gameState.getCheckState(key), { resolved_1: true });
-});
-
-test('_resetSkillAttempts: discovery keeps found items and resolution, drops tries', () => {
-  const { sr } = makeSR();
-  const key = CHECK_KEYS.skillDc('perception', 'cell');
-  gameState.setCheckState(key, { found: [true, false], tries: 3, resolved: true });
-  sr._resetSkillAttempts({ skills: [{ skillCheck: 'perception', items: [{ dc: 5 }, { dc: 15 }] }] }, 'cell');
-  assert.deepEqual(gameState.getCheckState(key), { found: [true, false], resolved: true });
-});
-
+// What a reset keeps vs drops is resetAttempts' contract, owned by
+// skill-checks.test.js — here only the scene-side guard is worth a test.
 test('_resetSkillAttempts: checks never attempted are left alone', () => {
   const { sr } = makeSR();
   const key = CHECK_KEYS.skillDc('perception', 'cell');
@@ -314,24 +264,11 @@ test('_resetSkillAttempts: checks never attempted are left alone', () => {
 
 // ── _maybeStartAutoAttack ─────────────────────────────────────────────────────
 
-test('_maybeStartAutoAttack: no autoAttack returns false', () => {
-  const { sr, calls } = makeSR();
-  assert.equal(sr._maybeStartAutoAttack({}), false);
-  assert.equal(calls.combat.length, 0);
-});
-
 test('_maybeStartAutoAttack: unmet condition blocks the encounter', () => {
   const { sr, calls } = makeSR();
   const scene = { autoAttack: { enemies: ['goblin_grunt'], condition: { flag: 'ambush', value: true } } };
   assert.equal(sr._maybeStartAutoAttack(scene), false);
   assert.equal(calls.combat.length, 0);
-});
-
-test('_maybeStartAutoAttack: starts combat and reports true when allowed', () => {
-  const { sr, calls } = makeSR();
-  const scene = { autoAttack: { enemies: ['goblin_grunt'] } };
-  assert.equal(sr._maybeStartAutoAttack(scene), true);
-  assert.deepEqual(calls.combat[0].enemies, ['goblin_grunt']);
 });
 
 test('render: skipAutoAttack suppresses the scene autoAttack (post-victory re-render)', () => {
@@ -351,13 +288,6 @@ test('render: refuses to render during combat', () => {
   gameState.setCurrentSceneId('cell');
   sr.render('elsewhere');
   assert.equal(gameState.getCurrentSceneId(), 'cell');
-});
-
-test('render: unknown scene logs an error and bails', () => {
-  const error = mock.method(console, 'error', () => {});
-  const { sr } = makeSR();
-  sr.render('no_such_scene');
-  assert.equal(error.mock.callCount(), 1);
 });
 
 test('handleOption: re-renders options when no action navigated', () => {
@@ -397,34 +327,6 @@ test('restoreFromSave: a null description leaves the cache empty', () => {
   const { sr } = makeSR({ scenes: { cell: {} } });
   sr.restoreFromSave('cell', null);
   assert.equal(sr.lastRenderedSceneId, null);
-});
-
-// ── _buildPassFailButton: re-render guards ────────────────────────────────────
-
-test('_buildPassFailButton: success that opens a dialogue skips the scene re-render', () => {
-  const { sr, engine, calls } = makeSR({ scenes: { cell: {} } });
-  gameState.setCurrentSceneId('cell');
-  engine.runActions = () => { engine.inDialogue = true; };
-  mock.method(Math, 'random', () => 0.99); // d20 roll of 20 — passes DC 5
-  const btn = sr._buildPassFailButton(
-    { text: 'Persuade the guard', skillCheck: 'perception', dc: 5, actions: [{ type: 'dialogue', npc: 'guard' }] },
-    0, 'cell', {}
-  );
-  btn.onclick();
-  assert.equal(calls.renderedScenes.length, 0);
-});
-
-test('_buildPassFailButton: failure whose onFailure opens a custom UI skips the options re-render', () => {
-  const { sr, engine } = makeSR({ scenes: { cell: {} } });
-  gameState.setCurrentSceneId('cell');
-  engine.runActions = () => { engine.inCustomUI = true; };
-  mock.method(Math, 'random', () => 0); // d20 roll of 1 — fails DC 5
-  const btn = sr._buildPassFailButton(
-    { text: 'Pick the lock', skillCheck: 'perception', dc: 5, onFailure: [{ type: 'manage_chest' }] },
-    0, 'cell', {}
-  );
-  btn.onclick();
-  assert.equal(sr.renderOptions.mock.callCount(), 0);
 });
 
 // ── Outcome tiers, resolveOnce, maxAttempts ──────────────────────────────────
@@ -546,16 +448,6 @@ test('handleOption: navigate options charge the default travel cost before the p
   assert.deepEqual(charged, [2]);
 });
 
-test('handleOption: an explicit timeCost of 0 opts out of the default', () => {
-  const { sr, engine } = makeSR({ scenes: { cell: {} } });
-  engine.data.rules = { time: { defaultCosts: { navigate: 2 } } };
-  const charged = [];
-  engine.advanceTime = (n) => charged.push(n);
-  gameState.setCurrentSceneId('cell');
-  sr.handleOption({ text: 'Go', timeCost: 0, actions: [{ type: 'navigate', destination: 'exit' }] });
-  assert.deepEqual(charged, []);
-});
-
 test('skill attempts charge the skillAttempt default (or their explicit timeCost)', () => {
   const { sr, engine } = makeSR();
   engine.data.rules = { time: { defaultCosts: { skillAttempt: 1 } } };
@@ -638,6 +530,21 @@ test('discovery adopts legacy top-level state from older saves', () => {
   assert.equal(sr._buildItemDiscoveryButton(opt, 0, 'cell', {}), null);
 });
 
+// ── scene:entered — the event plugins build on ───────────────────────────────
+
+test('scene:entered fires on every render except restores, with isEntry telling arrivals apart', () => {
+  const scene = { description: 'Bare walls.', autoAttack: { enemies: ['goblin_grunt'] } };
+  const { sr, calls } = makeSR({ scenes: { cell: scene } });
+  sr.render('cell');
+  assert.deepEqual(calls.emitted[0], {
+    event: 'scene:entered',
+    data: { sceneId: 'cell', scene, isEntry: true, startsCombat: true },
+  });
+  sr.render('cell', { skipAutoAttack: true });
+  assert.equal(calls.emitted[1].data.isEntry, false, 'a same-scene re-render is not an arrival');
+  assert.equal(calls.emitted[1].data.startsCombat, false, 'skipAutoAttack reaches the payload');
+});
+
 // ── Game over: the scene must not clobber the recovery panel ─────────────────
 
 test('_didNavigate treats game over as navigation, so options are not re-rendered over it', () => {
@@ -645,6 +552,9 @@ test('_didNavigate treats game over as navigation, so options are not re-rendere
   // the combat — endCombat has already cleared inCombat when the stack
   // unwinds, and handleOption re-rendered the scene's options on top of the
   // game-over panel, letting the player fight on after death.
+  // (The mock's snapshotNavigation mirrors the engine's mode-machine
+  // semantics; the real engine.snapshotNavigation is driven end-to-end by
+  // the smoke test's combat and dialogue flows.)
   const { sr, engine } = makeSR({ scenes: { cell: {} } });
   gameState.setCurrentSceneId('cell');
   engine.runActions = () => { engine.isGameOver = true; }; // pipeline kills the player

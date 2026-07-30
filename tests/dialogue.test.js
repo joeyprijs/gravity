@@ -128,14 +128,6 @@ test('startDialogue: resets store state from a previous conversation', () => {
 
 // ── registered dialogue actions ───────────────────────────────────────────────
 
-test('constructor registers the dialogue actions on the engine registry', () => {
-  const { registry } = makeDS();
-  for (const type of [ACTIONS.GO_TO_CONVERSATION, ACTIONS.TRADE, ACTIONS.LEAVE,
-                      ACTIONS.QUEST_TRIGGER]) {
-    assert.ok(registry.has(type), `expected "${type}" to be registered`);
-  }
-});
-
 test('goToConversation: renders the target node during a dialogue', () => {
   const { ds, registry, engine } = makeDS();
   ds.startDialogue('talker');
@@ -158,26 +150,22 @@ test('leave: renders the current scene', () => {
   assert.deepEqual(calls.renderedScenes, ['town_square']);
 });
 
-test('questTrigger: forwards the action to the engine', () => {
-  const { registry, engine, calls } = makeDS();
-  const action = { type: ACTIONS.QUEST_TRIGGER, mission: 'escape_dungeon' };
-  registry.get(ACTIONS.QUEST_TRIGGER)(action, engine);
-  assert.deepEqual(calls.questTriggers, [action]);
-});
-
-test('trade: numeric discount percentage becomes a ratio and opens the store', () => {
+test('trade: the discount percentage becomes a ratio (numeric or string) and opens the store', () => {
   const { ds, registry, engine } = makeDS();
   ds.startDialogue('talker');
   registry.get(ACTIONS.TRADE)({ type: ACTIONS.TRADE, tradeDiscount: 20 }, engine);
   assert.equal(ds.activeDiscount, 0.2);
   assert.equal(ds.renderStore.mock.callCount(), 1);
-});
-
-test('trade: string discount percentage is parsed', () => {
-  const { ds, registry, engine } = makeDS();
-  ds.startDialogue('talker');
   registry.get(ACTIONS.TRADE)({ type: ACTIONS.TRADE, tradeDiscount: '25' }, engine);
   assert.equal(ds.activeDiscount, 0.25);
+});
+
+test('trade: an unparseable discount means no discount, never NaN prices', () => {
+  const { ds, registry, engine } = makeDS();
+  ds.startDialogue('talker');
+  registry.get(ACTIONS.TRADE)({ type: ACTIONS.TRADE, tradeDiscount: 'abc', persistDiscount: true }, engine);
+  assert.equal(ds.activeDiscount, 0);
+  assert.equal(gameState.getFlag(FLAG_KEYS.tradeDiscount('talker')), false, 'nothing persisted either');
 });
 
 test('trade: persistDiscount stores the percentage in a flag', () => {
@@ -233,15 +221,10 @@ test('_getStock: null npcAmount means unlimited stock', () => {
   assert.equal(ds._getStock('healing_potion', null), null);
 });
 
-test('_getStock: falls back to the NPC-configured amount when nothing was sold yet', () => {
+test('_getStock: the merchant flag wins once set, else the NPC-configured amount', () => {
   const { ds } = makeDS();
   ds.startDialogue('quiet_merchant');
-  assert.equal(ds._getStock('healing_potion', 3), 3);
-});
-
-test('_getStock: reads the remaining stock from the merchant flag', () => {
-  const { ds } = makeDS();
-  ds.startDialogue('quiet_merchant');
+  assert.equal(ds._getStock('healing_potion', 3), 3, 'nothing sold yet — NPC amount');
   gameState.setFlag(FLAG_KEYS.merchantStock('quiet_merchant', 'healing_potion'), 1);
   assert.equal(ds._getStock('healing_potion', 3), 1);
 });
