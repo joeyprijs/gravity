@@ -120,18 +120,21 @@ const HAND_TYPES = new Set(['Weapon', 'Spell']);
 
 /**
  * The hand a weapon or spell goes into: an empty hand (left before right),
- * otherwise the hand opposite the one filled last — so successive equips
- * alternate left, right, left… The alternation is session memory
- * (engine._lastEquippedHand); after a reload the next equip starts left again.
+ * otherwise the hand holding the same type as the incoming item — a new
+ * weapon replaces the weapon, a new spell the spell — so the pick is always
+ * readable off the equipped section. Left when the types don't decide
+ * (both hands hold the incoming type).
  *
  * @param {object} engine - The RPGEngine instance.
+ * @param {object} itemData - The item being equipped.
  * @returns {string} A hand slot name.
  */
-function pickHand(engine) {
+function pickHand(engine, itemData) {
   const equipment = engine.state.getPlayer().equipment;
   const empty = WEAPON_SLOTS.find(hand => !equipment[hand]);
   if (empty) return empty;
-  return engine._lastEquippedHand === WEAPON_SLOTS[0] ? WEAPON_SLOTS[1] : WEAPON_SLOTS[0];
+  const sameType = WEAPON_SLOTS.find(hand => engine.data.items[equipment[hand]]?.type === itemData.type);
+  return sameType ?? WEAPON_SLOTS[0];
 }
 
 /**
@@ -147,7 +150,7 @@ export function equipItem(engine, itemId) {
   if (engine.isGameOver) return;
   const itemData = engine.data.items[itemId];
   if (!itemData) return;
-  const targetSlot = HAND_TYPES.has(itemData.type) ? pickHand(engine) : itemData.slot;
+  const targetSlot = HAND_TYPES.has(itemData.type) ? pickHand(engine, itemData) : itemData.slot;
   if (!targetSlot) return;
 
   if (engine.state.countPlayerItem(itemId, { includeEquipped: false }) <= 0) return;
@@ -170,7 +173,6 @@ export function equipItem(engine, itemId) {
     deltas[key] = (newBonuses[key] ?? 0) - (oldBonuses[key] ?? 0);
   }
   engine.state.modifyPlayerStats(deltas);
-  if (WEAPON_SLOTS.includes(targetSlot)) engine._lastEquippedHand = targetSlot;
   // The user's act, in their voice — the engine-picked hand rides along in
   // the parens (see STYLE.md, the narrative log's two voices).
   engine.log(LOG.PLAYER, engine.t('player.equipped', { name: itemData.name, slot: targetSlot }), 'choice');

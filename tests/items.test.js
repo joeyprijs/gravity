@@ -10,6 +10,7 @@ const ITEMS = {
   sword:   { name: 'Sword',   type: 'Weapon', slot: RIGHT, attributes: { damageRoll: '1d6', actionPoints: 1 } },
   dagger:  { name: 'Dagger',  type: 'Weapon', slot: RIGHT, attributes: { damageRoll: '1d4', actionPoints: 1 } },
   flames:  { name: 'Flames',  type: 'Spell',  slot: RIGHT, attributes: { damageRoll: '2d6', actionPoints: 2 } },
+  frost:   { name: 'Frost',   type: 'Spell',  slot: RIGHT, attributes: { damageRoll: '1d8', actionPoints: 2 } },
   cudgel:  { name: 'Cudgel',  type: 'Weapon', slot: LEFT,  attributes: { damageRoll: '1d6', actionPoints: 1 } },
   // A weapon that declares no slot at all — the demo's dagger does the same.
   knife:   { name: 'Knife',   type: 'Weapon', attributes: { damageRoll: '1d4', actionPoints: 1 } },
@@ -44,7 +45,6 @@ function makeMockEngine() {
     get inCombat() { return this.mode === 'combat'; },
     get isGameOver() { return this.mode === 'gameover'; },
     _spendAP: () => true,
-    _lastEquippedHand: null,
   };
 }
 
@@ -59,20 +59,37 @@ beforeEach(() => {
   engine = makeMockEngine();
 });
 
-test('equipItem: hand items fill left, then right, then alternate', () => {
+test('equipItem: hand items fill left, then right', () => {
   equipItem(engine, 'sword');
   assert.deepEqual(hands(), ['sword', null]);
 
   equipItem(engine, 'dagger');
   assert.deepEqual(hands(), ['sword', 'dagger']);
+});
 
-  // Both hands full: the next equip goes back to the left, and the one after
-  // that to the right.
+test('equipItem: both hands full, the incoming item replaces its own type', () => {
+  equipItem(engine, 'sword');
+  equipItem(engine, 'flames');
+  assert.deepEqual(hands(), ['sword', 'flames']);
+
+  // A new weapon swaps the weapon, keeping the spell — and vice versa.
+  equipItem(engine, 'dagger');
+  assert.deepEqual(hands(), ['dagger', 'flames']);
+
+  equipItem(engine, 'frost');
+  assert.deepEqual(hands(), ['dagger', 'frost']);
+});
+
+test('equipItem: when the types cannot decide, the left hand is replaced', () => {
+  // Two weapons, a third incoming: both hands match, the left goes first.
+  equipItem(engine, 'sword');
+  equipItem(engine, 'dagger');
+  equipItem(engine, 'cudgel');
+  assert.deepEqual(hands(), ['cudgel', 'dagger']);
+
+  // Two weapons, a spell incoming: neither hand matches, the left still goes.
   equipItem(engine, 'flames');
   assert.deepEqual(hands(), ['flames', 'dagger']);
-
-  equipItem(engine, 'cudgel');
-  assert.deepEqual(hands(), ['flames', 'cudgel']);
 });
 
 test('equipItem: a freed hand is filled before the other is swapped out', () => {

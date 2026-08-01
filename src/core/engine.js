@@ -53,11 +53,6 @@ export class RPGEngine {
     // can never smear across per-subsystem booleans.
     this.mode = 'scene';
 
-    // The hand a weapon or spell last went into, so equipping alternates
-    // left, right, left… (see systems/items.js). Session-only, not saved: a
-    // reload starts from the left hand again.
-    this._lastEquippedHand = null;
-
     this._actionRegistry = new Map();
     this._sceneDecorators = [];
     this._sheetRows = [];
