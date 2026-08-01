@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Gravity Mission Definition",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Display name shown in the quest log and quest log lines."
+    },
+    "description": {
+      "type": "string",
+      "description": "The mission's framing, logged when it activates and shown on its quest card."
+    },
+    "stages": {
+      "type": "array",
+      "description": "Ordered stages. Omit entirely for a stageless mission (plain active → complete). Progress is one-way: stages advance forward only, and advancing past the last stage completes the mission.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stage identifier, unique within the mission — referenced by questTrigger stage jumps and stage/stageReached conditions."
+          },
+          "description": {
+            "type": "string",
+            "description": "The objective, shown on the active quest card and logged when the stage becomes current."
+          },
+          "advanceWhen": {
+            "description": "A condition tree (same shape as option/response conditions). Observed: re-evaluated on every state mutation and the moment the stage becomes current — a player already satisfying it advances instantly. Advancement is recorded, not continuously required; the condition turning false later never regresses the stage. Omit for stages advanced only by explicit questTrigger stage jumps.",
+            "type": "object"
+          },
+          "rewards": {
+            "type": "object",
+            "description": "Granted when this stage is completed (advanced past). Stages skipped by a forward jump grant nothing.",
+            "properties": {
+              "xp": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "gold": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "description"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "missionRewards": {
+      "type": "object",
+      "description": "Granted on mission completion, after the final stage's own rewards.",
+      "properties": {
+        "xp": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "gold": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "name",
+    "description"
+  ],
+  "additionalProperties": false
+}

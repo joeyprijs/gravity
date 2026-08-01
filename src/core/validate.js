@@ -19,7 +19,7 @@ const COMBAT_NPC_ATTRIBUTES = ['healthPoints', 'armorClass', 'actionPoints'];
 // prevent that ambiguity.
 const RESERVED_CONDITION_KEYS = new Set([
   'and', 'or', 'not', 'flag', 'value', 'item', 'count', 'gold', 'level', 'mission', 'status',
-  'time', 'day', 'segment',
+  'stage', 'stageReached', 'time', 'day', 'segment',
 ]);
 
 // The outcome tier names a check's `outcomes` object may define.
@@ -69,9 +69,55 @@ export function validateGameData(data, knownActionTypes) {
   validateScenes(ctx);
   validateNpcs(ctx);
   validateItems(ctx);
+  validateMissions(ctx);
   validateRules(ctx);
 
   return issues;
+}
+
+// The status values a questTrigger may set — not_started is the absence of
+// progress, never a transition target.
+const TRIGGER_STATUSES = new Set(['active', 'complete', 'failed']);
+
+// Checks a questTrigger (scene block or action): it must name a known
+// mission and exactly one of a valid status or a known stage.
+function validateQuestTrigger(ctx, group, trigger, where) {
+  const mission = ctx.missions[trigger.mission];
+  if (!trigger.mission)
+    ctx.add(group, `${where}: missing "mission"`);
+  else if (!mission)
+    ctx.add(group, `${where}: unknown mission "${trigger.mission}"`);
+  if (!trigger.status && !trigger.stage)
+    ctx.add(group, `${where}: needs a "status" or a "stage" — nothing to transition to`);
+  if (trigger.status && trigger.stage)
+    ctx.add(group, `${where}: has both "status" and "stage" — a trigger does one transition; use two triggers`);
+  if (trigger.status && !TRIGGER_STATUSES.has(trigger.status))
+    ctx.add(group, `${where}: unknown status "${trigger.status}" (${[...TRIGGER_STATUSES].join(', ')})`);
+  if (trigger.stage && mission && !(mission.stages ?? []).some(s => s.id === trigger.stage))
+    ctx.add(group, `${where}: unknown stage "${trigger.stage}" on mission "${trigger.mission}"`);
+}
+
+// Missions: a stages array must be a non-empty list of uniquely-id'd stages;
+// advanceWhen trees get the same reference checks as every other condition.
+function validateMissions(ctx) {
+  for (const [mId, mission] of Object.entries(ctx.missions ?? {})) {
+    const group = `Mission "${mId}"`;
+    if (mission.stages === undefined) continue;
+    if (!Array.isArray(mission.stages) || !mission.stages.length) {
+      ctx.add(group, 'stages must be a non-empty array — omit it entirely for a stageless mission');
+      continue;
+    }
+    const seen = new Set();
+    mission.stages.forEach((stage, i) => {
+      const where = `stage #${i + 1}`;
+      if (!stage.id) ctx.add(group, `${where}: missing "id"`);
+      else if (seen.has(stage.id)) ctx.add(group, `${where}: duplicate stage id "${stage.id}"`);
+      seen.add(stage.id);
+      if (!stage.description)
+        ctx.add(group, `${where}: missing "description" — the quest log and stage-advance line have nothing to show`);
+      validateCondition(ctx, group, stage.advanceWhen, `${where} advanceWhen`);
+    });
+  }
 }
 
 // Items: type must name a known item type; slot must name a declared
@@ -123,8 +169,16 @@ function validateCondition(ctx, group, condition, where) {
   if (condition.not) { validateCondition(ctx, group, condition.not, where); return; }
   if ('item' in condition && !ctx.items[condition.item])
     ctx.add(group, `${where}: condition references unknown item "${condition.item}"`);
-  if ('mission' in condition && !ctx.missions[condition.mission])
-    ctx.add(group, `${where}: condition references unknown mission "${condition.mission}"`);
+  if ('mission' in condition) {
+    const mission = ctx.missions[condition.mission];
+    if (!mission)
+      ctx.add(group, `${where}: condition references unknown mission "${condition.mission}"`);
+    const stageRef = condition.stage ?? condition.stageReached;
+    if (stageRef !== undefined && mission && !(mission.stages ?? []).some(s => s.id === stageRef))
+      ctx.add(group, `${where}: condition references unknown stage "${stageRef}" on mission "${condition.mission}"`);
+    if ('stage' in condition && 'status' in condition)
+      ctx.add(group, `${where}: condition has both "stage" and "status" — "stage" already implies active; the "status" is ignored`);
+  }
   if ('day' in condition && !(ctx.rules?.time?.ticksPerDay > 0))
     ctx.add(group, `${where}: condition uses "day" but rules.time.ticksPerDay is not configured — it always evaluates false`);
   if ('segment' in condition) {
@@ -167,6 +221,8 @@ function validateActions(ctx, group, actions, where) {
       ctx.add(group, `${where}: loot → unknown item "${action.item}"`);
     if (action.type === 'dialogue' && action.npc && !ctx.npcs[action.npc])
       ctx.add(group, `${where}: dialogue → unknown NPC "${action.npc}"`);
+    if (action.type === 'questTrigger')
+      validateQuestTrigger(ctx, group, action, `${where}: questTrigger`);
     if (action.type === 'combat') {
       validateEnemyList(ctx, group, action.enemies, `${where}: combat`);
       validateActions(ctx, group, action.onVictory, `${where}: combat.onVictory`);
@@ -253,6 +309,9 @@ function validateTables(ctx) {
 function validateScenes(ctx) {
   for (const [sceneId, scene] of Object.entries(ctx.scenes)) {
     const group = `Scene "${sceneId}"`;
+
+    if (scene.questTrigger)
+      validateQuestTrigger(ctx, group, scene.questTrigger, 'questTrigger');
 
     for (const skill of (scene.skills || [])) {
       const where = `skill "${skill.text}"`;

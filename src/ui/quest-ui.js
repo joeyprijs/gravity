@@ -14,15 +14,17 @@ export class QuestUI {
 
     const activeList = [];
     const completedList = [];
+    const failedList = [];
 
     // A started/completed quest wears a dot until the player rests the pointer
     // on its card (see UIManager.setup) or leaves the tab. The card names its
     // mission in the dataset — that's what the hover handler acknowledges.
-    const buildQuestItem = (mId, mData, extraClass = null) => {
+    // An active staged quest shows its current objective as a second body line.
+    const buildQuestItem = (mId, mData, extraClass = null, stageDesc = null) => {
       const card = buildCard({
         tag: 'li',
         title: mData.name,
-        body: mData.description,
+        body: stageDesc ? [mData.description, stageDesc] : mData.description,
         classes: [extraClass, newQuests?.has(mId) ? CSS.CARD_NEW : null].filter(Boolean),
       });
       card.dataset.mission = mId;
@@ -32,9 +34,12 @@ export class QuestUI {
     for (const [mId, mData] of Object.entries(this.engine.data.missions)) {
       const status = this.engine.state.getMissionStatus(mId);
       if (status === MISSION_STATUS.ACTIVE) {
-        activeList.push(buildQuestItem(mId, mData));
+        const stage = (mData.stages ?? []).find(s => s.id === this.engine.state.getMissionStage(mId));
+        activeList.push(buildQuestItem(mId, mData, null, stage?.description));
       } else if (status === MISSION_STATUS.COMPLETE) {
         completedList.push(buildQuestItem(mId, mData, CSS.CARD_DONE));
+      } else if (status === MISSION_STATUS.FAILED) {
+        failedList.push(buildQuestItem(mId, mData, CSS.CARD_DONE));
       }
     }
 
@@ -54,7 +59,15 @@ export class QuestUI {
       section.appendChild(ul);
       panel.appendChild(section);
     }
-    if (activeList.length === 0 && completedList.length === 0) {
+    if (failedList.length > 0) {
+      const section = createElement('div', CSS.PANEL_SECTION);
+      section.appendChild(createElement('div', CSS.SECTION_HEADING, this.engine.t('ui.questsFailed')));
+      const ul = createElement('ul', CSS.CARD_LIST);
+      failedList.forEach(li => ul.appendChild(li));
+      section.appendChild(ul);
+      panel.appendChild(section);
+    }
+    if (activeList.length === 0 && completedList.length === 0 && failedList.length === 0) {
       const section = createElement('div', CSS.PANEL_SECTION);
       section.appendChild(createElement('p', CSS.CARD_BODY, this.engine.t('ui.questsNone')));
       panel.appendChild(section);

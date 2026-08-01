@@ -88,6 +88,14 @@ test('every shipped NPC conforms to npc.schema.json at the top level', () => {
   }
 });
 
+const missionSchema = readJson('../schemas/mission.schema.json');
+
+test('every shipped mission conforms to mission.schema.json at the top level', () => {
+  for (const [id, mission] of Object.entries(data.missions)) {
+    assert.deepEqual(topLevelSchemaIssues(missionSchema, mission), [], `mission "${id}"`);
+  }
+});
+
 // ── Audio assets ─────────────────────────────────────────────────────────────
 // Clips are recorded by hand and referenced by path, and a missing file is only
 // a console warning at runtime — so a typo would ship as silence. Collect every

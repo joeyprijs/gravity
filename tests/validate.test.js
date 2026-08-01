@@ -473,3 +473,37 @@ test('item type and slot: valid values and omitted fields pass', () => {
   assert.ok(!messages.some(m => m.includes('is not a known item type')));
   assert.ok(!messages.some(m => m.includes('is not a declared equipment slot')));
 });
+
+test('missions: flags duplicate stage ids, missing fields, and bad advanceWhen references', () => {
+  const data = makeCleanData();
+  data.missions.escape.stages = [
+    { id: 'a', description: 'A.', advanceWhen: { item: 'ghost' } },
+    { id: 'a', description: 'B.' },
+    { description: 'C.' },
+  ];
+  const issues = validate(data);
+  assert.ok(issues.some(i => i.group === 'Mission "escape"' && i.message.includes('duplicate stage id "a"')));
+  assert.ok(issues.some(i => i.message.includes('unknown item "ghost"')));
+  assert.ok(issues.some(i => i.message.includes('stage #3: missing "id"')));
+});
+
+test('questTrigger: validated in scene blocks and action pipelines', () => {
+  const data = makeCleanData();
+  data.scenes.cave.questTrigger = { mission: 'ghost_quest', status: 'done' };
+  data.scenes.exit.options.push({ text: 'Advance', actions: [{ type: 'questTrigger', mission: 'escape', stage: 'ghost_stage' }] });
+  normalizeCarriedItems(data.npcs);
+  const issues = validateGameData(data, new Set([...KNOWN_ACTIONS, 'questTrigger']));
+  assert.ok(issues.some(i => i.message.includes('unknown mission "ghost_quest"')));
+  assert.ok(issues.some(i => i.message.includes('unknown status "done"')));
+  assert.ok(issues.some(i => i.message.includes('unknown stage "ghost_stage" on mission "escape"')));
+});
+
+test('conditions: unknown stage references and stage+status combos are flagged', () => {
+  const data = makeCleanData();
+  data.missions.escape.stages = [{ id: 'a', description: 'A.' }];
+  data.scenes.cave.options[0].condition = { mission: 'escape', stage: 'ghost' };
+  data.scenes.exit.options = [{ text: 'x', condition: { mission: 'escape', stage: 'a', status: 'active' }, actions: [] }];
+  const issues = validate(data);
+  assert.ok(issues.some(i => i.message.includes('unknown stage "ghost" on mission "escape"')));
+  assert.ok(issues.some(i => i.message.includes('both "stage" and "status"')));
+});

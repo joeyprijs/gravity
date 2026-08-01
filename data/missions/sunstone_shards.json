@@ -1,0 +1,25 @@
+{
+  "name": "Echoes of the Sunstone",
+  "description": "Bron swears the old waystation's sunstone shattered into the halls below when the dungeon fell. Shards like that belong in a collection, not under rubble.",
+  "stages": [
+    {
+      "id": "collect_shards",
+      "description": "Recover two sunstone shards from the dungeon.",
+      "advanceWhen": {
+        "item": "sunstone_shard",
+        "count": 2
+      },
+      "rewards": {
+        "xp": 25
+      }
+    },
+    {
+      "id": "show_bron",
+      "description": "Show the shards to Bron."
+    }
+  ],
+  "missionRewards": {
+    "xp": 75,
+    "gold": 50
+  }
+}

@@ -56,6 +56,7 @@
     },
     "questTrigger": {
       "type": "object",
+      "description": "One mission transition: a status change, or a forward-only stage jump (never both). complete and failed are terminal.",
       "properties": {
         "mission": {
           "type": "string",
@@ -65,13 +66,17 @@
           "type": "string",
           "enum": [
             "active",
-            "complete"
+            "complete",
+            "failed"
           ]
+        },
+        "stage": {
+          "type": "string",
+          "description": "Stage id to jump forward to. Completes the current stage (its rewards fire); stages skipped over grant nothing."
         }
       },
       "required": [
-        "mission",
-        "status"
+        "mission"
       ],
       "additionalProperties": false
     },
@@ -477,8 +482,17 @@
           "enum": [
             "active",
             "complete",
+            "failed",
             "not_started"
           ]
+        },
+        "stage": {
+          "type": "string",
+          "description": "True while the mission is active AND this is its current stage."
+        },
+        "stageReached": {
+          "type": "string",
+          "description": "True once the mission's recorded stage is at or past this one (by authored stage order) — including after the mission ends."
         },
         "time": {
           "type": [
@@ -602,8 +616,13 @@
           "type": "string",
           "enum": [
             "active",
-            "complete"
+            "complete",
+            "failed"
           ]
+        },
+        "stage": {
+          "type": "string",
+          "description": "questTrigger: stage id to jump forward to (instead of a status)."
         },
         "node": {
           "type": "string"

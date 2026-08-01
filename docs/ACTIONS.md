@@ -206,12 +206,17 @@ Leave the conversation and return to the current scene. Takes no parameters.
 
 ### `questTrigger`
 
-Drive a mission's lifecycle.
+Drive a mission's lifecycle. One trigger performs one transition — a status change *or* a forward stage jump, never both.
 
 - `mission` *(string, required)* — the mission id.
-- `status` *(string, required)* — `"active"` starts the mission (only when it has not started yet; it logs the quest as begun) or `"complete"` finishes it (granting `missionRewards` and logging completion). An unknown mission, or one already complete, is silently skipped — so re-entering a trigger scene is safe.
+- `status` *(string)* — `"active"` starts the mission (only when it has not started yet; it logs the quest as begun), `"complete"` finishes it (granting the current stage's `rewards`, then `missionRewards`, and logging completion), `"failed"` fails it (only reachable from `active` — a mission that never started cannot fail). `complete` and `failed` are **terminal**: no trigger moves a mission out of them, and their rewards can never re-grant.
+- `stage` *(string)* — a stage id from the mission's `stages` to jump forward to. Forward-only: naming the current or an earlier stage is a no-op, so re-running the pipeline never regresses the quest. The stage being left counts as completed — its `rewards` fire; stages skipped over grant nothing.
+
+An unknown mission, or one already complete or failed, is silently skipped — so re-entering a trigger scene is always safe.
 
 The same block can be attached to a scene as `questTrigger` (fired on entry) rather than run as an action; the effect is identical.
+
+Stage *objectives* usually need no trigger at all: a stage with `advanceWhen` in the mission file advances by observation the moment its condition holds — see [Missions in the README](../README.md#loot-tables-flags-missions) for the staged mission format.
 
 ---
 

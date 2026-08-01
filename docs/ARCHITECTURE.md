@@ -35,7 +35,7 @@ engine.js (orchestrator, mode machine, delegate API, event bus, registries)
 │   ├── scene.js       scene rendering, options, item discovery
 │   ├── combat.js      initiative-based turn combat (renderer in ui/combat-ui.js)
 │   ├── dialogue.js    conversation trees, merchant shops
-│   ├── quests.js      mission lifecycle (listens to scene:entered)
+│   ├── quests.js      mission lifecycle + staged objectives (scene:entered + the mutation bus)
 │   ├── narrative.js   scrollable narrative log
 │   ├── audio.js       two-channel audio: region ambience loops + narration clips
 │   ├── actions.js     built-in action handlers
@@ -85,7 +85,9 @@ Conditions gate scene options, dialogue responses, description variants, and aut
 |---|---|
 | `{ "flag": "name", "value": true }` | Flag equals value |
 | `{ "item": "id", "count": 2 }` | Inventory holds ≥ count (count optional) |
-| `{ "mission": "id", "status": "active" }` | Quest status (`not_started`/`active`/`complete`) |
+| `{ "mission": "id", "status": "active" }` | Quest status (`not_started`/`active`/`complete`/`failed`) |
+| `{ "mission": "id", "stage": "collect" }` | Mission is active and exactly on this stage |
+| `{ "mission": "id", "stageReached": "collect" }` | Mission's recorded stage is at or past this one (authored order; survives completion) |
 | `{ "level": 3 }` | Player level comparison |
 | `{ "gold": { "less_than": 10 } }` | Gold comparison |
 | `{ "<attribute>": 2 }` | Any custom attribute from `rules.customAttributes` |

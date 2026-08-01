@@ -24,6 +24,32 @@
           ]
         },
         {
+          "text": "Any relics worth hunting in that dungeon?",
+          "condition": {
+            "mission": "sunstone_shards",
+            "status": "not_started"
+          },
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "sunstone_story"
+            }
+          ]
+        },
+        {
+          "text": "About that sunstone — take a look at these.",
+          "condition": {
+            "mission": "sunstone_shards",
+            "stage": "show_bron"
+          },
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "sunstone_shown"
+            }
+          ]
+        },
+        {
           "text": "I made it out of the dungeon.",
           "condition": {
             "and": [
@@ -157,6 +183,64 @@
       "responses": [
         {
           "text": "Cheers, Bron.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "sunstone_story": {
+      "npcText": "Relics, eh? The waystation had one worth the name — a sunstone, big as my fist, lit the whole common room without a flame. Shattered when the lower halls caved in. They say the shards still glow down there, warm as a hearth. If you're crawling that dungeon anyway, keep your eyes open.",
+      "actions": [
+        {
+          "type": "questTrigger",
+          "mission": "sunstone_shards",
+          "status": "active"
+        }
+      ],
+      "responses": [
+        {
+          "text": "I'll keep an eye out.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        },
+        {
+          "text": "Goodbye.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "sunstone_shown": {
+      "npcText": "Well, I'll be. That's the sunstone, all right — still warm after all these years. Keep 'em. They'll do more good in that museum of yours than in my pocket. Just let an old dwarf come look at 'em now and then.",
+      "actions": [
+        {
+          "type": "questTrigger",
+          "mission": "sunstone_shards",
+          "status": "complete"
+        }
+      ],
+      "responses": [
+        {
+          "text": "You're welcome anytime, Bron.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        },
+        {
+          "text": "Goodbye.",
           "actions": [
             {
               "type": "leave"

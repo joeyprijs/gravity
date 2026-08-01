@@ -72,6 +72,7 @@
     "questsNone": "No active quests.",
     "questsActive": "Active Quests",
     "questsCompleted": "Completed Quests",
+    "questsFailed": "Failed Quests",
     "chestTitle": "Chest",
     "chestContents": "Contents",
     "personalTitle": "Personal Chest",
@@ -277,7 +278,9 @@
   },
   "quest": {
     "started": "A new goal takes shape — {name}. {description}",
+    "stageAdvanced": "The goal moves forward — {name}: {description}",
     "completed": "Quest complete: {name}!",
+    "failed": "Quest failed: {name}.",
     "earnedXP": "Earned {amount} XP.",
     "earnedGold": "Earned {amount} Gold."
   }

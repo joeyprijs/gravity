@@ -995,6 +995,28 @@
         assert(lastLogText() === 'Never mind', `backing out is a choice (got "${lastLogText()}")`);
       });
 
+      await step('a staged quest: card shows the objective, loot advances it, hand-in completes it', async () => {
+        // Bron's shard hunt, driven through the engine's trigger surface. Late
+        // in the run so the shard loot can't skew earlier exact-value asserts.
+        const engine = window.gameEngine;
+        const card = () => $$('#quests-tab .card').find(c => text(c).includes('Echoes of the Sunstone'));
+
+        engine.handleQuestTrigger({ mission: 'sunstone_shards', status: 'active' });
+        assert(card(), 'the staged quest card renders');
+        assert(text(card()).includes('Recover two sunstone shards'), 'the active card shows its current objective');
+
+        engine.state.addToInventory('sunstone_shard', 1);
+        assert(engine.state.getMissionStage('sunstone_shards') === 'collect_shards', 'one shard is not enough');
+        engine.state.addToInventory('sunstone_shard', 1);
+        assert(engine.state.getMissionStage('sunstone_shards') === 'show_bron', 'the second shard advanced the stage');
+        assert(text(card()).includes('Show the shards to Bron'), 'the card follows the stage');
+
+        engine.handleQuestTrigger({ mission: 'sunstone_shards', status: 'complete' });
+        const sections = $$('#quests-tab .panel-section');
+        const completed = sections.find(s => text(s).includes('Completed Quests'));
+        assert(completed && text(completed).includes('Echoes of the Sunstone'), 'the quest lands under Completed Quests');
+      });
+
       await step('no uncaught errors during the run', () => {
         assert(errors.length === 0, `caught: ${errors.join(' | ')}`);
       });

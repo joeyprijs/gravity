@@ -310,6 +310,6 @@ test('a pre-time (v3) save with the curator active runs core AND plugin migratio
     ['relic_crown', 'relic_shard', 'rusty_sword']);
   // Core and plugin versions are partitioned: the core counter never carries
   // the curator's number.
-  assert.equal(gameState.state.saveVersion, 4);
+  assert.equal(gameState.state.saveVersion, 5);
   assert.equal(gameState.state.pluginSaveVersions.curator, 1);
 });

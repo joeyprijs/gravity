@@ -188,10 +188,12 @@ export const EL = {
 export const TIMER_SAFE_ACTIONS = new Set(['set_flag', 'log', 'questTrigger', 'cancel_timer', 'set_timer']);
 
 // Canonical mission status values — used by QuestSystem, StateManager, QuestUI, and conditions.
+// COMPLETE and FAILED are terminal: no trigger moves a mission out of them.
 export const MISSION_STATUS = {
   NOT_STARTED: 'not_started',
   ACTIVE:      'active',
   COMPLETE:    'complete',
+  FAILED:      'failed',
 };
 
 // Log type labels — the [Label] prefix shown in every narrative log entry.

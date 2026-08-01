@@ -147,6 +147,11 @@
           "table": "basic_loot",
           "dc": 12,
           "itemDrops": 2
+        },
+        {
+          "item": "sunstone_shard",
+          "amount": 1,
+          "dc": 14
         }
       ]
     },

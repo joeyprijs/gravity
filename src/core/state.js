@@ -6,7 +6,7 @@ const MAX_LOG_ENTRIES = 200;
 // Increment when the save schema changes. loadFromObject() migrates older saves
 // forward so they remain compatible. Each migration function receives the raw
 // parsed data object and mutates it in-place.
-const SAVE_VERSION = 4;
+const SAVE_VERSION = 5;
 
 const MIGRATIONS = {
   // v0 → v1: player.name was added; give it an empty default on older saves.
@@ -31,19 +31,31 @@ const MIGRATIONS = {
     if (!('time' in data)) data.time = { ticks: 0 };
     if (!('timers' in data)) data.timers = [];
   },
+  // v4 → v5: mission entries went from bare status strings to
+  // { status, stage } objects (staged quests). Idempotent — object entries
+  // pass through untouched (the legacy-stamp adoption below can re-run this).
+  5: (data) => {
+    for (const [id, entry] of Object.entries(data.missions ?? {})) {
+      if (typeof entry === 'string') data.missions[id] = { status: entry };
+    }
+  },
 };
 
 // Saves written before plugin migrations had their own version line (see
 // registerMigration) carried the curator's stamp — 5 — on the core counter.
 const LEGACY_PLUGIN_STAMP = 5;
 
+// The core version pre-partition saves were actually at: core migrations
+// never went past 4 while the legacy stamp was in use.
+const LEGACY_STAMP_CORE_VERSION = 4;
+
 function migrate(data, pluginMigrations = {}) {
-  // Adopt pre-partition saves back onto the core line: they are core-current
-  // (core migrations never went past 4), and left at 5 they would silently
-  // skip a future core v5. Detectable exactly — partitioned saves always
-  // carry pluginSaveVersions, pre-partition saves never do.
+  // Adopt pre-partition saves back onto the core line at the version their
+  // data really has — NOT SAVE_VERSION, which now sits past the stamp and
+  // would skip the v5 mission migration. Detectable exactly — partitioned
+  // saves always carry pluginSaveVersions, pre-partition saves never do.
   if (data.saveVersion === LEGACY_PLUGIN_STAMP && !('pluginSaveVersions' in data)) {
-    data.saveVersion = SAVE_VERSION;
+    data.saveVersion = LEGACY_STAMP_CORE_VERSION;
   }
 
   const from = data.saveVersion ?? 0;
@@ -124,6 +136,7 @@ class StateManager {
     this.listeners = [];
     this._rules = null;
     this._items = {};
+    this._missions = {};
     this._pluginMigrations = {};
     this._mutationHooks = [];
     this._statHandlers = {};
@@ -145,7 +158,8 @@ class StateManager {
    * Emitting methods: init, loadFromObject, reset, modifyPlayerStat,
    * modifyPlayerStats, addXP, spendStatPoint, applyCharCreation,
    * addToInventory, removeFromInventory, equipItem, placeItemInDisplay,
-   * takeItemFromDisplay, advanceTime.
+   * takeItemFromDisplay, advanceTime, setFlag, setMissionStatus,
+   * setMissionStage.
    *
    * @param {(method: string, info: object) => void} fn - Receives the
    *   StateManager method name and an info object with its relevant arguments
@@ -364,10 +378,13 @@ class StateManager {
 
   // Called once on startup to ensure every mission ID exists in state.
   // Skips missions already present so loaded saves are not overwritten.
+  // Keeps the definitions so stage lookups (getMissionStage's first-stage
+  // fallback, missionStageIndex) work without reaching into engine data.
   registerMissions(missionsData) {
+    this._missions = missionsData;
     Object.keys(missionsData).forEach(missionId => {
       if (!(missionId in this.state.missions)) {
-        this.state.missions[missionId] = MISSION_STATUS.NOT_STARTED;
+        this.state.missions[missionId] = { status: MISSION_STATUS.NOT_STARTED };
       }
     });
   }
@@ -393,7 +410,13 @@ class StateManager {
   }
 
   getFlag(flagName) { return this.state.flags[flagName] ?? false; }
-  setFlag(flagName, value) { this.state.flags[flagName] = value; }
+  // Deliberately no notifyListeners (flag changes surface through the
+  // re-renders their own flow drives) — but the mutation IS emitted, so
+  // observers of world state (quest advanceWhen conditions) see flag writes.
+  setFlag(flagName, value) {
+    this.state.flags[flagName] = value;
+    this._emitMutation('setFlag', { flag: flagName, value });
+  }
 
   // ── Check bookkeeping ─────────────────────────────────────────────────────
   // The engine-private skill-check state maps (attempt counts, resolution
@@ -768,8 +791,53 @@ class StateManager {
     return true;
   }
 
-  getMissionStatus(missionId) { return this.state.missions[missionId] || MISSION_STATUS.NOT_STARTED; }
-  setMissionStatus(missionId, status) { this.state.missions[missionId] = status; this._emitMutation('setMissionStatus', { missionId, status }); this.notifyListeners('quests'); }
+  getMissionStatus(missionId) { return this.state.missions[missionId]?.status || MISSION_STATUS.NOT_STARTED; }
+
+  // Preserves the entry's stage — status and stage move independently
+  // (activation sets status; advancement sets stage).
+  setMissionStatus(missionId, status) {
+    const entry = (this.state.missions[missionId] ??= {});
+    entry.status = status;
+    this._emitMutation('setMissionStatus', { missionId, status });
+    this.notifyListeners('quests');
+  }
+
+  /**
+   * The mission's current stage id. Null for missions that haven't started
+   * (or have no stages). A started mission that never advanced — including
+   * saves that predate a mission gaining stages — reports the first declared
+   * stage, so authors never see a "stageless but active" gap.
+   *
+   * @param {string} missionId - The mission id.
+   * @returns {string|null} The current stage id, or null.
+   */
+  getMissionStage(missionId) {
+    const entry = this.state.missions[missionId];
+    if (!entry?.status || entry.status === MISSION_STATUS.NOT_STARTED) return null;
+    return entry.stage ?? this._missions?.[missionId]?.stages?.[0]?.id ?? null;
+  }
+
+  setMissionStage(missionId, stage) {
+    const entry = (this.state.missions[missionId] ??= {});
+    entry.stage = stage;
+    this._emitMutation('setMissionStage', { missionId, stage });
+    this.notifyListeners('quests');
+  }
+
+  /**
+   * A stage's position in its mission's authored stage order — what
+   * "stageReached" conditions compare by. -1 for unknown missions, stageless
+   * missions, and unknown stage ids.
+   *
+   * @param {string} missionId - The mission id.
+   * @param {string} stageId - The stage id to locate.
+   * @returns {number} The stage index, or -1.
+   */
+  missionStageIndex(missionId, stageId) {
+    const stages = this._missions?.[missionId]?.stages;
+    if (!Array.isArray(stages)) return -1;
+    return stages.findIndex(s => s.id === stageId);
+  }
 
   getCurrentSceneId() { return this.state.currentSceneId; }
   setCurrentSceneId(sceneId) { this.state.currentSceneId = sceneId; this.notifyListeners('map'); }

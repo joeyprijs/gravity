@@ -7,6 +7,8 @@
 //   gold:      { "gold": { "less_than": 50 } }
 //   level:     { "level": 3 }
 //   mission:   { "mission": "escape", "status": "active" }
+//              { "mission": "escape", "stage": "find_key" }         exactly here (implies active)
+//              { "mission": "escape", "stageReached": "find_key" }  at or past, by authored stage order
 //   time:      { "time": { "at_least": 120 } }        absolute elapsed ticks
 //   day:       { "day": { "at_least": 3 } }           needs rules.time
 //   segment:   { "segment": "night" }                 needs rules.time
@@ -15,6 +17,7 @@
 // Combinators `and` (array), `or` (array), and `not` (single child) nest
 // arbitrarily. Like dice.js, this module is DOM- and engine-free.
 
+import { MISSION_STATUS } from "../core/config.js";
 import { getDay, getSegment } from "./time.js";
 
 /**
@@ -66,6 +69,19 @@ export function evaluateCondition(condition, state) {
   }
 
   if ('mission' in condition) {
+    // `stage` is "the player is doing this right now" — exact current stage,
+    // active missions only. `stageReached` is "the story got at least this
+    // far" — compared by authored stage order, and still true after the
+    // mission ends (the recorded stage stays where it got to).
+    if ('stage' in condition) {
+      return state.getMissionStatus(condition.mission) === MISSION_STATUS.ACTIVE
+        && state.getMissionStage(condition.mission) === condition.stage;
+    }
+    if ('stageReached' in condition) {
+      const target = state.missionStageIndex(condition.mission, condition.stageReached);
+      const current = state.missionStageIndex(condition.mission, state.getMissionStage(condition.mission));
+      return target >= 0 && current >= target;
+    }
     return state.getMissionStatus(condition.mission) === condition.status;
   }
 

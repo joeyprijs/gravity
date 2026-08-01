@@ -283,7 +283,7 @@ export class UIManager {
       // the sets grown here are already in place for the render this same
       // mutation triggers — no catch-up re-render needed.
       if (method === 'addToInventory' && !info.silent) { this._newItems.add(info.itemId); dot(EL.TAB_INVENTORY); }
-      if (method === 'setMissionStatus') { this._newQuests.add(info.missionId); dot(EL.TAB_QUESTS); }
+      if (method === 'setMissionStatus' || method === 'setMissionStage') { this._newQuests.add(info.missionId); dot(EL.TAB_QUESTS); }
 
       // A level-up bank is the one sheet change worth flagging (the spend
       // button is easy to miss); ordinary stat changes are top-bar-visible.

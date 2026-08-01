@@ -2,11 +2,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { evaluateCondition } from '../src/systems/condition.js';
 
-function makeState({ flags = {}, inventory = [], equipment = {}, level = 1, gold = 0, missions = {}, attrs = {} } = {}) {
+function makeState({ flags = {}, inventory = [], equipment = {}, level = 1, gold = 0, missions = {}, stages = {}, currentStages = {}, attrs = {} } = {}) {
   return {
     getFlag: (f) => flags[f] ?? false,
     getPlayer: () => ({ inventory, equipment, level, resources: { gold }, attributes: attrs }),
     getMissionStatus: (m) => missions[m] ?? 'not_started',
+    getMissionStage: (m) => currentStages[m] ?? null,
+    missionStageIndex: (m, sId) => (stages[m] ?? []).indexOf(sId),
     countPlayerItem(itemId, { includeEquipped = true } = {}) {
       const invEntry = inventory.find(i => i.item === itemId);
       const invCount = invEntry ? invEntry.amount : 0;
@@ -69,6 +71,31 @@ test('mission leaf: matching status returns true', () => {
 test('mission leaf: non-matching status returns false', () => {
   const state = makeState({ missions: { quest_1: 'active' } });
   assert.equal(evaluateCondition({ mission: 'quest_1', status: 'complete' }, state), false);
+});
+
+test('mission stage leaf: exact current stage, active missions only', () => {
+  const staged = { missions: { q: 'active' }, stages: { q: ['collect', 'report'] }, currentStages: { q: 'collect' } };
+  assert.equal(evaluateCondition({ mission: 'q', stage: 'collect' }, makeState(staged)), true);
+  assert.equal(evaluateCondition({ mission: 'q', stage: 'report' }, makeState(staged)), false);
+  // A finished mission is not "doing" any stage.
+  const done = { ...staged, missions: { q: 'complete' } };
+  assert.equal(evaluateCondition({ mission: 'q', stage: 'collect' }, makeState(done)), false);
+});
+
+test('mission stageReached leaf: at-or-past by stage order, surviving mission end', () => {
+  const stages = { q: ['collect', 'report', 'celebrate'] };
+  const mid = { missions: { q: 'active' }, stages, currentStages: { q: 'report' } };
+  assert.equal(evaluateCondition({ mission: 'q', stageReached: 'collect' }, makeState(mid)), true);
+  assert.equal(evaluateCondition({ mission: 'q', stageReached: 'report' }, makeState(mid)), true);
+  assert.equal(evaluateCondition({ mission: 'q', stageReached: 'celebrate' }, makeState(mid)), false);
+  // Unknown target stages never match.
+  assert.equal(evaluateCondition({ mission: 'q', stageReached: 'ghost' }, makeState(mid)), false);
+  // The recorded stage stays where it got to — still true after completion.
+  const done = { missions: { q: 'complete' }, stages, currentStages: { q: 'celebrate' } };
+  assert.equal(evaluateCondition({ mission: 'q', stageReached: 'report' }, makeState(done)), true);
+  // Not-started missions have no recorded stage.
+  const fresh = { missions: {}, stages, currentStages: {} };
+  assert.equal(evaluateCondition({ mission: 'q', stageReached: 'collect' }, makeState(fresh)), false);
 });
 
 // (Equipped items counting toward possession is countPlayerItem's contract,

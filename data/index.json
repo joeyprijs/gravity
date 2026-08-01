@@ -82,6 +82,7 @@
     "home_museum": "data/scenes/player_home/museum.json"
   },
   "missions": {
-    "escape_dungeon": "data/missions/escape_dungeon.json"
+    "escape_dungeon": "data/missions/escape_dungeon.json",
+    "sunstone_shards": "data/missions/sunstone_shards.json"
   }
 }

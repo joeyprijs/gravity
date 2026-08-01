@@ -49,6 +49,7 @@ A browser-native, zero-dependency, data-driven text RPG engine. Define your enti
 *   **Turn-Based Combat** — Initiative order, HP / Armor Class / Action Point budgets, multi-enemy encounters, and auto-combat scene entries. AP is a per-combat tactical budget: full at the start of every fight and refreshed each round.
 *   **Character Progression** — Point-buy character creation, XP levels that bank spendable stat points, weapons governed by a wielder attribute (`attackAttribute`), and equipment that raises any attribute (`attributeBonuses`).
 *   **Branching Dialogue & Merchants** — Conversation trees with skill-checked responses, item and quest rewards, and stateful merchant stock with per-NPC pricing.
+*   **Staged Quests** — Multi-step missions whose objectives are observed conditions: collect-N stages auto-advance the moment they're satisfied (even retroactively), stages pay their own rewards, progress is forward-only, and failure is a first-class terminal state.
 *   **A World Clock (opt-in)** — Player actions advance a deterministic tick counter; days and named segments derive from rules, timers fire quiet action pipelines, and conditions can read `time` / `day` / `segment`. No wall clock, fully save-safe.
 *   **Two-Channel Audio (opt-in)** — Looping ambience resolved per region (overridable per scene) plus one-shot narration clips for scene descriptions and action outcomes, with per-channel volume in the Options tab. A game that authors no audio never touches the Web Audio API. Full guide: [`docs/AUDIO.md`](docs/AUDIO.md).
 *   **Interactive World Map** — A scaled minimap in the sidebar plus a full-screen scrollable coordinate map centered on the player.
@@ -280,7 +281,9 @@ Leaf shapes:
 | `{ "item": "id", "count": 2 }` | Inventory holds ≥ count (count optional) |
 | `{ "gold": 50 }` / `{ "gold": { "less_than": 10 } }` | Gold comparison |
 | `{ "level": 3 }` | Player level |
-| `{ "mission": "id", "status": "active" }` | Quest status (`not_started` / `active` / `complete`) |
+| `{ "mission": "id", "status": "active" }` | Quest status (`not_started` / `active` / `complete` / `failed`) |
+| `{ "mission": "id", "stage": "collect" }` | Mission is active and exactly on this stage |
+| `{ "mission": "id", "stageReached": "collect" }` | Mission's recorded stage is at or past this one (by authored order; survives completion) |
 | `{ "stealth": 2 }` | Any declared attribute threshold |
 | `{ "time": { "at_least": 120 } }` | Elapsed world-clock ticks |
 | `{ "day": { "at_least": 3 } }` / `{ "segment": "night" }` | Derived day / segment (requires `rules.time`) |
@@ -317,7 +320,7 @@ Conversation actions (`goToConversation` and `trade` warn and no-op outside an a
 | `goToConversation` | `node` | Render another node of the current conversation. |
 | `trade` | `tradeDiscount?`, `persistDiscount?` | Open the merchant store, optionally repriced. |
 | `leave` | — | Leave the conversation, back to the scene. |
-| `questTrigger` | `mission`, `status` | Start (`"active"`) or complete (`"complete"`) a mission. |
+| `questTrigger` | `mission`, `status` *or* `stage` | Start (`"active"`), complete, or fail a mission — or jump forward to a named stage. `complete` and `failed` are terminal. |
 
 The state-changing actions (`loot`, `heal`, `full_rest`, `short_rest`, `advance_time`) take an optional `log`: `false` silences the default message, a string replaces it (resolved through the locale table first, so a locale key stays translatable; any other string logs as-is). `advance_time` has no default line, so only its string form does anything. Timer pipelines are restricted to *quiet* actions (`set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`) — a timer changes the world through flags, never by navigating or starting combat. Plugins register their own types (the curator plugin adds `manage_exhibits` and `build_wing`) — see the [Plugin API](#plugin-api). Every parameter above is documented in full in [`docs/ACTIONS.md`](docs/ACTIONS.md).
 
@@ -640,7 +643,7 @@ Equipment `slot` names are **game-defined** — whatever keys appear in `rules.p
 }
 ```
 
-**Missions** are simple definitions started via `questTrigger` (on scenes or dialogue) and completed through the quest system's lifecycle:
+**Missions** are started via `questTrigger` (on scenes or dialogue) and completed through the quest system's lifecycle. The simplest form is a name, a description, and completion rewards:
 
 ```json
 {
@@ -652,6 +655,30 @@ Equipment `slot` names are **game-defined** — whatever keys appear in `rules.p
   }
 }
 ```
+
+Add `stages` for multi-step quests. Each stage names an objective; an optional `advanceWhen` condition tree (the same shape as option conditions) advances it **by observation** — re-evaluated on every state change *and* the moment the stage becomes current, so a player who already carries the goods advances instantly, chaining through as many stages as are satisfied. Advancement is one-way and recorded: once a stage is passed, its condition turning false again never regresses it. Advancing past the last stage completes the mission.
+
+```json
+{
+  "name": "Echoes of the Sunstone",
+  "description": "Bron swears the old waystation's sunstone shattered into the halls below.",
+  "stages": [
+    {
+      "id": "collect_shards",
+      "description": "Recover two sunstone shards from the dungeon.",
+      "advanceWhen": { "item": "sunstone_shard", "count": 2 },
+      "rewards": { "xp": 25 }
+    },
+    {
+      "id": "show_bron",
+      "description": "Show the shards to Bron."
+    }
+  ],
+  "missionRewards": { "xp": 75, "gold": 50 }
+}
+```
+
+A stage's `rewards` fire when the stage is completed (advanced past); the final stage's fire alongside `missionRewards`. Stages without `advanceWhen` advance through explicit `questTrigger` stage jumps — forward-only, and stages skipped by a jump grant nothing. A mission can also end `failed`: terminal, reachable only from `active`, and only through an explicit trigger (a quest-giver crossed, a deadline timer fired). The active quest card shows the current stage's description under the mission's, and conditions read quest progress through the `stage` / `stageReached` leaves — see [Conditions](#conditions-logic-gates). Full parameter reference: [`schemas/mission.schema.json`](schemas/mission.schema.json) and [`docs/ACTIONS.md`](docs/ACTIONS.md).
 
 ---
 
