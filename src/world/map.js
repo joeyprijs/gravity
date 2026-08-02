@@ -1,9 +1,36 @@
-import { clearElement } from "../core/utils.js";
+import { clearElement, isInteriorScene } from "../core/utils.js";
 import { MINIMAP_SIZE, MAP_PADDING, MAP_NODE_DEFAULT_BG, CSS, EL } from "../core/config.js";
 
-// MapManager handles both the minimap HUD in the sidebar and the full-screen
-// world map overlay: it scales visited scenes' mapDefinitions into the HUD
-// bounds and centers the full map on the player's position.
+// Every scene a scene can send the player to: the destinations of the navigate
+// actions in its option and skill-check pipelines. This is the map's notion of a
+// door, and what one step of sight is measured along.
+function sceneNavigationTargets(scene) {
+  const targets = [];
+  const walk = (actions) => {
+    for (const action of actions || []) {
+      if (action.type === 'navigate' && action.destination) targets.push(action.destination);
+      walk(action.onVictory);
+    }
+  };
+
+  for (const option of scene?.options || []) walk(option.actions);
+  for (const check of scene?.skills || []) {
+    walk(check.actions);
+    walk(check.onFailure);
+    for (const tier of Object.values(check.outcomes || {})) walk(tier.actions);
+  }
+  return targets;
+}
+
+// MapManager owns both the minimap HUD in the sidebar and the full-screen world
+// map overlay.
+//
+// The two answer different questions from one body of knowledge
+// (_outdoorKnowledge), so they can never disagree about what exists; what
+// differs is projection and detail. The minimap is "where am I" — inside a
+// building, that building's rooms; outdoors, a viewport centered on the player.
+// The full map is "where is everything" — the same places at their authored
+// coordinates, collapsing only the buildings never entered.
 export class MapManager {
   constructor(engine) {
     this.engine = engine;
@@ -50,22 +77,15 @@ export class MapManager {
     // the constructor).
     if (currentSceneId === this._minimapCacheKey) return;
 
-    // A scene without a region gets no minimap (regionScenes stays empty).
-    const regionId = this.engine.data.scenes[currentSceneId]?.region;
-    const regionScenes = regionId ? this._getVisitedMapScenes(regionId) : [];
+    const placements = this._minimapPlacements(currentSceneId);
 
-    if (regionScenes.length === 0) {
+    if (placements.length === 0) {
       minimapEl.hidden = true;
       return;
     }
 
-    // Scale the region's padded bounding box to fit the square HUD.
-    const bbox = this._computeBbox(regionScenes);
-    const padding = MAP_PADDING;
-    const bboxW = (bbox.maxRight - bbox.minLeft) + padding * 2;
-    const bboxH = (bbox.maxBottom - bbox.minTop) + padding * 2;
     const size = minimapEl.offsetWidth || MINIMAP_SIZE;
-    const scale = size / Math.max(bboxW, bboxH);
+    const view = this._minimapView(currentSceneId, placements, size);
 
     // Safari layout bug prevention: Rebuilding the canvas wrapper and swapping it
     // into the DOM via replaceWith() forces the browser engine to completely flush
@@ -74,14 +94,13 @@ export class MapManager {
     fresh.id = EL.MINIMAP_CANVAS;
     fresh.className = CSS.MINIMAP_CANVAS;
 
-    for (const { id, scene } of regionScenes) {
-      const d = scene.mapDefinitions;
-      const node = this._buildMapNode(id, scene, id === currentSceneId);
-      node.style.top    = ((d.top    - bbox.minTop  + padding) * scale) + 'px';
-      node.style.left   = ((d.left   - bbox.minLeft + padding) * scale) + 'px';
-      node.style.width  = (d.width  * scale) + 'px';
-      node.style.height = (d.height * scale) + 'px';
-      node.style.background = d.background || MAP_NODE_DEFAULT_BG;
+    for (const { def, label, background, isCurrent } of placements) {
+      const node = this._buildMapNode(label, isCurrent);
+      node.style.top    = ((def.top  - view.top)  * view.scale) + 'px';
+      node.style.left   = ((def.left - view.left) * view.scale) + 'px';
+      node.style.width  = (def.width  * view.scale) + 'px';
+      node.style.height = (def.height * view.scale) + 'px';
+      node.style.background = background || MAP_NODE_DEFAULT_BG;
       fresh.appendChild(node);
     }
 
@@ -102,14 +121,13 @@ export class MapManager {
     if (!overlay || !canvasEl || !scrollEl) return;
 
     const currentSceneId = this.engine.state.getCurrentSceneId();
-    const allScenes = this._getVisitedMapScenes();
     const { width, height } = this.engine.data.worldMapSize;
 
     if (titleEl) titleEl.textContent = this.engine.t('ui.worldMapTitle');
     canvasEl.style.width = `${width}px`;
     canvasEl.style.height = `${height}px`;
 
-    this._renderSceneNodes(canvasEl, allScenes, currentSceneId);
+    this._renderSceneNodes(canvasEl, this._fullMapPlacements(currentSceneId));
     overlay.hidden = false;
 
     // Center the scroll viewport on the player's scene. requestAnimationFrame
@@ -135,35 +153,240 @@ export class MapManager {
     this._minimapCacheKey = null;
   }
 
-  // Every visited scene that has mapDefinitions, as { id, scene } pairs —
-  // optionally narrowed to one region (what the minimap shows).
-  _getVisitedMapScenes(regionId = null) {
+  // What the minimap draws, as { def, label, background, isCurrent } boxes.
+  //
+  // Inside a building, only that building's visited rooms: what a player wants
+  // from the map in Frey's Store is the store, and a house reveals itself room
+  // by room as you walk it. Outdoors is the open world instead — one continuous
+  // map of everywhere the player knows about, no matter which region it belongs
+  // to, with each building on it drawn as the single square it occupies.
+  _minimapPlacements(currentSceneId) {
+    const inside = this._interiorKeyOf(currentSceneId);
+    if (inside) {
+      return this._visitedMapScenes()
+        .filter(({ id }) => this._interiorKeyOf(id) === inside)
+        .map(({ id, scene }) => this._roomPlacement(id, scene, currentSceneId));
+    }
+
+    const scenes = this.engine.data.scenes;
+    const known = this._outdoorKnowledge();
+    const rooms = [...known.rooms]
+      .filter(id => scenes[id]?.mapDefinitions)
+      .map(id => this._roomPlacement(id, scenes[id], currentSceneId));
+    const buildings = [...known.buildings].map(key => this._buildingPlacement(key));
+
+    // Buildings first so the rooms paint over them: a building's square is a
+    // bounding box, so it covers ground its rooms don't fill, and the world the
+    // player is standing in must never end up underneath it.
+    return [...buildings, ...rooms];
+  }
+
+  // What the full map draws: everywhere the player knows of, in as much detail
+  // as they know it. Outdoors follows the same reveal as the minimap. A building
+  // they have been inside shows the rooms they walked, at their real coordinates;
+  // one they have only seen from the road shows as its footprint, because a shape
+  // in the landscape is all they know of it yet.
+  _fullMapPlacements(currentSceneId) {
+    const scenes = this.engine.data.scenes;
+    const { rooms, buildings } = this._outdoorKnowledge();
+
+    const walked = new Map();
+    const insideRooms = [];
+    for (const { id, scene } of this._visitedMapScenes()) {
+      const key = this._interiorKeyOf(id);
+      if (!key) continue;
+      if (!walked.has(key)) walked.set(key, []);
+      walked.get(key).push(scene);
+      insideRooms.push(this._roomPlacement(id, scene, currentSceneId));
+    }
+
+    // Footprints first, so a building's box never covers the road it stands on.
+    // Outlines last: they draw no fill, and their names sit above the building,
+    // which for a building backing onto something else is over its neighbor —
+    // readable only if nothing paints after them.
+    return [
+      ...[...buildings].filter(key => !walked.has(key)).map(key => this._buildingPlacement(key)),
+      ...[...rooms].filter(id => scenes[id]?.mapDefinitions)
+        .map(id => this._roomPlacement(id, scenes[id], currentSceneId)),
+      ...insideRooms,
+      // Only where there is something to group: a building drawn as a single
+      // room is already named by that room, and an outline would just say it
+      // twice.
+      ...[...walked].filter(([, rooms]) => rooms.length > 1)
+        .map(([key, rooms]) => this._buildingOutline(key, rooms))
+    ];
+  }
+
+  // A building the player has been inside, drawn around the rooms they walked:
+  // an outline with the building's name above it. Rooms tile their building
+  // exactly, so without this a house reads as loose boxes with nothing saying
+  // which building — or whose — they belong to, and prefixing every room name
+  // ("Player Kitchen") would say it in the ugliest possible way.
+  //
+  // Bounded by the rooms *walked*, not the whole footprint: a half-explored
+  // dungeon must not have its extent drawn before it is earned.
+  _buildingOutline(key, rooms) {
+    return {
+      def: this._enclosing(rooms),
+      label: this._buildingFace(key, rooms).label,
+      background: 'transparent',
+      isCurrent: false,
+      isBuilding: true
+    };
+  }
+
+  // The box enclosing a set of rooms, in the shape the renderers position.
+  _enclosing(rooms) {
+    const bbox = this._computeBbox(rooms.map(room => room.mapDefinitions));
+    return {
+      top: bbox.minTop,
+      left: bbox.minLeft,
+      width: bbox.maxRight - bbox.minLeft,
+      height: bbox.maxBottom - bbox.minTop
+    };
+  }
+
+  // Everywhere outdoors the player knows of: what they have walked, plus one
+  // step of sight from it — the roads leading off the places they have stood,
+  // and the buildings whose doors they have stood at. Nothing is ever entered
+  // off a map it wasn't already on.
+  //
+  // Sight stops at that one step: you can see the lane leaving the square, not
+  // what stands along it. Indoors has no equivalent — a building's rooms are
+  // revealed by walking them, which is what makes exploring one feel like
+  // exploring.
+  _outdoorKnowledge() {
+    const scenes = this.engine.data.scenes;
+    const rooms = new Set();
+    const buildings = new Set();
+
+    for (const id of this.engine.state.getVisitedScenes()) {
+      if (!scenes[id] || this._interiorKeyOf(id)) continue;
+      rooms.add(id);
+      for (const dest of sceneNavigationTargets(scenes[id])) {
+        const key = this._interiorKeyOf(dest);
+        if (key) buildings.add(key);
+        else if (scenes[dest]) rooms.add(dest);
+      }
+    }
+    return { rooms, buildings };
+  }
+
+  // How world coordinates land in the HUD square. Outdoors the minimap is a
+  // viewport — a fixed span of world centered on the player, so walking scrolls
+  // the map rather than zooming it out. A world that keeps growing must not keep
+  // shrinking what you can read of it. Without a configured span, or inside a
+  // building, the frame is the extent of what's drawn: a building is bounded and
+  // small, so there is nothing to scroll.
+  _minimapView(currentSceneId, placements, size) {
+    const radius = this.engine.data.minimapRadius;
+    const here = this.engine.data.scenes[currentSceneId]?.mapDefinitions;
+
+    if (radius > 0 && here && !this._interiorKeyOf(currentSceneId)) {
+      return {
+        left: (here.left + here.width / 2) - radius,
+        top: (here.top + here.height / 2) - radius,
+        scale: size / (radius * 2)
+      };
+    }
+
+    const bbox = this._computeBbox(placements.map(p => p.def));
+    const span = Math.max(
+      (bbox.maxRight - bbox.minLeft),
+      (bbox.maxBottom - bbox.minTop)
+    ) + MAP_PADDING * 2;
+    return {
+      left: bbox.minLeft - MAP_PADDING,
+      top: bbox.minTop - MAP_PADDING,
+      scale: size / span
+    };
+  }
+
+  // The building the player is inside, as a stable key, or null out in the open.
+  // A one-room building marks itself (`interior` on the scene); the rooms of a
+  // bigger one are grouped by a region flagged `interior`, which is also where
+  // that building gets the single name and color its square is drawn with. The
+  // scene's own marking wins, so a shop with its own map inside a keep stays
+  // its own map.
+  _interiorKeyOf(sceneId) {
+    const scene = this.engine.data.scenes[sceneId];
+    if (!isInteriorScene(scene, this.engine.data.regions)) return null;
+    return scene.interior ? `scene:${sceneId}` : `region:${scene.region}`;
+  }
+
+  // One building as one square: its whole footprint, whether or not the player
+  // has been inside. A building seen from the road is a shape in the landscape,
+  // so its square is the ground it stands on — it doesn't grow as its owner
+  // wanders around indoors.
+  _buildingPlacement(key) {
+    const rooms = Object.entries(this.engine.data.scenes)
+      .filter(([id, scene]) => scene?.mapDefinitions && this._interiorKeyOf(id) === key)
+      .map(([, scene]) => scene);
+
+    return {
+      def: this._enclosing(rooms),
+      ...this._buildingFace(key, rooms),
+      isCurrent: false
+    };
+  }
+
+  // The name and color a building's square is drawn with: a region's own for a
+  // grouped building, the room's own for a building that is one room.
+  _buildingFace(key, rooms) {
+    if (key.startsWith('region:')) {
+      const region = this.engine.data.regions?.[key.slice('region:'.length)];
+      return { label: region?.name || key, background: region?.mapBackground };
+    }
+    const room = rooms[0];
+    return {
+      label: room.name || room.title || key.slice('scene:'.length),
+      background: room.mapDefinitions.background
+    };
+  }
+
+  // One drawn room, in the shape renderMinimap positions. Tagged with `name`
+  // ahead of `title`: the schema reserves `title` for the header a player reads
+  // on arrival and `name` for map tags, which is what lets a room inside a
+  // building avoid repeating the building's own name on the map.
+  _roomPlacement(id, scene, currentSceneId) {
+    return {
+      def: scene.mapDefinitions,
+      label: scene.name || scene.title || id,
+      background: scene.mapDefinitions.background,
+      isCurrent: id === currentSceneId
+    };
+  }
+
+  // Every visited scene that has mapDefinitions, as { id, scene } pairs.
+  _visitedMapScenes() {
     const visited = new Set(this.engine.state.getVisitedScenes());
     return Object.entries(this.engine.data.scenes)
-      .filter(([id, scene]) => (!regionId || scene?.region === regionId) && visited.has(id) && scene.mapDefinitions)
+      .filter(([id, scene]) => visited.has(id) && scene.mapDefinitions)
       .map(([id, scene]) => ({ id, scene }));
   }
 
   // Builds one labeled map-node element. The caller positions and sizes it —
   // the minimap scales coordinates, the full map uses them as authored.
-  _buildMapNode(id, scene, isCurrentScene) {
+  _buildMapNode(labelText, isCurrentScene, isBuilding = false) {
     const node = document.createElement('div');
-    node.className = isCurrentScene ? `${CSS.MAP_NODE} ${CSS.MAP_NODE_CURRENT}` : CSS.MAP_NODE;
+    node.className = CSS.MAP_NODE;
+    if (isCurrentScene) node.classList.add(CSS.MAP_NODE_CURRENT);
+    if (isBuilding) node.classList.add(CSS.MAP_NODE_BUILDING);
 
     const label = document.createElement('span');
     label.className = CSS.MAP_NODE_LABEL;
-    label.textContent = scene.title || scene.name || id;
+    label.textContent = labelText;
     node.appendChild(label);
 
     return node;
   }
 
-  // The bounding box enclosing the given scenes' mapDefinitions — what the
-  // minimap scales to fit its square.
-  _computeBbox(scenes) {
+  // The bounding box enclosing the given geometry — what the minimap scales to
+  // fit its square, and what collapses a region into one node.
+  _computeBbox(defs) {
     let minLeft = Infinity, minTop = Infinity, maxRight = -Infinity, maxBottom = -Infinity;
-    for (const { scene } of scenes) {
-      const { left, top, width, height } = scene.mapDefinitions;
+    for (const def of defs) {
+      const { left, top, width, height } = def;
       if (left < minLeft) minLeft = left;
       if (top < minTop) minTop = top;
       if (left + width > maxRight) maxRight = left + width;
@@ -172,18 +395,17 @@ export class MapManager {
     return { minLeft, minTop, maxRight, maxBottom };
   }
 
-  // Fills the full-map canvas: one node per scene at its authored
-  // mapDefinitions coordinates, unscaled.
-  _renderSceneNodes(canvasEl, scenes, currentSceneId) {
+  // Fills the full-map canvas: one node per placement at its authored
+  // coordinates, unscaled.
+  _renderSceneNodes(canvasEl, placements) {
     clearElement(canvasEl);
-    for (const { id, scene } of scenes) {
-      const { top, left, width, height, background } = scene.mapDefinitions;
-      const node = this._buildMapNode(id, scene, id === currentSceneId);
+    for (const { def, label, background, isCurrent, isBuilding } of placements) {
+      const node = this._buildMapNode(label, isCurrent, isBuilding);
       Object.assign(node.style, {
-        top: top + 'px',
-        left: left + 'px',
-        width: width + 'px',
-        height: height + 'px',
+        top: def.top + 'px',
+        left: def.left + 'px',
+        width: def.width + 'px',
+        height: def.height + 'px',
         background: background || MAP_NODE_DEFAULT_BG
       });
 

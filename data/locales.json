@@ -80,6 +80,8 @@
     "chestClose": "Close Chest",
     "inventoryTitle": "Your Inventory",
     "skillsHeading": "Skills",
+    "entrancesHeading": "Entrances",
+    "exitsHeading": "Exits",
     "conversationsHeading": "NPCs",
     "actionsHeading": "Actions",
     "shortRestRemaining": "Remaining: {current}/{max}",

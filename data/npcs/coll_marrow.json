@@ -1,0 +1,26 @@
+{
+  "name": "Coll",
+  "conversations": {
+    "start": {
+      "npcText": "This is a fort. You can come in the fort but you have to be a wall, because Da took the good plank back and now there's only three walls.",
+      "responses": [
+        {
+          "text": "I'll be a wall.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "A fort needs four walls. Fair.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

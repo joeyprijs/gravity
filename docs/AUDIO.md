@@ -30,12 +30,12 @@ Declared on the region (in `data/index.json`) and overridable per scene:
 ```
 
 ```json
-{ "id": "home_door", "region": "player_home", "ambience": "audio/ambience/home_door.m4a" }
+{ "id": "village_hill_path", "region": "village", "ambience": "audio/ambience/hill_path.m4a" }
 ```
 
 Resolution order, per scene: the scene's own `ambience` wins, else the region's, else silence. An explicit `"ambience": null` on a scene silences it against a region that has a bed.
 
-Re-syncing to the same path is a no-op, so walking between rooms of one region never restarts the loop — the bed is continuous across a whole dungeon, and only a region (or an overriding scene) change crossfades it. A region with no `ambience` is silence: stepping from the hillside outside `home_door` into the house fades the outdoors out.
+Re-syncing to the same path is a no-op, so walking between rooms of one region never restarts the loop — the bed is continuous across a whole dungeon, and only a region (or an overriding scene) change crossfades it. A region with no `ambience` is silence: climbing from the hillside of `village_hill_path` into the house fades the outdoors out.
 
 ## Narration
 
@@ -60,53 +60,23 @@ Because the channel plays one clip at a time, a narrated action followed by `nav
 audio/
   ambience/                    # O(regions) — flat, named for the id that declares it
     dungeon.m4a                #   a region id
-    home_door.m4a              #   a scene id, for a scene-level override
+    hill_path.m4a              #   a scene id, for a scene-level override
   narration/                   # O(scenes) — mirrors data/scenes/
     dungeon/
       start.webm               #   data/scenes/dungeon/start.json — its description
       start__closer_look.webm  #   …and a clip for one action inside it
   _masters/                    # lossless sources + superseded takes — gitignored
-  _scripts/                    # generated recording scripts — committed
 ```
 
-**The clips are gitignored for now** (`audio/**/*.m4a`, `*.webm`, `*.wav`, and friends) — a checkout has the layout and the recording scripts but no audio, and plays silent, which is exactly how the engine handles a missing file anyway. Two consequences worth knowing: the deployed demo on GitHub Pages has no sound, and the data-integrity test that checks every referenced clip exists skips itself when there are no clips to check. `audio/_scripts/` stays tracked — it is text, and its diffs are the drift signal.
+**The clips are gitignored for now** (`audio/**/*.m4a`, `*.webm`, `*.wav`, and friends) — a checkout has the layout but no audio, and plays silent, which is exactly how the engine handles a missing file anyway. Two consequences worth knowing: the deployed demo on GitHub Pages has no sound, and the data-integrity test that checks every referenced clip exists skips itself when there are no clips to check.
 
 The rules behind it:
 
 - **Top level is the channel.** A file's path says which channel plays it and which volume slider governs it.
 - **Ambience is flat**, named for the id that declares it — a region id, or a scene id where a scene overrides its region. This class is bounded by the number of regions; nesting would be ceremony.
 - **Narration mirrors `data/scenes/<region>/<scene>`.** This is the class that grows with content, and its whole maintenance problem is *which clip belongs to which line* — mirroring makes the path derivable from the JSON and back again, with no lookup.
-- **A second clip for the same scene takes a `__suffix`.** For a description variant the generator names the beat — the condition flag that selects it (`corridor__wanderer_defeated`); for an action or check line it suggests a slug of the owning option's text (`start__closer_look`). The suggestion is only that: a path already wired in the data wins outright, so relabeling a button never moves a recorded take.
+- **A second clip for the same scene takes a `__suffix`** naming the beat: the condition flag that selects a description variant (`corridor__wanderer_defeated`), or a slug of the owning option's text for an action line (`start__closer_look`).
 - **`snake_case`**, matching data filenames and ids. The schema field is spelled `ambience` — keep the files spelled the same way so one grep finds both.
-
-## Recording scripts
-
-```
-node scripts/generate-narration-script.js          # write audio/_scripts/
-node scripts/generate-narration-script.js --check  # exit 1 if stale (CI)
-```
-
-Writes one plain-text recording script per scene — `audio/_scripts/<region>/<scene>.txt`. Each entry gives the line wrapped for reading aloud, where it lives in the JSON, and the clip path the take belongs at:
-
-```
-────────────────────────────────────────────────────────────────────────
-Log line · Take a closer look at the door · loot
-options[1].actions[0].log
-→ audio/narration/dungeon/start__closer_look.webm  [clip authored]
-
-  You run your hands over the rough planks, feeling for weakness.
-  Nothing gives. But crouching at the threshold, you spot it: a small
-  iron key lying in the gap beneath the door, slid through from the
-  other side. Whoever locked you in wanted you to let yourself out.
-```
-
-What it extracts, per scene: the description (plain or every variant, labelled with the state that selects it), `passiveChecks[].text`, each skill's `resultText` and `outcomes.<tier>.text` — including the per-attempt array form, one entry per attempt — and every custom `log` / `message` string in any action pipeline, at any nesting depth.
-
-Prose locations are an explicit allowlist, not a scan for `text`: `options[].text`, `skills[].text`, and `retryText` are button labels and are never narrated.
-
-Where the data already wires a `narration` path, the script shows that path. Where it doesn't, it suggests one by the rules above and marks the line `[no clip yet]`. Kinds the engine cannot play yet — outcome text, `resultText`, passive checks — say so on the status line, so recording them is a deliberate choice to work ahead of the engine rather than a surprise silence.
-
-**The output is committed on purpose.** The script is a pure function of the data — it never looks at which clips are on disk — so `git diff` after editing prose is exactly the list of clips that no longer match their text. That is the answer to narration's real failure mode: a recording that quietly stops matching the line it reads. CI runs `--check` to keep the two in step.
 
 ## Format
 

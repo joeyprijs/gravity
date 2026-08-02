@@ -3,9 +3,9 @@
   "name": "Kitchen",
   "region": "player_home",
   "mapDefinitions": {
-    "top": 1800,
-    "left": 2390,
-    "width": 110,
+    "top": 1900,
+    "left": 2500,
+    "width": 140,
     "height": 100,
     "background": "rgba(70, 50, 30, 0.9)"
   },

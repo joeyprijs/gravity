@@ -1,0 +1,104 @@
+{
+  "id": "village_east_row",
+  "name": "East Row",
+  "region": "village",
+  "mapDefinitions": {
+    "top": 2310,
+    "left": 3060,
+    "width": 280,
+    "height": 100,
+    "background": "rgba(85, 70, 55, 0.9)"
+  },
+  "description": [
+    {
+      "text": "The last three cottages in Hollowbrook, and past them nothing but hedge and field. A ladder is still leaning against the first roof, which somebody's wife will have something to say about.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "The lane peters out into a row of three cottages with the fields beginning immediately behind them — the far edge of the village. A ladder stands against the first roof with a bundle of reed lashed halfway up it. The second has more books in its window than the rest of Hollowbrook put together, and the third has a loom going in each of its two front rooms.",
+      "condition": {
+        "segment": "day"
+      }
+    },
+    {
+      "text": "Three cottages at the far edge of the village, the fields starting right behind them. A ladder against the first, books stacked in the window of the second, and both front rooms of the third lit for weaving."
+    }
+  ],
+  "options": [
+    {
+      "text": "Go into the Thatcher cottage",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_thatcher_cottage"
+        }
+      ]
+    },
+    {
+      "text": "Go into the Quill cottage",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_quill_cottage"
+        }
+      ]
+    },
+    {
+      "text": "Go into the weavers' cottage",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_weavers_cottage"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Bryn on his ladder",
+      "condition": {
+        "segment": "day"
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "bryn_thatcher"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Dov, holding the ladder",
+      "condition": {
+        "segment": "day"
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "dov_thatcher"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Dain at the gate",
+      "condition": {
+        "segment": "evening"
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "dain_loom"
+        }
+      ]
+    },
+    {
+      "text": "Walk back along Forge Lane",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_forge_lane"
+        }
+      ]
+    }
+  ]
+}

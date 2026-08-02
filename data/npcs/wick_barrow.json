@@ -1,0 +1,186 @@
+{
+  "name": "Wick Barrow",
+  "isMerchant": true,
+  "storeExitText": "Take the loaf. You're carrying nothing and it's a long lane.",
+  "carriedItems": [
+    "loaf_of_bread",
+    "flour_sack"
+  ],
+  "conversations": {
+    "start": {
+      "npcText": "Speak up, would you — the wheel eats half of everything a man says. Wick Barrow. Miller when the brook's high, baker when it isn't.",
+      "responses": [
+        {
+          "text": "What's for sale?",
+          "condition": {
+            "not": {
+              "segment": "night"
+            }
+          },
+          "actions": [
+            {
+              "type": "trade"
+            }
+          ]
+        },
+        {
+          "text": "Anything left at this hour?",
+          "condition": {
+            "segment": "night"
+          },
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "closed"
+            }
+          ]
+        },
+        {
+          "text": "Both trades in one house?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "both_trades"
+            }
+          ]
+        },
+        {
+          "text": "How's the brook running?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_brook"
+            }
+          ]
+        },
+        {
+          "text": "Good day to you.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "closed": {
+      "npcText": "Sold out by midday, and the oven's cold. Anwen sets the dough before dawn — come at first light and the whole lane smells of it. That's not sales talk, that's just the lane.",
+      "responses": [
+        {
+          "text": "I'll come at first light.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        },
+        {
+          "text": "Goodnight.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "both_trades": {
+      "npcText": "Grain comes in, flour goes out, and somebody has to prove the flour's any good. My father milled and sold it on. I got tired of hearing what other folk did with my flour.",
+      "responses": [
+        {
+          "text": "And the bread settled it?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "bread_settled"
+            }
+          ]
+        },
+        {
+          "text": "Makes sense.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "bread_settled": {
+      "npcText": "Anwen's bread settled it. Mine was fit for propping doors. She married into a mill and turned it into a bakehouse, and I've had the sense not to argue since.",
+      "responses": [
+        {
+          "text": "A wise man.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "the_brook": {
+      "npcText": "Low, and dropping. Two more dry weeks and the wheel turns for show. It's happened twice in my life and both times the village ate the winter store early and pretended it hadn't.",
+      "responses": [
+        {
+          "text": "What happens if it dries?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "if_it_dries"
+            }
+          ]
+        },
+        {
+          "text": "Here's hoping for rain.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "if_it_dries": {
+      "npcText": "Then I grind by hand and charge the same, and everyone calls me a thief, and come spring nobody remembers. Tam's already sharpening his opinions about it. Sixteen and he's got the whole thing solved.",
+      "responses": [
+        {
+          "text": "What's his solution?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "tams_solution"
+            }
+          ]
+        },
+        {
+          "text": "Sixteen is like that.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "tams_solution": {
+      "npcText": "Dig a race up from the deep pool above the fisher's cottage. Which is Garrow's water, and Garrow's grandfather's before that, and my boy thinks that's a detail. Ask him about it. He'll draw it in the flour for you.",
+      "responses": [
+        {
+          "text": "I might just do that.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

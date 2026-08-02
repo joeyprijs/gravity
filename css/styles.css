@@ -45,6 +45,7 @@
   /* Map Visuals */
   --minimap-bg: rgba(0, 0, 0, 0.55);
   --map-node-border: rgba(255, 255, 255, 0.18);
+  --map-building-outline: rgba(255, 255, 255, 0.45);
   --map-node-text: rgba(255, 255, 255, 0.65);
 
   /* Typography */
@@ -945,6 +946,37 @@ button.section-toggle--collapsed .section-toggle__label::before {
   text-overflow: ellipsis;
   width: 100%;
   line-height: 1.2;
+}
+
+/* A building on the full map: an outline gathering the rooms the player has
+   walked, named above them. The rooms keep their own colours — the outline is
+   the only thing that says they are one building, which is why it sits outside
+   their edges (outline-offset) instead of under them, where the rooms tile
+   their building exactly and would hide it. */
+.map-node--building {
+  border-color: transparent;
+  outline: 1px dashed var(--map-building-outline);
+  outline-offset: 3px;
+  overflow: visible;
+}
+
+/* The name sits above the building rather than over its rooms. A building that
+   backs onto a road puts that name on top of the neighbour, so it carries its
+   own backing to stay readable wherever it lands. */
+.map-node--building .map-node__label {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
+  max-width: none;
+  margin-bottom: 6px;
+  padding: 1px 6px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.6);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 /* ==========================================================================

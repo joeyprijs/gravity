@@ -37,7 +37,7 @@ test('itemStatLines: unknown scalar attributes fall back to key: value', () => {
 });
 
 test('itemStatLines: authoring-data attributes (teleportScene) never render', () => {
-  assert.deepEqual(itemStatLines(t, { attributes: { teleportScene: 'home_door' } }), []);
+  assert.deepEqual(itemStatLines(t, { attributes: { teleportScene: 'home_living_room' } }), []);
 });
 
 // ── equipmentAttributeBonuses ─────────────────────────────────────────────────

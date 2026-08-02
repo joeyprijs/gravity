@@ -1,0 +1,26 @@
+{
+  "name": "Maev Orrel",
+  "conversations": {
+    "start": {
+      "npcText": "So he DID ask you. Good. Supper, any night, and bring nothing — he'll have told you that part like it was his idea. Seven of us and there's never a chair, so come early and take mine.",
+      "responses": [
+        {
+          "text": "I'll come early.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "He did claim it as his idea.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

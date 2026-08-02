@@ -1,0 +1,10 @@
+{
+  "name": "Loaf of Bread",
+  "type": "Consumable",
+  "description": "Dark, dense, still warm through the cloth. Anwen's crust cracks when you press it.",
+  "value": 3,
+  "attributes": {
+    "healingAmount": 2,
+    "actionPoints": 1
+  }
+}

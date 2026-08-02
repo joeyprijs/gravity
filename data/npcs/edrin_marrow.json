@@ -1,0 +1,26 @@
+{
+  "name": "Edrin Marrow",
+  "conversations": {
+    "start": {
+      "npcText": "Careful of the felloes stacked there, they're seasoning. A wheel is thirty pieces of wood that all want to be somewhere else, and the whole craft is talking them out of it.",
+      "responses": [
+        {
+          "text": "That's a fine way to put it.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "I'll mind the stack.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

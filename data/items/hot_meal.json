@@ -1,0 +1,10 @@
+{
+  "name": "Hot Meal",
+  "type": "Consumable",
+  "description": "Barley and mutton under a lid, with bread to push it about the bowl. Rosalind never says what is in it.",
+  "value": 7,
+  "attributes": {
+    "healingAmount": "1d6",
+    "actionPoints": 1
+  }
+}

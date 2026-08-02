@@ -1,0 +1,26 @@
+{
+  "name": "Nim Bream",
+  "conversations": {
+    "start": {
+      "npcText": "Don't move, don't move — see under the far stone? That's the Reeve. He's the fattest one and he never moves and I'm not allowed to call him that in the village, so I do.",
+      "responses": [
+        {
+          "text": "Your secret's safe.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "A well-named fish.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

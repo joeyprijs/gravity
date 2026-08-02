@@ -142,6 +142,5 @@ Check design (tiers, budgets, retry costs, the clock) has its own guide: [`CHECK
 | Unit + data-integrity tests | `npm test` | ✔ |
 | Manifest in sync with data tree | `node scripts/generate-manifest.js --check` | ✔ |
 | Canonical data formatting | `node scripts/format-data.js --check` | ✔ |
-| Narration scripts match the authored prose | `node scripts/generate-narration-script.js --check` | ✔ |
 | Browser UI smoke test | `scripts/run-smoke.sh` (or open `tests/smoke.html`) | ✔ |
 | Everything else in this guide | review | — |

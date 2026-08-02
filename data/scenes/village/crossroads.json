@@ -1,0 +1,65 @@
+{
+  "id": "village_crossroads",
+  "name": "The Crossroads",
+  "region": "village",
+  "mapDefinitions": {
+    "top": 2070,
+    "left": 2385,
+    "width": 280,
+    "height": 70,
+    "background": "rgba(80, 75, 55, 0.9)"
+  },
+  "description": [
+    {
+      "text": "Four ways meet at a leaning waymarker stone, and at this hour all four of them are empty. The stone's carved arms are worn past reading; someone has left a lantern hook screwed into the top of it, and no lantern.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "Four ways meet at a leaning waymarker stone, its carved arms worn past reading: the hill path behind you, the shepherd's track climbing west, the road south into the village, and the ridge road east — deep-rutted, going nowhere anyone here has been."
+    }
+  ],
+  "options": [
+    {
+      "text": "Take the road south into the village",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_north_road"
+        }
+      ]
+    },
+    {
+      "text": "Climb the shepherd's track west",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_shepherds_hill"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Alder and his handcart",
+      "condition": {
+        "segment": "day"
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "alder_frey"
+        }
+      ]
+    },
+    {
+      "text": "Climb the hill path home",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_hill_path"
+        }
+      ]
+    }
+  ]
+}

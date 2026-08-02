@@ -1,0 +1,26 @@
+{
+  "name": "Dov Thatcher",
+  "conversations": {
+    "start": {
+      "npcText": "Do you know Josen Bramble? Properly know him? He's said he'd take me up the ridge in autumn and Ma's said no, and neither of them has said it to the other one yet.",
+      "responses": [
+        {
+          "text": "That'll end well for nobody.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "I know him. He tells a story twice.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

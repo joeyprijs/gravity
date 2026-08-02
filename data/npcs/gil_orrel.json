@@ -1,0 +1,26 @@
+{
+  "name": "Gil Orrel",
+  "conversations": {
+    "start": {
+      "npcText": "Gate's stiff. I'll get to it. There's the top field first, and the low one, and then the gate, and then it'll be dark.",
+      "responses": [
+        {
+          "text": "I could hold it while you pass.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "I'll leave you to the fields.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

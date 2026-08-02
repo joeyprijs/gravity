@@ -1,0 +1,63 @@
+{
+  "id": "village_hill_path",
+  "name": "Hill Path",
+  "region": "village",
+  "mapDefinitions": {
+    "top": 2000,
+    "left": 2525,
+    "width": 90,
+    "height": 70,
+    "background": "rgba(60, 70, 45, 0.9)"
+  },
+  "ambience": "audio/ambience/hill_path.m4a",
+  "description": [
+    {
+      "text": "The path drops away from your door in a series of worn turns, chalk showing through the grass where generations of feet have cut the corner. Below, Hollowbrook is a scatter of dark roofs and one lit window, and the mill wheel has stopped for the night.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "The path drops away from your door in a series of worn turns, and the whole village lies below in the early light — chimney smoke going straight up, the mill wheel turning, somebody's dog answering somebody else's.",
+      "condition": {
+        "segment": "morning"
+      }
+    },
+    {
+      "text": "The path drops away from your door in a series of worn turns, chalk showing through the grass where generations of feet have cut the corner. Hollowbrook sits below in the crook of its brook: the square, the mill, lanes running off east and west between low thatched roofs."
+    }
+  ],
+  "options": [
+    {
+      "text": "Walk down to the crossroads",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_crossroads"
+        }
+      ]
+    },
+    {
+      "text": "Go into your house",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "home_living_room"
+        }
+      ]
+    }
+  ],
+  "skills": [
+    {
+      "text": "Stop and look out over the village",
+      "skillCheck": "perception",
+      "repeatable": true,
+      "resultText": [
+        "From up here the whole shape of it is plain: every lane bends toward the well, and every roof turns its back to the ridge. Somebody laid this village out on purpose, a long time ago, and nobody since has needed to change it.",
+        "You pick out the museum's roofline behind you, higher than anything below. From the village, your family's house is the first thing you'd see coming up the valley — and the easiest thing to stop noticing.",
+        "Twenty-odd chimneys, and you find yourself counting them. Seventy-some people down there, give or take a baby, and until this week you could not have named four."
+      ]
+    }
+  ]
+}

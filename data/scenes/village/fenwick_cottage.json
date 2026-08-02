@@ -1,0 +1,48 @@
+{
+  "id": "village_fenwick_cottage",
+  "name": "Fenwick Cottage",
+  "region": "village",
+  "interior": true,
+  "mapDefinitions": {
+    "top": 2230,
+    "left": 2910,
+    "width": 150,
+    "height": 80,
+    "background": "rgba(70, 60, 50, 0.9)"
+  },
+  "description": [
+    {
+      "text": "One room, one chair, one bed, and sixty years of small things arranged on every ledge: pressed flowers gone to paper, a child's shoe, four different clay birds. Halda is inside at this hour with a shawl over her knees and the door left on the latch, because she has never once locked it.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "The smallest house on the lane, and the tidiest. One room, one chair by the fire and one out on the step where she actually sits. Sixty years of small kept things line the ledges — pressed flowers, a child's shoe, four clay birds in a row — and above the fire hangs a wedding cloth with the stitching gone soft."
+    }
+  ],
+  "options": [
+    {
+      "text": "Talk to Halda",
+      "condition": {
+        "segment": "night"
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "halda_fenwick"
+        }
+      ]
+    },
+    {
+      "text": "Step back out to the lane",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_forge_lane"
+        }
+      ]
+    }
+  ]
+}

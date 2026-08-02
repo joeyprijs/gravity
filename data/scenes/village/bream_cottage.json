@@ -1,0 +1,62 @@
+{
+  "id": "village_bream_cottage",
+  "name": "Bream Cottage",
+  "region": "village",
+  "interior": true,
+  "mapDefinitions": {
+    "top": 2230,
+    "left": 1740,
+    "width": 160,
+    "height": 80,
+    "background": "rgba(50, 70, 80, 0.9)"
+  },
+  "description": [
+    {
+      "text": "Two boys asleep in one bed with their heads at opposite ends, and their father still up, mending a net he could mend blind. A woman's shawl hangs on the door peg where it has hung for four years and will go on hanging.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "A cottage that smells permanently of river and pitch. Nets hang the length of one wall in various states of repair, floats and lead in a bowl, and every boot in the house is wet. Someone has scratched six fish onto the doorframe with names beside them; the largest is labelled, in careful letters, THE REEVE."
+    }
+  ],
+  "options": [
+    {
+      "text": "Talk to Garrow",
+      "condition": {
+        "segment": "night"
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "garrow_bream"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Nim",
+      "condition": {
+        "not": {
+          "segment": "day"
+        }
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "nim_bream"
+        }
+      ]
+    },
+    {
+      "text": "Step back out to the bank",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_brookside"
+        }
+      ]
+    }
+  ]
+}

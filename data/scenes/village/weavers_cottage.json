@@ -1,0 +1,59 @@
+{
+  "id": "village_weavers_cottage",
+  "name": "The Weavers' Cottage",
+  "region": "village",
+  "interior": true,
+  "mapDefinitions": {
+    "top": 2410,
+    "left": 3060,
+    "width": 140,
+    "height": 80,
+    "background": "rgba(75, 55, 70, 0.9)"
+  },
+  "description": [
+    {
+      "text": "Both looms are stopped and covered. Two candles burn at opposite ends of the same house, which tells you the sisters are still not speaking. Somebody has left a cup of something hot on the wrong side of the room, half deliberately.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "Two looms in two front rooms, and they are counting each other's shuttles. Yvaine works green wool at the near one, Pyra grey at the far one, and neither has addressed the other since Tuesday. Dain moves between them carrying things nobody asked him to carry."
+    }
+  ],
+  "options": [
+    {
+      "text": "Talk to Yvaine",
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "yvaine_loom"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Dain",
+      "condition": {
+        "not": {
+          "segment": "evening"
+        }
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "dain_loom"
+        }
+      ]
+    },
+    {
+      "text": "Step back out to the row",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_east_row"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+{
+  "id": "village_south_fields",
+  "name": "South Fields",
+  "region": "village",
+  "mapDefinitions": {
+    "top": 2590,
+    "left": 2270,
+    "width": 520,
+    "height": 150,
+    "background": "rgba(105, 100, 55, 0.9)"
+  },
+  "description": [
+    {
+      "text": "The fields are a great pale emptiness under the stars, and the two farmhouses sit far apart with a single lit window each. Something moves along a hedge line and turns out, when you stop, to be nothing you can name.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "The village ends and the fields begin: barley going over from green, a low field and a stony top field beyond it, and two farmsteads set well apart with their barns turned to the weather. Somebody is working every one of those fields, and from here they are all very small.",
+      "condition": {
+        "segment": "day"
+      }
+    },
+    {
+      "text": "The fields lie open and cooling, the barley moving all at once when the air does. Two farmsteads sit well apart across them, both with smoke going up, and the day's tools are still standing where they were set down."
+    }
+  ],
+  "options": [
+    {
+      "text": "Go to the Orrel farmhouse",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_orrel_farmhouse"
+        }
+      ]
+    },
+    {
+      "text": "Go to the Ashcroft farmhouse",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_ashcroft_farmhouse"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Dunstan at the gate",
+      "condition": {
+        "or": [
+          {
+            "segment": "morning"
+          },
+          {
+            "segment": "day"
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "dunstan_orrel"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Gil in the low field",
+      "condition": {
+        "segment": "day"
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "gil_orrel"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Aldous on his morning walk",
+      "condition": {
+        "segment": "morning"
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "aldous_orrel"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Serrel by the barn",
+      "condition": {
+        "segment": "day"
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "serrel_ashcroft"
+        }
+      ]
+    },
+    {
+      "text": "Talk to the twins at the Ashcroft gate",
+      "condition": {
+        "or": [
+          {
+            "segment": "morning"
+          },
+          {
+            "segment": "day"
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "ashcroft_twins"
+        }
+      ]
+    },
+    {
+      "text": "Walk back up Sowers Lane",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_sowers_lane"
+        }
+      ]
+    }
+  ]
+}

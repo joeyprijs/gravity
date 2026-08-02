@@ -1,0 +1,78 @@
+{
+  "id": "village_mill",
+  "name": "The Mill & Bakehouse",
+  "region": "village",
+  "interior": true,
+  "mapDefinitions": {
+    "top": 2410,
+    "left": 2140,
+    "width": 180,
+    "height": 80,
+    "background": "rgba(100, 85, 55, 0.9)"
+  },
+  "description": [
+    {
+      "text": "The wheel is still and the oven is cold, and the mill has gone quiet in a way that clearly unsettles the family living in it. Gerta has the good chair. Brill is asleep against the flour bins where nobody has the heart to move her.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "Two trades in one building, and the floor is white with the argument between them. The millstones grind at the low end, the bakehouse oven glows at the high end, and everything between is flour: on the beams, the bins, the dog, and a patch of table where Tam has drawn the brook with his finger. Anwen's morning loaves cool in ranks by the door.",
+      "condition": {
+        "segment": "morning"
+      }
+    },
+    {
+      "text": "Two trades in one building, and flour on every surface of both. The stones grind at the low end, the oven stands at the high end with the day's baking gone from it, and there is a drawing of the brook fingered into the flour on the table that nobody has been allowed to wipe."
+    }
+  ],
+  "options": [
+    {
+      "text": "Talk to Wick",
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "wick_barrow"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Anwen",
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "anwen_barrow"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Tam",
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "tam_barrow"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Old Gerta",
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "old_gerta"
+        }
+      ]
+    },
+    {
+      "text": "Step back out to the road",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_mill_road"
+        }
+      ]
+    }
+  ]
+}

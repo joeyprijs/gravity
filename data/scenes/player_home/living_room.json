@@ -57,12 +57,23 @@
       ]
     },
     {
-      "text": "Leave House",
+      "text": "Return via Teleport",
+      "requirements": {
+        "item": "home_rune"
+      },
+      "actions": [
+        {
+          "type": "return"
+        }
+      ]
+    },
+    {
+      "text": "Step outside to the hill path",
       "isBack": true,
       "actions": [
         {
           "type": "navigate",
-          "destination": "home_door"
+          "destination": "village_hill_path"
         }
       ]
     }

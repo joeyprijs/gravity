@@ -1,0 +1,373 @@
+{
+  "name": "Dunstan Orrel",
+  "conversations": {
+    "start": {
+      "npcText": "Hold the gate, would you — no, other way, it drops. There. Good. You've earned five minutes of my day, which is generous of me and you'll not get six.",
+      "responses": [
+        {
+          "text": "How's the harvest looking?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "harvest"
+            }
+          ]
+        },
+        {
+          "text": "That's a big household up there.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "household"
+            }
+          ]
+        },
+        {
+          "text": "Do you need a hand with anything?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "a_hand"
+            }
+          ]
+        },
+        {
+          "text": "I'll not take the sixth.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "harvest": {
+      "npcText": "Barley's fair. Oats are thin and the top field is thinner, and if the brook drops another hand the whole conversation changes. Ask me again after it rains and you'll get a nicer man.",
+      "responses": [
+        {
+          "text": "Everyone's watching that brook.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "watching_brook"
+            }
+          ]
+        },
+        {
+          "text": "What's wrong with the top field?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "top_field"
+            }
+          ]
+        }
+      ]
+    },
+    "watching_brook": {
+      "npcText": "Aye, and every one of them thinks their own trade is the one that matters. Wick's wheel, Garrow's trout, my oats. The truth is a dry year takes a bite out of all three and the village argues about the bite instead of the year.",
+      "responses": [
+        {
+          "text": "You sound like the reeve.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "like_reeve"
+            }
+          ]
+        },
+        {
+          "text": "So what do you do about it?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "what_you_do"
+            }
+          ]
+        }
+      ]
+    },
+    "like_reeve": {
+      "npcText": "Don't you say that where he can hear it, he'll put me on a committee. I've been on the water committee twice and both times it met in my kitchen and ate my bread.",
+      "responses": [
+        {
+          "text": "Ha. Your secret's safe.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "what_you_do": {
+      "npcText": "You plant the low field wider and you say nothing clever at the meeting. Farming is mostly not doing the exciting thing. It's a poor trade for young folk and a fine one for me.",
+      "responses": [
+        {
+          "text": "Do your sons see it that way?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_sons"
+            }
+          ]
+        },
+        {
+          "text": "There's wisdom in that.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "the_sons": {
+      "npcText": "Gil does. Gil was born forty years old and he'll have this farm and do it better than me. Hob wants a reason, and 'it's the family's' has never once been a reason to an eighteen-year-old, and I know that, and I keep saying it anyway.",
+      "responses": [
+        {
+          "text": "What would be a reason?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "a_reason"
+            }
+          ]
+        },
+        {
+          "text": "He'll find his own.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "a_reason": {
+      "npcText": "Being wanted for the thing, not needed for it. There's a difference and I've never once managed to say it out loud in that kitchen. You've a museum nobody's asked you to keep — you'll know the difference better than I do.",
+      "responses": [
+        {
+          "text": "I'm working on the wanting part.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        },
+        {
+          "text": "Say it in the kitchen.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "should_tell_him"
+            }
+          ]
+        }
+      ]
+    },
+    "top_field": {
+      "npcText": "Stone. Always has been. My father cleared it twice and it grew a new crop of them both times — that's a real thing, before you look at me like that. Frost brings them up. The field is patient and so am I.",
+      "responses": [
+        {
+          "text": "Then why work it?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "why_work_it"
+            }
+          ]
+        },
+        {
+          "text": "I believe you.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "why_work_it": {
+      "npcText": "Because it's mine and because Hob wants to. Eighteen and he's decided that field is his argument with the world. I cleared stones at eighteen for the same reason and I've never told him so.",
+      "responses": [
+        {
+          "text": "You should tell him.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "should_tell_him"
+            }
+          ]
+        },
+        {
+          "text": "Let him have the argument.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "let_him"
+            }
+          ]
+        }
+      ]
+    },
+    "should_tell_him": {
+      "npcText": "Aye, likely. My father never told me and I resented it for twenty years and then he died and I understood the whole thing in an afternoon, which is a rotten way to learn it. I'll think on that. Don't look pleased.",
+      "responses": [
+        {
+          "text": "I'm not looking pleased.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "let_him": {
+      "npcText": "That's what I've been doing, and it's costing him a summer and me a son's temper. There's a version of me that says it plain over supper. I've not met him yet.",
+      "responses": [
+        {
+          "text": "You might, over supper.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "household": {
+      "npcText": "Seven under one roof and my father the loudest of them. Maev holds it together, Gil works like two men, the girls are everywhere at once, and Pip is six and rules the place absolutely.",
+      "responses": [
+        {
+          "text": "Seven sounds warm.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "sounds_warm"
+            }
+          ]
+        },
+        {
+          "text": "Your father still works?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "aldous"
+            }
+          ]
+        }
+      ]
+    },
+    "sounds_warm": {
+      "npcText": "It's warm and it's loud and there's never a chair. Come to supper one night — Maev's already asked me twice whether I'd invited you, which means I'm now inviting you.",
+      "responses": [
+        {
+          "text": "I'd be glad to.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "glad_to"
+            }
+          ]
+        },
+        {
+          "text": "Tell her you did it beautifully.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "beautifully"
+            }
+          ]
+        }
+      ]
+    },
+    "glad_to": {
+      "npcText": "Good. Bring nothing. If you bring something Maev will spend a week deciding what to send back up the hill with you and I'll hear about all of it.",
+      "responses": [
+        {
+          "text": "Nothing it is.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "beautifully": {
+      "npcText": "Ha! I'll tell her I was warm and welcoming and she'll ask you directly, so let's agree on the story now.",
+      "responses": [
+        {
+          "text": "You were positively courtly.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "aldous": {
+      "npcText": "Seventy-six and he still walks the low field every morning to disagree with how I've done it. I'd not stop him for the world. When he stops walking it, I'll know, and I'd rather not know yet.",
+      "responses": [
+        {
+          "text": "Let him disagree.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "a_hand": {
+      "npcText": "From the hill house? You'd blister in an hour and I'd spend the afternoon being polite about it. No — but I'll tell you what I do need, and it costs you nothing: walk down here again. Twice a week. Let the fields see you.",
+      "responses": [
+        {
+          "text": "Why does that matter?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "why_matter"
+            }
+          ]
+        },
+        {
+          "text": "Twice a week. Done.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "why_matter": {
+      "npcText": "Because your family stopped coming down and the village decided it knew why, and the village was wrong, and nobody went up to check. That's how a hill gets lonely. Don't be a story people tell about a window.",
+      "responses": [
+        {
+          "text": "I'll come down.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "Elowen Ashcroft",
+  "conversations": {
+    "start": {
+      "npcText": "Nine of us at table on a good night, counting Nella and Ruthe, and I have long since stopped counting properly. If two boys with identical faces have told you something outrageous, it was probably true.",
+      "responses": [
+        {
+          "text": "They mentioned a badger.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "Nine sounds like a good night.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

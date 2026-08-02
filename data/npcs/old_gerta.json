@@ -1,0 +1,26 @@
+{
+  "name": "Old Gerta",
+  "conversations": {
+    "start": {
+      "npcText": "Speak UP. No — closer. Right. You're the museum one. I went up there in nineteen and there was a two-headed lamb in a jar, and I have thought about that lamb every year since, and nobody wants to hear it.",
+      "responses": [
+        {
+          "text": "I want to hear about the lamb.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "I'll find that jar.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

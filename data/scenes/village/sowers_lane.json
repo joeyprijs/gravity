@@ -1,0 +1,92 @@
+{
+  "id": "village_sowers_lane",
+  "name": "Sowers Lane",
+  "region": "village",
+  "mapDefinitions": {
+    "top": 2450,
+    "left": 2470,
+    "width": 90,
+    "height": 140,
+    "background": "rgba(80, 78, 55, 0.9)"
+  },
+  "description": [
+    {
+      "text": "The lane runs south between a cooper's yard and a low cottage, both dark, and gives out at a field gate. One window has a candle in it — the chandler's, of course.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "A working lane, narrow and rutted: a cooper's yard on the right stacked with staves and half-hooped barrels, a chandler's cottage on the left with trays of tapers set out to harden in the cool. South, the lane opens into the fields.",
+      "condition": {
+        "segment": "day"
+      }
+    },
+    {
+      "text": "A narrow lane running south to the fields, with a cooper's yard on one side and the chandler's cottage on the other. Barrels, wax, and the smell of both."
+    }
+  ],
+  "options": [
+    {
+      "text": "Go into Stave's yard",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_stave_yard"
+        }
+      ]
+    },
+    {
+      "text": "Go into the Taper cottage",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_taper_cottage"
+        }
+      ]
+    },
+    {
+      "text": "Go on south to the fields",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_south_fields"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Dorn at his barrels",
+      "condition": {
+        "segment": "day"
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "dorn_stave"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Sela over her taper trays",
+      "condition": {
+        "segment": "day"
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "sela_taper"
+        }
+      ]
+    },
+    {
+      "text": "Go back to the square",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_square"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,217 @@
+{
+  "name": "Hedda Ironhand",
+  "isMerchant": true,
+  "storeExitText": "Mind the doorframe. It's lower than it looks.",
+  "carriedItems": [
+    "iron_sword",
+    "hand_axe",
+    {
+      "item": "round_shield",
+      "amount": 2
+    },
+    {
+      "item": "padded_jerkin",
+      "amount": 3
+    }
+  ],
+  "conversations": {
+    "start": {
+      "npcText": "Hold on — let me set this down before it cools wrong. Right. What do you need?",
+      "responses": [
+        {
+          "text": "Let's see what you have.",
+          "condition": {
+            "not": {
+              "segment": "night"
+            }
+          },
+          "actions": [
+            {
+              "type": "trade"
+            }
+          ]
+        },
+        {
+          "text": "Are you open?",
+          "condition": {
+            "segment": "night"
+          },
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "closed"
+            }
+          ]
+        },
+        {
+          "text": "You made all of this?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "her_work"
+            }
+          ]
+        },
+        {
+          "text": "You know the museum on the hill?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_museum"
+            }
+          ]
+        },
+        {
+          "text": "How is the village treating you?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_village"
+            }
+          ]
+        },
+        {
+          "text": "I'll leave you to it.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "closed": {
+      "npcText": "The forge is banked and my hands are done for the day. Come back when there's light — I'll not sell you a blade I can't show you properly.",
+      "responses": [
+        {
+          "text": "Fair enough.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        },
+        {
+          "text": "Goodnight, Hedda.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "her_work": {
+      "npcText": "Every piece on that wall, and the hinges on half the doors in Hollowbrook. Corin does the horses — I do the iron. He'd tell you it's the same work. It is not the same work.",
+      "responses": [
+        {
+          "text": "What's the hardest thing you've made?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "hardest_thing"
+            }
+          ]
+        },
+        {
+          "text": "Understood.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "hardest_thing": {
+      "npcText": "A lock. Twelve years old, showing off for my father. Took me a season and it never once turned. He kept it on the shelf where I'd have to look at it, and I've made better locks since, and I still look at it.",
+      "responses": [
+        {
+          "text": "That sounds like a good teacher.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        },
+        {
+          "text": "Cruel of him.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "cruel_of_him"
+            }
+          ]
+        }
+      ]
+    },
+    "cruel_of_him": {
+      "npcText": "No. Cruel would have been letting me think it worked.",
+      "responses": [
+        {
+          "text": "I take your point.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "the_museum": {
+      "npcText": "Know it? My grandfather hung the doors on it. Wide as a cart, and they still swing true — go and push one, you'll feel how little it wants from you. He was paid in supper and a story, and he thought he'd got the better end.",
+      "responses": [
+        {
+          "text": "Nobody comes to see it anymore.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "nobody_comes"
+            }
+          ]
+        },
+        {
+          "text": "I'll go and push one.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "nobody_comes": {
+      "npcText": "No. They've all got something brighter to look at now, held in the hand. Doesn't make the doors any less well hung. Put something worth the walk behind them and the walk will get made again — that's not hope, that's just how it goes with good work.",
+      "responses": [
+        {
+          "text": "I intend to.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "the_village": {
+      "npcText": "Well enough. Wick's flour is honest, Tilda's prices are not, and the reeve calls a meeting every time a goat gets out. I'd not live anywhere else, which I'd thank you not to repeat.",
+      "responses": [
+        {
+          "text": "Your secret's safe.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

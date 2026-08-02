@@ -1,0 +1,63 @@
+{
+  "id": "village_store",
+  "title": "Frey's Store",
+  "name": "The Shop Floor",
+  "region": "village_store",
+  "mapDefinitions": {
+    "top": 2190,
+    "left": 2320,
+    "width": 195,
+    "height": 80,
+    "background": "rgba(70, 60, 90, 0.9)"
+  },
+  "description": [
+    {
+      "text": "The shutters are down and the shop has folded itself away for the night — goods under cloth, the counter cleared, one lamp burning over the ledger where Sable has left it open at today's page. The living room is the same room; the family simply turns the chairs around.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "Everything a village cannot make for itself, in a room the size of a barn stall: rope, lamp oil, salt, needles, nails by weight, a lantern hanging from each beam, and two small stoppered potions kept behind the counter where nobody's children can reach them. It smells of oil and dried herbs, and the ledger on the counter is very much the tidiest thing in the room."
+    }
+  ],
+  "options": [
+    {
+      "text": "Talk to Tilda",
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "tilda_frey"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Sable",
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "sable_frey"
+        }
+      ]
+    },
+    {
+      "text": "Go through to the stockroom",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_store_back"
+        }
+      ]
+    },
+    {
+      "text": "Step back out to the square",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_square"
+        }
+      ]
+    }
+  ]
+}

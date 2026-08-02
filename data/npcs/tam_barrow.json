@@ -1,0 +1,48 @@
+{
+  "name": "Tam Barrow",
+  "conversations": {
+    "start": {
+      "npcText": "You're the one from the hill! Good — you'll have a clear head. Look, here in the flour: that's the brook, that's the pool, and if we cut a race from HERE the wheel turns all summer. Da won't look at it properly.",
+      "responses": [
+        {
+          "text": "Garrow says cut it above the pool, not through it.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "above_the_pool"
+            }
+          ]
+        },
+        {
+          "text": "Show me the drawing again.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "above_the_pool": {
+      "npcText": "Above the — hold on. Hold ON. That's the same fall of water and it leaves his trout alone. That's... that's better than mine. Did he say that himself? Garrow Bream said that?",
+      "responses": [
+        {
+          "text": "He did. Take it to your father as yours.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "He did. He'd rather it came from you.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

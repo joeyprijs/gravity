@@ -1,0 +1,193 @@
+{
+  "name": "Wynne Alder",
+  "conversations": {
+    "start": {
+      "npcText": "Don't touch the bench, half of it's drying. Wynne Alder. If you're bleeding, sit. If you're not, talk while I work.",
+      "responses": [
+        {
+          "text": "I'm not bleeding.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "not_bleeding"
+            }
+          ]
+        },
+        {
+          "text": "What are you making?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "making"
+            }
+          ]
+        },
+        {
+          "text": "You're the midwife too?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "midwife"
+            }
+          ]
+        },
+        {
+          "text": "I'll let you work.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "not_bleeding": {
+      "npcText": "Good. Come back when you are — and you will be, if you're going out past the ridge like every young thing with a name to make. Bring me the wound before it's three days old and I'll not have to be interesting about it.",
+      "responses": [
+        {
+          "text": "Interesting how?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "interesting_how"
+            }
+          ]
+        },
+        {
+          "text": "Three days. Understood.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "interesting_how": {
+      "npcText": "Interesting is what I call it when the simple thing won't work anymore. Nobody wants to be an interesting case. Ask the reeve about his thumb sometime — go on, ask him, he'll show you before you finish the question.",
+      "responses": [
+        {
+          "text": "I'll ask about the thumb.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "making": {
+      "npcText": "Fever draught, mostly, while the willow's still good. And a salve for Hedda's forearms that she'll take and not use. Tomas brings me the bark on his way back from the wood, so I get the inner strips and not the rubbish.",
+      "responses": [
+        {
+          "text": "Do you sell any of it?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "sell_it"
+            }
+          ]
+        },
+        {
+          "text": "A good arrangement.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "sell_it": {
+      "npcText": "Tilda sells the potions. I make the draughts and give them away, which Tilda regards as unfair competition and I regard as the whole point of a village. We've had the argument. It's a good argument, we keep it going.",
+      "responses": [
+        {
+          "text": "You give them away?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "give_away"
+            }
+          ]
+        },
+        {
+          "text": "I'll buy from Tilda, then.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "give_away": {
+      "npcText": "To this village, yes. Twenty households owe me nothing and I owe them my whole life — Serrel's family fed us the winter Elin was born and I have never once been asked about it. That's the ledger I keep and it balances fine.",
+      "responses": [
+        {
+          "text": "That's a good ledger.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "midwife": {
+      "npcText": "Every child in Hollowbrook under twenty came through my hands, bar the Thatchers' youngest who arrived in a hayloft while I was on the wrong side of the brook. Meg has never let me forget it and never once been unkind about it, which is Meg.",
+      "responses": [
+        {
+          "text": "Every child? That's most of the village.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "most_of_village"
+            }
+          ]
+        },
+        {
+          "text": "A hayloft?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_hayloft"
+            }
+          ]
+        }
+      ]
+    },
+    "most_of_village": {
+      "npcText": "Thirty-one of them, and I could tell you the weather on every one of those days. It's why I don't leave. Ivo writes the years down and I remember them, and between us not much gets lost.",
+      "responses": [
+        {
+          "text": "Between the two of you, nothing does.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "the_hayloft": {
+      "npcText": "Bett Thatcher, four years old now and afraid of nothing, which I put down entirely to the hayloft. Bryn still can't tell the story without sitting down first.",
+      "responses": [
+        {
+          "text": "Ha. I'll ask him to tell it.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "Mug of Ale",
+  "type": "Consumable",
+  "description": "Bramm's own, brewed in the back room. Cloudy, brown, and better than it looks.",
+  "value": 2,
+  "attributes": {
+    "healingAmount": 1,
+    "actionPoints": 1
+  }
+}

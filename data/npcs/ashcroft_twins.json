@@ -1,0 +1,472 @@
+{
+  "name": "Jory & Jem",
+  "conversations": {
+    "start": {
+      "npcText": "\"Are you the one from the museum?\" \"He means the house on the hill.\" \"That's what I said.\" \"You said museum.\" Two identical faces, one gate, absolutely no intention of letting you past it.",
+      "responses": [
+        {
+          "text": "I am, as it happens.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "admits_it"
+            }
+          ]
+        },
+        {
+          "text": "Is this a toll gate?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "toll_gate"
+            }
+          ]
+        },
+        {
+          "text": "Which of you is which?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "which_is_which"
+            }
+          ]
+        },
+        {
+          "text": "Excuse me, I'm walking through.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "walking_through"
+            }
+          ]
+        }
+      ]
+    },
+    "admits_it": {
+      "npcText": "\"HA.\" \"We win.\" \"We've had a bet on since Tuesday.\" \"What's in it?\" \"He means the museum. What's IN it.\"",
+      "responses": [
+        {
+          "text": "Bones, mostly. And a very old egg that isn't there anymore.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_egg"
+            }
+          ]
+        },
+        {
+          "text": "Come up and find out.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "come_up"
+            }
+          ]
+        },
+        {
+          "text": "What do you think is in it?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "what_they_think"
+            }
+          ]
+        }
+      ]
+    },
+    "the_egg": {
+      "npcText": "\"An egg?\" \"How old?\" \"Whose egg?\" \"Did it HATCH?\" \"It didn't hatch, it's a museum.\" \"Things hatch in museums.\" \"Name one.\"",
+      "responses": [
+        {
+          "text": "Nobody knows whose. It was lent to a man with a cart and never came back.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "cart_man"
+            }
+          ]
+        },
+        {
+          "text": "It didn't hatch. Probably.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "probably"
+            }
+          ]
+        }
+      ]
+    },
+    "cart_man": {
+      "npcText": "\"A STOLEN egg.\" \"It was lent.\" \"Lent and not brought back is stolen, Jem, ask the reeve.\" \"...That's actually true.\" \"We'll look for it.\" \"We're allowed as far as the ridge.\" \"We're allowed as far as the FIRST wall.\"",
+      "responses": [
+        {
+          "text": "Stay at the first wall.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "first_wall"
+            }
+          ]
+        },
+        {
+          "text": "Deal. You look near, I'll look far.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_deal"
+            }
+          ]
+        }
+      ]
+    },
+    "first_wall": {
+      "npcText": "\"That's what Mam says.\" \"That's what everyone says.\" \"You sound like Nella.\" \"Nella's the SENSIBLE one.\" \"...Fine. First wall.\"",
+      "responses": [
+        {
+          "text": "Good. Report anything strange.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_deal"
+            }
+          ]
+        }
+      ]
+    },
+    "the_deal": {
+      "npcText": "\"Deal.\" \"DEAL.\" \"We're very good at looking.\" \"We found a dead badger.\" \"We found it twice.\" \"That's because you put it back.\"",
+      "responses": [
+        {
+          "text": "Twice is thorough.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "thorough"
+            }
+          ]
+        },
+        {
+          "text": "Don't bring me the badger.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "no_badger"
+            }
+          ]
+        }
+      ]
+    },
+    "thorough": {
+      "npcText": "\"See.\" \"SEE.\" \"Thorough, that's us.\" \"You can go through the gate now.\" \"You could always go through the gate.\"",
+      "responses": [
+        {
+          "text": "I appreciate the permission anyway.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "no_badger": {
+      "npcText": "\"...\" \"He's already got the badger.\" \"I HAVEN'T.\" \"It's behind the wall.\" \"Behind the wall isn't got.\"",
+      "responses": [
+        {
+          "text": "Leave the badger behind the wall.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "thorough"
+            }
+          ]
+        }
+      ]
+    },
+    "probably": {
+      "npcText": "\"PROBABLY.\" \"That means it hatched.\" \"It means she doesn't know.\" \"Which means it could have.\" \"...Can we see it?\" \"You just said it's gone.\" \"Can we see WHERE it was?\"",
+      "responses": [
+        {
+          "text": "You can see where it was.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "come_up"
+            }
+          ]
+        }
+      ]
+    },
+    "what_they_think": {
+      "npcText": "\"A dragon's skull.\" \"A whole dragon.\" \"You can't fit a whole dragon in a house.\" \"You can if it's coiled.\" \"Gold, probably. In a case.\" \"Nobody keeps gold in a case where people walk past it.\" \"Rich people do.\"",
+      "responses": [
+        {
+          "text": "There's a bird skeleton bigger than you two.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_bird"
+            }
+          ]
+        },
+        {
+          "text": "No gold, I'm afraid.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "no_gold"
+            }
+          ]
+        }
+      ]
+    },
+    "the_bird": {
+      "npcText": "\"How MUCH bigger?\" \"Bigger than Da?\" \"Bigger than the barn door?\" \"Does it have the beak still on?\" \"Of COURSE it has the beak on, it's a skeleton.\"",
+      "responses": [
+        {
+          "text": "Beak and all. Come and stand under it.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "come_up"
+            }
+          ]
+        }
+      ]
+    },
+    "no_gold": {
+      "npcText": "\"Told you.\" \"That's worse.\" \"It's not WORSE.\" \"A house with no gold in it is just a house.\" \"It's got a dead bird in it, that's not just a house.\"",
+      "responses": [
+        {
+          "text": "It's got a very large dead bird in it.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_bird"
+            }
+          ]
+        }
+      ]
+    },
+    "come_up": {
+      "npcText": "\"Are we allowed?\" \"She just said.\" \"Mam says the hill house doesn't like visitors.\" \"Mam says that about the CHAPEL.\" \"...Will you be there? At the door?\"",
+      "responses": [
+        {
+          "text": "I'll be at the door.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "at_the_door"
+            }
+          ]
+        },
+        {
+          "text": "Bring your mother. Bring everyone.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "bring_everyone"
+            }
+          ]
+        }
+      ]
+    },
+    "at_the_door": {
+      "npcText": "\"Then we're coming.\" \"We're coming on rest day.\" \"That's four days.\" \"He can't wait four days.\" \"I CAN wait four days.\"",
+      "responses": [
+        {
+          "text": "I'll see you on rest day.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "bring_everyone": {
+      "npcText": "\"EVERYONE?\" \"Faye won't come, she's got a face on.\" \"Nella will come if there's bones.\" \"Ruthe will come if Nella comes.\" \"That's four. That's nearly everyone.\"",
+      "responses": [
+        {
+          "text": "Four is a queue. I'll take it.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "at_the_door"
+            }
+          ]
+        }
+      ]
+    },
+    "walking_through": {
+      "npcText": "\"...They said excuse me.\" \"To US.\" \"Nobody says excuse me to us.\" They step apart from the gate with the enormous dignity of children who have decided to be gracious about it.",
+      "responses": [
+        {
+          "text": "Much obliged to you both.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "obliged"
+            }
+          ]
+        },
+        {
+          "text": "Wait — are you the Ashcroft twins?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "which_is_which"
+            }
+          ]
+        }
+      ]
+    },
+    "obliged": {
+      "npcText": "\"You can come through any time.\" \"Any time.\" \"That's TWO people we've said that to.\" \"It's not a rule if you say it twice.\"",
+      "responses": [
+        {
+          "text": "I'll use it sparingly.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "toll_gate": {
+      "npcText": "\"...\" \"It is now.\" \"It's a toll gate.\" \"What's the toll?\" \"You have to say something interesting.\" \"That's the toll.\"",
+      "responses": [
+        {
+          "text": "There's a bird skeleton on that hill bigger than your barn door.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_bird"
+            }
+          ]
+        },
+        {
+          "text": "I once escaped a dungeon.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_dungeon"
+            }
+          ]
+        },
+        {
+          "text": "I have nothing interesting. I'll go round.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "go_round"
+            }
+          ]
+        }
+      ]
+    },
+    "the_dungeon": {
+      "npcText": "\"A DUNGEON.\" \"Liar.\" \"Was there monsters?\" \"Was there a skeleton?\" \"Was there TREASURE?\" \"If there was treasure why are your boots like that?\"",
+      "responses": [
+        {
+          "text": "Monsters, yes. Treasure, some. Boots, fair point.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "toll_paid"
+            }
+          ]
+        }
+      ]
+    },
+    "go_round": {
+      "npcText": "\"You can't go round, it's a wall.\" \"They can go round.\" \"Then it's a rubbish toll gate.\" \"...Just go through. It's open. It's always open.\"",
+      "responses": [
+        {
+          "text": "Thank you kindly.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "Wait — I do have something interesting.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "toll_gate"
+            }
+          ]
+        }
+      ]
+    },
+    "toll_paid": {
+      "npcText": "\"Toll paid.\" \"TOLL PAID.\" \"You can come through whenever you like now.\" \"Forever?\" \"Forever. That's the rule.\"",
+      "responses": [
+        {
+          "text": "Forever is a generous toll.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "which_is_which": {
+      "npcText": "\"I'm Jory.\" \"I'm Jory.\" \"He's Jem.\" \"HE'S Jem.\" One of them is grinning. Both of them are grinning.",
+      "responses": [
+        {
+          "text": "Then you're both Jem. Settled.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "both_jem"
+            }
+          ]
+        },
+        {
+          "text": "I'll ask your mother.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "ask_mother"
+            }
+          ]
+        }
+      ]
+    },
+    "both_jem": {
+      "npcText": "\"...\" \"I don't like that.\" \"I like it.\" \"You would.\" \"Fine. I'm Jory. He's Jem. Now you have to remember it.\"",
+      "responses": [
+        {
+          "text": "Jory. Jem. I've got it.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "ask_mother": {
+      "npcText": "\"She can't tell either.\" \"She CAN.\" \"She calls us 'you two'.\" \"That's because there's two of us.\" \"Aunt Nella can tell. From the ears.\"",
+      "responses": [
+        {
+          "text": "The ears. Noted.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

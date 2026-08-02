@@ -1,0 +1,80 @@
+{
+  "id": "village_vance_house",
+  "name": "The Reeve's House",
+  "region": "village",
+  "interior": true,
+  "mapDefinitions": {
+    "top": 2410,
+    "left": 2910,
+    "width": 150,
+    "height": 80,
+    "background": "rgba(60, 55, 85, 0.9)"
+  },
+  "description": [
+    {
+      "text": "The reeve is home, which the whole house can tell: he is reading aloud from his own minutes at the table while Perrin does not listen, magnificently. Cyra sits at the far end with her back to all of it. Ysolde has taken Row up to bed and is telling him the version with wolves in it.",
+      "condition": {
+        "or": [
+          {
+            "segment": "evening"
+          },
+          {
+            "segment": "night"
+          }
+        ]
+      }
+    },
+    {
+      "text": "The only painted door in Hollowbrook, and behind it the only house with two proper rooms. Ledgers and minute-books fill a shelf that was built for them, each spine dated in the same careful hand. There are five people living here and evidence of all of them everywhere; Perrin has given up on the front room and holds the kitchen absolutely."
+    }
+  ],
+  "options": [
+    {
+      "text": "Talk to Aldric",
+      "condition": {
+        "or": [
+          {
+            "segment": "evening"
+          },
+          {
+            "segment": "night"
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "aldric_vance"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Perrin",
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "perrin_vance"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Cyra",
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "cyra_vance"
+        }
+      ]
+    },
+    {
+      "text": "Step back out to the lane",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_forge_lane"
+        }
+      ]
+    }
+  ]
+}

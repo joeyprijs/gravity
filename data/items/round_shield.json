@@ -1,0 +1,11 @@
+{
+  "name": "Round Shield",
+  "type": "Armor",
+  "slot": "Left Hand",
+  "description": "Banded elm with an iron boss, scorched along one edge where the glue was cured too close to the fire.",
+  "value": 30,
+  "attributes": {
+    "armorClassBonus": 2,
+    "actionPoints": 1
+  }
+}

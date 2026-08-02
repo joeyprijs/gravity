@@ -1,0 +1,304 @@
+{
+  "name": "Nyssa Combe",
+  "conversations": {
+    "start": {
+      "npcText": "Walk slow past the hives and they'll ignore you entirely. Wave your arms and you'll learn something about yourself. Nyssa Combe.",
+      "responses": [
+        {
+          "text": "How many hives do you keep?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_hives"
+            }
+          ]
+        },
+        {
+          "text": "Why up here, away from the village?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "why_up_here"
+            }
+          ]
+        },
+        {
+          "text": "Is that your apprentice?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "lira"
+            }
+          ]
+        },
+        {
+          "text": "I'll walk slow, then.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "the_hives": {
+      "npcText": "Eleven, and one of them is a disgrace. The village gets wax and candle-stock, Sela buys the rest, and Bramm takes what's left for the mead he pretends is his grandmother's recipe.",
+      "responses": [
+        {
+          "text": "A disgrace how?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "disgrace"
+            }
+          ]
+        },
+        {
+          "text": "It isn't his grandmother's recipe?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_mead"
+            }
+          ]
+        }
+      ]
+    },
+    "disgrace": {
+      "npcText": "The end hive. Swarms every spring, robs the others, and makes the best honey on this hill by a distance. I've meant to break it up for four years and every year I taste the honey and find something else to do.",
+      "responses": [
+        {
+          "text": "Some things earn their trouble.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "earn_trouble"
+            }
+          ]
+        },
+        {
+          "text": "Break it up.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "break_it_up"
+            }
+          ]
+        }
+      ]
+    },
+    "earn_trouble": {
+      "npcText": "That's the line I use on myself in April. It's nice to hear it in someone else's mouth — makes it sound less like an excuse and more like a philosophy.",
+      "responses": [
+        {
+          "text": "Call it a philosophy.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "break_it_up": {
+      "npcText": "Spoken like someone who's never tasted it. Come back in high summer and I'll put a spoon in your hand and we'll see how firm you are then.",
+      "responses": [
+        {
+          "text": "I'll hold my opinion till then.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "the_mead": {
+      "npcText": "His grandmother's recipe was vinegar and everyone in Hollowbrook over sixty knows it. Bramm's is genuinely good, which is why he lies about it — he'd rather be a keeper of tradition than a man with a talent. Villages do that to people.",
+      "responses": [
+        {
+          "text": "That's a sharp observation.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "sharp"
+            }
+          ]
+        },
+        {
+          "text": "I won't tell him.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "sharp": {
+      "npcText": "I've a hill to myself and eleven hives that don't talk back. You get a lot of thinking done. Some of it comes out sharper than I mean it to and I've stopped apologising for that around the age of thirty.",
+      "responses": [
+        {
+          "text": "Don't start again on my account.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "why_up_here": {
+      "npcText": "Bees want heather and I want quiet, and the hill has both. The village thinks it's a story — the woman who went up the hill alone. There's no story. I simply prefer it and they can't make that fit.",
+      "responses": [
+        {
+          "text": "Does that bother you?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "bother_you"
+            }
+          ]
+        },
+        {
+          "text": "I understand preferring it.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "understand"
+            }
+          ]
+        }
+      ]
+    },
+    "bother_you": {
+      "npcText": "Not for years. What bothers me is that they've decided Orik is the same story, and he isn't — he's up here because the flock is, and he'd have liked the village if the village had ever once come up the path.",
+      "responses": [
+        {
+          "text": "Has anyone?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "has_anyone"
+            }
+          ]
+        },
+        {
+          "text": "I came up the path.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "you_came_up"
+            }
+          ]
+        }
+      ]
+    },
+    "has_anyone": {
+      "npcText": "Josen, when the ewes went. Wynne, when I broke a wrist. That's the list, and I've been here fourteen years. Make of the village what you like — they're kind people who don't climb.",
+      "responses": [
+        {
+          "text": "I'll climb.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "you_came_up"
+            }
+          ]
+        }
+      ]
+    },
+    "you_came_up": {
+      "npcText": "You did. And I've noticed, and so has he, and neither of us will make a fuss about it because that's the sort of hill this is. Come again and there'll be honey out.",
+      "responses": [
+        {
+          "text": "I'll come again.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "understand": {
+      "npcText": "Then you're from the right house for it. That museum is the same instinct as these hives — a thing you tend because it's worth tending, and be damned whether anyone walks up to look at it.",
+      "responses": [
+        {
+          "text": "I'd like people to walk up.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "want_visitors"
+            }
+          ]
+        },
+        {
+          "text": "That's exactly it.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "want_visitors": {
+      "npcText": "Then you're braver than me — you've picked the version that needs other people. I'd wish you luck, but what you actually need is a reason for them to climb. Find the thing that's worth the walk and the walk stops being the problem.",
+      "responses": [
+        {
+          "text": "I'm going to look for it.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "lira": {
+      "npcText": "My sister's girl. Thirteen, and the only person in that village who asked to come up here rather than being sent. She'll have the hives when I'm done with them, and she already knows it, and she's told nobody.",
+      "responses": [
+        {
+          "text": "Why tell nobody?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "tell_nobody"
+            }
+          ]
+        },
+        {
+          "text": "That's a fine inheritance.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "tell_nobody": {
+      "npcText": "Because her mother has plans involving the weaver's cottage and a respectable trade. Lira has worked out that a thing you love is easier to keep if it looks like a chore. Thirteen. I did not teach her that.",
+      "responses": [
+        {
+          "text": "Sharp girl.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

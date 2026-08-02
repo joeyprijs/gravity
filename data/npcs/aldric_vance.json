@@ -1,0 +1,216 @@
+{
+  "name": "Aldric Vance",
+  "conversations": {
+    "start": {
+      "npcText": "Ah! The hill house. I'd hoped to be the first to say it properly — welcome down, and on behalf of Hollowbrook, which I am entitled to speak for, welcome down.",
+      "responses": [
+        {
+          "text": "You're the reeve?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_reeve"
+            }
+          ]
+        },
+        {
+          "text": "What does the village need?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "village_needs"
+            }
+          ]
+        },
+        {
+          "text": "Anything I should know about the roads?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_roads"
+            }
+          ]
+        },
+        {
+          "text": "Thank you, reeve.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "the_reeve": {
+      "npcText": "Elected nine years running, which sounds grander than it is — nobody else will do it. I settle boundaries, I count the winter store, and I write down what was agreed so that in March nobody can say otherwise.",
+      "responses": [
+        {
+          "text": "Does that work?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "does_it_work"
+            }
+          ]
+        },
+        {
+          "text": "Somebody has to.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "does_it_work": {
+      "npcText": "It works because I write it down. That is the entire craft. Hedda thinks I like the sound of my own voice — I do, but that is a separate matter from the ledger being correct.",
+      "responses": [
+        {
+          "text": "She does say that.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "she_says_that"
+            }
+          ]
+        },
+        {
+          "text": "Both can be true.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "she_says_that": {
+      "npcText": "Of course she does, she's said it to my face at three meetings. I keep her on the water committee for exactly that reason. A room where everyone agrees with me is a room where I'm about to be wrong.",
+      "responses": [
+        {
+          "text": "That's better sense than I expected.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "village_needs": {
+      "npcText": "Rain, chiefly. Beyond that: the brook's dropping, and there'll be a fight about the water before the month's out. Wick wants a race dug from the deep pool. Garrow Bream's family has held that water four generations. Both of them are right, which is the worst kind of dispute.",
+      "responses": [
+        {
+          "text": "What will you decide?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "will_decide"
+            }
+          ]
+        },
+        {
+          "text": "Can I help with any of it?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "can_i_help"
+            }
+          ]
+        }
+      ]
+    },
+    "will_decide": {
+      "npcText": "Nothing, for as long as I can manage it. Half of reeving is knowing which quarrels solve themselves in a week of rain. If it doesn't rain I'll have to be brave, and I'd rather not.",
+      "responses": [
+        {
+          "text": "Honest of you.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "can_i_help": {
+      "npcText": "You can walk the lanes and be seen doing it. I mean that seriously — this village has watched your family's windows go dark one at a time. The museum's heir on the roads, greeting people by name, is worth more than you'd think and costs you nothing but boot leather.",
+      "responses": [
+        {
+          "text": "I can walk lanes.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        },
+        {
+          "text": "Is that all anyone wants of me?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "all_they_want"
+            }
+          ]
+        }
+      ]
+    },
+    "all_they_want": {
+      "npcText": "It's all anyone wants of anyone, at the start. The rest is earned by turning up twice. Come to the meeting at the well when I call one and stand at the front — that's two.",
+      "responses": [
+        {
+          "text": "I'll be at the front.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "the_roads": {
+      "npcText": "Within the village, nothing worse than Bryn Thatcher's ladder. Beyond the crossroads — east of the ridge the carters are coming through with tales, and there's talk of something at the tree line above the shepherd's cot. I record talk. I don't repeat it as fact.",
+      "responses": [
+        {
+          "text": "Record it for me anyway.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "record_it"
+            }
+          ]
+        },
+        {
+          "text": "I'll stay on the lanes.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "record_it": {
+      "npcText": "Two ewes gone from Orik's flock, taken up the stream. One carter refuses the ridge road after dark and won't say why, which for a carter is remarkable. That's what's in my book. Make of it what you will — and if you go up there, tell me what you see so I can write that down too.",
+      "responses": [
+        {
+          "text": "I'll bring you a report.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

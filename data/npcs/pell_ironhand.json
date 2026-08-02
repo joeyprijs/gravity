@@ -1,0 +1,26 @@
+{
+  "name": "Pell",
+  "conversations": {
+    "start": {
+      "npcText": "I did the nails on that gate. All of them. Ma checked two and said nothing, and if she says nothing it means they're right.",
+      "responses": [
+        {
+          "text": "They look right to me.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "Good work.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

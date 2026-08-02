@@ -1,0 +1,26 @@
+{
+  "name": "Kellan Bramble",
+  "conversations": {
+    "start": {
+      "npcText": "...Aye.",
+      "responses": [
+        {
+          "text": "Good day to you too.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "I'll not keep you.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

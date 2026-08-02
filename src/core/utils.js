@@ -206,6 +206,23 @@ export function isSpecialItem(itemData) {
 }
 
 /**
+ * Whether a scene is the inside of a building rather than a place in the open
+ * world. A building of one room marks itself (`interior` on the scene); the
+ * rooms of a bigger one are grouped by a region flagged `interior`.
+ *
+ * The map draws buildings from this and the interactions panel sorts a door into
+ * one apart from a road out of here, so both ask the same question here — two
+ * answers would let the map and the panel disagree about what a place is.
+ *
+ * @param {object|null} scene - The scene definition.
+ * @param {Object<string, object>} regions - The manifest's regions map.
+ * @returns {boolean}
+ */
+export function isInteriorScene(scene, regions) {
+  return !!(scene?.interior || regions?.[scene?.region]?.interior);
+}
+
+/**
  * The attribute deltas one equipment piece carries while worn: its
  * attributeBonuses map, plus the legacy armorClassBonus folded into 'ac'.
  * equipItem/unequipItem apply these on swap, so a relic can raise any
@@ -333,15 +350,17 @@ export function itemCardStats(t, itemData, attributes = {}, { slot = true } = {}
 export function resetOptionsPanel(reminderText = null) {
   const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
   const container = document.getElementById(EL.SCENE_OPTIONS);
+  const entrancesContainer = document.getElementById(EL.SCENE_OPTIONS_ENTRANCES);
   const talkContainer = document.getElementById(EL.SCENE_OPTIONS_TALK);
   const actionsContainer = document.getElementById(EL.SCENE_OPTIONS_ACTIONS);
   const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
+  const exitsContainer = document.getElementById(EL.SCENE_OPTIONS_EXITS);
   const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
 
   clearElement(container);
   // Every headed section starts empty and hidden: its heading is only earned
   // once something lands in it (see renderOptions).
-  [talkContainer, actionsContainer, skillsContainer].forEach(section => {
+  [entrancesContainer, talkContainer, actionsContainer, skillsContainer, exitsContainer].forEach(section => {
     clearElement(section);
     section.setAttribute('hidden', '');
   });
@@ -351,7 +370,7 @@ export function resetOptionsPanel(reminderText = null) {
     if (reminderText !== null) reminder.innerText = reminderText;
     container.appendChild(reminder);
   }
-  return { panel, container, talkContainer, actionsContainer, skillsContainer, reminder };
+  return { panel, container, entrancesContainer, talkContainer, actionsContainer, skillsContainer, exitsContainer, reminder };
 }
 
 /**

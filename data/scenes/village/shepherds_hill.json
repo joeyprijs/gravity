@@ -1,0 +1,96 @@
+{
+  "id": "village_shepherds_hill",
+  "name": "Shepherd's Hill",
+  "region": "village",
+  "mapDefinitions": {
+    "top": 2070,
+    "left": 2145,
+    "width": 240,
+    "height": 70,
+    "background": "rgba(70, 85, 60, 0.9)"
+  },
+  "description": [
+    {
+      "text": "The track levels out onto open heather. The flock is a pale smudge folded against the drystone wall, and two cottages sit further along the slope — one with a shuttered light, one dark. Above them the ground rises to a black tree line that the moonlight does not get into.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "The track levels out onto open heather, all gorse and bee-hum and sheep-cropped turf. Orik's flock works its way along a drystone wall; past them stand the shepherd's cot and, further along the slope, the beekeeper's cottage with its row of hives. The tree line above is close enough to see individual trunks."
+    }
+  ],
+  "options": [
+    {
+      "text": "Go to the shepherd's cot",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_shepherds_cot"
+        }
+      ]
+    },
+    {
+      "text": "Go to the beekeeper's cottage",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_combe_cottage"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Orik",
+      "condition": {
+        "or": [
+          {
+            "segment": "morning"
+          },
+          {
+            "segment": "day"
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "orik_shepherd"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Lira on her way up to the hives",
+      "condition": {
+        "segment": "morning"
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "lira_combe"
+        }
+      ]
+    },
+    {
+      "text": "Go back down to the crossroads",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_crossroads"
+        }
+      ]
+    }
+  ],
+  "skills": [
+    {
+      "text": "Look up at the tree line",
+      "skillCheck": "perception",
+      "repeatable": true,
+      "resultText": [
+        "Where the heather gives out, the grass is flattened in a long band going uphill — wide as a dragged ewe, and it stops dead about forty feet short of the trees. Nothing enters the wood. Nothing leaves it.",
+        "You find the end of the flattened band again and crouch at it. No prints, no dew-break, no broken gorse. The grass simply gives up being flattened, as though whatever made the track was set down here and lifted away.",
+        "One of Orik's dogs comes and sits at your knee facing the trees, and does not look away from them, and does not make a sound."
+      ]
+    }
+  ]
+}

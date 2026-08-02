@@ -1,0 +1,61 @@
+{
+  "id": "village_store_back",
+  "name": "The Stockroom",
+  "region": "village_store",
+  "mapDefinitions": {
+    "top": 2140,
+    "left": 2320,
+    "width": 195,
+    "height": 50,
+    "background": "rgba(55, 48, 72, 0.9)"
+  },
+  "description": [
+    {
+      "text": "The stockroom is dark and smells of straw and lamp oil. The yard door is barred for the night, and the day's crates stand where they were set down, still roped.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "A long, low room behind the shop, stacked to the beams: crates, sacks, a coil of spare rope, lamp oil in a corner by itself. The yard door at the far end opens straight onto the crossroads, which is the whole reason the Freys have the carters' trade — a cart can be unloaded here without ever coming down into the village."
+    }
+  ],
+  "options": [
+    {
+      "text": "Talk to Alder among the crates",
+      "condition": {
+        "not": {
+          "segment": "day"
+        }
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "alder_frey"
+        }
+      ]
+    },
+    {
+      "text": "Go back through to the shop",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_store"
+        }
+      ]
+    }
+  ],
+  "skills": [
+    {
+      "text": "Read the labels on the older crates",
+      "skillCheck": "perception",
+      "repeatable": true,
+      "resultText": [
+        "Most are carters' marks and destinations you don't know. One at the back is older than the rest, the straw around it gone grey, and the label is addressed in a careful hand to the museum on the hill.",
+        "You get a corner of the old crate up off the floor. It weighs almost nothing. Whatever was inside it went somewhere else a long time ago — the label is the only part of the delivery that arrived.",
+        "The hand on that label is the same one you have seen in your great-grandfather's ledgers, small and even, the letters leaning slightly back."
+      ]
+    }
+  ]
+}

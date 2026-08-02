@@ -1,0 +1,26 @@
+{
+  "name": "Bryn Thatcher",
+  "conversations": {
+    "start": {
+      "npcText": "Don't stand under the — right, you're standing under it. Move two paces. Reed comes down faster than it goes up and it's sharp at the butt end.",
+      "responses": [
+        {
+          "text": "Moved. Sorry.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "How much of the village have you roofed?",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

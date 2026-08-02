@@ -1,0 +1,26 @@
+{
+  "name": "Rosalind Hollow",
+  "conversations": {
+    "start": {
+      "npcText": "Sit. No, sit — you've the look of someone who's walked down that hill on nothing. There's barley in the pot and I'm not asking, I'm telling.",
+      "responses": [
+        {
+          "text": "I won't argue.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "I've eaten, truly.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

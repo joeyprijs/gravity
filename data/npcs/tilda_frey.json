@@ -1,0 +1,241 @@
+{
+  "name": "Tilda Frey",
+  "isMerchant": true,
+  "storeExitText": "Come back when you've thought of the thing you forgot. Everyone does.",
+  "carriedItems": [
+    "rope",
+    "waterskin",
+    "tinderbox",
+    {
+      "item": "lantern",
+      "amount": 2
+    },
+    {
+      "item": "healing_potion",
+      "amount": 2
+    }
+  ],
+  "conversations": {
+    "start": {
+      "npcText": "You'll be the one from the hill. I know every face that comes through that door and I didn't know yours, so it had to be you. Tilda Frey. What are you short of?",
+      "responses": [
+        {
+          "text": "Show me the shelves.",
+          "condition": {
+            "not": {
+              "segment": "night"
+            }
+          },
+          "actions": [
+            {
+              "type": "trade"
+            }
+          ]
+        },
+        {
+          "text": "Are you still trading?",
+          "condition": {
+            "segment": "night"
+          },
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "closed"
+            }
+          ]
+        },
+        {
+          "text": "Where does it all come from?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "where_from"
+            }
+          ]
+        },
+        {
+          "text": "You run this alone?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "alone"
+            }
+          ]
+        },
+        {
+          "text": "Who should I know in Hollowbrook?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "who_to_know"
+            }
+          ]
+        },
+        {
+          "text": "Nothing today.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "closed": {
+      "npcText": "The shutters are down, which is the whole of my answer. Come in the morning. And come with a list — you'll spend less, and I'll still make my margin, and we'll both feel clever.",
+      "responses": [
+        {
+          "text": "In the morning, then.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        },
+        {
+          "text": "Goodnight, Tilda.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "where_from": {
+      "npcText": "The carters, mostly. They stop here because I feed them and don't haggle in front of their apprentices. Alder meets them at the crossroads with the handcart — nineteen and built like a door, that boy, it's the one thing his father left him.",
+      "responses": [
+        {
+          "text": "Do carters bring news?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "carter_news"
+            }
+          ]
+        },
+        {
+          "text": "Sensible arrangement.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "carter_news": {
+      "npcText": "They bring rumor, which is news that hasn't paid for itself yet. Roads are worse east of the ridge. Something's been at the sheep two valleys over — Orik will tell you it's wolves, and Orik has said wolves every year since I was a girl.",
+      "responses": [
+        {
+          "text": "And what do you think it is?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "what_she_thinks"
+            }
+          ]
+        },
+        {
+          "text": "I'll ask Orik myself.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "what_she_thinks": {
+      "npcText": "I think a shepherd who cries wolf every year is right eventually, and I think I'd rather sell lanterns before that than after. Make of that what you like.",
+      "responses": [
+        {
+          "text": "You're a comfort, Tilda.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "alone": {
+      "npcText": "Since the fever, yes — six years now. Alder hauls and Sable keeps the ledger better than I do, and neither of them will thank me for saying so in front of a stranger.",
+      "responses": [
+        {
+          "text": "I'm sorry.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "sorry"
+            }
+          ]
+        },
+        {
+          "text": "They sound like good help.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "sorry": {
+      "npcText": "That's kind, and you needn't be — it was a long time ago and the shop stayed open, which was the part I was frightened of. Ask Sable about the ledger. She'll show you. She's been waiting years for someone to ask.",
+      "responses": [
+        {
+          "text": "I will.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "who_to_know": {
+      "npcText": "Halda Fenwick, on the forge lane — old as the hill and forgets nothing, which is a rarer combination than people think. She'll want to talk about your family, and you should let her. Beyond that: Bramm pours honest measures, and the reeve means well at volume.",
+      "responses": [
+        {
+          "text": "Why my family?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "why_family"
+            }
+          ]
+        },
+        {
+          "text": "Noted.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "why_family": {
+      "npcText": "Because she was a girl when that museum had queues. Actual queues, down the hill and round the crossroads — I've heard it a hundred times and I still can't picture it. She can. Go and let her.",
+      "responses": [
+        {
+          "text": "I'll go up the lane.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

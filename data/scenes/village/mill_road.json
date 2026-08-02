@@ -1,0 +1,113 @@
+{
+  "id": "village_mill_road",
+  "name": "Mill Road",
+  "region": "village",
+  "mapDefinitions": {
+    "top": 2310,
+    "left": 2020,
+    "width": 300,
+    "height": 100,
+    "background": "rgba(75, 80, 60, 0.9)"
+  },
+  "description": [
+    {
+      "text": "The road runs west along the brook, and the wheel has stopped. Without it the water is suddenly loud. Two cottages sit back from the road with their shutters closed, and the mill's bulk stands black against the sky at the end.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "The road follows the brook west, and the mill wheel turns at the end of it — slower than it should, the water low against the stones. A herbalist's cottage stands to the right with bundles drying under the eaves, and the hunters' house beyond it, hides pegged out along its wall.",
+      "condition": {
+        "segment": "day"
+      }
+    },
+    {
+      "text": "The road follows the brook west toward the mill, and the whole stretch smells of bread and wet stone. A herbalist's cottage stands to the right with bundles drying under the eaves; past it, the hunters' house with hides pegged along the wall."
+    }
+  ],
+  "options": [
+    {
+      "text": "Go into the herbalist's cottage",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_alder_cottage"
+        }
+      ]
+    },
+    {
+      "text": "Go into the Bramble house",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_bramble_house"
+        }
+      ]
+    },
+    {
+      "text": "Go into the mill and bakehouse",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_mill"
+        }
+      ]
+    },
+    {
+      "text": "Follow the brook on to Brookside",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_brookside"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Josen, heading out to the ridge",
+      "condition": {
+        "segment": "morning"
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "josen_bramble"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Tomas, carrying willow",
+      "condition": {
+        "segment": "day"
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "tomas_alder"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Kellan at the hides",
+      "condition": {
+        "segment": "evening"
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "kellan_bramble"
+        }
+      ]
+    },
+    {
+      "text": "Go back to the square",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_square"
+        }
+      ]
+    }
+  ]
+}

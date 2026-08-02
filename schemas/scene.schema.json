@@ -9,15 +9,19 @@
     },
     "title": {
       "type": "string",
-      "description": "Visual header name of the scene. Takes precedence over 'name'."
+      "description": "Visual header name of the scene — what the player reads on arrival. Takes precedence over 'name' there."
     },
     "name": {
       "type": "string",
-      "description": "Display name of the scene (used for map tags and fallback headers)."
+      "description": "Map tag for the scene, and the header when there is no 'title'. Authoring both lets a room read one way on arrival and another on the map: Frey's shop floor is titled \"Frey's Store\" but tagged \"The Shop Floor\", so it doesn't repeat its building's name under the building's own outline."
     },
     "region": {
       "type": "string",
-      "description": "Region key from data/index.json indicating map grouping."
+      "description": "Region key from data/index.json. Resolves the scene's ambience bed; a region flagged `interior` there also groups its scenes into one building on the map."
+    },
+    "interior": {
+      "type": "boolean",
+      "description": "Marks a scene as the inside of a building that is one room: the minimap shows only this room while the player is in it, and draws it as a single square from outdoors. A building with several rooms groups them through an `interior` region instead."
     },
     "xpReward": {
       "type": "integer",

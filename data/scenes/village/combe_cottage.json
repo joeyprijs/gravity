@@ -1,0 +1,59 @@
+{
+  "id": "village_combe_cottage",
+  "name": "Combe Cottage",
+  "region": "village",
+  "interior": true,
+  "mapDefinitions": {
+    "top": 2000,
+    "left": 2265,
+    "width": 120,
+    "height": 70,
+    "background": "rgba(85, 80, 45, 0.9)"
+  },
+  "description": [
+    {
+      "text": "Eleven hives stand in a row outside, silent and warm. Inside, the cottage is all beeswax and lamplight: frames stacked to be scraped, a long knife, muslin folded, and two people working without needing to say anything about it.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "The hives stand in a row along the slope outside, eleven of them, the end one visibly busier than the rest. Inside, everything is wax and cedar and quiet industry: frames on the table, muslin over a settling jar, a hooked knife hanging where a hand falls on it. There is honey in a dish by the door for whoever comes up the path, which is almost nobody."
+    }
+  ],
+  "options": [
+    {
+      "text": "Talk to Nyssa",
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "nyssa_combe"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Lira",
+      "condition": {
+        "not": {
+          "segment": "morning"
+        }
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "lira_combe"
+        }
+      ]
+    },
+    {
+      "text": "Step back out to the hill",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_shepherds_hill"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "name": "Mabel Rush",
+  "conversations": {
+    "start": {
+      "npcText": "Give it here, I'll do it with the Thatchers' — no? Suit yourself. Twenty households' linen through these hands, and I could tell you which of them are careful and which of them are lying about it.",
+      "responses": [
+        {
+          "text": "I'll bear that in mind.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "Next time I'll bring my washing.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

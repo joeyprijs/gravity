@@ -1,0 +1,62 @@
+{
+  "id": "village_shepherds_cot",
+  "name": "The Shepherd's Cot",
+  "region": "village",
+  "interior": true,
+  "mapDefinitions": {
+    "top": 2000,
+    "left": 2145,
+    "width": 120,
+    "height": 70,
+    "background": "rgba(60, 75, 55, 0.9)"
+  },
+  "description": [
+    {
+      "text": "One room, one man, three dogs, and a fire built small and exactly right. Orik is oiling a crook he does not need to oil. The dogs have arranged themselves between him and the door in an order they clearly agreed on years ago.",
+      "condition": {
+        "or": [
+          {
+            "segment": "evening"
+          },
+          {
+            "segment": "night"
+          }
+        ]
+      }
+    },
+    {
+      "text": "A stone cot with the door standing open and nobody in it. Bed, chair, kettle, a wall of hooks holding forty-one years of the same four tools, and a shelf with a comb, a whetstone, and a small tin box. The floor is swept. It is the tidiest empty room you have ever walked into."
+    }
+  ],
+  "options": [
+    {
+      "text": "Talk to Orik",
+      "condition": {
+        "or": [
+          {
+            "segment": "evening"
+          },
+          {
+            "segment": "night"
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "orik_shepherd"
+        }
+      ]
+    },
+    {
+      "text": "Step back out to the hill",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_shepherds_hill"
+        }
+      ]
+    }
+  ]
+}

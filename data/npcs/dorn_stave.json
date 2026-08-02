@@ -1,0 +1,26 @@
+{
+  "name": "Dorn Stave",
+  "conversations": {
+    "start": {
+      "npcText": "Thirty-one staves, one hoop, and not a drop gets out. Every barrel in this village is mine and half of them are older than me, which is the only kind of fame a cooper gets.",
+      "responses": [
+        {
+          "text": "That's a good kind.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "Thirty-one exactly?",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
