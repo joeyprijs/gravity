@@ -2,8 +2,17 @@ import { clearElement, isInteriorScene } from "../core/utils.js";
 import { MINIMAP_SIZE, MAP_PADDING, MAP_NODE_DEFAULT_BG, CSS, EL } from "../core/config.js";
 
 // Every scene a scene can send the player to: the destinations of the navigate
-// actions in its option and skill-check pipelines. This is the map's notion of a
-// door, and what one step of sight is measured along.
+// actions in its *options*. This is the map's notion of a door, and what one
+// step of sight is measured along.
+//
+// Options only, deliberately. A door is something the player can see standing
+// here — a button on the panel, whatever its condition currently says, because
+// a door they can see but not yet open is still a door they have seen. Where a
+// skill check navigates, the destination is the *reward* for passing it: a
+// passage found by searching, a ledge reached by climbing. Walking those
+// pipelines would draw the secret on the map before it was discovered, which is
+// the one thing one-step sight exists to stop. `onVictory` stays in — the road
+// past a fight is a road, and the option offering the fight is right there.
 function sceneNavigationTargets(scene) {
   const targets = [];
   const walk = (actions) => {
@@ -14,11 +23,6 @@ function sceneNavigationTargets(scene) {
   };
 
   for (const option of scene?.options || []) walk(option.actions);
-  for (const check of scene?.skills || []) {
-    walk(check.actions);
-    walk(check.onFailure);
-    for (const tier of Object.values(check.outcomes || {})) walk(tier.actions);
-  }
   return targets;
 }
 
@@ -81,6 +85,7 @@ export class MapManager {
 
     if (placements.length === 0) {
       minimapEl.hidden = true;
+      this._minimapCacheKey = currentSceneId;
       return;
     }
 
@@ -269,7 +274,22 @@ export class MapManager {
         else if (scenes[dest]) rooms.add(dest);
       }
     }
-    return { rooms, buildings };
+
+    // A building is drawn from its rooms' geometry, so one whose rooms carry no
+    // mapDefinitions has no square to occupy. Dropping it here rather than
+    // downstream keeps "known" meaning "drawable", so neither view has to think
+    // about a building it cannot place. validate.js says so at boot.
+    return {
+      rooms,
+      buildings: new Set([...buildings].filter(key => this._buildingRooms(key).length))
+    };
+  }
+
+  // The rooms of one building that carry map geometry, as scene definitions.
+  _buildingRooms(key) {
+    return Object.entries(this.engine.data.scenes)
+      .filter(([id, scene]) => scene?.mapDefinitions && this._interiorKeyOf(id) === key)
+      .map(([, scene]) => scene);
   }
 
   // How world coordinates land in the HUD square. Outdoors the minimap is a
@@ -319,9 +339,7 @@ export class MapManager {
   // so its square is the ground it stands on — it doesn't grow as its owner
   // wanders around indoors.
   _buildingPlacement(key) {
-    const rooms = Object.entries(this.engine.data.scenes)
-      .filter(([id, scene]) => scene?.mapDefinitions && this._interiorKeyOf(id) === key)
-      .map(([, scene]) => scene);
+    const rooms = this._buildingRooms(key);
 
     return {
       def: this._enclosing(rooms),

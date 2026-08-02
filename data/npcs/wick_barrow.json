@@ -3,7 +3,10 @@
   "isMerchant": true,
   "storeExitText": "Take the loaf. You're carrying nothing and it's a long lane.",
   "carriedItems": [
-    "loaf_of_bread",
+    {
+      "item": "loaf_of_bread",
+      "amount": 6
+    },
     "flour_sack"
   ],
   "conversations": {

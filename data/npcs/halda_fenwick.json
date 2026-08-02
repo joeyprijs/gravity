@@ -106,6 +106,12 @@
       "responses": [
         {
           "text": "I do want it full.",
+          "condition": {
+            "not": {
+              "flag": "received_haldas_token",
+              "value": true
+            }
+          },
           "actions": [
             {
               "type": "goToConversation",
@@ -177,12 +183,6 @@
         },
         {
           "text": "What happened to all that?",
-          "condition": {
-            "not": {
-              "flag": "received_haldas_token",
-              "value": true
-            }
-          },
           "actions": [
             {
               "type": "goToConversation",

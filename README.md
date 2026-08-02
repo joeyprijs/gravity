@@ -361,7 +361,7 @@ Growing a one-room building into a bigger one is that migration and nothing else
 
 **What the minimap draws.** Inside a building: that building's visited rooms, and nothing else — in a one-room shop, the shop. Outdoors: a **viewport** onto the open world, centered on the player, spanning `minimapRadius` world units in every direction (omit the field and the outdoor map falls back to fitting everything known into the square). Walking scrolls it; the world getting bigger never shrinks what you can read.
 
-**What the player knows about.** Outdoors, a place is on the map once it has been *seen*: everywhere they have walked, plus one step of sight from it — the roads leading off those places, and the buildings whose doors they have stood at. So a cottage is on the map before it is entered, and nothing is ever walked into off a map it wasn't on. Sight stops at that one step: you can see the lane leaving the square, not the cottages along it. Indoors has no such rule — a building's rooms are revealed by walking them, which is what makes exploring one feel like exploring.
+**What the player knows about.** Outdoors, a place is on the map once it has been *seen*: everywhere they have walked, plus one step of sight from it — the roads leading off those places, and the buildings whose doors they have stood at. So a cottage is on the map before it is entered, and nothing is ever walked into off a map it wasn't on. Sight stops at that one step: you can see the lane leaving the square, not the cottages along it. Sight also means *doors*, and only doors — scene options. Where a skill check navigates, the destination is what passing it earns (a passage found by searching, a ledge reached by climbing), so it stays off the map until the player gets there. A door with an unmet `condition` does count: it is in front of them, whether or not it opens yet. Indoors has no such rule — a building's rooms are revealed by walking them, which is what makes exploring one feel like exploring.
 
 A building's square is its whole footprint, entered or not, and buildings paint *under* the world: the square is a bounding box, so it covers ground its rooms don't fill. A building with no door out in the open — the demo's dungeon, reached through the story — is never drawn into the landscape.
 
@@ -382,11 +382,15 @@ A **region** is what remains: an ambience grouping (see [`docs/AUDIO.md`](docs/A
 
 One thing follows for authors: a building's coordinates should sit where the building actually *is*, since its square is drawn from its rooms' real geometry. Rooms authored a thousand units from their own front door draw a building a thousand units away from its door.
 
+The square is the *bounding box* of those rooms, so rooms that don't tile the box leave dead space inside it — the demo's dungeon covers 28 250 units of a 53 000-unit box, which costs nothing only because nothing outdoors opens onto it. The first door that does would draw it half again larger than the rooms inside. Buildings meant to be seen from the road want their rooms tiling the footprint (the player's house does, exactly); sprawling interiors are better off staying unreachable from the open world, the way a dungeon is.
+
 `minimapRadius` is set in `data/index.json` beside `worldMapSize`, and is the one number that tunes how much world the player sees at once — the demo's `500` shows Hollowbrook's square with its lanes running off the edges.
 
 ### Scenes
 
-A location: conditional description blocks, options, skill checks, and map placement. The top-level `id` is the scene's manifest key:
+A location: conditional description blocks, options, skill checks, and map placement. The top-level `id` is the scene's manifest key.
+
+A scene is named twice, and the two are genuinely separate: **`title`** is the header the player reads on arrival, **`name`** is the tag the map draws on the room. Author one and it does both jobs. Author both and a room can read one way arriving and another on the map — the demo's shop floor is titled `Frey's Store` and tagged `The Shop Floor`, so it doesn't repeat its building's own name under the building's outline. `interior` marks the scene as a one-room building; see [Regions, Interiors, and the Map](#regions-interiors-and-the-map).
 
 ```json
 {

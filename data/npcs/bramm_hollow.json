@@ -3,9 +3,18 @@
   "isMerchant": true,
   "storeExitText": "Mind the step down. It's caught better boots than yours.",
   "carriedItems": [
-    "mug_of_ale",
-    "hot_meal",
-    "loaf_of_bread"
+    {
+      "item": "mug_of_ale",
+      "amount": 8
+    },
+    {
+      "item": "hot_meal",
+      "amount": 6
+    },
+    {
+      "item": "loaf_of_bread",
+      "amount": 4
+    }
   ],
   "conversations": {
     "start": {

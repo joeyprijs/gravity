@@ -255,9 +255,16 @@ export class SceneRenderer {
     // road between two outdoor places, or a door between two rooms of one house.
     const regions = this.engine.data.regions;
     const outdoors = !isInteriorScene(scene, regions);
+    // Destinations that actually resolve. An unknown one is a typo, and reading
+    // it as "not a building" would make the two halves below disagree: outdoors
+    // it falls through to the roads, but inside it would satisfy "navigates to
+    // somewhere that isn't this building" and file a broken door under Exits.
+    // Dropping it leaves the option in the neutral list, where validate.js is
+    // the one that names the typo.
     const navTargets = (opt) => (opt.actions || [])
       .filter(a => a.type === 'navigate')
-      .map(a => this.engine.data.scenes[a.destination]);
+      .map(a => this.engine.data.scenes[a.destination])
+      .filter(Boolean);
 
     const entersBuilding = (opt) => outdoors
       && navTargets(opt).some(dest => isInteriorScene(dest, regions));

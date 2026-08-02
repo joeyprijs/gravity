@@ -313,6 +313,14 @@ function validateScenes(ctx) {
     if (scene.questTrigger)
       validateQuestTrigger(ctx, group, scene.questTrigger, 'questTrigger');
 
+    // A building is drawn from its rooms' geometry, so a room of one with no
+    // mapDefinitions contributes nothing and the building has no square to
+    // occupy. Silent on the map either way — worth saying out loud, because the
+    // scene reads as placed and isn't.
+    const interiorRegion = ctx.regions?.[scene.region]?.interior;
+    if ((scene.interior || interiorRegion) && !scene.mapDefinitions)
+      ctx.add(group, `marked interior${scene.interior ? '' : ` (region "${scene.region}")`} but has no mapDefinitions — a building is drawn from its rooms' geometry, so it can never appear on the map`);
+
     for (const skill of (scene.skills || [])) {
       const where = `skill "${skill.text}"`;
       validateCondition(ctx, group, skill.condition, where);
@@ -376,6 +384,8 @@ function validateNpcs(ctx) {
       }
     }
 
+    warnIfGiftFarmable(ctx, group, npc);
+
     for (const [nodeId, node] of Object.entries(npc.conversations || {})) {
       const where = `conversation node "${nodeId}"`;
       validateActions(ctx, group, node.actions, where);
@@ -395,6 +405,39 @@ function validateNpcs(ctx) {
           if (tier && typeof tier === 'object')
             validateConversationNodeRefs(ctx, group, npc, tier.actions, resWhere);
         }
+      }
+    }
+  }
+}
+
+// A conversation node whose own actions hand over an item is the dialogue twin
+// of a rewarding skill check, and farmable the same way: node actions re-run
+// every time the node is displayed, so any route back into it is a second copy
+// of the gift. The gate has to sit on the responses that *reach* the node — a
+// guard one step further up covers only the path it happens to be on, which is
+// how a second route gets forgotten.
+function warnIfGiftFarmable(ctx, group, npc) {
+  const conversations = npc.conversations || {};
+
+  for (const [nodeId, node] of Object.entries(conversations)) {
+    const actions = node.actions || [];
+    const gives = actions.some(a => a.type === 'loot' && (a.amount ?? 1) > 0);
+    if (!gives) continue;
+
+    // The flags this node's own actions raise — the only ones that can retire it.
+    const ownGates = new Set(actions
+      .filter(a => a.type === 'set_flag' && a.value === true)
+      .map(a => a.flag));
+
+    for (const [fromId, from] of Object.entries(conversations)) {
+      for (const res of (from.responses || [])) {
+        const leadsHere = (res.actions || [])
+          .some(a => a.type === 'goToConversation' && a.node === nodeId);
+        if (!leadsHere) continue;
+
+        const guarded = [...collectFalseFlagGates(res.condition)].some(f => ownGates.has(f));
+        if (!guarded)
+          ctx.add(group, `conversation node "${fromId}", response "${res.text}" reaches gift node "${nodeId}" ungated — its loot runs again on every visit. Gate the response on a flag the gift node's own actions set (condition { "not": { "flag": X, "value": true } } + set_flag X in "${nodeId}").`);
       }
     }
   }
