@@ -154,6 +154,25 @@
         assert($('#attributes-tab').hidden && $('#inventory-tab').hidden, 'the rest are hidden');
       });
 
+      await step('the minimap is drawn at boot, untouched', () => {
+        // The map tab leads the panel, so the first thing a new player sees is
+        // this. It has to be drawn by the time the game appears — no tab
+        // switch, no first step taken, nothing invalidated by hand.
+        //
+        // Guards a specific trap: state.init() seeds currentSceneId from
+        // rules.startingScene before that scene is visited, so renderMinimap
+        // runs once with nothing to draw while the id already reads final.
+        // Cache that as "drawn" and the starting scene never gets a map — and
+        // only the starting scene, which is why the rest of the suite missed
+        // it. Every step below reaches the map through invalidateMinimap();
+        // this one must not.
+        assert(!$('#minimap').hidden, 'the minimap is showing');
+        const nodes = $$('#minimap-canvas .map-node');
+        assert(nodes.length === 1, `the room the player woke up in is on it (got ${nodes.length} nodes)`);
+        assert(nodes[0].dataset.place === 'dungeon_start', `and it is the cellar (got ${nodes[0].dataset.place})`);
+        assert(nodes[0].classList.contains('map-node--current'), 'marked as where they are');
+      });
+
       await step('sheet sections start collapsed', () => {
         assert($('[data-section-body="character"]').hidden, 'character body starts hidden');
         assert($('[data-section-body="skills"]').hidden, 'skills body starts hidden');

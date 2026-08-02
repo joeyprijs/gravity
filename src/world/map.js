@@ -135,9 +135,15 @@ export class MapManager {
 
     const placements = this._minimapPlacements(currentSceneId);
 
+    // Deliberately WITHOUT caching the key. Drawing nothing is a transient
+    // state, not a settled one: state.init() seeds currentSceneId from
+    // rules.startingScene before that scene has been visited, so the first
+    // render finds nothing to draw while the id is already its final value.
+    // Caching here would mark the starting scene as "already drawn" and the
+    // minimap would stay hidden for the whole of it — the scene id is only a
+    // sufficient key once there is something on the map.
     if (placements.length === 0) {
       minimapEl.hidden = true;
-      this._minimapCacheKey = currentSceneId;
       return;
     }
 
