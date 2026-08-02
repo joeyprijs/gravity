@@ -46,11 +46,11 @@
       ]
     },
     {
-      "text": "Go on south to the fields",
+      "text": "Go back to the square",
       "actions": [
         {
           "type": "navigate",
-          "destination": "village_south_fields"
+          "destination": "village_square"
         }
       ]
     },
@@ -79,12 +79,11 @@
       ]
     },
     {
-      "text": "Go back to the square",
-      "isBack": true,
+      "text": "Go on south to the fields",
       "actions": [
         {
           "type": "navigate",
-          "destination": "village_square"
+          "destination": "village_south_fields"
         }
       ]
     }

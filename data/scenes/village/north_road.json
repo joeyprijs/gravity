@@ -28,11 +28,11 @@
   ],
   "options": [
     {
-      "text": "Walk on to the village square",
+      "text": "Walk back up to the crossroads",
       "actions": [
         {
           "type": "navigate",
-          "destination": "village_square"
+          "destination": "village_crossroads"
         }
       ]
     },
@@ -61,12 +61,11 @@
       ]
     },
     {
-      "text": "Walk back up to the crossroads",
-      "isBack": true,
+      "text": "Walk on to the village square",
       "actions": [
         {
           "type": "navigate",
-          "destination": "village_crossroads"
+          "destination": "village_square"
         }
       ]
     }

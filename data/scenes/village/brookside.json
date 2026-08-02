@@ -85,7 +85,6 @@
     },
     {
       "text": "Walk back up the mill road",
-      "isBack": true,
       "actions": [
         {
           "type": "navigate",

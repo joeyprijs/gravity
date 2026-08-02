@@ -55,11 +55,11 @@
       ]
     },
     {
-      "text": "Follow the brook on to Brookside",
+      "text": "Go back to the square",
       "actions": [
         {
           "type": "navigate",
-          "destination": "village_brookside"
+          "destination": "village_square"
         }
       ]
     },
@@ -100,12 +100,11 @@
       ]
     },
     {
-      "text": "Go back to the square",
-      "isBack": true,
+      "text": "Follow the brook on to Brookside",
       "actions": [
         {
           "type": "navigate",
-          "destination": "village_square"
+          "destination": "village_brookside"
         }
       ]
     }

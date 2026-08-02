@@ -72,7 +72,6 @@
     },
     {
       "text": "Go back down to the crossroads",
-      "isBack": true,
       "actions": [
         {
           "type": "navigate",

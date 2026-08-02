@@ -92,7 +92,6 @@
     },
     {
       "text": "Walk back along Forge Lane",
-      "isBack": true,
       "actions": [
         {
           "type": "navigate",

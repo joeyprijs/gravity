@@ -100,7 +100,6 @@
     },
     {
       "text": "Go back to the square",
-      "isBack": true,
       "actions": [
         {
           "type": "navigate",

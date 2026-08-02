@@ -121,7 +121,6 @@
     },
     {
       "text": "Walk back up Sowers Lane",
-      "isBack": true,
       "actions": [
         {
           "type": "navigate",
