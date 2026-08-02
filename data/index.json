@@ -20,10 +20,10 @@
         "installCost": 50,
         "wingCost": 250,
         "museumLayout": {
-          "top": 1890,
-          "left": 2670,
-          "roomWidth": 80,
-          "roomHeight": 55,
+          "top": 1910,
+          "left": 2660,
+          "roomWidth": 70,
+          "roomHeight": 45,
           "roomBackground": "rgba(75, 45, 90, 0.9)"
         }
       }
@@ -158,6 +158,7 @@
     "home_museum_armor": "data/scenes/player_home/museum_armor.json",
     "home_museum_relics": "data/scenes/player_home/museum_relics.json",
     "home_museum": "data/scenes/player_home/museum.json",
+    "home_parents_bedroom": "data/scenes/player_home/parents_bedroom.json",
     "village_alder_cottage": "data/scenes/village/alder_cottage.json",
     "village_ashcroft_farmhouse": "data/scenes/village/ashcroft_farmhouse.json",
     "village_bramble_house": "data/scenes/village/bramble_house.json",

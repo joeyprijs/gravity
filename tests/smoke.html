@@ -773,7 +773,9 @@
         window.gameEngine.renderScene('home_museum');
         await until(() => layout().includes('Wings'), 'the hall\'s panel');
         order = layout();
-        assert(order[0] === 'Return to Living Room', `the exit comes first (got "${order[0]}")`);
+        // The museum is entered from the hall of the house, not through the
+        // family's living room, so that is where its exit goes back to.
+        assert(order[0] === 'Return to the Hallway', `the exit comes first (got "${order[0]}")`);
         assert(order.indexOf('Wings') < order.indexOf('Construction'), 'the wings before construction');
         assert(order[order.length - 1].includes('Build a New Wing'), `building is last (got "${order[order.length - 1]}")`);
         assert(!order.some(l => l.startsWith('+')), 'no + prefixes on the buttons');

@@ -1,0 +1,35 @@
+{
+  "id": "home_parents_bedroom",
+  "name": "Parents' Room",
+  "region": "player_home",
+  "mapDefinitions": {
+    "top": 1865,
+    "left": 2480,
+    "width": 90,
+    "height": 45,
+    "background": "rgba(45, 55, 70, 0.9)"
+  },
+  "description": [
+    {
+      "text": "Your parents' room, dark and settled for the night. The washstand, the two chairs that have faced each other for forty years, and the smell of the lavender your mother still puts under the pillows because her mother did.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "Your parents' room, kept the way they keep everything: the bed made tight enough to bounce a coin off, the washstand squared to the wall, and a row of small things on the sill that each mean a story you have heard more than once. Above the bed hangs the museum's first ledger, framed — the year it took more than it cost, which was the only year it did."
+    }
+  ],
+  "options": [
+    {
+      "text": "Return to Living Room",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "home_living_room"
+        }
+      ]
+    }
+  ]
+}

@@ -3,10 +3,10 @@
   "name": "Hallway",
   "region": "player_home",
   "mapDefinitions": {
-    "top": 1945,
-    "left": 2470,
-    "width": 200,
-    "height": 55,
+    "top": 1910,
+    "left": 2480,
+    "width": 180,
+    "height": 90,
     "background": "rgba(55, 45, 35, 0.9)"
   },
   "description": [
@@ -27,6 +27,15 @@
         {
           "type": "navigate",
           "destination": "home_living_room"
+        }
+      ]
+    },
+    {
+      "text": "Enter Museum Lobby",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "home_museum"
         }
       ]
     },
