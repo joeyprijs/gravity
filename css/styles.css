@@ -355,16 +355,20 @@ button.card:disabled {
 .option-direction {
   position: absolute;
   right: calc(var(--spacing) * 2);
-  top: 50%;
-  transform: translateY(-50%);
+  top: 0;
+  bottom: 0;
+  /* `.card > * + *` spaces a card's stacked lines. This one is not in that
+     stack — it is pinned to the edge — so it opts out, or it hangs 8px low. */
+  margin: 0;
   display: flex;
+  align-items: center;
   color: var(--text-secondary);
 }
 
 .option-direction .icon {
-  width: 0.85em;
-  height: 0.85em;
-  transform: rotate(calc(var(--turn) * 45deg));
+  width: 1.15em;
+  height: 1.15em;
+  transform: rotate(calc(var(--turn) * 90deg));
 }
 
 .card__body {

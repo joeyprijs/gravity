@@ -972,15 +972,32 @@
 
         // One glyph turned to face the road, so a direction never needs its own art.
         const east = $$('#scene-options button.card').find(b => text(b).includes('forge lane'));
-        assert(east.querySelector('.option-direction').style.getPropertyValue('--turn') === '2',
-          'east is two 45-degree turns from north');
+        assert(east.querySelector('.option-direction').style.getPropertyValue('--turn') === '1',
+          'east is one quarter-turn from north');
         assert(text(east.querySelector('.option-direction .visually-hidden')) === 'East',
           'and says so where the arrow cannot be seen');
         assert(east.querySelector('.icon[aria-hidden="true"]'), 'the glyph itself is hidden from readers');
 
+        // On the card's centre line. `.card > * + *` spaces a card's stacked
+        // lines, and the marker is the second child — left in that stack it
+        // hangs 8px low, which reads as sloppy down a column of options.
+        const iconBox = east.querySelector('.option-direction svg').getBoundingClientRect();
+        const cardBox = east.getBoundingClientRect();
+        const drop = Math.abs((iconBox.top + iconBox.height / 2) - (cardBox.top + cardBox.height / 2));
+        assert(drop < 1, `the arrow sits on the card's centre line (off by ${drop.toFixed(1)}px)`);
+
         // A door is a threshold, not a direction — "go in", never "go east".
         assert(marks('scene-options-entrances').every(m => m.endsWith('|-')),
           `no entrance claims a direction (got ${marks('scene-options-entrances').join(' ')})`);
+
+        // Four points, never eight: the hill path runs north-east out of the
+        // crossroads and is shown as north, because a diagonal arrow is the one
+        // the eye has to stop and work out.
+        engine.renderScene('village_crossroads');
+        await until(() => text($('#scene-location-reminder')).includes('Crossroads'), 'the crossroads');
+        const points = marks('scene-options').map(m => m.split('|')[1]);
+        assert(points.join(' ') === 'N S W', `the north-east road shows as north (got ${points.join(' ')})`);
+        assert(points.every(p => ['N', 'E', 'S', 'W'].includes(p)), 'no diagonal reaches the panel');
 
         // Neither is a move between two rooms of one house.
         engine.renderScene('home_living_room');

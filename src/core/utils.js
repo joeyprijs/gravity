@@ -223,10 +223,15 @@ export function isInteriorScene(scene, regions) {
 }
 
 /**
- * The eight compass points, clockwise from north — the order a set of roads is
- * authored in, and the order `compassPoint` names them.
+ * The four cardinal points, clockwise from north.
+ *
+ * Four, not eight: a diagonal arrow is genuinely harder to read at option size —
+ * the eye takes "up" and "right" instantly and has to stop and work out
+ * "up-and-right". Roads are still *authored* in eight-point order, which needs
+ * the finer resolution to be deterministic; what the player is shown rounds to
+ * the nearest cardinal, which is the unit they think in.
  */
-export const COMPASS_POINTS = Object.freeze(['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']);
+export const COMPASS_POINTS = Object.freeze(['N', 'E', 'S', 'W']);
 
 /**
  * Which way one scene lies from another, as a compass point.
@@ -236,10 +241,9 @@ export const COMPASS_POINTS = Object.freeze(['N', 'NE', 'E', 'SE', 'S', 'SW', 'W
  * navigational meaning in the game trapped in a string a translator has to get
  * right. Derived here instead, it survives translation.
  *
- * Rounded to eight points rather than kept as an angle, deliberately: a road
+ * Rounded to a compass point rather than kept as an angle, deliberately: a road
  * bearing 340° is read as *north* by anyone looking at it, and an exact angle
- * would both point somewhere nobody perceives and sort after south on a 0–360
- * scale. The point is the unit the player thinks in.
+ * would point somewhere nobody perceives.
  *
  * @param {object|null} from - Scene the player is standing in.
  * @param {object|null} to - Scene the road leads to.
@@ -256,7 +260,8 @@ export function compassPoint(from, to) {
 
   // Screen coordinates put north at the *top*, so north is a negative dy.
   const degrees = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
-  return COMPASS_POINTS[Math.round(degrees / 45) % COMPASS_POINTS.length];
+  const step = 360 / COMPASS_POINTS.length;
+  return COMPASS_POINTS[Math.round(degrees / step) % COMPASS_POINTS.length];
 }
 
 /**
