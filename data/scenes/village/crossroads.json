@@ -22,6 +22,15 @@
   ],
   "options": [
     {
+      "text": "Climb the hill path home",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_hill_path"
+        }
+      ]
+    },
+    {
       "text": "Take the road south into the village",
       "actions": [
         {
@@ -48,16 +57,6 @@
         {
           "type": "dialogue",
           "npc": "alder_frey"
-        }
-      ]
-    },
-    {
-      "text": "Climb the hill path home",
-      "isBack": true,
-      "actions": [
-        {
-          "type": "navigate",
-          "destination": "village_hill_path"
         }
       ]
     }

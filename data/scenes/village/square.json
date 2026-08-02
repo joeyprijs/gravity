@@ -47,6 +47,15 @@
       ]
     },
     {
+      "text": "Walk back up the north road",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_north_road"
+        }
+      ]
+    },
+    {
       "text": "Take the forge lane east",
       "actions": [
         {
@@ -56,20 +65,20 @@
       ]
     },
     {
-      "text": "Take the mill road west",
-      "actions": [
-        {
-          "type": "navigate",
-          "destination": "village_mill_road"
-        }
-      ]
-    },
-    {
       "text": "Take Sowers Lane south",
       "actions": [
         {
           "type": "navigate",
           "destination": "village_sowers_lane"
+        }
+      ]
+    },
+    {
+      "text": "Take the mill road west",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_mill_road"
         }
       ]
     },
@@ -101,16 +110,6 @@
         {
           "type": "dialogue",
           "npc": "iryna_hollow"
-        }
-      ]
-    },
-    {
-      "text": "Walk back up the north road",
-      "isBack": true,
-      "actions": [
-        {
-          "type": "navigate",
-          "destination": "village_north_road"
         }
       ]
     }

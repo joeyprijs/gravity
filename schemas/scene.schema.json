@@ -155,7 +155,7 @@
           },
           "isBack": {
             "type": "boolean",
-            "description": "If true, sorts this option to the bottom as a 'back'/exit choice (locale-independent alternative to a 'return' action)."
+            "description": "If true, sorts this option to the bottom as a 'back'/exit choice (locale-independent alternative to a 'return' action). Use it where 'back' is genuinely the odd one out — a dead-end cottage, a room off a corridor. Do NOT use it at a junction, where the way you came is just one of several directions: it drags that road out of the order the others read in, which is exactly what makes a list feel arbitrary. Roads at a junction are authored in compass order (N, E, S, W) instead."
           },
           "log": {
             "type": [
