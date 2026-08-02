@@ -43,7 +43,7 @@
       "actions": [
         {
           "type": "navigate",
-          "destination": "home_living_room"
+          "destination": "home_hallway"
         }
       ]
     }

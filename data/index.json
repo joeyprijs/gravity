@@ -152,6 +152,7 @@
     "dungeon_hallway": "data/scenes/dungeon/hallway.json",
     "dungeon_start": "data/scenes/dungeon/start.json",
     "home_bedroom": "data/scenes/player_home/bedroom.json",
+    "home_hallway": "data/scenes/player_home/hallway.json",
     "home_kitchen": "data/scenes/player_home/kitchen.json",
     "home_living_room": "data/scenes/player_home/living_room.json",
     "home_museum_armor": "data/scenes/player_home/museum_armor.json",

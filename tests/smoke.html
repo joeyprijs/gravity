@@ -950,15 +950,24 @@
           'the way home is a door, not a road');
 
         // Inside, the mirror: the ways out are the ones set apart, and they sit at
-        // the foot of the panel where the way out has always sat.
+        // the foot of the panel where the way out has always sat. The house is
+        // entered and left through its hallway, so that is where the door is.
+        engine.renderScene('home_hallway');
+        await until(() => text($('#scene-location-reminder')).includes('Hallway'), 'the hallway');
+        assert(!sectionOf('scene-options-entrances'), 'inside a building there are no entrances');
+        assert(text($('#scene-options-exits .section-heading')) === 'Exits', 'the ways out earn a heading');
+        assert(sectionOf('scene-options-exits').some(t => t.includes('Step outside to the hill path')),
+          `the door out is set apart (got ${sectionOf('scene-options-exits').join(' | ')})`);
+        assert(sectionOf('scene-options').some(t => t.includes('living room')),
+          'while the room it opens onto stays in the unheaded list');
+
+        // A teleport leaves the building whatever else it does, so it is an exit
+        // from a room that has no door to the outside at all.
         engine.state.addToInventory('home_rune', 1);   // so the teleport out shows
         engine.renderScene('home_living_room');
         await until(() => text($('#scene-location-reminder')).includes('Living Room'), 'the living room');
-        assert(!sectionOf('scene-options-entrances'), 'inside a building there are no entrances');
-        assert(text($('#scene-options-exits .section-heading')) === 'Exits', 'the ways out earn a heading');
         const ways = sectionOf('scene-options-exits');
-        assert(ways.some(t => t.includes('Step outside to the hill path')), `the door out is one (got ${ways.join(' | ')})`);
-        assert(ways.some(t => t.includes('Return via Teleport')), 'and so is a teleport, which leaves whatever else it does');
+        assert(ways.join() === 'Return via Teleport', `only the teleport (got ${ways.join(' | ')})`);
         assert(sectionOf('scene-options').some(t => t.includes('Enter Kitchen')),
           'while its own rooms stay in the unheaded list');
         assert(!sectionOf('scene-options').some(t => t.includes('Step outside')), 'with no way out left among them');
@@ -1182,7 +1191,11 @@
           `indoors it is the room that lights (got ${lit()[0]?.dataset.place})`);
 
         // A way out leads somewhere this map isn't drawing, so nothing lights —
-        // silence, rather than a wrong box.
+        // silence, rather than a wrong box. The door out is in the hallway.
+        engine.renderScene('home_hallway');
+        engine.ui.map.invalidateMinimap();
+        engine.ui.map.renderMinimap();
+        await until(() => text($('#scene-location-reminder')).includes('Hallway'), 'the hallway');
         point($$('#scene-options-exits button.card').find(b => text(b).includes('Step outside')));
         assert(!lit().length, 'a place off this map lights nothing');
         $('#scene-options-panel').dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));

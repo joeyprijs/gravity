@@ -9,7 +9,7 @@
     "height": 100,
     "background": "rgba(30, 60, 40, 0.9)"
   },
-  "description": "You enter the home and find yourself inside a cozy living room with a roaring hearth. Multiple wooden doors are visible leading deeper into the house. A gruff dwarf is sitting in a worn armchair, completely fixated on a strange scrying box emitting colorful moving pictures. In the corner, a young woman scribbles in a leather journal, glancing up as you enter.",
+  "description": "You come through into a cozy living room with a roaring hearth. Multiple wooden doors are visible leading deeper into the house. A gruff dwarf is sitting in a worn armchair, completely fixated on a strange scrying box emitting colorful moving pictures. In the corner, a young woman scribbles in a leather journal, glancing up as you enter.",
   "options": [
     {
       "text": "Enter Kitchen",
@@ -39,6 +39,15 @@
       ]
     },
     {
+      "text": "Enter Hallway",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "home_hallway"
+        }
+      ]
+    },
+    {
       "text": "Talk to Bron",
       "actions": [
         {
@@ -64,16 +73,6 @@
       "actions": [
         {
           "type": "return"
-        }
-      ]
-    },
-    {
-      "text": "Step outside to the hill path",
-      "isBack": true,
-      "actions": [
-        {
-          "type": "navigate",
-          "destination": "village_hill_path"
         }
       ]
     }
