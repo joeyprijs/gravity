@@ -20,10 +20,10 @@
         "installCost": 50,
         "wingCost": 250,
         "museumLayout": {
-          "top": 1800,
-          "left": 2640,
-          "roomWidth": 120,
-          "roomHeight": 100,
+          "top": 1890,
+          "left": 2670,
+          "roomWidth": 80,
+          "roomHeight": 55,
           "roomBackground": "rgba(75, 45, 90, 0.9)"
         }
       }

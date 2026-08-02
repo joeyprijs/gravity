@@ -4,10 +4,10 @@
   "region": "player_home",
   "museumHall": true,
   "mapDefinitions": {
-    "top": 1800,
-    "left": 2640,
-    "width": 120,
-    "height": 100,
+    "top": 1890,
+    "left": 2670,
+    "width": 80,
+    "height": 55,
     "background": "rgba(60, 30, 70, 0.9)"
   },
   "description": "You step into the museum lobby. There is nothing on show here — just a worn mosaic floor, your grandfather's portrait over the arch, and the doors to the wings standing open on either side.",

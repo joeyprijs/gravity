@@ -4,10 +4,10 @@
   "region": "player_home",
   "museumSlot": 1,
   "mapDefinitions": {
-    "top": 1900,
-    "left": 2640,
-    "width": 120,
-    "height": 100,
+    "top": 1945,
+    "left": 2670,
+    "width": 80,
+    "height": 55,
     "background": "rgba(75, 45, 90, 0.9)"
   },
   "description": "You step into the Relic Wing, the oldest hall your family still keeps open. Mahogany stands and glass cases wait in a patient row, each one lit from above, ready for whatever you carry home.",

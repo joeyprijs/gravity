@@ -3,10 +3,10 @@
   "name": "Hallway",
   "region": "player_home",
   "mapDefinitions": {
-    "top": 1900,
-    "left": 2360,
-    "width": 280,
-    "height": 100,
+    "top": 1945,
+    "left": 2470,
+    "width": 200,
+    "height": 55,
     "background": "rgba(55, 45, 35, 0.9)"
   },
   "description": [

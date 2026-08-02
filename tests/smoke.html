@@ -823,10 +823,16 @@
         assert(window.gameEngine.state.getPlayer().resources.gold === 50, `250 Gold spent (left: ${window.gameEngine.state.getPlayer().resources.gold})`);
         // Slot 2 opens a second column, so the hall spans both — the map room
         // for the wing is the whole point.
+        // Read against the declared layout rather than fixed numbers: what is
+        // under test is where the curator *puts* a slot, not how big the demo's
+        // museum happens to be drawn. Hard-coding both broke this step the first
+        // time the house was rescaled, which told us nothing about the curator.
+        const { left, top, roomWidth, roomHeight } = window.gameEngine.pluginConfig('curator').museumLayout;
         const hall = window.gameEngine.data.scenes.home_museum.mapDefinitions;
         const wing = window.gameEngine.data.scenes.home_museum_wing_2.mapDefinitions;
-        assert(hall.width === 240, `the hall widened to two columns (got ${hall.width})`);
-        assert(wing.left === 2760 && wing.top === 1700, `the wing sits north of column 1 (got ${wing.left},${wing.top})`);
+        assert(hall.width === roomWidth * 2, `the hall widened to two columns (got ${hall.width})`);
+        assert(wing.left === left + roomWidth && wing.top === top - roomHeight,
+          `the wing sits north of column 1 (got ${wing.left},${wing.top})`);
 
         // A built wing behaves like the shipped ones: entering opens its panel,
         // titled with the name the player gave it, and its exit walks back out.
@@ -849,7 +855,9 @@
         assert(state.loadFromObject(save) === true, 'the save loads');
         const wing = window.gameEngine.data.scenes.home_museum_wing_2;
         assert(wing?.name === 'Pottery Wing', 'the wing came back with its name');
-        assert(wing.mapDefinitions.left === 2760, 'and its geometry was re-derived, not stored');
+        const layout = window.gameEngine.pluginConfig('curator').museumLayout;
+        assert(wing.mapDefinitions.left === layout.left + layout.roomWidth,
+          'and its geometry was re-derived, not stored');
         // Walk in from the house, so the hall builds its panel on arrival.
         window.gameEngine.renderScene('home_living_room');
         window.gameEngine.renderScene('home_museum');
