@@ -114,6 +114,7 @@ export const CSS = {
   MAP_NODE:               'map-node',
   MAP_NODE_CURRENT:       'map-node--current',
   MAP_NODE_BUILDING:      'map-node--building',
+  MAP_NODE_TARGET:        'map-node--target',
   MAP_NODE_LABEL:         'map-node__label',
   MINIMAP_CANVAS:         'minimap__canvas',
   FULLMAP_INNER:          'fullmap-overlay__inner',

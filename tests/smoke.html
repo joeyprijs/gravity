@@ -1063,6 +1063,58 @@
         assert(!drawn.includes("Stave's Yard"), 'but not what stands along it');
       });
 
+      await step('pointing at an option lights up where it goes', async () => {
+        // The map draws places as unlabeled boxes, and the panel is holding all
+        // the names — so "Go into the smithy" is only useful if you can tell
+        // which box the smithy is. Pointing at the option answers it, which is
+        // why the map needs no legend of its own.
+        const engine = window.gameEngine;
+        const lit = () => $$('#minimap-canvas .map-node--target');
+        const point = (btn) => btn.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+
+        engine.renderScene('village_forge_lane');
+        engine.ui.map.invalidateMinimap();
+        engine.ui.map.renderMinimap();
+        await until(() => text($('#scene-location-reminder')).includes('Forge Lane'), 'the forge lane');
+
+        const door = $$('#scene-options-entrances button.card').find(b => text(b).includes('smithy'));
+        assert(door.dataset.destination === 'village_smithy', 'the button declares where it goes');
+        assert(!lit().length, 'nothing is lit until the player asks');
+
+        point(door);
+        // The smithy is one room, so outdoors it draws as its own building
+        // square — the room is not on this map, the building is.
+        assert(lit().length === 1, `exactly one place lights up (got ${lit().length})`);
+        assert(lit()[0].dataset.place === 'scene:village_smithy',
+          `and it is the smithy (got ${lit()[0].dataset.place})`);
+        assert(lit()[0].title === 'The Smithy', `boxes name themselves on hover (got "${lit()[0].title}")`);
+
+        // A road works the same way — this is not a buildings-only affordance.
+        point($$('#scene-options button.card').find(b => text(b).includes('East Row')));
+        assert(lit()[0]?.dataset.place === 'village_east_row',
+          `a lane lights its own box (got ${lit()[0]?.dataset.place})`);
+
+        // Sliding off a button onto the panel drops it again.
+        $('#scene-options-panel').dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+        assert(!lit().length, 'and it lets go when the player stops pointing');
+
+        // Inside a building the minimap draws that building's own rooms, so the
+        // room itself is what lights — not the building holding it.
+        engine.renderScene('home_living_room');
+        engine.ui.map.invalidateMinimap();
+        engine.ui.map.renderMinimap();
+        await until(() => text($('#scene-location-reminder')).includes('Living Room'), 'the living room');
+        point($$('#scene-options button.card').find(b => text(b).includes('Enter Kitchen')));
+        assert(lit()[0]?.dataset.place === 'home_kitchen',
+          `indoors it is the room that lights (got ${lit()[0]?.dataset.place})`);
+
+        // A way out leads somewhere this map isn't drawing, so nothing lights —
+        // silence, rather than a wrong box.
+        point($$('#scene-options-exits button.card').find(b => text(b).includes('Step outside')));
+        assert(!lit().length, 'a place off this map lights nothing');
+        $('#scene-options-panel').dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      });
+
       await step('a chosen solo fight introduces its enemy', async () => {
         // Nothing framed this encounter, so the NPC description is the only
         // thing establishing what the player is up against — it must survive.

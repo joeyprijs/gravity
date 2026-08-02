@@ -64,6 +64,58 @@ export class MapManager {
     document.getElementById(EL.FULLMAP_OVERLAY).addEventListener('click', (e) => {
       if (e.target === e.currentTarget) this.closeFullMap();
     });
+
+    // The interactions panel is the minimap's legend. The map draws places as
+    // unlabeled boxes because a name is unreadable at this scale, and the panel
+    // is already holding the names — so pointing at an option that goes
+    // somewhere lights that place up, and the two halves read as one.
+    //
+    // Delegated from the panel, not bound per button: the panel rebuilds its
+    // buttons constantly (every option click that doesn't navigate), and a
+    // listener per button would have to be rebuilt with them. Buttons only
+    // declare where they lead (data-destination, set in systems/scene.js);
+    // deciding what that means for the map belongs here.
+    const optionsPanel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
+    if (optionsPanel) {
+      const destinationUnder = (e) => e.target?.closest?.('[data-destination]')?.dataset.destination ?? null;
+      // mouseover (not mouseenter) so it bubbles from the button's inner spans,
+      // and it fires on the panel's own background too — which is what clears
+      // the highlight when the pointer slides off a button onto nothing.
+      optionsPanel.addEventListener('mouseover', (e) => this.highlightPlace(destinationUnder(e)));
+      optionsPanel.addEventListener('mouseleave', () => this.highlightPlace(null));
+      optionsPanel.addEventListener('focusin', (e) => this.highlightPlace(destinationUnder(e)));
+      optionsPanel.addEventListener('focusout', () => this.highlightPlace(null));
+    }
+  }
+
+  /**
+   * Marks the place a scene id lands on, as the one the player is pointing at —
+   * or clears the mark when passed nothing.
+   *
+   * Which node that is depends on what the minimap is currently drawing, so it
+   * asks in that order: the room itself if it is drawn (inside a building, its
+   * own rooms are), otherwise the building containing it (outdoors, that square
+   * is the only place a room gets). A destination the map isn't drawing at all
+   * — off the viewport's edge, or outside the building you are in — marks
+   * nothing, which is the honest answer.
+   *
+   * @param {string|null} sceneId - Destination scene id, or null to clear.
+   */
+  highlightPlace(sceneId) {
+    const canvas = document.getElementById(EL.MINIMAP_CANVAS);
+    if (!canvas) return;
+
+    const nodes = [...canvas.children];
+    for (const node of nodes) node.classList.remove(CSS.MAP_NODE_TARGET);
+    if (!sceneId) return;
+
+    for (const key of [sceneId, this._interiorKeyOf(sceneId)]) {
+      const node = key && nodes.find(n => n.dataset.place === key);
+      if (node) {
+        node.classList.add(CSS.MAP_NODE_TARGET);
+        return;
+      }
+    }
   }
 
   /**
@@ -99,8 +151,14 @@ export class MapManager {
     fresh.id = EL.MINIMAP_CANVAS;
     fresh.className = CSS.MINIMAP_CANVAS;
 
-    for (const { def, label, background, isCurrent } of placements) {
+    for (const { def, label, background, isCurrent, place } of placements) {
       const node = this._buildMapNode(label, isCurrent);
+      // What this box is, both ways round: `place` is what an option's
+      // destination is matched against (highlightPlace), and the name — already
+      // built into the node and hidden at this scale — comes back as the hover
+      // title, the way the top bar's icons keep their labels.
+      node.dataset.place = place;
+      node.title = label;
       node.style.top    = ((def.top  - view.top)  * view.scale) + 'px';
       node.style.left   = ((def.left - view.left) * view.scale) + 'px';
       node.style.width  = (def.width  * view.scale) + 'px';
@@ -344,7 +402,8 @@ export class MapManager {
     return {
       def: this._enclosing(rooms),
       ...this._buildingFace(key, rooms),
-      isCurrent: false
+      isCurrent: false,
+      place: key
     };
   }
 
@@ -371,7 +430,8 @@ export class MapManager {
       def: scene.mapDefinitions,
       label: scene.name || scene.title || id,
       background: scene.mapDefinitions.background,
-      isCurrent: id === currentSceneId
+      isCurrent: id === currentSceneId,
+      place: id
     };
   }
 

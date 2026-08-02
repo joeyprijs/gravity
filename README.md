@@ -371,6 +371,10 @@ Rooms tile their building exactly, which would leave a walked building reading a
 
 **What the interactions panel does with it.** Being a building is also a fact about movement, so crossing a threshold is listed apart from walking on. Out in the open, an option that navigates *into* a building goes under **Entrances**; inside one, the ways back out — a navigate to anywhere that isn't this building, or a teleport — go under **Exits**, at the foot of the panel. A move that stays on one side of the threshold is neither: a road between two outdoor places, or a door between two rooms of the same house. Like every other section, this follows from what the option's pipeline does, never from how its label is worded.
 
+**Reading the map through the panel.** At minimap scale a name is unreadable, so places are drawn as unlabeled boxes — which leaves "Go into Frey's store" pointing at a building the player can't pick out. Rather than give the map a legend of its own (icons, numbers — a third thing to learn, authored per building, and hopeless at twenty households), the panel *is* the legend: **point at an option that goes somewhere and that place lights up on the minimap.** Hover or keyboard-focus, any option that navigates, buildings and roads alike — so "take the forge lane east" shows you where the forge lane actually is. Boxes also carry their own name as a hover title, so it reads from either side.
+
+The link is derived, never authored: an option button declares its `navigate` destination and the map resolves it — the room if the map is drawing rooms, otherwise the building containing it. A destination the map isn't drawing (off the viewport's edge, or outside the building you're in) lights nothing rather than guessing. Skill-check destinations are deliberately excluded, for the same reason they don't reveal: a passage you haven't found yet shouldn't light up on the map.
+
 A **region** is what remains: an ambience grouping (see [`docs/AUDIO.md`](docs/AUDIO.md)) that a building can also use to gather its rooms.
 
 | Field | Meaning |

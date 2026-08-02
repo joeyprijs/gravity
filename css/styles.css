@@ -46,6 +46,7 @@
   --minimap-bg: rgba(0, 0, 0, 0.55);
   --map-node-border: rgba(255, 255, 255, 0.18);
   --map-building-outline: rgba(255, 255, 255, 0.45);
+  --map-node-target: rgba(255, 255, 255, 0.95);
   --map-node-text: rgba(255, 255, 255, 0.65);
 
   /* Typography */
@@ -934,6 +935,24 @@ button.section-toggle--collapsed .section-toggle__label::before {
 .map-node--current {
   border-color: var(--accent-color);
 
+}
+
+/* The place the option under the pointer leads to. The panel is already saying
+   its name, so the map only has to say which box.
+
+   White, not the accent: the accent is the *player* — it is what draws "you are
+   here" one box away, and a second accent outline would read as a second claim
+   of the same kind. White is the map's own ink (the same family as the node
+   border and the building outline, at full strength), so the place reads as lit
+   rather than as somewhere you also are. The glow does the work an outline
+   alone can't at this size, and outline-offset keeps both off the box's edge so
+   nothing shifts. */
+.map-node--target {
+  outline: 2px solid var(--map-node-target);
+  outline-offset: 1px;
+  box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.35);
+  filter: brightness(1.5);
+  z-index: 2;
 }
 
 .map-node__label {
