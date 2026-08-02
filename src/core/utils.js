@@ -223,6 +223,43 @@ export function isInteriorScene(scene, regions) {
 }
 
 /**
+ * The eight compass points, clockwise from north — the order a set of roads is
+ * authored in, and the order `compassPoint` names them.
+ */
+export const COMPASS_POINTS = Object.freeze(['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']);
+
+/**
+ * Which way one scene lies from another, as a compass point.
+ *
+ * The map's coordinates are where the world records direction — the prose used
+ * to carry it ("take the forge lane east"), which left the one piece of
+ * navigational meaning in the game trapped in a string a translator has to get
+ * right. Derived here instead, it survives translation.
+ *
+ * Rounded to eight points rather than kept as an angle, deliberately: a road
+ * bearing 340° is read as *north* by anyone looking at it, and an exact angle
+ * would both point somewhere nobody perceives and sort after south on a 0–360
+ * scale. The point is the unit the player thinks in.
+ *
+ * @param {object|null} from - Scene the player is standing in.
+ * @param {object|null} to - Scene the road leads to.
+ * @returns {string|null} A COMPASS_POINTS entry, or null without geometry for both.
+ */
+export function compassPoint(from, to) {
+  const a = from?.mapDefinitions;
+  const b = to?.mapDefinitions;
+  if (!a || !b) return null;
+
+  const dx = (b.left + b.width / 2) - (a.left + a.width / 2);
+  const dy = (b.top + b.height / 2) - (a.top + a.height / 2);
+  if (!dx && !dy) return null;
+
+  // Screen coordinates put north at the *top*, so north is a negative dy.
+  const degrees = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+  return COMPASS_POINTS[Math.round(degrees / 45) % COMPASS_POINTS.length];
+}
+
+/**
  * The attribute deltas one equipment piece carries while worn: its
  * attributeBonuses map, plus the legacy armorClassBonus folded into 'ac'.
  * equipItem/unequipItem apply these on swap, so a relic can raise any

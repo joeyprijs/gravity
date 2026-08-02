@@ -952,6 +952,43 @@
           'it stays where it was');
       });
 
+      await step('a road shows which way it runs; a threshold has no direction', async () => {
+        // The prose stopped saying "east" — the arrow carries it now, so it has
+        // to be there, has to face the right way, and has to name itself for a
+        // screen reader, or dropping the word took the direction away.
+        const engine = window.gameEngine;
+        engine.renderScene('village_square');
+        await until(() => text($('#scene-location-reminder')).includes('Village Square'), 'the square');
+
+        const marks = (id) => $$(`#${id} button.card`).map(b => {
+          const m = b.querySelector('.option-direction');
+          return `${text(b.querySelector('.card__title'))}|${m ? m.dataset.point : '-'}`;
+        });
+
+        // Authored in compass order, and each arrow agrees with its place in it.
+        assert(marks('scene-options').join(' ') ===
+          'Walk back up the north road|N Take the forge lane|E Take Sowers Lane|S Take the mill road|W',
+          `roads read round the compass (got ${marks('scene-options').join(' ')})`);
+
+        // One glyph turned to face the road, so a direction never needs its own art.
+        const east = $$('#scene-options button.card').find(b => text(b).includes('forge lane'));
+        assert(east.querySelector('.option-direction').style.getPropertyValue('--turn') === '2',
+          'east is two 45-degree turns from north');
+        assert(text(east.querySelector('.option-direction .visually-hidden')) === 'East',
+          'and says so where the arrow cannot be seen');
+        assert(east.querySelector('.icon[aria-hidden="true"]'), 'the glyph itself is hidden from readers');
+
+        // A door is a threshold, not a direction — "go in", never "go east".
+        assert(marks('scene-options-entrances').every(m => m.endsWith('|-')),
+          `no entrance claims a direction (got ${marks('scene-options-entrances').join(' ')})`);
+
+        // Neither is a move between two rooms of one house.
+        engine.renderScene('home_living_room');
+        await until(() => text($('#scene-location-reminder')).includes('Living Room'), 'the living room');
+        assert(marks('scene-options').every(m => m.endsWith('|-')),
+          `indoors nothing is a road (got ${marks('scene-options').join(' ')})`);
+      });
+
       await step('the minimap: one open world outdoors, one building inside', async () => {
         // Outdoors is continuous — every outdoor room walked, whatever region it
         // belongs to — with each building drawn as the one square it occupies,

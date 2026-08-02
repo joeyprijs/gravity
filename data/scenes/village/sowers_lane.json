@@ -79,7 +79,7 @@
       ]
     },
     {
-      "text": "Go on south to the fields",
+      "text": "Go on to the fields",
       "actions": [
         {
           "type": "navigate",

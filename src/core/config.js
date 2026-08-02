@@ -113,6 +113,7 @@ export const CSS = {
   // Map
   MAP_NODE:               'map-node',
   MAP_NODE_CURRENT:       'map-node--current',
+  OPTION_DIRECTION:       'option-direction',
   MAP_NODE_BUILDING:      'map-node--building',
   MAP_NODE_TARGET:        'map-node--target',
   MAP_NODE_LABEL:         'map-node__label',

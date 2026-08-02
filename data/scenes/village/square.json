@@ -56,7 +56,7 @@
       ]
     },
     {
-      "text": "Take the forge lane east",
+      "text": "Take the forge lane",
       "actions": [
         {
           "type": "navigate",
@@ -65,7 +65,7 @@
       ]
     },
     {
-      "text": "Take Sowers Lane south",
+      "text": "Take Sowers Lane",
       "actions": [
         {
           "type": "navigate",
@@ -74,7 +74,7 @@
       ]
     },
     {
-      "text": "Take the mill road west",
+      "text": "Take the mill road",
       "actions": [
         {
           "type": "navigate",
