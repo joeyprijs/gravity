@@ -757,9 +757,12 @@
       await step('hall and wing read the same: exit, what is here, construction', async () => {
         // The lobby is a museum room like any other — same panel, same order —
         // so moving through the museum never rearranges under the player.
-        // The location reminder is a .section-heading too — skip it by id.
+        // The location reminder is a .section-heading too — skip it by id. Read a
+        // button by its title, not its whole text: a direction marker adds the
+        // compass point's name for screen readers, which belongs in the
+        // accessible name and not in what the panel is read as saying.
         const layout = () => $$('#scene-options-panel .section-heading:not(#scene-location-reminder), #scene-options-panel button.card')
-          .map(el => text(el));
+          .map(el => text(el.querySelector('.card__title') ?? el));
 
         window.gameEngine.renderScene('home_museum_relics');
         await until(() => layout().includes('Current Exhibits'), 'the wing\'s panel');
@@ -990,7 +993,7 @@
           'it stays where it was');
       });
 
-      await step('a road shows which way it runs; a threshold has no direction', async () => {
+      await step('a move within one space shows its direction; a threshold has none', async () => {
         // The prose stopped saying "east" — the arrow carries it now, so it has
         // to be there, has to face the right way, and has to name itself for a
         // screen reader, or dropping the word took the direction away.
@@ -1037,11 +1040,29 @@
         assert(points.join(' ') === 'N S W', `the north-east road shows as north (got ${points.join(' ')})`);
         assert(points.every(p => ['N', 'E', 'S', 'W'].includes(p)), 'no diagonal reaches the panel');
 
-        // Neither is a move between two rooms of one house.
+        // Indoors carries a direction too. A house of eight rooms has a shape,
+        // and this is what says which way across it a door goes — the compass
+        // reads less literally than on a road, but "the museum is off the east
+        // side of the hall" is still what the map says.
+        engine.renderScene('home_hallway');
+        await until(() => text($('#scene-location-reminder')).includes('Hallway'), 'the hallway');
+        const hall = Object.fromEntries(marks('scene-options').map(m => m.split('|')));
+        assert(hall['Go through to the living room'] === 'N' && hall['Enter Museum Lobby'] === 'E',
+          `a door across the house has a direction (got ${marks('scene-options').join(' ')})`);
+
+        // But the way out of the building still does not: that is a threshold,
+        // the same as a door into one, and "out" is not a compass point.
+        assert(marks('scene-options-exits').every(m => m.endsWith('|-')),
+          `no exit claims a direction (got ${marks('scene-options-exits').join(' ')})`);
+
+        // Two rooms on the same side of a house read the same way, which is
+        // honest rather than useful — the label is what tells them apart.
         engine.renderScene('home_living_room');
         await until(() => text($('#scene-location-reminder')).includes('Living Room'), 'the living room');
-        assert(marks('scene-options').every(m => m.endsWith('|-')),
-          `indoors nothing is a road (got ${marks('scene-options').join(' ')})`);
+        const home = Object.fromEntries(marks('scene-options').map(m => m.split('|')));
+        assert(home['Enter Kitchen'] === 'W' && home["Enter Parents' Room"] === 'W',
+          `both west rooms point west (got ${marks('scene-options').join(' ')})`);
+        assert(home['Enter Bedroom'] === 'E' && home['Enter Hallway'] === 'S', 'and the others their own way');
       });
 
       await step('the minimap: one open world outdoors, one building inside', async () => {

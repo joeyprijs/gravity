@@ -515,6 +515,42 @@ export function buildOptionButton(text, reqText = null) {
 }
 
 /**
+ * The arrow that says which way an option goes, or null when it doesn't go a
+ * way — appended to an option button's trailing edge.
+ *
+ * The rule lives here rather than in either caller, because both the scene
+ * renderer and the curator's own panels build navigation buttons and would
+ * otherwise answer it differently: a step *within* one continuous space has a
+ * direction (a road between outdoor places, a door between two rooms of one
+ * building), and crossing a threshold does not — going in or out of a building
+ * is not a compass move, which is the same line Entrances and Exits are drawn
+ * on. Geometry both sides is required; a scene without mapDefinitions is
+ * nowhere in particular.
+ *
+ * @param {object} engine - For the locale table and the manifest's regions.
+ * @param {object} scene - The scene the player is standing in.
+ * @param {object|null} destination - The scene the option leads to.
+ * @returns {HTMLElement|null}
+ */
+export function buildDirectionMarker(engine, scene, destination) {
+  const regions = engine.data.regions;
+  if (!destination) return null;
+  if (isInteriorScene(scene, regions) !== isInteriorScene(destination, regions)) return null;
+
+  const point = compassPoint(scene, destination);
+  if (!point) return null;
+
+  const marker = createElement('span', CSS.OPTION_DIRECTION);
+  marker.dataset.point = point;
+  // One glyph drawn pointing north, turned a quarter-turn per point by CSS.
+  marker.style.setProperty('--turn', String(COMPASS_POINTS.indexOf(point)));
+  // The glyph is aria-hidden, so the point's name rides along for a screen
+  // reader — without it the direction would exist only for people who can see.
+  marker.innerHTML = `${iconHtml('arrow')}<span class="visually-hidden">${escapeHtml(engine.t(`ui.compass${point}`))}</span>`;
+  return marker;
+}
+
+/**
  * Builds one stat line for a card: "Action Points: 1" becomes a label span
  * ("Action Points:") and a value span ("1") so CSS can put every value of a
  * card in its own column. Stat lines are locale strings, so the split is on

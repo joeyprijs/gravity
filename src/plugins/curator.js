@@ -1,4 +1,4 @@
-import { buildCard, buildOptionButton, createElement, escapeHtml, getItemLabel, isSpecialItem, itemCardStats, resetOptionsPanel } from "../core/utils.js";
+import { buildCard, buildOptionButton, buildDirectionMarker, createElement, escapeHtml, getItemLabel, isSpecialItem, itemCardStats, resetOptionsPanel } from "../core/utils.js";
 import { CSS, EL, LOG } from "../core/config.js";
 
 // The curator's reputation model: a permanent score (earned by acquiring
@@ -443,6 +443,12 @@ export class CuratorUI {
     }
 
     const backBtn = buildOptionButton(back.text);
+    // A museum room's panel is built here rather than by the scene renderer, so
+    // its way out has to carry its own direction marker or the museum would be
+    // the one place indoors where doors don't show which way they go.
+    const dest = back.actions?.find(a => a.type === 'navigate')?.destination;
+    const marker = buildDirectionMarker(this.engine, scene, this.engine.data.scenes[dest]);
+    if (marker) backBtn.appendChild(marker);
     backBtn.onclick = () => {
       this.engine.setCustomUIOpen(false);
       this.engine.scene.handleOption(back);   // logs the choice and walks out
@@ -475,6 +481,10 @@ export class CuratorUI {
     for (const [id, wing] of wings) {
       const text = this.engine.t('plugin.curator.wingEnter', { name: wing.name });
       const btn = buildOptionButton(text);
+      // Slot order already reads the way the map does; the marker says it
+      // outright — the wings sit directly above and below the hall.
+      const wingMarker = buildDirectionMarker(this.engine, scene, wing);
+      if (wingMarker) btn.appendChild(wingMarker);
       btn.onclick = () => {
         this.engine.setCustomUIOpen(false);
         this.engine.scene.handleOption({ text, actions: [{ type: 'navigate', destination: id }] });

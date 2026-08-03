@@ -1,5 +1,4 @@
-import { clearElement, createElement, escapeHtml, buildSceneDescription, buildOptionButton, getItemLabel, isInteriorScene, compassPoint, COMPASS_POINTS, resetOptionsPanel } from "../core/utils.js";
-import { iconHtml } from "../core/icons.js";
+import { clearElement, createElement, buildSceneDescription, buildOptionButton, buildDirectionMarker, getItemLabel, isInteriorScene, resetOptionsPanel } from "../core/utils.js";
 import { CHECK_KEYS, CSS, FLAG_KEYS, GOLD_ITEM_ID, LOG, MAX_D20_ROLL } from "../core/config.js";
 import { evaluateCondition } from "./condition.js";
 import { formatList } from "../core/i18n.js";
@@ -274,21 +273,19 @@ export class SceneRenderer {
     const navDestination = (opt) => (opt.actions || [])
       .find(a => a.type === 'navigate' && this.engine.data.scenes[a.destination])?.destination ?? null;
 
-    // A road: outdoors, leading somewhere else outdoors. Roads are the only
-    // options that have a *direction* — a door is a threshold ("go in", not
-    // "go east"), and so is a move between two rooms of one house, which is the
-    // same line that puts doors under their own heading. Their prose no longer
-    // says which way they run; the marker below does, in every language.
-    const roadTo = (opt) => outdoors
-      ? (navTargets(opt).find(dest => !isInteriorScene(dest, regions)) ?? null)
-      : null;
-
     const entersBuilding = (opt) => outdoors
       && navTargets(opt).some(dest => isInteriorScene(dest, regions));
     const leavesBuilding = (opt) => !outdoors && (
       navTargets(opt).some(dest => !isInteriorScene(dest, regions))
       || (opt.actions || []).some(a => a.type === 'return')
     );
+
+    // Which way an option goes, when it goes a way at all: buildDirectionMarker
+    // owns that question (a step within one space has a direction; crossing a
+    // threshold does not), because the curator builds navigation buttons of its
+    // own and the two must not answer it differently. Road prose no longer names
+    // its direction; the marker does, in every language.
+    const stepTo = (opt) => navTargets(opt)[0] ?? null;
 
     (scene.options || []).forEach(opt => {
       const cond = opt.condition ?? null;
@@ -327,18 +324,8 @@ export class SceneRenderer {
       const destination = navDestination(opt);
       if (destination) btn.dataset.destination = destination;
 
-      // Which way this road runs, as one arrow turned to face it. The glyph is
-      // aria-hidden, so the point's name rides along for a screen reader —
-      // without it, dropping the direction from the prose would take the
-      // direction away from anyone not looking at the arrow.
-      const point = compassPoint(scene, roadTo(opt));
-      if (point) {
-        const marker = createElement('span', CSS.OPTION_DIRECTION);
-        marker.dataset.point = point;
-        marker.style.setProperty('--turn', String(COMPASS_POINTS.indexOf(point)));
-        marker.innerHTML = `${iconHtml('arrow')}<span class="visually-hidden">${escapeHtml(this.engine.t(`ui.compass${point}`))}</span>`;
-        btn.appendChild(marker);
-      }
+      const marker = buildDirectionMarker(this.engine, scene, stepTo(opt));
+      if (marker) btn.appendChild(marker);
 
       if (disabled) btn.disabled = true;
       btn.onclick = () => this.handleOption(opt);
