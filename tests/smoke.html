@@ -1184,7 +1184,10 @@
         // why the map needs no legend of its own.
         const engine = window.gameEngine;
         const lit = () => $$('#minimap-canvas .map-node--target');
-        const point = (btn) => btn.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+        const point = (btn) => btn.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+        // What the browser fires when a button arrives under a cursor that never
+        // moved — which must not count as the player pointing at it.
+        const arriveUnder = (btn) => btn.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
 
         engine.renderScene('village_forge_lane');
         engine.ui.map.invalidateMinimap();
@@ -1209,8 +1212,19 @@
           `a lane lights its own box (got ${lit()[0]?.dataset.place})`);
 
         // Sliding off a button onto the panel drops it again.
-        $('#scene-options-panel').dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+        $('#scene-options-panel').dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
         assert(!lit().length, 'and it lets go when the player stops pointing');
+
+        // Taking an option rebuilds the panel under a cursor that has not moved,
+        // and the browser answers that with mouseover on whatever button lands
+        // beneath it. Following that would light a place the player never asked
+        // about, the instant they arrived somewhere else — so only movement
+        // counts. Same button, both events: one speaks, one does not.
+        arriveUnder(door);
+        assert(!lit().length, 'a button arriving under a still cursor lights nothing');
+        point(door);
+        assert(lit()[0]?.dataset.place === 'scene:village_smithy', 'moving onto it still does');
+        $('#scene-options-panel').dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
 
         // Inside a building the minimap draws that building's own rooms, so the
         // room itself is what lights — not the building holding it.
@@ -1230,7 +1244,7 @@
         await until(() => text($('#scene-location-reminder')).includes('Hallway'), 'the hallway');
         point($$('#scene-options-exits button.card').find(b => text(b).includes('Step outside')));
         assert(!lit().length, 'a place off this map lights nothing');
-        $('#scene-options-panel').dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+        $('#scene-options-panel').dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
       });
 
       await step('a chosen solo fight introduces its enemy', async () => {

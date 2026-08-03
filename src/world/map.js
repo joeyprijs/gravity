@@ -46,6 +46,10 @@ export class MapManager {
     // Anything that changes map appearance without moving the player must
     // call invalidateMinimap() first (as the map tab switch in ui.js does).
     this._minimapCacheKey = null;
+
+    // The place currently marked as the one the player is pointing at, so a
+    // pointer crossing a button doesn't redraw the same answer per pixel.
+    this._highlightedPlace = null;
   }
 
   // Wires the open/close triggers for the full-screen map overlay (minimap
@@ -78,10 +82,17 @@ export class MapManager {
     const optionsPanel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
     if (optionsPanel) {
       const destinationUnder = (e) => e.target?.closest?.('[data-destination]')?.dataset.destination ?? null;
-      // mouseover (not mouseenter) so it bubbles from the button's inner spans,
-      // and it fires on the panel's own background too — which is what clears
-      // the highlight when the pointer slides off a button onto nothing.
-      optionsPanel.addEventListener('mouseover', (e) => this.highlightPlace(destinationUnder(e)));
+      // mousemove, deliberately — NOT mouseover. The highlight answers "where is
+      // that?", so it has to mean the player pointed at something, and pointing
+      // is a movement. Taking an option rebuilds the panel under a cursor that
+      // has not moved, and the browser then fires mouseover on whichever button
+      // happens to land beneath it: arrive in the kitchen and the map lights up
+      // the bedroom, because the bedroom's door is where the cursor already was.
+      // mousemove cannot do that — no movement, no event — so the map stays
+      // quiet until the player actually asks something. It also bubbles from the
+      // button's inner spans, and fires over the panel's own background, which
+      // is what drops the highlight when the pointer slides onto nothing.
+      optionsPanel.addEventListener('mousemove', (e) => this.highlightPlace(destinationUnder(e)));
       optionsPanel.addEventListener('mouseleave', () => this.highlightPlace(null));
       optionsPanel.addEventListener('focusin', (e) => this.highlightPlace(destinationUnder(e)));
       optionsPanel.addEventListener('focusout', () => this.highlightPlace(null));
@@ -99,11 +110,16 @@ export class MapManager {
    * — off the viewport's edge, or outside the building you are in — marks
    * nothing, which is the honest answer.
    *
+   * Called on every pointer move across the panel, so it leaves early when the
+   * answer hasn't changed rather than clearing and re-adding a class per pixel.
+   *
    * @param {string|null} sceneId - Destination scene id, or null to clear.
    */
   highlightPlace(sceneId) {
     const canvas = document.getElementById(EL.MINIMAP_CANVAS);
     if (!canvas) return;
+    if ((sceneId ?? null) === this._highlightedPlace) return;
+    this._highlightedPlace = sceneId ?? null;
 
     const nodes = [...canvas.children];
     for (const node of nodes) node.classList.remove(CSS.MAP_NODE_TARGET);
@@ -176,6 +192,10 @@ export class MapManager {
     canvasEl.replaceWith(fresh);
     minimapEl.hidden = false;
     this._minimapCacheKey = currentSceneId;
+    // The old nodes carried the highlight and have just been thrown away, so the
+    // remembered answer is stale — leaving it would make highlightPlace's early
+    // return swallow the next request for that same place.
+    this._highlightedPlace = null;
   }
 
   /**
