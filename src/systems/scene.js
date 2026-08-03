@@ -266,13 +266,6 @@ export class SceneRenderer {
       .map(a => this.engine.data.scenes[a.destination])
       .filter(Boolean);
 
-    // Where a button leads, for the map link below. Options only, and navigate
-    // only: a skill check's destination is what passing it earns, and lighting
-    // it up on the minimap would hand over exactly the secret one step of sight
-    // withholds (see sceneNavigationTargets in world/map.js).
-    const navDestination = (opt) => (opt.actions || [])
-      .find(a => a.type === 'navigate' && this.engine.data.scenes[a.destination])?.destination ?? null;
-
     const entersBuilding = (opt) => outdoors
       && navTargets(opt).some(dest => isInteriorScene(dest, regions));
     const leavesBuilding = (opt) => !outdoors && (
@@ -319,11 +312,6 @@ export class SceneRenderer {
 
       const stats = [...(extraStats ?? []), ...(reqText ? [reqText] : [])];
       const btn = buildOptionButton(opt.text, stats.length ? stats : null);
-      // Pointing at a button is asking "where is that?" — world/map.js answers
-      // it on the minimap. The button only says where it goes.
-      const destination = navDestination(opt);
-      if (destination) btn.dataset.destination = destination;
-
       const marker = buildDirectionMarker(this.engine, scene, stepTo(opt));
       if (marker) btn.appendChild(marker);
 

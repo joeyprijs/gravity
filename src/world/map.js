@@ -46,10 +46,6 @@ export class MapManager {
     // Anything that changes map appearance without moving the player must
     // call invalidateMinimap() first (as the map tab switch in ui.js does).
     this._minimapCacheKey = null;
-
-    // The place currently marked as the one the player is pointing at, so a
-    // pointer crossing a button doesn't redraw the same answer per pixel.
-    this._highlightedPlace = null;
   }
 
   // Wires the open/close triggers for the full-screen map overlay (minimap
@@ -69,69 +65,6 @@ export class MapManager {
       if (e.target === e.currentTarget) this.closeFullMap();
     });
 
-    // The interactions panel is the minimap's legend. The map draws places as
-    // unlabeled boxes because a name is unreadable at this scale, and the panel
-    // is already holding the names — so pointing at an option that goes
-    // somewhere lights that place up, and the two halves read as one.
-    //
-    // Delegated from the panel, not bound per button: the panel rebuilds its
-    // buttons constantly (every option click that doesn't navigate), and a
-    // listener per button would have to be rebuilt with them. Buttons only
-    // declare where they lead (data-destination, set in systems/scene.js);
-    // deciding what that means for the map belongs here.
-    const optionsPanel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
-    if (optionsPanel) {
-      const destinationUnder = (e) => e.target?.closest?.('[data-destination]')?.dataset.destination ?? null;
-      // mousemove, deliberately — NOT mouseover. The highlight answers "where is
-      // that?", so it has to mean the player pointed at something, and pointing
-      // is a movement. Taking an option rebuilds the panel under a cursor that
-      // has not moved, and the browser then fires mouseover on whichever button
-      // happens to land beneath it: arrive in the kitchen and the map lights up
-      // the bedroom, because the bedroom's door is where the cursor already was.
-      // mousemove cannot do that — no movement, no event — so the map stays
-      // quiet until the player actually asks something. It also bubbles from the
-      // button's inner spans, and fires over the panel's own background, which
-      // is what drops the highlight when the pointer slides onto nothing.
-      optionsPanel.addEventListener('mousemove', (e) => this.highlightPlace(destinationUnder(e)));
-      optionsPanel.addEventListener('mouseleave', () => this.highlightPlace(null));
-      optionsPanel.addEventListener('focusin', (e) => this.highlightPlace(destinationUnder(e)));
-      optionsPanel.addEventListener('focusout', () => this.highlightPlace(null));
-    }
-  }
-
-  /**
-   * Marks the place a scene id lands on, as the one the player is pointing at —
-   * or clears the mark when passed nothing.
-   *
-   * Which node that is depends on what the minimap is currently drawing, so it
-   * asks in that order: the room itself if it is drawn (inside a building, its
-   * own rooms are), otherwise the building containing it (outdoors, that square
-   * is the only place a room gets). A destination the map isn't drawing at all
-   * — off the viewport's edge, or outside the building you are in — marks
-   * nothing, which is the honest answer.
-   *
-   * Called on every pointer move across the panel, so it leaves early when the
-   * answer hasn't changed rather than clearing and re-adding a class per pixel.
-   *
-   * @param {string|null} sceneId - Destination scene id, or null to clear.
-   */
-  highlightPlace(sceneId) {
-    const canvas = document.getElementById(EL.MINIMAP_CANVAS);
-    if (!canvas) return;
-    if ((sceneId ?? null) === this._highlightedPlace) return;
-    this._highlightedPlace = sceneId ?? null;
-
-    const nodes = [...canvas.children];
-    for (const node of nodes) node.classList.remove(CSS.MAP_NODE_TARGET);
-    if (!sceneId) return;
-
-    for (const key of [sceneId, this._interiorKeyOf(sceneId)]) {
-      const node = key && nodes.find(n => n.dataset.place === key);
-      if (node) {
-        node.classList.add(CSS.MAP_NODE_TARGET);
-        return;
-      }
-    }
   }
 
   /**
@@ -173,13 +106,11 @@ export class MapManager {
     fresh.id = EL.MINIMAP_CANVAS;
     fresh.className = CSS.MINIMAP_CANVAS;
 
-    for (const { def, label, background, isCurrent, place } of placements) {
+    for (const { def, label, background, isCurrent } of placements) {
       const node = this._buildMapNode(label, isCurrent);
-      // What this box is, both ways round: `place` is what an option's
-      // destination is matched against (highlightPlace), and the name — already
-      // built into the node and hidden at this scale — comes back as the hover
-      // title, the way the top bar's icons keep their labels.
-      node.dataset.place = place;
+      // The name is already built into the node and hidden at this scale, so it
+      // comes back as the hover title — the way the top bar's icons keep their
+      // labels. Unlabeled boxes you can name by pointing at them.
       node.title = label;
       node.style.top    = ((def.top  - view.top)  * view.scale) + 'px';
       node.style.left   = ((def.left - view.left) * view.scale) + 'px';
@@ -192,10 +123,6 @@ export class MapManager {
     canvasEl.replaceWith(fresh);
     minimapEl.hidden = false;
     this._minimapCacheKey = currentSceneId;
-    // The old nodes carried the highlight and have just been thrown away, so the
-    // remembered answer is stale — leaving it would make highlightPlace's early
-    // return swallow the next request for that same place.
-    this._highlightedPlace = null;
   }
 
   /**
@@ -428,8 +355,7 @@ export class MapManager {
     return {
       def: this._enclosing(rooms),
       ...this._buildingFace(key, rooms),
-      isCurrent: false,
-      place: key
+      isCurrent: false
     };
   }
 
@@ -456,8 +382,7 @@ export class MapManager {
       def: scene.mapDefinitions,
       label: scene.name || scene.title || id,
       background: scene.mapDefinitions.background,
-      isCurrent: id === currentSceneId,
-      place: id
+      isCurrent: id === currentSceneId
     };
   }
 
