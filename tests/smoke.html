@@ -1055,14 +1055,15 @@
         assert(marks('scene-options-exits').every(m => m.endsWith('|-')),
           `no exit claims a direction (got ${marks('scene-options-exits').join(' ')})`);
 
-        // Two rooms on the same side of a house read the same way, which is
-        // honest rather than useful — the label is what tells them apart.
+        // A house's doors are authored round the compass too, so the arrows read
+        // as a sweep here exactly as they do on a road. Two rooms down the same
+        // side point the same way — honest rather than useful, and they sit
+        // together, ordered by where they actually are within that side.
         engine.renderScene('home_living_room');
         await until(() => text($('#scene-location-reminder')).includes('Living Room'), 'the living room');
-        const home = Object.fromEntries(marks('scene-options').map(m => m.split('|')));
-        assert(home['Enter Kitchen'] === 'W' && home["Enter Parents' Room"] === 'W',
-          `both west rooms point west (got ${marks('scene-options').join(' ')})`);
-        assert(home['Enter Bedroom'] === 'E' && home['Enter Hallway'] === 'S', 'and the others their own way');
+        assert(marks('scene-options').join(' ') ===
+          "Enter Bedroom|E Enter Hallway|S Enter Parents' Room|W Enter Kitchen|W",
+          `the house reads round the compass (got ${marks('scene-options').join(' ')})`);
       });
 
       await step('the minimap: one open world outdoors, one building inside', async () => {

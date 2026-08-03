@@ -12,20 +12,20 @@
   "description": "You come through into a cozy living room with a roaring hearth. Multiple wooden doors are visible leading deeper into the house. A gruff dwarf is sitting in a worn armchair, completely fixated on a strange scrying box emitting colorful moving pictures. In the corner, a young woman scribbles in a leather journal, glancing up as you enter.",
   "options": [
     {
-      "text": "Enter Kitchen",
-      "actions": [
-        {
-          "type": "navigate",
-          "destination": "home_kitchen"
-        }
-      ]
-    },
-    {
       "text": "Enter Bedroom",
       "actions": [
         {
           "type": "navigate",
           "destination": "home_bedroom"
+        }
+      ]
+    },
+    {
+      "text": "Enter Hallway",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "home_hallway"
         }
       ]
     },
@@ -39,11 +39,11 @@
       ]
     },
     {
-      "text": "Enter Hallway",
+      "text": "Enter Kitchen",
       "actions": [
         {
           "type": "navigate",
-          "destination": "home_hallway"
+          "destination": "home_kitchen"
         }
       ]
     },
