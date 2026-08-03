@@ -1,4 +1,4 @@
-import { buildCard, buildOptionButton, buildDirectionMarker, createElement, escapeHtml, getItemLabel, isSpecialItem, itemCardStats, resetOptionsPanel } from "../core/utils.js";
+import { buildCard, buildOptionButton, addDirectionMarker, createElement, escapeHtml, getItemLabel, isSpecialItem, itemCardStats, resetOptionsPanel } from "../core/utils.js";
 import { CSS, EL, LOG } from "../core/config.js";
 
 // The curator's reputation model: a permanent score (earned by acquiring
@@ -447,8 +447,7 @@ export class CuratorUI {
     // its way out has to carry its own direction marker or the museum would be
     // the one place indoors where doors don't show which way they go.
     const dest = back.actions?.find(a => a.type === 'navigate')?.destination;
-    const marker = buildDirectionMarker(this.engine, scene, this.engine.data.scenes[dest]);
-    if (marker) backBtn.appendChild(marker);
+    addDirectionMarker(this.engine, scene, this.engine.data.scenes[dest], backBtn);
     backBtn.onclick = () => {
       this.engine.setCustomUIOpen(false);
       this.engine.scene.handleOption(back);   // logs the choice and walks out
@@ -483,8 +482,7 @@ export class CuratorUI {
       const btn = buildOptionButton(text);
       // Slot order already reads the way the map does; the marker says it
       // outright — the wings sit directly above and below the hall.
-      const wingMarker = buildDirectionMarker(this.engine, scene, wing);
-      if (wingMarker) btn.appendChild(wingMarker);
+      addDirectionMarker(this.engine, scene, wing, btn);
       btn.onclick = () => {
         this.engine.setCustomUIOpen(false);
         this.engine.scene.handleOption({ text, actions: [{ type: 'navigate', destination: id }] });

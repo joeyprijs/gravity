@@ -515,30 +515,36 @@ export function buildOptionButton(text, reqText = null) {
 }
 
 /**
- * The arrow that says which way an option goes, or null when it doesn't go a
- * way — appended to an option button's trailing edge.
+ * Adds the arrow that says which way an option goes, to an option button — and
+ * does nothing when the option doesn't go a way.
  *
- * The rule lives here rather than in either caller, because both the scene
- * renderer and the curator's own panels build navigation buttons and would
- * otherwise answer it differently: a step *within* one continuous space has a
- * direction (a road between outdoor places, a door between two rooms of one
- * building), and crossing a threshold does not — going in or out of a building
- * is not a compass move, which is the same line Entrances and Exits are drawn
- * on. Geometry both sides is required; a scene without mapDefinitions is
- * nowhere in particular.
+ * The rule lives here rather than in any caller, because the scene renderer and
+ * the curator's own panels both build navigation buttons and would otherwise
+ * answer it differently: a step *within* one continuous space has a direction (a
+ * road between outdoor places, a door between two rooms of one building), and
+ * crossing a threshold does not — going in or out of a building is not a compass
+ * move, which is the same line Entrances and Exits are drawn on. Geometry both
+ * sides is required; a scene without mapDefinitions is nowhere in particular.
+ *
+ * Marks the button as well as filling it, so the CSS never has to ask whether a
+ * card contains a marker. The marker is positioned against its card, and every
+ * ancestor above the card is `static` — asking with `:has()` would put the whole
+ * thing one unsupported selector away from resolving against the viewport
+ * instead, and dropping the arrow into a page corner. The code appending it
+ * already knows; it can say so.
  *
  * @param {object} engine - For the locale table and the manifest's regions.
  * @param {object} scene - The scene the player is standing in.
  * @param {object|null} destination - The scene the option leads to.
- * @returns {HTMLElement|null}
+ * @param {HTMLElement} button - The option button to mark and append to.
  */
-export function buildDirectionMarker(engine, scene, destination) {
+export function addDirectionMarker(engine, scene, destination, button) {
   const regions = engine.data.regions;
-  if (!destination) return null;
-  if (isInteriorScene(scene, regions) !== isInteriorScene(destination, regions)) return null;
+  if (!destination) return;
+  if (isInteriorScene(scene, regions) !== isInteriorScene(destination, regions)) return;
 
   const point = compassPoint(scene, destination);
-  if (!point) return null;
+  if (!point) return;
 
   const marker = createElement('span', CSS.OPTION_DIRECTION);
   marker.dataset.point = point;
@@ -547,7 +553,9 @@ export function buildDirectionMarker(engine, scene, destination) {
   // The glyph is aria-hidden, so the point's name rides along for a screen
   // reader — without it the direction would exist only for people who can see.
   marker.innerHTML = `${iconHtml('arrow')}<span class="visually-hidden">${escapeHtml(engine.t(`ui.compass${point}`))}</span>`;
-  return marker;
+
+  button.classList.add(CSS.CARD_DIRECTED);
+  button.appendChild(marker);
 }
 
 /**

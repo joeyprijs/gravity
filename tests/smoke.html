@@ -1019,6 +1019,13 @@
           'and says so where the arrow cannot be seen');
         assert(east.querySelector('.icon[aria-hidden="true"]'), 'the glyph itself is hidden from readers');
 
+        // The card says it holds a marker, rather than the CSS asking with
+        // :has(). Every ancestor above the card is static, so if that selector
+        // were ever unsupported the marker would resolve against the viewport
+        // and land in a page corner — the appending code marks it instead.
+        assert(east.classList.contains('card--directed'), 'the card is marked as carrying a direction');
+        assert(getComputedStyle(east).position === 'relative', 'which is what the marker is positioned against');
+
         // On the card's centre line. `.card > * + *` spaces a card's stacked
         // lines, and the marker is the second child — left in that stack it
         // hangs 8px low, which reads as sloppy down a column of options.

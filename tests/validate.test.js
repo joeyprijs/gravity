@@ -334,6 +334,13 @@ test('flags a farmable gift node, per route in — a guard one step up is not en
     { text: 'Back again.', actions: [{ type: 'goToConversation', node: 'gift' }] });
   assert.ok(issuesFor(twoRoutes).some(m => m.includes('response "Back again." reaches gift node "gift" ungated')));
 
+  // A gift on the start node has no response to gate: saying hello displays it,
+  // so it hands the item over on every conversation and the per-route check
+  // above would never see it.
+  const onStart = makeToolkitData();
+  onStart.npcs.elder.conversations.start.actions = [{ type: 'loot', item: 'potion' }];
+  assert.ok(issuesFor(onStart).some(m => m.includes('every time the player talks to this NPC')));
+
   // Paying gold out is not a gift.
   const payment = makeToolkitData();
   payment.npcs.elder.conversations.gift = {

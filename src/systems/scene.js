@@ -1,4 +1,4 @@
-import { clearElement, createElement, buildSceneDescription, buildOptionButton, buildDirectionMarker, getItemLabel, isInteriorScene, resetOptionsPanel } from "../core/utils.js";
+import { clearElement, createElement, buildSceneDescription, buildOptionButton, addDirectionMarker, getItemLabel, isInteriorScene, resetOptionsPanel } from "../core/utils.js";
 import { CHECK_KEYS, CSS, FLAG_KEYS, GOLD_ITEM_ID, LOG, MAX_D20_ROLL } from "../core/config.js";
 import { evaluateCondition } from "./condition.js";
 import { formatList } from "../core/i18n.js";
@@ -273,12 +273,12 @@ export class SceneRenderer {
       || (opt.actions || []).some(a => a.type === 'return')
     );
 
-    // Which way an option goes, when it goes a way at all: buildDirectionMarker
-    // owns that question (a step within one space has a direction; crossing a
-    // threshold does not), because the curator builds navigation buttons of its
-    // own and the two must not answer it differently. Road prose no longer names
-    // its direction; the marker does, in every language.
-    const stepTo = (opt) => navTargets(opt)[0] ?? null;
+    // Where an option leads, unfiltered. Whether that *has* a direction —
+    // a step within one space does, crossing a threshold doesn't — is
+    // addDirectionMarker's question, because the curator builds navigation
+    // buttons of its own and the two must not answer it differently. Road prose
+    // no longer names its direction; the marker does, in every language.
+    const destinationOf = (opt) => navTargets(opt)[0] ?? null;
 
     (scene.options || []).forEach(opt => {
       const cond = opt.condition ?? null;
@@ -312,8 +312,7 @@ export class SceneRenderer {
 
       const stats = [...(extraStats ?? []), ...(reqText ? [reqText] : [])];
       const btn = buildOptionButton(opt.text, stats.length ? stats : null);
-      const marker = buildDirectionMarker(this.engine, scene, stepTo(opt));
-      if (marker) btn.appendChild(marker);
+      addDirectionMarker(this.engine, scene, destinationOf(opt), btn);
 
       if (disabled) btn.disabled = true;
       btn.onclick = () => this.handleOption(opt);

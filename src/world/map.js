@@ -64,7 +64,6 @@ export class MapManager {
     document.getElementById(EL.FULLMAP_OVERLAY).addEventListener('click', (e) => {
       if (e.target === e.currentTarget) this.closeFullMap();
     });
-
   }
 
   /**

@@ -155,7 +155,7 @@
           },
           "isBack": {
             "type": "boolean",
-            "description": "If true, sorts this option to the bottom as a 'back'/exit choice (locale-independent alternative to a 'return' action). Use it where 'back' is genuinely the odd one out — a dead-end cottage, the way out of a building. Do NOT use it on a road, or on a door between two rooms of one building: the way you came is a direction like any other, and sinking it drags that option out of the order the others read in, which is what makes a list feel arbitrary. Those are authored in compass order (clockwise from north, wrapping at due north) instead, which is what makes their direction arrows read as a sweep."
+            "description": "If true, sorts this option to the bottom as a 'back'/exit choice (locale-independent alternative to a 'return' action). It also *marks* the way back, not only its position: the curator plugin finds a museum room's exit by looking for a lone 'isBack' option, so removing it there replaces the labelled way out with a generic close. Use it where 'back' is genuinely the odd one out — a dead-end cottage, a room whose only exit is the way you came, the way out of a building. Do NOT use it where it would compete with compass order: on a junction's roads, or in any list holding more than one directional option, sinking one of them drags it out of the sequence the rest read in and makes the list feel arbitrary. Those are authored in compass order (clockwise from north, wrapping at due north) instead, which is what makes their direction arrows read as a sweep."
           },
           "log": {
             "type": [

@@ -97,6 +97,8 @@ export const CSS = {
   CARD_TITLE:             'card__title',
   CARD_BODY:              'card__body',
   CARD_STATS:             'card__stats',
+  CARD_DIRECTED:          'card--directed',
+  OPTION_DIRECTION:       'option-direction',
   CARD_STAT_LABEL:        'card__stat-label',
   CARD_STAT_VALUE:        'card__stat-value',
   CARD_LIST:              'card-list',
@@ -113,7 +115,6 @@ export const CSS = {
   // Map
   MAP_NODE:               'map-node',
   MAP_NODE_CURRENT:       'map-node--current',
-  OPTION_DIRECTION:       'option-direction',
   MAP_NODE_BUILDING:      'map-node--building',
   MAP_NODE_LABEL:         'map-node__label',
   MINIMAP_CANVAS:         'minimap__canvas',

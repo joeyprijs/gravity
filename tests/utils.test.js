@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { itemCardStats, itemStatLines, equipmentAttributeBonuses } from '../src/core/utils.js';
+import { itemCardStats, itemStatLines, equipmentAttributeBonuses, compassPoint, COMPASS_POINTS } from '../src/core/utils.js';
 
 // t() echoes "key:params" so assertions can check both key and values.
 const t = (key, p) => p ? `${key}:${JSON.stringify(p)}` : key;
@@ -77,4 +77,42 @@ test('itemCardStats: { slot: false } drops the slot row for the equipped list', 
   const lines = itemCardStats(t, item, {}, { slot: false });
   assert.ok(!lines.some(l => l.includes('itemStats.slot')), 'no slot row');
   assert.match(lines[0], /itemStats\.attributeBonus/, 'the rest is unchanged');
+});
+
+// ── compassPoint ──────────────────────────────────────────────────────────────
+// The direction an option's arrow points, and the order roads are authored in,
+// both come out of this. Its rounding has been wrong twice on the way in — once
+// ordering by raw bearing, which files a road at 340° after south, and once at
+// eight points, which asks the eye to decode a diagonal — so the boundaries are
+// worth holding still.
+
+const at = (left, top) => ({ mapDefinitions: { left, top, width: 10, height: 10 } });
+const here = at(100, 100);
+
+test('compassPoint: four cardinals, from a screen where north is up', () => {
+  assert.equal(compassPoint(here, at(100, 0)), 'N');
+  assert.equal(compassPoint(here, at(200, 100)), 'E');
+  assert.equal(compassPoint(here, at(100, 200)), 'S');
+  assert.equal(compassPoint(here, at(0, 100)), 'W');
+  assert.deepEqual(COMPASS_POINTS, ['N', 'E', 'S', 'W']);
+});
+
+test('compassPoint: rounds to the nearest cardinal, and wraps at due north', () => {
+  // A shade west of north is north, not west, and emphatically not "after
+  // south" — which is what a raw 0–360 comparison does with 340°.
+  assert.equal(compassPoint(here, at(90, 40)), 'N');    // ~ -9°
+  assert.equal(compassPoint(here, at(110, 40)), 'N');   // ~ +9°
+  // A true diagonal is not its own point any more: it lands on one side.
+  assert.ok(['N', 'E'].includes(compassPoint(here, at(160, 40))), 'north-east resolves to a cardinal');
+  // Just past the 45° boundary is unambiguously the next one round.
+  assert.equal(compassPoint(here, at(200, 90)), 'E');
+  assert.equal(compassPoint(here, at(200, 110)), 'E');
+});
+
+test('compassPoint: nowhere in particular is null, never a direction', () => {
+  assert.equal(compassPoint(here, at(100, 100)), null, 'the same place has no bearing from itself');
+  assert.equal(compassPoint(here, { name: 'unplaced' }), null, 'a scene with no mapDefinitions');
+  assert.equal(compassPoint({ name: 'unplaced' }, here), null, 'or standing in one');
+  assert.equal(compassPoint(here, null), null);
+  assert.equal(compassPoint(null, here), null);
 });

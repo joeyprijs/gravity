@@ -31,8 +31,8 @@ const ICONS = {
      + 'M17.5 4.2h3v2.3c0 2-1.2 3.8-3 4.6V8.7c.6-.5 1-1.3 1-2.2v-.8h-1V4.2z'
      + 'M10.9 12.4h2.2v5.1h-2.2z M8 17.5h8v2.4H8z M6.8 19.9h10.4v2.1H6.8z',
   },
-  // Drawn pointing north. The eight compass points are one glyph turned in
-  // 45° steps by CSS, so a direction never needs its own art.
+  // Drawn pointing north. The four cardinal points are this one glyph turned in
+  // quarter-turns by CSS, so a direction never needs its own art.
   arrow: {
     d: 'M12 2.6l5.6 8.4h-11.2z'
      + 'M10.2 9.8h3.6v11.6h-3.6z',

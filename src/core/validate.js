@@ -429,6 +429,12 @@ function warnIfGiftFarmable(ctx, group, npc) {
       .filter(a => a.type === 'set_flag' && a.value === true)
       .map(a => a.flag));
 
+    // The start node is displayed by opening the conversation, not by choosing a
+    // response, so there is no response to gate and the loot runs every time the
+    // player says hello. Nothing below would catch it.
+    if (nodeId === 'start')
+      ctx.add(group, `conversation node "start" hands over loot, and opening the conversation displays it — so it runs again every time the player talks to this NPC. Move the gift to a node reached by a response, and gate that response on a flag the gift node sets.`);
+
     for (const [fromId, from] of Object.entries(conversations)) {
       for (const res of (from.responses || [])) {
         const leadsHere = (res.actions || [])

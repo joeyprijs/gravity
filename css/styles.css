@@ -342,11 +342,18 @@ button.card:disabled {
   font-weight: 600;
 }
 
-/* Which way a road runs, on the card's trailing edge. Absolutely positioned so
+/* Which way a move goes, on the card's trailing edge. Absolutely positioned so
    the text's left edge stays flush with every other option in the panel — the
-   roads gain a direction column without the list going ragged. One glyph drawn
-   pointing north, turned 45° per compass point (--turn is its index). */
-.card:has(.option-direction) {
+   directional ones gain a column without the list going ragged. One glyph drawn
+   pointing north, turned a quarter-turn per cardinal point (--turn is its index
+   in COMPASS_POINTS).
+
+   The card is marked by the code that appends the marker (addDirectionMarker),
+   not found with :has(). Every ancestor above the card is static, so if that
+   selector went unsupported the marker would resolve against the viewport and
+   land in a page corner — too much to hang on one selector when the appending
+   code already knows. */
+.card--directed {
   position: relative;
   padding-right: calc(var(--spacing) * 5);
 }
