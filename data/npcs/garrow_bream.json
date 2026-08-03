@@ -1,0 +1,341 @@
+{
+  "name": "Garrow Bream",
+  "conversations": {
+    "start": {
+      "npcText": "Keep your shadow off the water, if you would. There — behind me's fine. Now you can say what you came to say.",
+      "responses": [
+        {
+          "text": "Sorry. Are they biting?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "biting"
+            }
+          ]
+        },
+        {
+          "text": "I hear Wick wants your water.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_water"
+            }
+          ]
+        },
+        {
+          "text": "Are those your boys on the bank?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_boys"
+            }
+          ]
+        },
+        {
+          "text": "I'll leave you to the pool.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "biting": {
+      "npcText": "They were until a moment ago. That's not a complaint — it's just a fact with you standing in it.",
+      "responses": [
+        {
+          "text": "I'll come back later.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "come_back_later"
+            }
+          ]
+        },
+        {
+          "text": "You could have said that first.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "said_first"
+            }
+          ]
+        }
+      ]
+    },
+    "come_back_later": {
+      "npcText": "Do. Bring nothing, say nothing, and stand where I put you, and in an hour I'll show you why four generations of us have refused to move house.",
+      "responses": [
+        {
+          "text": "I'd like that.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "said_first": {
+      "npcText": "I did say it first. You've a lot of your family in you — they'd talk to a man for an hour and never once notice he was working.",
+      "responses": [
+        {
+          "text": "That's fair.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "thats_fair"
+            }
+          ]
+        },
+        {
+          "text": "You knew them well?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "knew_them"
+            }
+          ]
+        }
+      ]
+    },
+    "thats_fair": {
+      "npcText": "It is, and I'll not press it. Sit on the stone if you're staying. Nim'll talk your ear off in a minute and you'll wish for my silence.",
+      "responses": [
+        {
+          "text": "I'll risk it.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "knew_them": {
+      "npcText": "Your grandmother bought trout off this bank every Friday for thirty years and never let me carry it up the hill for her. Not once. Proud as the hill itself, that woman, and she always asked after my mother by name.",
+      "responses": [
+        {
+          "text": "I never met her.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "never_met"
+            }
+          ]
+        },
+        {
+          "text": "That sounds like her.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "never_met": {
+      "npcText": "Then I'm sorry, and you'll get her in pieces off people like me for the rest of your life. It's not nothing. Bad way to meet someone, but it's not nothing.",
+      "responses": [
+        {
+          "text": "Tell me another piece sometime.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "the_water": {
+      "npcText": "He wants a race dug from the deep pool. That pool is where the trout hold in a dry year — you take the top off it and I've no living, and my boys have no living, and Wick has flour for one extra month.",
+      "responses": [
+        {
+          "text": "Wick says the wheel stops without it.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "wheel_stops"
+            }
+          ]
+        },
+        {
+          "text": "What would you have him do?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "what_instead"
+            }
+          ]
+        }
+      ]
+    },
+    "wheel_stops": {
+      "npcText": "Aye. And he's not wrong, and that's the whole misery of it. If it were Wick being greedy I'd sleep better — I could hate a greedy man. He's a decent man with a dry brook, and so am I.",
+      "responses": [
+        {
+          "text": "So what happens?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "what_instead"
+            }
+          ]
+        },
+        {
+          "text": "The reeve will have to choose.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "reeve_chooses"
+            }
+          ]
+        }
+      ]
+    },
+    "reeve_chooses": {
+      "npcText": "Aldric will do nothing until it rains, and he's right to. Half the quarrels in this village are solved by weather. It's the other half that put an axe through a friendship.",
+      "responses": [
+        {
+          "text": "And this one?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "what_instead"
+            }
+          ]
+        }
+      ]
+    },
+    "what_instead": {
+      "npcText": "Cut the race above the pool, not through it. Costs him a fortnight of digging he doesn't want to spend, and Tam's already worked out it would serve — the boy's cleverer than his drawing. Nobody wants to hear the answer from me, so it hasn't been the answer yet.",
+      "responses": [
+        {
+          "text": "Would you hear it from Tam?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "hear_from_tam"
+            }
+          ]
+        },
+        {
+          "text": "I could carry it for you.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "carry_it"
+            }
+          ]
+        }
+      ]
+    },
+    "hear_from_tam": {
+      "npcText": "From the boy? Gladly. Sixteen and he's the only one in this village who's looked at the actual water instead of the actual argument.",
+      "responses": [
+        {
+          "text": "I'll get him looking at it.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "carry_it": {
+      "npcText": "You could. You've the advantage of owing nobody anything yet — spend it carefully, that runs out. Say it to Tam and let it be his. It'll travel further as his than as mine.",
+      "responses": [
+        {
+          "text": "I'll do that.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "the_boys": {
+      "npcText": "Nim on the near bank, Fen in the reeds where he thinks I can't see him. Their mother's four years gone and I'll not have them raised indoors being careful, so they're out here being wet instead.",
+      "responses": [
+        {
+          "text": "They look happy enough.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "happy_enough"
+            }
+          ]
+        },
+        {
+          "text": "Four years is not long.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "not_long"
+            }
+          ]
+        }
+      ]
+    },
+    "happy_enough": {
+      "npcText": "They are. Wynne told me they'd be fine if I stopped watching them like the water might take them, and she was right, and I still watch. Talk to Nim — he'll show you the fish he's named.",
+      "responses": [
+        {
+          "text": "He's named fish?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "named_fish"
+            }
+          ]
+        },
+        {
+          "text": "I'll go and see them.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "named_fish": {
+      "npcText": "Six of them. There's one under the far stone he calls the Reeve because it's fat and won't be moved, and I've told him he can't say that in the village, and he says it in the village.",
+      "responses": [
+        {
+          "text": "Ha. Good lad.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "not_long": {
+      "npcText": "No. And this pool is the only place I've been able to sit still since, so you'll understand why I've dug my heels in over the water. It was never only about trout.",
+      "responses": [
+        {
+          "text": "I understand.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

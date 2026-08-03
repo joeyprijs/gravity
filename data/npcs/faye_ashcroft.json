@@ -1,0 +1,26 @@
+{
+  "name": "Faye Ashcroft",
+  "conversations": {
+    "start": {
+      "npcText": "If you're here about the twins, no. If you're here about the museum, then possibly — is it true there's a whole room nobody's allowed in?",
+      "responses": [
+        {
+          "text": "There's a whole wing, and you'd be allowed.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "Nobody's allowed in it yet.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

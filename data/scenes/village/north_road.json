@@ -1,0 +1,73 @@
+{
+  "id": "village_north_road",
+  "name": "North Road",
+  "region": "village",
+  "mapDefinitions": {
+    "top": 2140,
+    "left": 2515,
+    "width": 90,
+    "height": 130,
+    "background": "rgba(80, 75, 55, 0.9)"
+  },
+  "description": [
+    {
+      "text": "The road runs down between hedges toward the square, and there is nobody on it. A cat crosses ahead of you, unhurried, and vanishes under a gate.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "The road runs down between high hedges toward the village square. Cart ruts, hoof-cut mud dried hard, and a stone trough at the bend with a slick of green water in it. From here you can hear the well chain and somebody hammering, a long way off.",
+      "condition": {
+        "segment": "day"
+      }
+    },
+    {
+      "text": "The road runs down between high hedges toward the village square, and the day's traffic has left it churned. Smells of bread from somewhere west, and woodsmoke from everywhere."
+    }
+  ],
+  "options": [
+    {
+      "text": "Walk back up to the crossroads",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_crossroads"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Mabel and her linen basket",
+      "condition": {
+        "segment": "day"
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "mabel_rush"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Dov, running an errand",
+      "condition": {
+        "segment": "evening"
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "dov_thatcher"
+        }
+      ]
+    },
+    {
+      "text": "Walk on to the village square",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_square"
+        }
+      ]
+    }
+  ]
+}

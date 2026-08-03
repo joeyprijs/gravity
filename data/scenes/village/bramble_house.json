@@ -1,0 +1,50 @@
+{
+  "id": "village_bramble_house",
+  "name": "The Bramble House",
+  "region": "village",
+  "interior": true,
+  "mapDefinitions": {
+    "top": 2230,
+    "left": 2020,
+    "width": 150,
+    "height": 80,
+    "background": "rgba(65, 60, 40, 0.9)"
+  },
+  "description": [
+    {
+      "text": "Two bunks, one fire, and one brother — Josen's blanket is still folded from this morning, which means he is at the Goose and will be until Bramm turns him out. Kellan has the fire to himself and appears entirely satisfied with the arrangement.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "A house kept by two men who are out of it most of the day: two bunks, one table, one chair each, and the whole business of living reduced to what can be done in an hour before dark. Snares hang in graded coils by the door. Somebody's socks are drying at the hearth and there is an unmistakable ongoing dispute about them."
+    }
+  ],
+  "options": [
+    {
+      "text": "Talk to Kellan",
+      "condition": {
+        "not": {
+          "segment": "evening"
+        }
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "kellan_bramble"
+        }
+      ]
+    },
+    {
+      "text": "Step back out to the road",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_mill_road"
+        }
+      ]
+    }
+  ]
+}

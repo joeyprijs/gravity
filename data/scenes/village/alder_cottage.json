@@ -1,0 +1,59 @@
+{
+  "id": "village_alder_cottage",
+  "name": "The Herbalist's Cottage",
+  "region": "village",
+  "interior": true,
+  "mapDefinitions": {
+    "top": 2230,
+    "left": 2170,
+    "width": 150,
+    "height": 80,
+    "background": "rgba(55, 80, 55, 0.9)"
+  },
+  "description": [
+    {
+      "text": "The drying bundles have been brought in off the eaves and hang from the beams instead, so the whole room has to be walked through with a bowed head. Tomas is asleep upright. Elin is reading her mother's notes by the fire and mouthing the hard words.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "Every beam has something hanging from it and every surface has something steeping on it. Willow bark in strips, a shelf of stoppered jars in no order anyone else could follow, and a scrubbed table kept clear at one end for people to sit and be looked at. It smells green and slightly bitter, and it is the cleanest floor in the village."
+    }
+  ],
+  "options": [
+    {
+      "text": "Talk to Wynne",
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "wynne_alder"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Tomas",
+      "condition": {
+        "not": {
+          "segment": "day"
+        }
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "tomas_alder"
+        }
+      ]
+    },
+    {
+      "text": "Step back out to the road",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_mill_road"
+        }
+      ]
+    }
+  ]
+}

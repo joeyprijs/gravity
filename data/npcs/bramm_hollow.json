@@ -1,0 +1,222 @@
+{
+  "name": "Bramm Hollow",
+  "isMerchant": true,
+  "storeExitText": "Mind the step down. It's caught better boots than yours.",
+  "carriedItems": [
+    {
+      "item": "mug_of_ale",
+      "amount": 8
+    },
+    {
+      "item": "hot_meal",
+      "amount": 6
+    },
+    {
+      "item": "loaf_of_bread",
+      "amount": 4
+    }
+  ],
+  "conversations": {
+    "start": {
+      "npcText": "Sit where you like, the far bench doesn't wobble. Bramm Hollow — my name's on the sign and the sign's older than me. Drink? Something hot?",
+      "responses": [
+        {
+          "text": "What's on offer?",
+          "actions": [
+            {
+              "type": "trade"
+            }
+          ]
+        },
+        {
+          "text": "Why a brindled goose?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_sign"
+            }
+          ]
+        },
+        {
+          "text": "Busy tonight.",
+          "condition": {
+            "or": [
+              {
+                "segment": "evening"
+              },
+              {
+                "segment": "night"
+              }
+            ]
+          },
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "busy_tonight"
+            }
+          ]
+        },
+        {
+          "text": "Quiet in here.",
+          "condition": {
+            "or": [
+              {
+                "segment": "morning"
+              },
+              {
+                "segment": "day"
+              }
+            ]
+          },
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "quiet_now"
+            }
+          ]
+        },
+        {
+          "text": "I might want a room.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_room"
+            }
+          ]
+        },
+        {
+          "text": "Later, Bramm.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "the_sign": {
+      "npcText": "Because my great-grandmother had a brindled goose that bit a tax collector, and this family has never had a finer moment. Rosalind wants a new sign painted. Over my grave.",
+      "responses": [
+        {
+          "text": "Keep the goose.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "keep_the_goose"
+            }
+          ]
+        },
+        {
+          "text": "She might have a point.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "she_has_a_point"
+            }
+          ]
+        }
+      ]
+    },
+    "keep_the_goose": {
+      "npcText": "There. A stranger says it and it's settled — that's how these things are decided, whatever the reeve thinks.",
+      "responses": [
+        {
+          "text": "Glad to help.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "she_has_a_point": {
+      "npcText": "You've been in the door the length of a sneeze and you're already taking her side. She'll like you. That's the trouble with this village — everyone likes her.",
+      "responses": [
+        {
+          "text": "I'll take my chances.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "busy_tonight": {
+      "npcText": "Evening's when the lanes empty into me. Josen Bramble's in the corner telling the wolf story — that'll be his fourth telling and it grows a tooth each time. Iryna will have your order before you've decided it.",
+      "responses": [
+        {
+          "text": "The wolf story?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "wolf_story"
+            }
+          ]
+        },
+        {
+          "text": "I'll find a bench.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "wolf_story": {
+      "npcText": "Ask him yourself, he's paid for the privilege. I'll say this much: something took two of Orik's ewes at the tree line, and Josen was the one who went up and looked, which is more than the rest of us did.",
+      "responses": [
+        {
+          "text": "I'll go and hear it.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "quiet_now": {
+      "npcText": "It's a working village. Nobody drinks at this hour but carters and trouble, and you don't look like a carter. Come back when the light goes — you'll not get a bench without asking.",
+      "responses": [
+        {
+          "text": "I'll come back this evening.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "the_room": {
+      "npcText": "One room, up the back stair, and the mattress is new since the spring. Five coins and you'll sleep till the mill wheel wakes you. Tell Iryna at the bar or take it yourself, the key's on the hook.",
+      "responses": [
+        {
+          "text": "Good to know.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        },
+        {
+          "text": "Thanks, Bramm.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

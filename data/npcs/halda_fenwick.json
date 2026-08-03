@@ -1,0 +1,302 @@
+{
+  "name": "Halda Fenwick",
+  "conversations": {
+    "start": {
+      "npcText": "Come closer, I'll not shout. There. Yes — you've got the jaw. Your grandmother had that jaw and it lost her three arguments she should have won.",
+      "responses": [
+        {
+          "text": "You knew my family?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "knew_them"
+            }
+          ]
+        },
+        {
+          "text": "Tilda said you remember the queues.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_queues"
+            }
+          ]
+        },
+        {
+          "text": "You sit out here every day?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_step"
+            }
+          ]
+        },
+        {
+          "text": "I should let you rest.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "knew_them": {
+      "npcText": "I knew four of them. Your great-grandfather paid me a copper a day to keep children off the mosaic, and I was the worst guard he could have hired, because I wanted to look at it too.",
+      "responses": [
+        {
+          "text": "The mosaic's still there.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "still_there"
+            }
+          ]
+        },
+        {
+          "text": "What were they like?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "what_like"
+            }
+          ]
+        }
+      ]
+    },
+    "still_there": {
+      "npcText": "Of course it is, it's a floor. Is the crack still running under the third door? Ha — I put that there. Dropped a whetstone off a stepladder and blamed a visiting scholar, and he apologised.",
+      "responses": [
+        {
+          "text": "It's still running.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "what_like": {
+      "npcText": "Proud without being unkind, which is harder than it sounds. They believed a thing was worth keeping because it happened, not because anyone came to see it. That belief cost them money every year of their lives and they never once said so out loud.",
+      "responses": [
+        {
+          "text": "It's costing us still.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "costing_still"
+            }
+          ]
+        },
+        {
+          "text": "Thank you for telling me.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "costing_still": {
+      "npcText": "I know it. The whole lane knows it — we're old, we're not blind. And I'll tell you what nobody up at that house will: it is not your debt to be crushed by. Fill it because you want it full.",
+      "responses": [
+        {
+          "text": "I do want it full.",
+          "condition": {
+            "not": {
+              "flag": "received_haldas_token",
+              "value": true
+            }
+          },
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "wants_it_full"
+            }
+          ]
+        },
+        {
+          "text": "I'll think on that.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "wants_it_full": {
+      "npcText": "Then you'd better have this. Sixty years in my apron and I never gave it back — go on, take it. Put it under glass and let some child ask what it was for, and I'll have got away with something.",
+      "actions": [
+        {
+          "type": "loot",
+          "item": "brass_admission_token",
+          "received": true
+        },
+        {
+          "type": "set_flag",
+          "flag": "received_haldas_token",
+          "value": true
+        }
+      ],
+      "responses": [
+        {
+          "text": "I'll put it under glass.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "token_given"
+            }
+          ]
+        }
+      ]
+    },
+    "token_given": {
+      "npcText": "Good. Now go and be useful, and come back and tell me what you find out there — I've had the same view for eleven years and I'm not done being curious.",
+      "responses": [
+        {
+          "text": "I'll come back with stories.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "the_queues": {
+      "npcText": "Down the hill, round the crossroads, and once — once — as far as the well. Solstice, the year they showed the black egg. Bramm's grandmother sold cider to the line and made more in a day than the tavern made that month.",
+      "responses": [
+        {
+          "text": "The black egg?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "black_egg"
+            }
+          ]
+        },
+        {
+          "text": "What happened to all that?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "costing_still"
+            }
+          ]
+        },
+        {
+          "text": "I'd have queued for that.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "black_egg": {
+      "npcText": "Big as a milk pail and warm to the hand, and your great-grandfather would never say where it came from. It went out on loan the year I married and it never came back. I'd look for it, if I were young and had a jaw like yours.",
+      "responses": [
+        {
+          "text": "Out on loan to whom?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "loan_to_whom"
+            }
+          ]
+        },
+        {
+          "text": "I'll remember that.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "loan_to_whom": {
+      "npcText": "A man with a cart and very good manners. That's the whole of what I know, and I've had fifty years to be annoyed about it. Ask Ivo Quill on the row — he keeps the ledgers nobody asked him to keep.",
+      "responses": [
+        {
+          "text": "I'll ask Ivo.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "the_step": {
+      "npcText": "Every day the weather allows, and some it doesn't. My knees are finished, so the lane comes to me instead. I get more news than the reeve and I don't have to call a meeting about any of it.",
+      "responses": [
+        {
+          "text": "What's the news, then?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_news"
+            }
+          ]
+        },
+        {
+          "text": "A fair trade.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "the_news": {
+      "npcText": "The brook's low and Wick is pretending it isn't. Something's taking Orik's sheep. And the Loom sisters have stopped speaking again, which will last nine days, because it always lasts nine days.",
+      "responses": [
+        {
+          "text": "Nine days exactly?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "nine_days"
+            }
+          ]
+        },
+        {
+          "text": "You do get more news than the reeve.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "nine_days": {
+      "npcText": "Nine. I've counted since I was fifty. On the tenth one of them bakes and the other one eats it and nothing is ever said. It's the most reliable thing in Hollowbrook, including the mill.",
+      "responses": [
+        {
+          "text": "Ha. Thank you, Halda.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

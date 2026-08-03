@@ -1,0 +1,364 @@
+{
+  "name": "Josen Bramble",
+  "conversations": {
+    "start": {
+      "npcText": "New face! Sit down, new face. Josen Bramble, and before anyone else tells you: yes, that's my brother's coat, and no, he didn't say I could.",
+      "responses": [
+        {
+          "text": "I hear you have a wolf story.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "wolf_story"
+            }
+          ]
+        },
+        {
+          "text": "You hunt for the village?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "hunting"
+            }
+          ]
+        },
+        {
+          "text": "Just passing through.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "passing"
+            }
+          ]
+        },
+        {
+          "text": "Enjoy your evening.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "hunting": {
+      "npcText": "Kellan and me both — he traps, I walk. Hare and roe mostly, and the ridge in autumn if the year's been thin. Two brothers, one house, no wives, and the whole village praying about it.",
+      "responses": [
+        {
+          "text": "Praying for what?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "praying_for"
+            }
+          ]
+        },
+        {
+          "text": "Sounds like a good life.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "praying_for": {
+      "npcText": "That one of us marries and takes the other one's socks out of the kitchen. Won't happen. He's too quiet and I'm too much, and it turns out that's a house that works.",
+      "responses": [
+        {
+          "text": "Then keep it.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "passing": {
+      "npcText": "Nobody passes through Hollowbrook. There's nowhere the other side of it — the road stops at the fields and thinks better of itself. So you're either lost or you're the one from the hill house.",
+      "responses": [
+        {
+          "text": "The hill house.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "hill_house"
+            }
+          ]
+        }
+      ]
+    },
+    "hill_house": {
+      "npcText": "Knew it. My mother took me up there when I was six — paid a whole copper and I cried because the big bird skeleton looked at me. Best copper she ever spent. Is it still up there, the bird?",
+      "responses": [
+        {
+          "text": "I'll go and look.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "go_and_look"
+            }
+          ]
+        },
+        {
+          "text": "Most of it's in crates now.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "in_crates"
+            }
+          ]
+        }
+      ]
+    },
+    "go_and_look": {
+      "npcText": "Do. And if it is, put it out where a six-year-old can be terrified by it. That's what it's for.",
+      "responses": [
+        {
+          "text": "That's the plan.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "in_crates": {
+      "npcText": "Then get it out of the crate. I'm serious — I'll pay the copper again and I'll bring the whole lane. Half this village has a thing they saw up there once and never stopped thinking about.",
+      "responses": [
+        {
+          "text": "Half the village?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "half_village"
+            }
+          ]
+        },
+        {
+          "text": "I'll get it out of the crate.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "half_village": {
+      "npcText": "Ask them. Go on, ask anyone over thirty what they saw at the museum. Hedda'll say the door hinges, because she's Hedda. Everyone else will name a thing and go quiet for a second first.",
+      "responses": [
+        {
+          "text": "I'll start asking.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "wolf_story": {
+      "npcText": "Which telling do you want? There's the one for the room — teeth like tent pegs, eyes like coals, Josen Bramble alone against the dark. That one's better. You'll not believe a word of it and you'll enjoy it more.",
+      "responses": [
+        {
+          "text": "Give me the true one.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "true_telling"
+            }
+          ]
+        },
+        {
+          "text": "Teeth like tent pegs, then.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "room_telling"
+            }
+          ]
+        }
+      ]
+    },
+    "room_telling": {
+      "npcText": "That's the spirit. TENT PEGS, and it stood at the tree line and it looked at me, and I looked at IT, and — ah, you're not drinking. No good telling it to a man who isn't drinking. Come back when you've a mug and I'll do the whole thing standing up.",
+      "responses": [
+        {
+          "text": "And the true one?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "true_telling"
+            }
+          ]
+        },
+        {
+          "text": "I'll come back with a mug.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "true_telling": {
+      "npcText": "The true one's shorter and I don't tell it loud. I went up because Orik asked and nobody else would. There were no tracks. Not none-I-couldn't-read — none. A dragged ewe, forty feet of flattened grass, and it stops. Ends. Like something set it down and stepped off the world.",
+      "responses": [
+        {
+          "text": "That's not a wolf.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "not_a_wolf"
+            }
+          ]
+        },
+        {
+          "text": "Could you have missed them?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "missed_them"
+            }
+          ]
+        }
+      ]
+    },
+    "missed_them": {
+      "npcText": "I've read tracks since I was nine. I've followed a hare across bare rock. No. I stood in that grass an hour and I came down and told Orik it was wolves, because Orik has forty-one years up there and I couldn't hand him nothing.",
+      "responses": [
+        {
+          "text": "You lied to him.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "lied_to_him"
+            }
+          ]
+        },
+        {
+          "text": "That was a kindness.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "kindness"
+            }
+          ]
+        }
+      ]
+    },
+    "lied_to_him": {
+      "npcText": "I did. And I've had four mugs about it and I'll have more. You want to do me a favor, new face? Go up there yourself and come back with a better answer than mine. Then I'll tell him the truth and the truth will have somewhere to stand.",
+      "responses": [
+        {
+          "text": "I'll go up there.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "will_go_up"
+            }
+          ]
+        },
+        {
+          "text": "That's a lot to ask a stranger.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "lot_to_ask"
+            }
+          ]
+        }
+      ]
+    },
+    "kindness": {
+      "npcText": "That's what I've been telling myself and it's held up about as well as this bench. A kindness that leaves a man's flock unguarded against the wrong thing isn't one.",
+      "responses": [
+        {
+          "text": "Then tell him the truth.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "lied_to_him"
+            }
+          ]
+        }
+      ]
+    },
+    "not_a_wolf": {
+      "npcText": "No. And I've said wolf in this room four times tonight, loud, with the teeth and everything, because the room wants a wolf. A wolf you can hunt. A wolf runs out of sheep and moves on.",
+      "responses": [
+        {
+          "text": "What did you actually tell Orik?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "lied_to_him"
+            }
+          ]
+        },
+        {
+          "text": "And this isn't that.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "isnt_that"
+            }
+          ]
+        }
+      ]
+    },
+    "isnt_that": {
+      "npcText": "This came twice, a fortnight apart, at the dark of the moon, and went up the stream both times. That's not hunger. That's a habit. I don't like a thing with habits.",
+      "responses": [
+        {
+          "text": "Neither do I.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "lied_to_him"
+            }
+          ]
+        }
+      ]
+    },
+    "lot_to_ask": {
+      "npcText": "It is. I'm four mugs in and you've got a name to make, and those two things have found each other. Sleep on it. If you go, go by day, and go up the west side where the dogs can see you.",
+      "responses": [
+        {
+          "text": "I'll sleep on it.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "will_go_up": {
+      "npcText": "Then you're braver than the reeve and dafter than me. Go by day. Up the west side, where Orik's dogs can see you — Vetch will follow you at fifty paces and pretend she isn't, and you'll be glad of her.",
+      "responses": [
+        {
+          "text": "Thanks, Josen.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

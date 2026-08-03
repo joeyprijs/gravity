@@ -127,7 +127,7 @@ test('equipItem/unequipItem: the worn armor bonus goes on and comes back off', (
 
 test('itemHasUse: true for anything useItem can act on, false for inert gear', () => {
   assert.ok(itemHasUse({ attributes: { healingAmount: 4 } }), 'a consumable effect');
-  assert.ok(itemHasUse({ attributes: { teleportScene: 'home_door' } }), 'a teleport is a use');
+  assert.ok(itemHasUse({ attributes: { teleportScene: 'home_living_room' } }), 'a teleport is a use');
 
   assert.ok(!itemHasUse({ attributes: { damageRoll: '1d6' } }), 'a weapon is equipped, not used');
   assert.ok(!itemHasUse({ attributes: {} }));

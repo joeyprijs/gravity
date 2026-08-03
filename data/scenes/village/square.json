@@ -1,0 +1,129 @@
+{
+  "id": "village_square",
+  "name": "Village Square",
+  "region": "village",
+  "xpReward": 25,
+  "mapDefinitions": {
+    "top": 2270,
+    "left": 2320,
+    "width": 440,
+    "height": 180,
+    "background": "rgba(95, 90, 70, 0.9)"
+  },
+  "description": [
+    {
+      "text": "The square is empty and the well stands alone in the middle of it, its chain still. Frey's store is shuttered; the Brindled Goose has light in every window and a spill of talk coming out under its door. Three lanes leave the square into the dark.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "The square has filled up without anyone announcing it: the well working, the tavern's shutters folded back, somebody's geese being driven through the middle of everything to general complaint. Frey's store stands open on the north side, the Brindled Goose beside it, and lanes run off east, west, and south.",
+      "condition": {
+        "segment": "evening"
+      }
+    },
+    {
+      "text": "The heart of Hollowbrook: a cobbled space worn smooth, with a stone well at the center and a rowan grown crooked beside it. Frey's store stands open on the north side and the Brindled Goose next to it, sign creaking. Lanes leave east toward the forge, west toward the mill, and south toward the fields."
+    }
+  ],
+  "options": [
+    {
+      "text": "Go into Frey's store",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_store"
+        }
+      ]
+    },
+    {
+      "text": "Go into the Brindled Goose",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_tavern"
+        }
+      ]
+    },
+    {
+      "text": "Walk back up the north road",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_north_road"
+        }
+      ]
+    },
+    {
+      "text": "Take the forge lane",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_forge_lane"
+        }
+      ]
+    },
+    {
+      "text": "Take Sowers Lane",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_sowers_lane"
+        }
+      ]
+    },
+    {
+      "text": "Take the mill road",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_mill_road"
+        }
+      ]
+    },
+    {
+      "text": "Talk to the reeve at the well",
+      "condition": {
+        "or": [
+          {
+            "segment": "morning"
+          },
+          {
+            "segment": "day"
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "aldric_vance"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Iryna, drawing water",
+      "condition": {
+        "segment": "evening"
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "iryna_hollow"
+        }
+      ]
+    }
+  ],
+  "skills": [
+    {
+      "text": "Read the notices nailed to the rowan",
+      "skillCheck": "intelligence",
+      "repeatable": true,
+      "resultText": [
+        "Three notices in the same careful hand, all signed A. VANCE, REEVE. A water meeting, twice postponed. A reminder that the ridge road is not maintained. And a lost brindled hen, described at unnecessary length.",
+        "Under the reeve's notices, older paper has been layered and rained on for years. You can make out a fragment in a different hand entirely: MUSEUM OPEN — SOLSTICE — ADMIT ON PAYMENT, and then nothing.",
+        "Someone has pinned a child's drawing among the notices: a very large bird, all beak, standing in a house. It has been there long enough to go soft at the corners, and nobody has taken it down."
+      ]
+    }
+  ]
+}

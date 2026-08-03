@@ -1,0 +1,50 @@
+{
+  "id": "village_taper_cottage",
+  "name": "Taper Cottage",
+  "region": "village",
+  "interior": true,
+  "mapDefinitions": {
+    "top": 2450,
+    "left": 2560,
+    "width": 150,
+    "height": 100,
+    "background": "rgba(90, 80, 50, 0.9)"
+  },
+  "description": [
+    {
+      "text": "The only house in Hollowbrook that is never short of light. Sela works late over the dipping vat with three candles going purely because she can, and Ambry is asleep on the settle with wax to the elbows.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "A single room organised entirely around a wax vat and a drying rack. Tapers hang in ranks by the dozen, graded by length, and the smell is honey and hot fat together. Two beds behind a curtain, a mother and a daughter, and a stool set at exactly the height of a ten-year-old who has been given the dipping to do."
+    }
+  ],
+  "options": [
+    {
+      "text": "Talk to Sela",
+      "condition": {
+        "not": {
+          "segment": "day"
+        }
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "sela_taper"
+        }
+      ]
+    },
+    {
+      "text": "Step back out to the lane",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_sowers_lane"
+        }
+      ]
+    }
+  ]
+}

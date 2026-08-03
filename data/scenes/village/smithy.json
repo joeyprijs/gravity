@@ -1,0 +1,63 @@
+{
+  "id": "village_smithy",
+  "name": "The Smithy",
+  "region": "village",
+  "interior": true,
+  "mapDefinitions": {
+    "top": 2230,
+    "left": 2760,
+    "width": 150,
+    "height": 80,
+    "background": "rgba(90, 55, 40, 0.9)"
+  },
+  "description": [
+    {
+      "text": "The forge is banked for the night and the shop end has become a kitchen again: a table pulled out over the swept floor, four bowls, and the whole family eating in the last of the fire's heat. Hedda's hands are washed to the wrist and no further.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "Heat hits you in the doorway. The forge takes up half the building and the family lives in the other half, with a curtain that has long since given up pretending to divide them. Finished work hangs in rows: blades, hoops, hinges, and a shelf of horse-nails Pell is fiercely proud of. High on the wall, well out of reach, sits a small iron lock that has never opened."
+    }
+  ],
+  "options": [
+    {
+      "text": "Talk to Hedda",
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "hedda_ironhand"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Corin",
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "corin_ironhand"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Pell",
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "pell_ironhand"
+        }
+      ]
+    },
+    {
+      "text": "Step back out to the lane",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_forge_lane"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "name": "Lira",
+  "conversations": {
+    "start": {
+      "npcText": "Slow past the hives — good, you already know. Aunt Nyssa says you came up the path, which nobody does. Mother says beekeeping isn't a trade for a girl. It's eleven hives and forty thousand of them and I know every one.",
+      "responses": [
+        {
+          "text": "That sounds like a trade to me.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "I'll keep coming up the path.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

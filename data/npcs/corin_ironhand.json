@@ -1,0 +1,26 @@
+{
+  "name": "Corin Ironhand",
+  "conversations": {
+    "start": {
+      "npcText": "Mind your feet, there's a hoof paring somewhere about. Four horses in the village and three of them hate me, which Hedda says is a poor record and I say is a good average.",
+      "responses": [
+        {
+          "text": "Which one likes you?",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "A good average indeed.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

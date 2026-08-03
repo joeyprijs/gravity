@@ -27,6 +27,7 @@ A browser-native, zero-dependency, data-driven text RPG engine. Define your enti
   - [Rules — `data/rules.json`](#rules--datarulesjson)
   - [Conditions (Logic Gates)](#conditions-logic-gates)
   - [Actions (Mutations)](#actions-mutations)
+  - [Regions, Interiors, and the Map](#regions-interiors-and-the-map)
   - [Scenes](#scenes)
   - [NPCs & Enemies](#npcs--enemies)
   - [Items](#items)
@@ -52,7 +53,7 @@ A browser-native, zero-dependency, data-driven text RPG engine. Define your enti
 *   **Staged Quests** — Multi-step missions whose objectives are observed conditions: collect-N stages auto-advance the moment they're satisfied (even retroactively), stages pay their own rewards, progress is forward-only, and failure is a first-class terminal state.
 *   **A World Clock (opt-in)** — Player actions advance a deterministic tick counter; days and named segments derive from rules, timers fire quiet action pipelines, and conditions can read `time` / `day` / `segment`. No wall clock, fully save-safe.
 *   **Two-Channel Audio (opt-in)** — Looping ambience resolved per region (overridable per scene) plus one-shot narration clips for scene descriptions and action outcomes, with per-channel volume in the Options tab. A game that authors no audio never touches the Web Audio API. Full guide: [`docs/AUDIO.md`](docs/AUDIO.md).
-*   **Interactive World Map** — A scaled minimap in the sidebar plus a full-screen scrollable coordinate map centered on the player.
+*   **Interactive World Map** — A full-screen scrollable coordinate map, plus a sidebar minimap that frames where you *are*: outdoors, a player-centered viewport onto one continuous world, where every building is a single square and a place appears as soon as it's in sight; inside a building, that building's own rooms as you walk them.
 *   **Localisation** — Every player-facing string resolves through locale files; the engine matches the browser's language, and list/plural grammar goes through `Intl`, never through code.
 *   **Load-Time Validation** — The engine validates all game data on boot and prints authoring mistakes (dangling IDs, missing locale keys, unreachable UI) to the console, grouped per entity.
 *   **Versioned Saves with Migrations** — Saves are Base64-encoded state snapshots downloaded as files; a guarded migration chain (core + plugin) keeps older saves playable on newer engine versions.
@@ -324,9 +325,82 @@ Conversation actions (`goToConversation` and `trade` warn and no-op outside an a
 
 The state-changing actions (`loot`, `heal`, `full_rest`, `short_rest`, `advance_time`) take an optional `log`: `false` silences the default message, a string replaces it (resolved through the locale table first, so a locale key stays translatable; any other string logs as-is). `advance_time` has no default line, so only its string form does anything. Timer pipelines are restricted to *quiet* actions (`set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`) — a timer changes the world through flags, never by navigating or starting combat. Plugins register their own types (the curator plugin adds `manage_exhibits` and `build_wing`) — see the [Plugin API](#plugin-api). Every parameter above is documented in full in [`docs/ACTIONS.md`](docs/ACTIONS.md).
 
+### Regions, Interiors, and the Map
+
+The world is one continuous outdoors, and the only thing the map treats specially is **a place you go inside**. There are no map boundaries between areas: every outdoor scene the player has walked is drawn together, whatever region it belongs to.
+
+A **building** is declared one of two ways:
+
+```json
+// One room — the scene marks itself (data/scenes/village/fenwick_cottage.json)
+{
+  "id": "village_fenwick_cottage",
+  "name": "Fenwick Cottage",
+  "region": "village",
+  "interior": true
+}
+```
+
+```json
+// Several rooms — an interior region groups them (data/index.json)
+"regions": {
+  "player_home": {
+    "name": "Your House",
+    "interior": true,
+    "mapBackground": "rgba(80, 50, 20, 0.9)"
+  },
+  "village_store": {
+    "name": "Frey's Store",
+    "interior": true,
+    "mapBackground": "rgba(70, 60, 90, 0.9)"
+  }
+}
+```
+
+Growing a one-room building into a bigger one is that migration and nothing else: drop `interior` from the scene, declare a region carrying the building's name and color, and point both rooms' `region` at it. Frey's Store went from a single shop floor to a shop plus a stockroom that way, with no engine change — from outdoors it is the same one square it always was.
+
+**What the minimap draws.** Inside a building: that building's visited rooms, and nothing else — in a one-room shop, the shop. Outdoors: a **viewport** onto the open world, centered on the player, spanning `minimapRadius` world units in every direction (omit the field and the outdoor map falls back to fitting everything known into the square). Walking scrolls it; the world getting bigger never shrinks what you can read.
+
+**What the player knows about.** Outdoors, a place is on the map once it has been *seen*: everywhere they have walked, plus one step of sight from it — the roads leading off those places, and the buildings whose doors they have stood at. So a cottage is on the map before it is entered, and nothing is ever walked into off a map it wasn't on. Sight stops at that one step: you can see the lane leaving the square, not the cottages along it. Sight also means *doors*, and only doors — scene options. Where a skill check navigates, the destination is what passing it earns (a passage found by searching, a ledge reached by climbing), so it stays off the map until the player gets there. A door with an unmet `condition` does count: it is in front of them, whether or not it opens yet. Indoors has no such rule — a building's rooms are revealed by walking them, which is what makes exploring one feel like exploring.
+
+A building's square is its whole footprint, entered or not, and buildings paint *under* the world: the square is a bounding box, so it covers ground its rooms don't fill. A building with no door out in the open — the demo's dungeon, reached through the story — is never drawn into the landscape.
+
+The full-screen map knows exactly the same places, drawn at their authored coordinates instead of scaled into a viewport, and shows each in as much detail as the player has earned: a building they have walked shows its rooms, one they have only seen from the road shows as its footprint. So the two views never disagree about what exists — only about how much of it fits on screen.
+
+Rooms tile their building exactly, which would leave a walked building reading as a handful of loose boxes, so a building of **more than one** walked room is gathered in a named outline (`.map-node--building`). That is what says whose kitchen this is, without prefixing every room name. One room needs no outline: it is already named by the room itself.
+
+**What the interactions panel does with it.** Being a building is also a fact about movement, so crossing a threshold is listed apart from walking on. Out in the open, an option that navigates *into* a building goes under **Entrances**; inside one, the ways back out — a navigate to anywhere that isn't this building, or a teleport — go under **Exits**, at the foot of the panel. A move that stays on one side of the threshold is neither: a road between two outdoor places, or a door between two rooms of the same house. Like every other section, this follows from what the option's pipeline does, never from how its label is worded.
+
+**Naming a box.** At minimap scale a name is unreadable, so places are drawn as unlabeled boxes and their labels come back as **hover titles** — the same trick the top bar uses, where a stat's icon keeps its label as a hover name. Point at a box to learn what it is; it is the only thing distinguishing one from another at that size, so every box carries one.
+
+**A move shows which way it goes.** Any option in the unheaded list — a road between two outdoor places, or a door between two rooms of one building — carries a compass arrow on its trailing edge, derived from the two scenes' `mapDefinitions` and rounded to the nearest **cardinal**: one glyph turned a quarter-turn per point, so a direction never needs its own art. Four points, not eight: the eye reads "up" and "right" instantly and has to stop and work out "up-and-right", so a road running north-east is shown as north. Roads are still *ordered* on eight points, which needs the finer resolution to be deterministic. Because the map is where the world records direction, the prose doesn't: labels read "Take the forge lane", not "Take the forge lane east", which keeps the one piece of navigational meaning in the game out of a string a translator has to get right (the point's name rides along for screen readers).
+
+**Thresholds get no arrow.** Crossing one is "in" or "out", never "east", so nothing under **Entrances** or **Exits** is marked. That is the same line the sections themselves are drawn on: the arrow is for movement *within* a continuous space, and the headings are for movement between two of them. Indoors the compass reads less literally than on a road — nobody thinks of their kitchen as west — but a house of eight rooms has a shape, and this is what carries it. Two rooms down the same side of a house do point the same way, which is honest rather than useful; the label is what tells them apart.
+
+Within the unheaded list the order stays **authored**, and the convention is compass order, clockwise from north — for a house's doors as much as a junction's roads, since it is what makes the arrows read as a sweep rather than a scatter. Sort by bearing with the wrap at *due north*, so a way bearing slightly west of north leads instead of trailing after south; two that lead the same way sit together. No `isBack` among them: it sinks an option to the bottom, which pulls one road out of the sequence the rest read in. It stays right wherever "back" genuinely is the odd one out — a dead-end cottage, a room whose only exit is the way you came, the way out of a building — and it is more than a sort key there: the curator identifies a museum room's way out by finding its single `isBack` option, so those rooms need it. The rule is only "not where it would compete with compass order". Thresholds are exempt either way — they carry no arrow, so Entrances and Exits stay as authored.
+
+The engine deliberately does *not* sort by map bearing itself: `mapDefinitions` are authored to make the map read well, and tying option order to them would mean nudging a box to fix an overlap silently reorders the interactions panel. It draws the arrow from geometry and leaves the sequence to the author.
+
+A **region** is what remains: an ambience grouping (see [`docs/AUDIO.md`](docs/AUDIO.md)) that a building can also use to gather its rooms.
+
+| Field | Meaning |
+|---|---|
+| `name` | The area's display name. Labels an `interior` region's square on the map. |
+| `ambience` | Looping audio bed for every scene in the region. |
+| `interior` | The region's scenes are the rooms of one building. |
+| `mapBackground` | CSS color of that building's square. Falls back to the default node color; a one-room building uses its own `mapDefinitions.background`. |
+
+One thing follows for authors: a building's coordinates should sit where the building actually *is*, since its square is drawn from its rooms' real geometry. Rooms authored a thousand units from their own front door draw a building a thousand units away from its door.
+
+The square is the *bounding box* of those rooms, so rooms that don't tile the box leave dead space inside it — the demo's dungeon covers 28 250 units of a 53 000-unit box, which costs nothing only because nothing outdoors opens onto it. The first door that does would draw it half again larger than the rooms inside. Buildings meant to be seen from the road want their rooms tiling the footprint (the player's house does, exactly); sprawling interiors are better off staying unreachable from the open world, the way a dungeon is.
+
+`minimapRadius` is set in `data/index.json` beside `worldMapSize`, and is the one number that tunes how much world the player sees at once — the demo's `500` shows Hollowbrook's square with its lanes running off the edges.
+
 ### Scenes
 
-A location: conditional description blocks, options, skill checks, and map placement. The top-level `id` is the scene's manifest key:
+A location: conditional description blocks, options, skill checks, and map placement. The top-level `id` is the scene's manifest key.
+
+A scene is named twice, and the two are genuinely separate: **`title`** is the header the player reads on arrival, **`name`** is the tag the map draws on the room. Author one and it does both jobs. Author both and a room can read one way arriving and another on the map — the demo's shop floor is titled `Frey's Store` and tagged `The Shop Floor`, so it doesn't repeat its building's own name under the building's outline. `interior` marks the scene as a one-room building; see [Regions, Interiors, and the Map](#regions-interiors-and-the-map).
 
 ```json
 {
@@ -774,7 +848,6 @@ gravity/
 │   ├── screens/char-creation.js
 │   └── plugins/curator.js   # Reference plugin (museum curation & reputation)
 ├── scripts/generate-manifest.js  # Regenerates data/index.json from the data tree
-├── scripts/generate-narration-script.js  # Per-scene narration recording scripts
 ├── tests/                   # Node unit tests (npm test) + smoke.html (browser UI test)
 ├── schemas/                 # JSON Schemas for items, scenes, and NPCs
 ├── audio/                   # Ambience & narration clips (layout: docs/AUDIO.md)

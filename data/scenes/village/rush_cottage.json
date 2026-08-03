@@ -1,0 +1,50 @@
+{
+  "id": "village_rush_cottage",
+  "name": "Rush Cottage",
+  "region": "village",
+  "interior": true,
+  "mapDefinitions": {
+    "top": 2410,
+    "left": 1740,
+    "width": 160,
+    "height": 80,
+    "background": "rgba(65, 75, 80, 0.9)"
+  },
+  "description": [
+    {
+      "text": "Warm, damp, and full of other people's linen hanging to finish drying overnight, so that walking to the fire means parting sheets like curtains. Old Nan is asleep in the good chair. Sisi is under the table where the sheets make a room of their own.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "Three generations and a great deal of other people's washing. Lines are strung across the ceiling and pulled down by a rope at the wall; the copper by the door is always warm and always in use. Old Nan sits where she can see the path, and reports on it."
+    }
+  ],
+  "options": [
+    {
+      "text": "Talk to Mabel",
+      "condition": {
+        "not": {
+          "segment": "day"
+        }
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "mabel_rush"
+        }
+      ]
+    },
+    {
+      "text": "Step back out to the bank",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_brookside"
+        }
+      ]
+    }
+  ]
+}

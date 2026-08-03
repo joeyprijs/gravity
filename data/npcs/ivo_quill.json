@@ -1,0 +1,331 @@
+{
+  "name": "Ivo Quill",
+  "conversations": {
+    "start": {
+      "npcText": "One moment — I've a sentence half-finished and it will not survive being abandoned. There. Ivo Quill, schoolmaster, retired, though the village has not accepted the retirement.",
+      "responses": [
+        {
+          "text": "Halda said you keep ledgers.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_ledgers"
+            }
+          ]
+        },
+        {
+          "text": "You taught the whole village?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "taught_everyone"
+            }
+          ]
+        },
+        {
+          "text": "What are you writing?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "writing"
+            }
+          ]
+        },
+        {
+          "text": "I'll let you finish.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "the_ledgers": {
+      "npcText": "Ledgers nobody commissioned, as she'll have told you with some relish. Births, weathers, prices, and — since you are who you are — every loan and gift that passed through your family's museum from the year I could hold a pen.",
+      "responses": [
+        {
+          "text": "Then you know about the black egg.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_egg"
+            }
+          ]
+        },
+        {
+          "text": "Why keep all that?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "why_keep"
+            }
+          ]
+        }
+      ]
+    },
+    "why_keep": {
+      "npcText": "Because a village that forgets what it agreed becomes a village that argues forever. And because nobody else was going to. Those are the same reason wearing different coats.",
+      "responses": [
+        {
+          "text": "A curator's answer.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "curators_answer"
+            }
+          ]
+        },
+        {
+          "text": "Fair enough.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "curators_answer": {
+      "npcText": "Ha. I've been called worse by better. Though yes — your trade and mine are the same trade. You keep the objects and I keep the sentences, and neither of us can prove to a soul that it was worth doing.",
+      "responses": [
+        {
+          "text": "Do you believe it was?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "believe_it"
+            }
+          ]
+        },
+        {
+          "text": "I'll take the objects.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "believe_it": {
+      "npcText": "Every day but the wet ones. Ask me again in February and you'll get a bleaker man. That is not doubt, mind — that is just February.",
+      "responses": [
+        {
+          "text": "I'll come back in February.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "the_egg": {
+      "npcText": "The black egg. Sixth ledger, spring entry, and the only line in forty years I have never been able to close: LOANED — one ovoid stone, black, warm to the hand. No name given. No return date. Your great-grandfather's own hand, and he wrote small when he was uneasy.",
+      "responses": [
+        {
+          "text": "No name at all?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "no_name"
+            }
+          ]
+        },
+        {
+          "text": "Halda says a man with a cart took it.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "man_with_cart"
+            }
+          ]
+        }
+      ]
+    },
+    "no_name": {
+      "npcText": "None. Every other entry in that book names the borrower, the surety, and the supper they were given. This one names nothing and the page after it was cut out with a knife. I have views about that page.",
+      "responses": [
+        {
+          "text": "What views?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "his_views"
+            }
+          ]
+        },
+        {
+          "text": "Cut out by whom?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "his_views"
+            }
+          ]
+        }
+      ]
+    },
+    "his_views": {
+      "npcText": "That a man does not cut a page from his own ledger to hide a theft — he cuts it to hide an agreement. Whatever went down that hill on that cart, your family let it go, and wrote nothing down on purpose. I'd want to know why, if I had your legs and your years.",
+      "responses": [
+        {
+          "text": "I've got both.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "got_both"
+            }
+          ]
+        },
+        {
+          "text": "That's a heavy thing to hand me.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "heavy_thing"
+            }
+          ]
+        }
+      ]
+    },
+    "got_both": {
+      "npcText": "Then the ledger's on that shelf whenever you want it, and I'll not lend it — you'll read it here, at this table, like a proper scholar, and Anselma will feed you while you do.",
+      "responses": [
+        {
+          "text": "I'd like that.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "heavy_thing": {
+      "npcText": "It is. I've carried it forty years and I'm putting it down on your table because you walked in, which I admit is not fair. Take it or leave it — the ledger keeps either way.",
+      "responses": [
+        {
+          "text": "I'll take it.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "got_both"
+            }
+          ]
+        },
+        {
+          "text": "Let me think.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "man_with_cart": {
+      "npcText": "Halda's memory is better than my ledger and she knows it. Very good manners, she says, and a cart too fine for the road. That is precisely the amount of detail that makes a thing impossible to find and impossible to forget.",
+      "responses": [
+        {
+          "text": "Somebody must have seen it go.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "no_name"
+            }
+          ]
+        },
+        {
+          "text": "I'll keep it in mind.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "taught_everyone": {
+      "npcText": "Everyone under sixty in this village learned their letters at my table, including the reeve, whose spelling remains a private grief of mine. Hedda was the quickest. Bramm was the funniest. Tilda argued the price of the slate.",
+      "responses": [
+        {
+          "text": "Who was the worst?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_worst"
+            }
+          ]
+        },
+        {
+          "text": "That's a whole village in four sentences.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "the_worst": {
+      "npcText": "I shall go to my grave without answering that, and every one of them knows it's them.",
+      "responses": [
+        {
+          "text": "Ha. Well played.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "writing": {
+      "npcText": "An account of the year, for nobody. It will go in the box with the other forty-one. Anselma says that's a sad way to put it. Anselma is right, and I keep saying it that way, which is between me and the box.",
+      "responses": [
+        {
+          "text": "The museum could hold them.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "museum_could"
+            }
+          ]
+        },
+        {
+          "text": "Forty-one years is a lot of nobody.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "museum_could": {
+      "npcText": "It could. It could at that. Not yet — I'm still in the middle of them. But say it to me again when there's glass in that wing and somebody standing behind it who means to stay.",
+      "responses": [
+        {
+          "text": "I'll say it again.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

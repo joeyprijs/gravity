@@ -1,0 +1,9 @@
+{
+  "name": "Brass Admission Token",
+  "type": "Flavour",
+  "description": "A worn brass disc stamped with your family's crest and the word ADMIT. Thousands were struck; this one was kept in an apron pocket for sixty years.",
+  "value": 15,
+  "attributes": {
+    "reputation": 8
+  }
+}

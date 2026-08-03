@@ -143,14 +143,34 @@
         await until(() => !$('#game-container').hidden, 'game container to show');
       });
 
-      await step('tabs build from rules with the sheet active', () => {
+      await step('tabs build from rules, in rules order, with the map active', () => {
         const tabs = $$('.tabs__nav button');
         assert(tabs.length === 5, `expected 5 tabs, got ${tabs.length}`);
-        assert(text(tabs[0]) === 'Sheet', `first tab is "${text(tabs[0])}", expected "Sheet"`);
-        assert(tabs[0].classList.contains('tabs__btn--active'), 'sheet tab starts active');
+        assert(tabs.map(t => text(t)).join() === 'Map,Sheet,Inventory,Quests,Options',
+          `tabs read "${tabs.map(t => text(t)).join()}"`);
+        assert(tabs[0].classList.contains('tabs__btn--active'), 'the map tab starts active');
         assert(tabs.every(t => t.querySelector('svg.icon')), 'every tab renders its rules.tabs[].icon');
-        assert(!$('#attributes-tab').hidden, 'sheet panel visible');
-        assert($('#inventory-tab').hidden, 'inventory panel hidden');
+        assert(!$('#map-tab').hidden, 'map panel visible');
+        assert($('#attributes-tab').hidden && $('#inventory-tab').hidden, 'the rest are hidden');
+      });
+
+      await step('the minimap is drawn at boot, untouched', () => {
+        // The map tab leads the panel, so the first thing a new player sees is
+        // this. It has to be drawn by the time the game appears — no tab
+        // switch, no first step taken, nothing invalidated by hand.
+        //
+        // Guards a specific trap: state.init() seeds currentSceneId from
+        // rules.startingScene before that scene is visited, so renderMinimap
+        // runs once with nothing to draw while the id already reads final.
+        // Cache that as "drawn" and the starting scene never gets a map — and
+        // only the starting scene, which is why the rest of the suite missed
+        // it. Every step below reaches the map through invalidateMinimap();
+        // this one must not.
+        assert(!$('#minimap').hidden, 'the minimap is showing');
+        const nodes = $$('#minimap-canvas .map-node');
+        assert(nodes.length === 1, `the room the player woke up in is on it (got ${nodes.length} nodes)`);
+        assert(nodes[0].title === 'Cellar', `and it is the cellar (got "${nodes[0].title}")`);
+        assert(nodes[0].classList.contains('map-node--current'), 'marked as where they are');
       });
 
       await step('sheet sections start collapsed', () => {
@@ -737,9 +757,12 @@
       await step('hall and wing read the same: exit, what is here, construction', async () => {
         // The lobby is a museum room like any other — same panel, same order —
         // so moving through the museum never rearranges under the player.
-        // The location reminder is a .section-heading too — skip it by id.
+        // The location reminder is a .section-heading too — skip it by id. Read a
+        // button by its title, not its whole text: a direction marker adds the
+        // compass point's name for screen readers, which belongs in the
+        // accessible name and not in what the panel is read as saying.
         const layout = () => $$('#scene-options-panel .section-heading:not(#scene-location-reminder), #scene-options-panel button.card')
-          .map(el => text(el));
+          .map(el => text(el.querySelector('.card__title') ?? el));
 
         window.gameEngine.renderScene('home_museum_relics');
         await until(() => layout().includes('Current Exhibits'), 'the wing\'s panel');
@@ -753,7 +776,9 @@
         window.gameEngine.renderScene('home_museum');
         await until(() => layout().includes('Wings'), 'the hall\'s panel');
         order = layout();
-        assert(order[0] === 'Return to Living Room', `the exit comes first (got "${order[0]}")`);
+        // The museum is entered from the hall of the house, not through the
+        // family's living room, so that is where its exit goes back to.
+        assert(order[0] === 'Return to the Hallway', `the exit comes first (got "${order[0]}")`);
         assert(order.indexOf('Wings') < order.indexOf('Construction'), 'the wings before construction');
         assert(order[order.length - 1].includes('Build a New Wing'), `building is last (got "${order[order.length - 1]}")`);
         assert(!order.some(l => l.startsWith('+')), 'no + prefixes on the buttons');
@@ -803,10 +828,16 @@
         assert(window.gameEngine.state.getPlayer().resources.gold === 50, `250 Gold spent (left: ${window.gameEngine.state.getPlayer().resources.gold})`);
         // Slot 2 opens a second column, so the hall spans both — the map room
         // for the wing is the whole point.
+        // Read against the declared layout rather than fixed numbers: what is
+        // under test is where the curator *puts* a slot, not how big the demo's
+        // museum happens to be drawn. Hard-coding both broke this step the first
+        // time the house was rescaled, which told us nothing about the curator.
+        const { left, top, roomWidth, roomHeight } = window.gameEngine.pluginConfig('curator').museumLayout;
         const hall = window.gameEngine.data.scenes.home_museum.mapDefinitions;
         const wing = window.gameEngine.data.scenes.home_museum_wing_2.mapDefinitions;
-        assert(hall.width === 240, `the hall widened to two columns (got ${hall.width})`);
-        assert(wing.left === 2760 && wing.top === 1700, `the wing sits north of column 1 (got ${wing.left},${wing.top})`);
+        assert(hall.width === roomWidth * 2, `the hall widened to two columns (got ${hall.width})`);
+        assert(wing.left === left + roomWidth && wing.top === top - roomHeight,
+          `the wing sits north of column 1 (got ${wing.left},${wing.top})`);
 
         // A built wing behaves like the shipped ones: entering opens its panel,
         // titled with the name the player gave it, and its exit walks back out.
@@ -829,7 +860,9 @@
         assert(state.loadFromObject(save) === true, 'the save loads');
         const wing = window.gameEngine.data.scenes.home_museum_wing_2;
         assert(wing?.name === 'Pottery Wing', 'the wing came back with its name');
-        assert(wing.mapDefinitions.left === 2760, 'and its geometry was re-derived, not stored');
+        const layout = window.gameEngine.pluginConfig('curator').museumLayout;
+        assert(wing.mapDefinitions.left === layout.left + layout.roomWidth,
+          'and its geometry was re-derived, not stored');
         // Walk in from the house, so the hall builds its panel on arrival.
         window.gameEngine.renderScene('home_living_room');
         window.gameEngine.renderScene('home_museum');
@@ -899,6 +932,265 @@
         assert(cards('scene-options').some(t => t.includes('Return to the Corridor')), 'which is what that list holds');
         assert(heading('scene-options-skills') === 'Skills', 'and the checks keep their own section');
         assert(gone('scene-options-conversations'), 'nobody to talk to here, and no gap where they would be');
+      });
+
+      await step('threshold moves are listed apart: entrances outdoors, exits inside', async () => {
+        // A road to somewhere else and a door into a building are different kinds
+        // of move, so out in the open they are listed apart. Inside a building
+        // every door leads to another room of the same place, so the split would
+        // say nothing and isn't made. Decided by what the pipeline navigates to —
+        // never by the wording of the label.
+        const engine = window.gameEngine;
+        const sectionOf = (id) => {
+          const el = $(`#${id}`);
+          return el.hidden ? null : $$(`#${id} button.card`).map(b => text(b));
+        };
+
+        engine.renderScene('village_forge_lane');
+        await until(() => text($('#scene-location-reminder')).includes('Forge Lane'), 'the forge lane');
+        const exits = sectionOf('scene-options');
+        const doors = sectionOf('scene-options-entrances');
+        assert(text($('#scene-options-entrances .section-heading')) === 'Entrances', 'the doors earn a heading');
+        assert(doors.some(t => t.includes('Go into the smithy')) && doors.length === 4,
+          `every door on the lane is under it (got ${doors.join(' | ')})`);
+        assert(exits.some(t => t.includes('East Row')), 'the road on stays in the unheaded list');
+        assert(!exits.some(t => t.includes('Go into the smithy')), 'and no door is left among the roads');
+
+        // A door the author also marked as the way back is still a door.
+        engine.renderScene('village_hill_path');
+        await until(() => text($('#scene-location-reminder')).includes('Hill Path'), 'the hill path');
+        assert(sectionOf('scene-options-entrances').some(t => t.includes('Go into your house')),
+          'the way home is a door, not a road');
+
+        // Inside, the mirror: the ways out are the ones set apart, and they sit at
+        // the foot of the panel where the way out has always sat. The house is
+        // entered and left through its hallway, so that is where the door is.
+        engine.renderScene('home_hallway');
+        await until(() => text($('#scene-location-reminder')).includes('Hallway'), 'the hallway');
+        assert(!sectionOf('scene-options-entrances'), 'inside a building there are no entrances');
+        assert(text($('#scene-options-exits .section-heading')) === 'Exits', 'the ways out earn a heading');
+        assert(sectionOf('scene-options-exits').some(t => t.includes('Step outside to the hill path')),
+          `the door out is set apart (got ${sectionOf('scene-options-exits').join(' | ')})`);
+        assert(sectionOf('scene-options').some(t => t.includes('living room')),
+          'while the room it opens onto stays in the unheaded list');
+
+        // A teleport leaves the building whatever else it does, so it is an exit
+        // from a room that has no door to the outside at all.
+        engine.state.addToInventory('home_rune', 1);   // so the teleport out shows
+        engine.renderScene('home_living_room');
+        await until(() => text($('#scene-location-reminder')).includes('Living Room'), 'the living room');
+        const ways = sectionOf('scene-options-exits');
+        assert(ways.join() === 'Return via Teleport', `only the teleport (got ${ways.join(' | ')})`);
+        assert(sectionOf('scene-options').some(t => t.includes('Enter Kitchen')),
+          'while its own rooms stay in the unheaded list');
+        assert(!sectionOf('scene-options').some(t => t.includes('Step outside')), 'with no way out left among them');
+
+        // A door between two rooms of the same building is neither.
+        engine.renderScene('dungeon_hallway');
+        await until(() => text($('#scene-location-reminder')).includes('Stone Hallway'), 'the hallway');
+        assert(!sectionOf('scene-options-exits'), 'a room-to-room door is no exit');
+        assert(sectionOf('scene-options').some(t => t.includes('Return to the Corridor')),
+          'it stays where it was');
+      });
+
+      await step('a move within one space shows its direction; a threshold has none', async () => {
+        // The prose stopped saying "east" — the arrow carries it now, so it has
+        // to be there, has to face the right way, and has to name itself for a
+        // screen reader, or dropping the word took the direction away.
+        const engine = window.gameEngine;
+        engine.renderScene('village_square');
+        await until(() => text($('#scene-location-reminder')).includes('Village Square'), 'the square');
+
+        const marks = (id) => $$(`#${id} button.card`).map(b => {
+          const m = b.querySelector('.option-direction');
+          return `${text(b.querySelector('.card__title'))}|${m ? m.dataset.point : '-'}`;
+        });
+
+        // Authored in compass order, and each arrow agrees with its place in it.
+        assert(marks('scene-options').join(' ') ===
+          'Walk back up the north road|N Take the forge lane|E Take Sowers Lane|S Take the mill road|W',
+          `roads read round the compass (got ${marks('scene-options').join(' ')})`);
+
+        // One glyph turned to face the road, so a direction never needs its own art.
+        const east = $$('#scene-options button.card').find(b => text(b).includes('forge lane'));
+        assert(east.querySelector('.option-direction').style.getPropertyValue('--turn') === '1',
+          'east is one quarter-turn from north');
+        assert(text(east.querySelector('.option-direction .visually-hidden')) === 'East',
+          'and says so where the arrow cannot be seen');
+        assert(east.querySelector('.icon[aria-hidden="true"]'), 'the glyph itself is hidden from readers');
+
+        // The card says it holds a marker, rather than the CSS asking with
+        // :has(). Every ancestor above the card is static, so if that selector
+        // were ever unsupported the marker would resolve against the viewport
+        // and land in a page corner — the appending code marks it instead.
+        assert(east.classList.contains('card--directed'), 'the card is marked as carrying a direction');
+        assert(getComputedStyle(east).position === 'relative', 'which is what the marker is positioned against');
+
+        // On the card's centre line. `.card > * + *` spaces a card's stacked
+        // lines, and the marker is the second child — left in that stack it
+        // hangs 8px low, which reads as sloppy down a column of options.
+        const iconBox = east.querySelector('.option-direction svg').getBoundingClientRect();
+        const cardBox = east.getBoundingClientRect();
+        const drop = Math.abs((iconBox.top + iconBox.height / 2) - (cardBox.top + cardBox.height / 2));
+        assert(drop < 1, `the arrow sits on the card's centre line (off by ${drop.toFixed(1)}px)`);
+
+        // A door is a threshold, not a direction — "go in", never "go east".
+        assert(marks('scene-options-entrances').every(m => m.endsWith('|-')),
+          `no entrance claims a direction (got ${marks('scene-options-entrances').join(' ')})`);
+
+        // Four points, never eight: the hill path runs north-east out of the
+        // crossroads and is shown as north, because a diagonal arrow is the one
+        // the eye has to stop and work out.
+        engine.renderScene('village_crossroads');
+        await until(() => text($('#scene-location-reminder')).includes('Crossroads'), 'the crossroads');
+        const points = marks('scene-options').map(m => m.split('|')[1]);
+        assert(points.join(' ') === 'N S W', `the north-east road shows as north (got ${points.join(' ')})`);
+        assert(points.every(p => ['N', 'E', 'S', 'W'].includes(p)), 'no diagonal reaches the panel');
+
+        // Indoors carries a direction too. A house of eight rooms has a shape,
+        // and this is what says which way across it a door goes — the compass
+        // reads less literally than on a road, but "the museum is off the east
+        // side of the hall" is still what the map says.
+        engine.renderScene('home_hallway');
+        await until(() => text($('#scene-location-reminder')).includes('Hallway'), 'the hallway');
+        const hall = Object.fromEntries(marks('scene-options').map(m => m.split('|')));
+        assert(hall['Go through to the living room'] === 'N' && hall['Enter Museum Lobby'] === 'E',
+          `a door across the house has a direction (got ${marks('scene-options').join(' ')})`);
+
+        // But the way out of the building still does not: that is a threshold,
+        // the same as a door into one, and "out" is not a compass point.
+        assert(marks('scene-options-exits').every(m => m.endsWith('|-')),
+          `no exit claims a direction (got ${marks('scene-options-exits').join(' ')})`);
+
+        // A house's doors are authored round the compass too, so the arrows read
+        // as a sweep here exactly as they do on a road. Two rooms down the same
+        // side point the same way — honest rather than useful, and they sit
+        // together, ordered by where they actually are within that side.
+        engine.renderScene('home_living_room');
+        await until(() => text($('#scene-location-reminder')).includes('Living Room'), 'the living room');
+        assert(marks('scene-options').join(' ') ===
+          "Enter Bedroom|E Enter Hallway|S Enter Parents' Room|W Enter Kitchen|W",
+          `the house reads round the compass (got ${marks('scene-options').join(' ')})`);
+      });
+
+      await step('the minimap: one open world outdoors, one building inside', async () => {
+        // Outdoors is continuous — every outdoor room walked, whatever region it
+        // belongs to — with each building drawn as the one square it occupies,
+        // so the house on the hill is on the map from the path below it. Step
+        // inside anything and the map becomes that building alone: what a player
+        // wants from the map in Frey's Store is the store.
+        //
+        // Ahead of the combat steps on purpose: they leave a fight open, and a
+        // scene can't be walked into from inside one.
+        const engine = window.gameEngine;
+        $$('.tabs__nav button').find(b => text(b) === 'Map').click();
+
+        const labels = () => $$('#minimap-canvas .map-node__label').map(el => text(el));
+        const draw = (sceneId) => {
+          engine.renderScene(sceneId);
+          engine.ui.map.invalidateMinimap();
+          engine.ui.map.renderMinimap();
+          return labels();
+        };
+
+        // Walk down from the house into the village, the way a player would,
+        // and the house gets a second room so its own map has something in it.
+        for (const id of ['home_living_room', 'home_kitchen', 'village_hill_path',
+          'village_crossroads', 'village_north_road', 'village_square']) {
+          engine.renderScene(id);
+        }
+
+        const outdoors = draw('village_forge_lane');
+        assert(!$('#minimap').hidden, 'the minimap shows');
+        assert(outdoors.includes('Forge Lane'), `the road stood on draws (got ${outdoors.join(', ')})`);
+        assert(outdoors.includes('Your House'), `the house draws (got ${outdoors.join(', ')})`);
+        assert(!outdoors.includes('Living Room'), 'as one square, not as its rooms');
+        assert(outdoors.indexOf('Your House') < outdoors.indexOf('Forge Lane'),
+          'buildings paint under the world, never over it');
+
+        // A name is unreadable at this scale, so the labels are hidden and come
+        // back as hover titles instead — which is the only way to tell one
+        // unlabeled box from another, and so has to stay on every one of them.
+        const hoverNames = $$('#minimap-canvas .map-node').map(n => n.title);
+        assert(hoverNames.length && hoverNames.every(Boolean),
+          `every box names itself on hover (got ${hoverNames.join(', ')})`);
+        assert(hoverNames.includes('Your House') && hoverNames.includes('Forge Lane'),
+          'with the name the map tags it by');
+
+        // Spotted, not entered: standing on a lane puts its buildings on the map,
+        // so nothing is ever walked into off a map it wasn't on. Sight stops one
+        // step out — the lane beyond is visible, what stands along it is not.
+        const visited = new Set(engine.state.getVisitedScenes());
+        assert(!visited.has('village_marrow_cottage'), 'the cottage has never been entered');
+        assert(outdoors.includes('Marrow Cottage'), `yet it is on the map (got ${outdoors.join(', ')})`);
+        assert(outdoors.includes('East Row'), 'the lane beyond is in sight');
+        assert(!outdoors.includes('Thatcher Cottage'), 'but not the cottages along it');
+
+        // Outdoors the map is a viewport: the player sits at its center, and
+        // discovering more world scrolls it instead of zooming it out.
+        const centerOffset = () => {
+          const cur = $('#minimap-canvas .map-node--current');
+          const size = $('#minimap').offsetWidth;
+          return Math.abs((parseFloat(cur.style.left) + parseFloat(cur.style.width) / 2) - size / 2);
+        };
+        const laneWidth = () => parseFloat($('#minimap-canvas .map-node--current').style.width);
+        assert(centerOffset() < 1, `the player is centered (off by ${centerOffset()}px)`);
+
+        const before = laneWidth();
+        for (const id of ['village_east_row', 'village_mill_road', 'village_brookside', 'village_south_fields']) {
+          engine.renderScene(id);
+        }
+        draw('village_forge_lane');
+        assert(laneWidth() === before, `a bigger world draws at the same scale (${before} → ${laneWidth()})`);
+
+        // A building groups by its interior region, so a second room joins the
+        // same map instead of becoming a building of its own — and indoors still
+        // reveals room by room, so the shop alone shows until the back is walked.
+        const shop = draw('village_store');
+        assert(shop.join() === 'The Shop Floor', `inside the shop, the shop (got ${shop.join(', ')})`);
+        const stock = draw('village_store_back');
+        assert(stock.includes('The Shop Floor') && stock.includes('The Stockroom'),
+          `both rooms are the same building's map (got ${stock.join(', ')})`);
+        assert(!stock.includes('Village Square'), 'with the village still outside it');
+
+        const house = draw('home_living_room');
+        assert(house.includes('Living Room') && house.includes('Kitchen'),
+          `inside the house, its own rooms (got ${house.join(', ')})`);
+        assert(!house.includes('Village Square') && !house.includes('Hill Path'),
+          'and nothing outside it');
+
+        // The full map must know the same places, or the two views disagree about
+        // what exists. It differs only in detail: rooms for a building walked, a
+        // footprint for one merely seen.
+        engine.renderScene('village_forge_lane');
+        engine.ui.map.openFullMap();
+        const nodes = $$('#fullmap-canvas .map-node').map(n => ({
+          label: text(n.querySelector('.map-node__label')),
+          outline: n.classList.contains('map-node--building')
+        }));
+        engine.ui.map.closeFullMap();
+        const named = (name) => nodes.filter(n => n.label === name);
+        const drawn = nodes.map(n => n.label);
+
+        assert(named('Marrow Cottage').length === 1 && !named('Marrow Cottage')[0].outline,
+          `a building only seen is drawn, as its footprint (got ${drawn.join(', ')})`);
+        assert(drawn.includes('Living Room') && drawn.includes('Kitchen'),
+          'the house it has walked shows its rooms instead');
+        // Rooms tile their building exactly, so an outline named above them is
+        // the only thing saying which building they are.
+        assert(named('Your House').length === 1 && named('Your House')[0].outline,
+          'gathered by an outline named for the building, not a filled box');
+        // The building is named once: by its outline. Its shop floor is tagged
+        // for the room (`name`) while still titled for the shop on arrival, so
+        // the same words never appear twice on the map.
+        assert(named("Frey's Store").length === 1 && named("Frey's Store")[0].outline,
+          `the shop is named by its outline alone (got ${drawn.join(', ')})`);
+        assert(named('The Shop Floor').length === 1 && !named('The Shop Floor')[0].outline,
+          'and the room inside it carries its own map tag');
+        // Sowers Lane is in sight from the square but has not been walked, so the
+        // yard whose gate stands on it is still two steps away.
+        assert(drawn.includes('Sowers Lane'), 'a lane in sight is on the map');
+        assert(!drawn.includes("Stave's Yard"), 'but not what stands along it');
       });
 
       await step('a chosen solo fight introduces its enemy', async () => {

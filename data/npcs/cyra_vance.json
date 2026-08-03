@@ -1,0 +1,26 @@
+{
+  "name": "Cyra Vance",
+  "conversations": {
+    "start": {
+      "npcText": "Is it true you've been past the ridge? Actually past it. Everyone here says the road stops at the fields like that's a fact about the world instead of a fact about this village.",
+      "responses": [
+        {
+          "text": "It's a fact about the village.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "It's true, and the boots suffer.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

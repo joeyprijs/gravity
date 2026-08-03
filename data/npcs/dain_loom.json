@@ -1,0 +1,26 @@
+{
+  "name": "Dain Loom",
+  "conversations": {
+    "start": {
+      "npcText": "They're not speaking again. I'm seventeen and I have lived through eleven of these and there is no reason, ever, and on the tenth day there's cake and I'm expected to be delighted.",
+      "responses": [
+        {
+          "text": "Be delighted. It costs you nothing.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "Eleven is a lot of cake.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

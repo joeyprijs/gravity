@@ -1,0 +1,26 @@
+{
+  "name": "Kip",
+  "conversations": {
+    "start": {
+      "npcText": "I'll take your — oh. You've no horse. That's fine. I do the stable and the yard and the boots, and Bramm says I'm the fastest he's had, and I've been here two years so that's mostly true.",
+      "responses": [
+        {
+          "text": "Two years is a good record.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "I'll bring a horse next time, for your sake.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

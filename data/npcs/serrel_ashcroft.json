@@ -1,0 +1,26 @@
+{
+  "name": "Serrel Ashcroft",
+  "conversations": {
+    "start": {
+      "npcText": "You'll have met the twins at the gate, then. I'd apologise, but they'd only do it again and better. Sit on the wall a minute — it's the only shade this side of the barn.",
+      "responses": [
+        {
+          "text": "They charged me a toll.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "I'll take the shade.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

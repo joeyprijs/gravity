@@ -1,0 +1,26 @@
+{
+  "name": "Tomas Alder",
+  "conversations": {
+    "start": {
+      "npcText": "Willow's on my back and it wants stripping before it dries, so I'll be short with you and it's nothing personal. Wynne's inside. She'll be the one worth talking to.",
+      "responses": [
+        {
+          "text": "I'll go in.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "Nothing taken personally.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

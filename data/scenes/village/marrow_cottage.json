@@ -1,0 +1,59 @@
+{
+  "id": "village_marrow_cottage",
+  "name": "Marrow Cottage",
+  "region": "village",
+  "interior": true,
+  "mapDefinitions": {
+    "top": 2410,
+    "left": 2760,
+    "width": 150,
+    "height": 80,
+    "background": "rgba(75, 65, 45, 0.9)"
+  },
+  "description": [
+    {
+      "text": "The workshop end has been swept for the night and the good plank — the one missing from Coll's fort — is back on its trestles. Sanna is banking the fire; Coll is asleep with a wooden wheel-blank held against his chest like a favorite animal.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "Half workshop, half home, and sawdust wins. Wheel parts lean in every corner in every state of finish, and the air is all cut oak. Sanna keeps the hearth end fiercely clear of shavings; the boundary is marked on the floor in chalk, redrawn often, respected never."
+    }
+  ],
+  "options": [
+    {
+      "text": "Talk to Edrin",
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "edrin_marrow"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Coll",
+      "condition": {
+        "not": {
+          "segment": "day"
+        }
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "coll_marrow"
+        }
+      ]
+    },
+    {
+      "text": "Step back out to the lane",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_forge_lane"
+        }
+      ]
+    }
+  ]
+}

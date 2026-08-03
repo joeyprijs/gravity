@@ -1,0 +1,26 @@
+{
+  "name": "Iryna Hollow",
+  "conversations": {
+    "start": {
+      "npcText": "Ale, meal, or the bench by the fire, and if it's the bench you'll want to know that Josen Bramble talks to whoever's nearest. That's not a warning. It's nearly a warning.",
+      "responses": [
+        {
+          "text": "Noted. I'll take the far bench.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "The bench by the fire, please.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,9 +1,8 @@
 .DS_Store
 .claude/
 
-# Audio clips stay out of git for now — not ready to publish. The generated
-# recording scripts under audio/_scripts/ ARE tracked: they are text, and their
-# diffs are how prose drift surfaces. A checkout without clips plays silent.
+# Audio clips stay out of git for now — not ready to publish. A checkout
+# without clips plays silent.
 audio/**/*.wav
 audio/**/*.ogg
 audio/**/*.m4a

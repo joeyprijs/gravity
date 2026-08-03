@@ -1,0 +1,50 @@
+{
+  "id": "village_stave_yard",
+  "name": "Stave's Yard",
+  "region": "village",
+  "interior": true,
+  "mapDefinitions": {
+    "top": 2450,
+    "left": 2320,
+    "width": 150,
+    "height": 100,
+    "background": "rgba(85, 65, 45, 0.9)"
+  },
+  "description": [
+    {
+      "text": "The yard is stacked and covered and the house behind it is full: five at the table, Hesper at the head of it by long-standing arrangement, and an argument about hoop iron that has clearly been running for days and is enjoyed by everyone.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "A yard before a house, and the yard is the point: staves in bundles by length, hoops graded on a rail, three barrels standing finished and one clamped up waiting for its head. Inside, five people share two rooms and a table that is always half work and half supper. It smells of oak and steam."
+    }
+  ],
+  "options": [
+    {
+      "text": "Talk to Dorn",
+      "condition": {
+        "not": {
+          "segment": "day"
+        }
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "dorn_stave"
+        }
+      ]
+    },
+    {
+      "text": "Step back out to the lane",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_sowers_lane"
+        }
+      ]
+    }
+  ]
+}

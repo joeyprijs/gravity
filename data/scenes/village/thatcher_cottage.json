@@ -1,0 +1,73 @@
+{
+  "id": "village_thatcher_cottage",
+  "name": "Thatcher Cottage",
+  "region": "village",
+  "interior": true,
+  "mapDefinitions": {
+    "top": 2230,
+    "left": 3060,
+    "width": 140,
+    "height": 80,
+    "background": "rgba(80, 70, 45, 0.9)"
+  },
+  "description": [
+    {
+      "text": "Six children's worth of quiet, which is a particular kind of quiet. Bryn has his boots off and his feet toward the fire; Meg is going through the day's clothes by feel in the low light. Somebody small is awake upstairs and being extremely careful about it.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "The loudest house in Hollowbrook, and it is not close. Six children, one room downstairs, and a sleeping loft reached by a ladder that has been repaired more times than the roof it sits under. Reed bundles are stacked against the outside wall in a rank that doubles as a climbing frame, which Meg has stopped forbidding."
+    }
+  ],
+  "options": [
+    {
+      "text": "Talk to Meg",
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "meg_thatcher"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Bryn",
+      "condition": {
+        "not": {
+          "segment": "day"
+        }
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "bryn_thatcher"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Dov",
+      "condition": {
+        "not": {
+          "segment": "day"
+        }
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "dov_thatcher"
+        }
+      ]
+    },
+    {
+      "text": "Step back out to the row",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_east_row"
+        }
+      ]
+    }
+  ]
+}

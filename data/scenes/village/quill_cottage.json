@@ -1,0 +1,54 @@
+{
+  "id": "village_quill_cottage",
+  "name": "Quill Cottage",
+  "region": "village",
+  "interior": true,
+  "mapDefinitions": {
+    "top": 2230,
+    "left": 3200,
+    "width": 140,
+    "height": 80,
+    "background": "rgba(60, 65, 75, 0.9)"
+  },
+  "description": [
+    {
+      "text": "One candle, one working man, and the whole rest of the room in shadow with its books in it. Anselma has put bread and cheese at his elbow, where it will sit untouched until she mentions it, which she will, at exactly the right moment.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "More paper than furniture. Ivo's ledgers fill a shelf that runs the whole wall, forty-one identical spines and a gap at the end where this year is still on the table. The window is stacked with books two deep, which is why the light in here is brown, and there is a smell of old ink that the house will never lose."
+    }
+  ],
+  "options": [
+    {
+      "text": "Talk to Ivo",
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "ivo_quill"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Anselma",
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "anselma_quill"
+        }
+      ]
+    },
+    {
+      "text": "Step back out to the row",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_east_row"
+        }
+      ]
+    }
+  ]
+}

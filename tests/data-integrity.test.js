@@ -30,6 +30,7 @@ const data = {
   scenes: loadMap(index.scenes),
   missions: loadMap(index.missions),
   tables: loadMap(index.tables),
+  regions: index.regions,
   rules,
   locale,
 };

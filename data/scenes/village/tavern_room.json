@@ -1,0 +1,77 @@
+{
+  "id": "village_tavern_room",
+  "title": "The Room Up the Back Stair",
+  "name": "The Guest Room",
+  "region": "village_tavern",
+  "mapDefinitions": {
+    "top": 2140,
+    "left": 2605,
+    "width": 155,
+    "height": 50,
+    "background": "rgba(95, 62, 38, 0.9)"
+  },
+  "description": [
+    {
+      "text": "The stair comes up steeply into a room half under the thatch, where the ceiling meets the floor on one side and a grown adult can only stand up in the middle. The mattress is new, as promised. Below, the common room is a warm noise coming up through the boards, and out of the little window the square is dark except for the well.",
+      "condition": {
+        "or": [
+          {
+            "segment": "evening"
+          },
+          {
+            "segment": "night"
+          }
+        ]
+      }
+    },
+    {
+      "text": "A room half under the thatch, the ceiling coming down to meet the floor on one side. A bed with a new mattress, a stool, a candle stub in a dish, and a window the size of a serving tray looking out over the square. Somebody has left a jug of water on the stool, which nobody will admit to."
+    }
+  ],
+  "options": [
+    {
+      "text": "Sleep until the mill wheel wakes you",
+      "timeCost": 0,
+      "condition": {
+        "flag": "goose_room_paid",
+        "value": true
+      },
+      "actions": [
+        {
+          "type": "advance_time",
+          "until": "morning"
+        },
+        {
+          "type": "full_rest"
+        },
+        {
+          "type": "set_flag",
+          "flag": "goose_room_paid",
+          "value": false
+        }
+      ]
+    },
+    {
+      "text": "Go back down the stair",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_tavern"
+        }
+      ]
+    }
+  ],
+  "skills": [
+    {
+      "text": "Look out of the little window",
+      "skillCheck": "perception",
+      "repeatable": true,
+      "resultText": [
+        "The whole square from above, which nobody in Hollowbrook gets to see: the well, the rowan, the lanes going off into the dark. You understand the shape of the village in one look, the way you did from the hill path, except closer and from inside it.",
+        "Kip crosses the yard below with a lantern, checking on a horse that isn't there, because there are no horses tonight and he does it anyway.",
+        "The mill wheel has stopped. In the quiet you can hear the brook itself, low against the stones, and you find yourself thinking about Wick's dry fortnight."
+      ]
+    }
+  ]
+}

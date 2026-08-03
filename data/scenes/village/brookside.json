@@ -1,0 +1,108 @@
+{
+  "id": "village_brookside",
+  "name": "Brookside",
+  "region": "village",
+  "mapDefinitions": {
+    "top": 2310,
+    "left": 1740,
+    "width": 280,
+    "height": 100,
+    "background": "rgba(60, 80, 85, 0.9)"
+  },
+  "description": [
+    {
+      "text": "Past the mill the brook widens into a black pool under alders. The washing stone is bare, the drying lines are empty, and the water makes the only sound there is. Two cottages sit close to the bank with their doors shut.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "Past the mill the brook widens into a deep green pool under the alders — the best water in the valley, and low enough now to show the stones. A flat washing stone runs out into it, lines of linen strung between two trees, and two cottages sit almost on the bank.",
+      "condition": {
+        "segment": "day"
+      }
+    },
+    {
+      "text": "Past the mill the brook slows into a deep pool under the alders, mist sitting on it, the washing stone dark with water. Two cottages sit almost on the bank, close enough that you could hand something through a window from the path."
+    }
+  ],
+  "options": [
+    {
+      "text": "Go into the Bream cottage",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_bream_cottage"
+        }
+      ]
+    },
+    {
+      "text": "Go into the Rush cottage",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_rush_cottage"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Garrow at the pool",
+      "condition": {
+        "not": {
+          "segment": "night"
+        }
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "garrow_bream"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Nim on the bank",
+      "condition": {
+        "segment": "day"
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "nim_bream"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Mabel at the washing stone",
+      "condition": {
+        "segment": "day"
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "mabel_rush"
+        }
+      ]
+    },
+    {
+      "text": "Walk back up the mill road",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_mill_road"
+        }
+      ]
+    }
+  ],
+  "skills": [
+    {
+      "text": "Watch the pool without disturbing it",
+      "skillCheck": "stealth",
+      "repeatable": true,
+      "resultText": [
+        "You crouch behind the alder roots and let the water settle. They come back one at a time out of the deep end — six, seven, one of them enormous and utterly still under the far stone. You can see exactly why a man would refuse to let this be dug up.",
+        "The big one under the far stone has not moved at all. You begin to understand why Nim named it after the reeve.",
+        "A kingfisher goes through the whole length of the pool like a thrown thing, and you are the only person in Hollowbrook who saw it."
+      ]
+    }
+  ]
+}

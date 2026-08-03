@@ -106,7 +106,11 @@ Combat is the one exception, and deliberate: attacks are logged under their acto
 - Loot is authored on the encounter (`onVictory` pipelines, discovery `items`, loot tables) — never on the NPC. NPC definitions stay reusable across encounters.
 - Mechanical item stats live inside `attributes`; accuracy belongs to the wielder (`attackAttribute`), never to the weapon.
 - Anything tone-opinionated (retry currencies, time pressure, AP economies) must be opt-in through `rules.json` — a game that omits the block gets classic behavior. The engine stays tone-neutral; the demo is deliberately a kitchen sink.
-- A repeatable check that rewards loot must retire itself (`resolveOnce`, or a flag its own success sets) — the validator flags farmable checks.
+- A repeatable check that rewards loot must retire itself (`resolveOnce`, or a flag its own success sets) — the validator flags farmable checks. The same holds for a conversation node that hands over an item: gate *every* response that reaches it, not the route one step above, or a second way in gives a second copy.
+- **Moves within one space are authored in compass order**, clockwise from north — roads out of a junction and doors across a house alike, since both carry a direction arrow and the order is what makes the arrows read as a sweep rather than a scatter. Sort by bearing with the wrap at *due north*, so a door bearing 350° leads instead of trailing after south; where two lead the same way, they sit together in the order their bearings fall. It applies to a two-room landing as much as a crossroads — the way you came in is still a direction. **Thresholds are exempt**: nothing under Entrances or Exits carries an arrow, so nothing there needs the order either, and those stay as authored.
+- **`isBack` marks the way back, and sinks it to the bottom.** Both halves matter: the curator finds a museum room's way out by looking for a single `isBack` option (`_exitButton`), so stripping it from `home_museum` and its wings replaces "Return to the Hallway" with a generic close that never walks you out. Use it where "back" is genuinely the odd one out — a dead-end cottage, a room whose only exit is the way you came, the way out of a building. Don't use it where it would **compete with compass order**: on a junction's roads, or in any list holding more than one directional option, sinking one of them is what makes the sequence feel arbitrary.
+- **Order is the author's, on purpose.** The engine could sort by `mapDefinitions` bearing itself, but that would tie panel order to coordinates authored for *drawing* — nudging a box to fix a map overlap would silently reorder the options. It draws the arrow from geometry and leaves the sequence alone.
+- **Prose does not name a direction** — write "Take the forge lane", not "Take the forge lane east". The arrow says it, so a label that says it too says it twice and can drift out of step with the map. Direction words are fine inside a *name* ("the East Row", "the north road") — that is what the road is called, not a claim about which way you are facing.
 - Ship clean: boot the game and fix every `[Gravity]` validation warning; `npm test` runs the same checks over the shipped data. **[CI]**
 
 Check design (tiers, budgets, retry costs, the clock) has its own guide: [`CHECKS.md`](CHECKS.md).
@@ -142,6 +146,5 @@ Check design (tiers, budgets, retry costs, the clock) has its own guide: [`CHECK
 | Unit + data-integrity tests | `npm test` | ✔ |
 | Manifest in sync with data tree | `node scripts/generate-manifest.js --check` | ✔ |
 | Canonical data formatting | `node scripts/format-data.js --check` | ✔ |
-| Narration scripts match the authored prose | `node scripts/generate-narration-script.js --check` | ✔ |
 | Browser UI smoke test | `scripts/run-smoke.sh` (or open `tests/smoke.html`) | ✔ |
 | Everything else in this guide | review | — |

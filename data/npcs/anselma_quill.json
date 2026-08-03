@@ -1,0 +1,26 @@
+{
+  "name": "Anselma Quill",
+  "conversations": {
+    "start": {
+      "npcText": "He'll talk until the candle's out and forget to feed you — no, don't be polite, I've watched it happen to a school inspector. There's bread and there's cheese and you're having both.",
+      "responses": [
+        {
+          "text": "Both, then. Thank you.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "He hasn't forgotten yet.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

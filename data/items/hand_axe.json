@@ -1,0 +1,12 @@
+{
+  "name": "Hand Axe",
+  "type": "Weapon",
+  "slot": "Right Hand",
+  "description": "Short-hafted and heavier than it looks. Splits kindling as happily as anything else.",
+  "value": 22,
+  "attributes": {
+    "damageRoll": "1d6+1",
+    "attackAttribute": "strength",
+    "actionPoints": 1
+  }
+}

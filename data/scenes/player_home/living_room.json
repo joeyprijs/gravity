@@ -3,23 +3,14 @@
   "name": "Living Room",
   "region": "player_home",
   "mapDefinitions": {
-    "top": 1800,
-    "left": 2500,
-    "width": 140,
-    "height": 100,
+    "top": 1820,
+    "left": 2570,
+    "width": 90,
+    "height": 90,
     "background": "rgba(30, 60, 40, 0.9)"
   },
-  "description": "You enter the home and find yourself inside a cozy living room with a roaring hearth. Multiple wooden doors are visible leading deeper into the house. A gruff dwarf is sitting in a worn armchair, completely fixated on a strange scrying box emitting colorful moving pictures. In the corner, a young woman scribbles in a leather journal, glancing up as you enter.",
+  "description": "You come through into a cozy living room with a roaring hearth. Multiple wooden doors are visible leading deeper into the house. A gruff dwarf is sitting in a worn armchair, completely fixated on a strange scrying box emitting colorful moving pictures. In the corner, a young woman scribbles in a leather journal, glancing up as you enter.",
   "options": [
-    {
-      "text": "Enter Kitchen",
-      "actions": [
-        {
-          "type": "navigate",
-          "destination": "home_kitchen"
-        }
-      ]
-    },
     {
       "text": "Enter Bedroom",
       "actions": [
@@ -30,11 +21,29 @@
       ]
     },
     {
-      "text": "Enter Museum Lobby",
+      "text": "Enter Hallway",
       "actions": [
         {
           "type": "navigate",
-          "destination": "home_museum"
+          "destination": "home_hallway"
+        }
+      ]
+    },
+    {
+      "text": "Enter Parents' Room",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "home_parents_bedroom"
+        }
+      ]
+    },
+    {
+      "text": "Enter Kitchen",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "home_kitchen"
         }
       ]
     },
@@ -57,12 +66,13 @@
       ]
     },
     {
-      "text": "Leave House",
-      "isBack": true,
+      "text": "Return via Teleport",
+      "requirements": {
+        "item": "home_rune"
+      },
       "actions": [
         {
-          "type": "navigate",
-          "destination": "home_door"
+          "type": "return"
         }
       ]
     }

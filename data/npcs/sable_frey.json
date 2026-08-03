@@ -1,0 +1,40 @@
+{
+  "name": "Sable Frey",
+  "conversations": {
+    "start": {
+      "npcText": "You can look at the ledger if you want. Nobody looks at the ledger. It's the only interesting thing in this shop and it's under the lamp oil.",
+      "responses": [
+        {
+          "text": "Show me the ledger.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_ledger"
+            }
+          ]
+        }
+      ]
+    },
+    "the_ledger": {
+      "npcText": "There. Every carter, every price, four years back — and see this column? That's what they SAID they'd charge next time. Two of them have never once matched it. Ma says that's business. I say that's a habit with a name on it.",
+      "responses": [
+        {
+          "text": "That is genuinely interesting.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "Keep that column. It'll be worth something one day.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

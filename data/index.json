@@ -3,6 +3,7 @@
     "width": 6000,
     "height": 3000
   },
+  "minimapRadius": 500,
   "defaultLanguage": "en",
   "locales": {
     "en": "data/locales.json"
@@ -19,10 +20,10 @@
         "installCost": 50,
         "wingCost": 250,
         "museumLayout": {
-          "top": 1800,
-          "left": 2640,
-          "roomWidth": 120,
-          "roomHeight": 100,
+          "top": 1910,
+          "left": 2660,
+          "roomWidth": 70,
+          "roomHeight": 45,
           "roomBackground": "rgba(75, 45, 90, 0.9)"
         }
       }
@@ -30,30 +31,60 @@
   ],
   "flags": {
     "dungeon": "data/flags/dungeon.json",
-    "player_home": "data/flags/player_home.json"
+    "player_home": "data/flags/player_home.json",
+    "village": "data/flags/village.json"
   },
   "regions": {
     "dungeon": {
       "name": "The Dungeon",
-      "ambience": "audio/ambience/dungeon.m4a"
+      "ambience": "audio/ambience/dungeon.m4a",
+      "interior": true
     },
     "player_home": {
-      "name": "Player Home"
+      "name": "Your House",
+      "interior": true,
+      "mapBackground": "rgba(80, 50, 20, 0.9)"
+    },
+    "village": {
+      "name": "Hollowbrook"
+    },
+    "village_store": {
+      "name": "Frey's Store",
+      "interior": true,
+      "mapBackground": "rgba(70, 60, 90, 0.9)"
+    },
+    "village_tavern": {
+      "name": "The Brindled Goose",
+      "interior": true,
+      "mapBackground": "rgba(110, 70, 40, 0.9)"
     }
   },
   "items": {
+    "brass_admission_token": "data/items/brass_admission_token.json",
     "cellar_key": "data/items/cellar_key.json",
     "eagle_eye_amulet": "data/items/eagle_eye_amulet.json",
     "eldritch_eye": "data/items/eldritch_eye.json",
     "enemy_claw": "data/items/enemy_claw.json",
     "flames": "data/items/flames.json",
+    "flour_sack": "data/items/flour_sack.json",
+    "hand_axe": "data/items/hand_axe.json",
     "healing_potion": "data/items/healing_potion.json",
     "home_rune": "data/items/home_rune.json",
+    "hot_meal": "data/items/hot_meal.json",
+    "iron_sword": "data/items/iron_sword.json",
+    "lantern": "data/items/lantern.json",
     "leather_armor": "data/items/leather_armor.json",
+    "loaf_of_bread": "data/items/loaf_of_bread.json",
+    "mug_of_ale": "data/items/mug_of_ale.json",
+    "padded_jerkin": "data/items/padded_jerkin.json",
+    "rope": "data/items/rope.json",
+    "round_shield": "data/items/round_shield.json",
     "rusty_sword": "data/items/rusty_sword.json",
     "simple_dagger": "data/items/simple_dagger.json",
     "sunstone_shard": "data/items/sunstone_shard.json",
+    "tinderbox": "data/items/tinderbox.json",
     "unarmed_strike": "data/items/unarmed_strike.json",
+    "waterskin": "data/items/waterskin.json",
     "wayfinder_charm": "data/items/wayfinder_charm.json"
   },
   "tables": {
@@ -61,12 +92,59 @@
     "names": "data/tables/names.json"
   },
   "npcs": {
+    "alder_frey": "data/npcs/alder_frey.json",
+    "aldous_orrel": "data/npcs/aldous_orrel.json",
+    "aldric_vance": "data/npcs/aldric_vance.json",
+    "anselma_quill": "data/npcs/anselma_quill.json",
+    "anwen_barrow": "data/npcs/anwen_barrow.json",
+    "ashcroft_twins": "data/npcs/ashcroft_twins.json",
+    "bramm_hollow": "data/npcs/bramm_hollow.json",
+    "bryn_thatcher": "data/npcs/bryn_thatcher.json",
+    "coll_marrow": "data/npcs/coll_marrow.json",
+    "corin_ironhand": "data/npcs/corin_ironhand.json",
+    "cyra_vance": "data/npcs/cyra_vance.json",
+    "dain_loom": "data/npcs/dain_loom.json",
+    "dorn_stave": "data/npcs/dorn_stave.json",
+    "dov_thatcher": "data/npcs/dov_thatcher.json",
+    "dunstan_orrel": "data/npcs/dunstan_orrel.json",
     "dwarf_innkeeper": "data/npcs/dwarf_innkeeper.json",
+    "edrin_marrow": "data/npcs/edrin_marrow.json",
+    "elowen_ashcroft": "data/npcs/elowen_ashcroft.json",
+    "faye_ashcroft": "data/npcs/faye_ashcroft.json",
+    "garrow_bream": "data/npcs/garrow_bream.json",
+    "gil_orrel": "data/npcs/gil_orrel.json",
     "goblin_grunt": "data/npcs/goblin_grunt.json",
     "goblin_guard": "data/npcs/goblin_guard.json",
+    "halda_fenwick": "data/npcs/halda_fenwick.json",
+    "hedda_ironhand": "data/npcs/hedda_ironhand.json",
+    "iryna_hollow": "data/npcs/iryna_hollow.json",
+    "ivo_quill": "data/npcs/ivo_quill.json",
+    "josen_bramble": "data/npcs/josen_bramble.json",
+    "kellan_bramble": "data/npcs/kellan_bramble.json",
+    "kip": "data/npcs/kip.json",
+    "lira_combe": "data/npcs/lira_combe.json",
     "lost_wanderer": "data/npcs/lost_wanderer.json",
+    "mabel_rush": "data/npcs/mabel_rush.json",
+    "maev_orrel": "data/npcs/maev_orrel.json",
+    "meg_thatcher": "data/npcs/meg_thatcher.json",
     "mysterious_stranger": "data/npcs/mysterious_stranger.json",
-    "wandering_scribe": "data/npcs/wandering_scribe.json"
+    "nim_bream": "data/npcs/nim_bream.json",
+    "nyssa_combe": "data/npcs/nyssa_combe.json",
+    "old_gerta": "data/npcs/old_gerta.json",
+    "orik_shepherd": "data/npcs/orik_shepherd.json",
+    "pell_ironhand": "data/npcs/pell_ironhand.json",
+    "perrin_vance": "data/npcs/perrin_vance.json",
+    "rosalind_hollow": "data/npcs/rosalind_hollow.json",
+    "sable_frey": "data/npcs/sable_frey.json",
+    "sela_taper": "data/npcs/sela_taper.json",
+    "serrel_ashcroft": "data/npcs/serrel_ashcroft.json",
+    "tam_barrow": "data/npcs/tam_barrow.json",
+    "tilda_frey": "data/npcs/tilda_frey.json",
+    "tomas_alder": "data/npcs/tomas_alder.json",
+    "wandering_scribe": "data/npcs/wandering_scribe.json",
+    "wick_barrow": "data/npcs/wick_barrow.json",
+    "wynne_alder": "data/npcs/wynne_alder.json",
+    "yvaine_loom": "data/npcs/yvaine_loom.json"
   },
   "scenes": {
     "dungeon_chamber": "data/scenes/dungeon/chamber.json",
@@ -74,12 +152,46 @@
     "dungeon_hallway": "data/scenes/dungeon/hallway.json",
     "dungeon_start": "data/scenes/dungeon/start.json",
     "home_bedroom": "data/scenes/player_home/bedroom.json",
-    "home_door": "data/scenes/player_home/door.json",
+    "home_hallway": "data/scenes/player_home/hallway.json",
     "home_kitchen": "data/scenes/player_home/kitchen.json",
     "home_living_room": "data/scenes/player_home/living_room.json",
     "home_museum_armor": "data/scenes/player_home/museum_armor.json",
     "home_museum_relics": "data/scenes/player_home/museum_relics.json",
-    "home_museum": "data/scenes/player_home/museum.json"
+    "home_museum": "data/scenes/player_home/museum.json",
+    "home_parents_bedroom": "data/scenes/player_home/parents_bedroom.json",
+    "village_alder_cottage": "data/scenes/village/alder_cottage.json",
+    "village_ashcroft_farmhouse": "data/scenes/village/ashcroft_farmhouse.json",
+    "village_bramble_house": "data/scenes/village/bramble_house.json",
+    "village_bream_cottage": "data/scenes/village/bream_cottage.json",
+    "village_brookside": "data/scenes/village/brookside.json",
+    "village_combe_cottage": "data/scenes/village/combe_cottage.json",
+    "village_crossroads": "data/scenes/village/crossroads.json",
+    "village_east_row": "data/scenes/village/east_row.json",
+    "village_fenwick_cottage": "data/scenes/village/fenwick_cottage.json",
+    "village_forge_lane": "data/scenes/village/forge_lane.json",
+    "village_hill_path": "data/scenes/village/hill_path.json",
+    "village_marrow_cottage": "data/scenes/village/marrow_cottage.json",
+    "village_mill_road": "data/scenes/village/mill_road.json",
+    "village_mill": "data/scenes/village/mill.json",
+    "village_north_road": "data/scenes/village/north_road.json",
+    "village_orrel_farmhouse": "data/scenes/village/orrel_farmhouse.json",
+    "village_quill_cottage": "data/scenes/village/quill_cottage.json",
+    "village_rush_cottage": "data/scenes/village/rush_cottage.json",
+    "village_shepherds_cot": "data/scenes/village/shepherds_cot.json",
+    "village_shepherds_hill": "data/scenes/village/shepherds_hill.json",
+    "village_smithy": "data/scenes/village/smithy.json",
+    "village_south_fields": "data/scenes/village/south_fields.json",
+    "village_sowers_lane": "data/scenes/village/sowers_lane.json",
+    "village_square": "data/scenes/village/square.json",
+    "village_stave_yard": "data/scenes/village/stave_yard.json",
+    "village_store_back": "data/scenes/village/store_back.json",
+    "village_store": "data/scenes/village/store.json",
+    "village_taper_cottage": "data/scenes/village/taper_cottage.json",
+    "village_tavern_room": "data/scenes/village/tavern_room.json",
+    "village_tavern": "data/scenes/village/tavern.json",
+    "village_thatcher_cottage": "data/scenes/village/thatcher_cottage.json",
+    "village_vance_house": "data/scenes/village/vance_house.json",
+    "village_weavers_cottage": "data/scenes/village/weavers_cottage.json"
   },
   "missions": {
     "escape_dungeon": "data/missions/escape_dungeon.json",

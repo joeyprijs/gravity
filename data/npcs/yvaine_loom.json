@@ -1,0 +1,26 @@
+{
+  "name": "Yvaine Loom",
+  "conversations": {
+    "start": {
+      "npcText": "The green wool's mine, the grey is my sister's, and we are not discussing my sister. Come back in a week and there'll be cake and you'll never know there was anything.",
+      "responses": [
+        {
+          "text": "I'll come back for the cake.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "Nine days, Halda says.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

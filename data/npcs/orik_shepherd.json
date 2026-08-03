@@ -1,0 +1,216 @@
+{
+  "name": "Orik",
+  "conversations": {
+    "start": {
+      "npcText": "Stand still a moment — no, not for me, for the dogs. There. Now they've decided about you and we can talk.",
+      "responses": [
+        {
+          "text": "What did they decide?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_dogs"
+            }
+          ]
+        },
+        {
+          "text": "I hear you've been losing sheep.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "the_sheep"
+            }
+          ]
+        },
+        {
+          "text": "You live up here alone?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "alone_up_here"
+            }
+          ]
+        },
+        {
+          "text": "I'll leave you to the flock.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "the_dogs": {
+      "npcText": "That you're from the hill house and you smell of indoors. Vetch there is the one that matters — she's had my judgement for eleven years and never once been wrong about a person.",
+      "responses": [
+        {
+          "text": "Has she been wrong about weather?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "about_weather"
+            }
+          ]
+        },
+        {
+          "text": "High praise, then.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "about_weather": {
+      "npcText": "Never. She sits down facing the ridge two hours before rain and I've built my whole life around it. The reeve calls that superstition. The reeve has been rained on more than me.",
+      "responses": [
+        {
+          "text": "Hard to argue with results.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "the_sheep": {
+      "npcText": "Two ewes at the tree line, a fortnight apart, and taken clean — dragged, not scattered. That's not dogs and it's not a fox and I'll thank the village to stop saying so where I can hear it.",
+      "responses": [
+        {
+          "text": "What do you think it is?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "what_took_them"
+            }
+          ]
+        },
+        {
+          "text": "Tilda says you cry wolf every year.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "cry_wolf"
+            }
+          ]
+        },
+        {
+          "text": "That's a hard loss.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "what_took_them": {
+      "npcText": "Something that knows to come at the dark of the moon and go up the stream so the dogs lose it. I don't have a word for that. Josen Bramble went up and looked and came back quiet, and Josen is never quiet.",
+      "responses": [
+        {
+          "text": "Then I'll ask Josen.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "ask_josen"
+            }
+          ]
+        },
+        {
+          "text": "Keep the dogs close.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "ask_josen": {
+      "npcText": "He'll be in the Goose by dark, telling it wrong. Buy him the second mug, not the first — the first he tells for the room, the second he tells straight.",
+      "responses": [
+        {
+          "text": "Good advice.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "cry_wolf": {
+      "npcText": "Tilda has sold lanterns off my wolves for thirty years, so I'll not take lectures from that quarter. And aye — I've been wrong plenty. A shepherd who's never wrong is a shepherd with no sheep left to be wrong about.",
+      "responses": [
+        {
+          "text": "That's fairer than she was.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "alone_up_here": {
+      "npcText": "Forty-one years in that cot. Folk think it's a sad thing and I've stopped correcting them — it's less trouble, and it keeps visitors short.",
+      "responses": [
+        {
+          "text": "Am I being kept short?",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "kept_short"
+            }
+          ]
+        },
+        {
+          "text": "It's a fine view to have to yourself.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "fine_view"
+            }
+          ]
+        }
+      ]
+    },
+    "kept_short": {
+      "npcText": "You were, and then you asked, which nobody does. Sit on the wall if you like. Don't talk for a bit — that's the good part of up here.",
+      "responses": [
+        {
+          "text": "I can do that.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    },
+    "fine_view": {
+      "npcText": "It is. Your house has the better one, mind, and nobody in it looks out. I've watched that hill my whole life and I could count the times on one hand.",
+      "responses": [
+        {
+          "text": "I'll start looking out.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "start"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "Meg Thatcher",
+  "conversations": {
+    "start": {
+      "npcText": "There's six of them and four are indoors, so you've picked a brave hour. Mind Bett — she's four, she's afraid of nothing, and she was born in a hayloft, which explains most of it.",
+      "responses": [
+        {
+          "text": "I've heard about the hayloft.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "I'll mind Bett.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

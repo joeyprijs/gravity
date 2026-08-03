@@ -1,0 +1,26 @@
+{
+  "name": "Alder Frey",
+  "conversations": {
+    "start": {
+      "npcText": "Oh — sorry, didn't see you behind the cart. It's heavy on the corner, that's all, and Ma says if I scrape her doorframe again I'm paying for it out of nothing, which is what I earn.",
+      "responses": [
+        {
+          "text": "I can hold the corner.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "I'll get out of your way.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "Perrin Vance",
+  "conversations": {
+    "start": {
+      "npcText": "You'll be the one from the hill — sit down, and if my husband comes in, you are not here about anything. He'll turn it into a meeting. He turns weather into a meeting.",
+      "responses": [
+        {
+          "text": "I'm not here about anything.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "Ha. Understood.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

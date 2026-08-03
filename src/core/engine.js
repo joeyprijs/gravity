@@ -40,7 +40,7 @@ export class RPGEngine {
 
     // Populated by loadData(). Kept as an empty shell here so subsystems
     // constructed below can safely reference this.engine.data without null checks.
-    this.data = { items: {}, npcs: {}, scenes: {}, missions: {}, tables: {}, regions: {}, worldMapSize: DEFAULT_WORLD_MAP_SIZE, locale: {}, rules: null, flags: {} };
+    this.data = { items: {}, npcs: {}, scenes: {}, missions: {}, tables: {}, regions: {}, worldMapSize: DEFAULT_WORLD_MAP_SIZE, minimapRadius: null, locale: {}, rules: null, flags: {} };
 
     // Active language code. Resolved properly in loadData() once the manifest's
     // declared locales are known; 'en' until then.
@@ -230,7 +230,7 @@ export class RPGEngine {
       // ever see carriedItems in its { item, amount } object form.
       normalizeCarriedItems(npcs);
 
-      this.data = { items, npcs, scenes, missions, tables, regions: manifest.regions || {}, worldMapSize: manifest.worldMapSize || DEFAULT_WORLD_MAP_SIZE, locale: this.data.locale, rules, flags };
+      this.data = { items, npcs, scenes, missions, tables, regions: manifest.regions || {}, worldMapSize: manifest.worldMapSize || DEFAULT_WORLD_MAP_SIZE, minimapRadius: manifest.minimapRadius ?? null, locale: this.data.locale, rules, flags };
 
       // Note: registerMissions and registerSceneFlags are called by init()
       // after this.state.init(rules) — they must NOT be called here. Data

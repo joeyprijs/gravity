@@ -9,15 +9,19 @@
     },
     "title": {
       "type": "string",
-      "description": "Visual header name of the scene. Takes precedence over 'name'."
+      "description": "Visual header name of the scene — what the player reads on arrival. Takes precedence over 'name' there."
     },
     "name": {
       "type": "string",
-      "description": "Display name of the scene (used for map tags and fallback headers)."
+      "description": "Map tag for the scene, and the header when there is no 'title'. Authoring both lets a room read one way on arrival and another on the map: Frey's shop floor is titled \"Frey's Store\" but tagged \"The Shop Floor\", so it doesn't repeat its building's name under the building's own outline."
     },
     "region": {
       "type": "string",
-      "description": "Region key from data/index.json indicating map grouping."
+      "description": "Region key from data/index.json. Resolves the scene's ambience bed; a region flagged `interior` there also groups its scenes into one building on the map."
+    },
+    "interior": {
+      "type": "boolean",
+      "description": "Marks a scene as the inside of a building that is one room: the minimap shows only this room while the player is in it, and draws it as a single square from outdoors. A building with several rooms groups them through an `interior` region instead."
     },
     "xpReward": {
       "type": "integer",
@@ -151,7 +155,7 @@
           },
           "isBack": {
             "type": "boolean",
-            "description": "If true, sorts this option to the bottom as a 'back'/exit choice (locale-independent alternative to a 'return' action)."
+            "description": "If true, sorts this option to the bottom as a 'back'/exit choice (locale-independent alternative to a 'return' action). It also *marks* the way back, not only its position: the curator plugin finds a museum room's exit by looking for a lone 'isBack' option, so removing it there replaces the labelled way out with a generic close. Use it where 'back' is genuinely the odd one out — a dead-end cottage, a room whose only exit is the way you came, the way out of a building. Do NOT use it where it would compete with compass order: on a junction's roads, or in any list holding more than one directional option, sinking one of them drags it out of the sequence the rest read in and makes the list feel arbitrary. Those are authored in compass order (clockwise from north, wrapping at due north) instead, which is what makes their direction arrows read as a sweep."
           },
           "log": {
             "type": [

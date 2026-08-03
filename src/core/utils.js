@@ -206,6 +206,65 @@ export function isSpecialItem(itemData) {
 }
 
 /**
+ * Whether a scene is the inside of a building rather than a place in the open
+ * world. A building of one room marks itself (`interior` on the scene); the
+ * rooms of a bigger one are grouped by a region flagged `interior`.
+ *
+ * The map draws buildings from this and the interactions panel sorts a door into
+ * one apart from a road out of here, so both ask the same question here — two
+ * answers would let the map and the panel disagree about what a place is.
+ *
+ * @param {object|null} scene - The scene definition.
+ * @param {Object<string, object>} regions - The manifest's regions map.
+ * @returns {boolean}
+ */
+export function isInteriorScene(scene, regions) {
+  return !!(scene?.interior || regions?.[scene?.region]?.interior);
+}
+
+/**
+ * The four cardinal points, clockwise from north.
+ *
+ * Four, not eight: a diagonal arrow is genuinely harder to read at option size —
+ * the eye takes "up" and "right" instantly and has to stop and work out
+ * "up-and-right". Roads are still *authored* in eight-point order, which needs
+ * the finer resolution to be deterministic; what the player is shown rounds to
+ * the nearest cardinal, which is the unit they think in.
+ */
+export const COMPASS_POINTS = Object.freeze(['N', 'E', 'S', 'W']);
+
+/**
+ * Which way one scene lies from another, as a compass point.
+ *
+ * The map's coordinates are where the world records direction — the prose used
+ * to carry it ("take the forge lane east"), which left the one piece of
+ * navigational meaning in the game trapped in a string a translator has to get
+ * right. Derived here instead, it survives translation.
+ *
+ * Rounded to a compass point rather than kept as an angle, deliberately: a road
+ * bearing 340° is read as *north* by anyone looking at it, and an exact angle
+ * would point somewhere nobody perceives.
+ *
+ * @param {object|null} from - Scene the player is standing in.
+ * @param {object|null} to - Scene the road leads to.
+ * @returns {string|null} A COMPASS_POINTS entry, or null without geometry for both.
+ */
+export function compassPoint(from, to) {
+  const a = from?.mapDefinitions;
+  const b = to?.mapDefinitions;
+  if (!a || !b) return null;
+
+  const dx = (b.left + b.width / 2) - (a.left + a.width / 2);
+  const dy = (b.top + b.height / 2) - (a.top + a.height / 2);
+  if (!dx && !dy) return null;
+
+  // Screen coordinates put north at the *top*, so north is a negative dy.
+  const degrees = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+  const step = 360 / COMPASS_POINTS.length;
+  return COMPASS_POINTS[Math.round(degrees / step) % COMPASS_POINTS.length];
+}
+
+/**
  * The attribute deltas one equipment piece carries while worn: its
  * attributeBonuses map, plus the legacy armorClassBonus folded into 'ac'.
  * equipItem/unequipItem apply these on swap, so a relic can raise any
@@ -333,15 +392,17 @@ export function itemCardStats(t, itemData, attributes = {}, { slot = true } = {}
 export function resetOptionsPanel(reminderText = null) {
   const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
   const container = document.getElementById(EL.SCENE_OPTIONS);
+  const entrancesContainer = document.getElementById(EL.SCENE_OPTIONS_ENTRANCES);
   const talkContainer = document.getElementById(EL.SCENE_OPTIONS_TALK);
   const actionsContainer = document.getElementById(EL.SCENE_OPTIONS_ACTIONS);
   const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
+  const exitsContainer = document.getElementById(EL.SCENE_OPTIONS_EXITS);
   const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
 
   clearElement(container);
   // Every headed section starts empty and hidden: its heading is only earned
   // once something lands in it (see renderOptions).
-  [talkContainer, actionsContainer, skillsContainer].forEach(section => {
+  [entrancesContainer, talkContainer, actionsContainer, skillsContainer, exitsContainer].forEach(section => {
     clearElement(section);
     section.setAttribute('hidden', '');
   });
@@ -351,7 +412,7 @@ export function resetOptionsPanel(reminderText = null) {
     if (reminderText !== null) reminder.innerText = reminderText;
     container.appendChild(reminder);
   }
-  return { panel, container, talkContainer, actionsContainer, skillsContainer, reminder };
+  return { panel, container, entrancesContainer, talkContainer, actionsContainer, skillsContainer, exitsContainer, reminder };
 }
 
 /**
@@ -451,6 +512,50 @@ export function attrRowHtml({ label, valueHtml, icon = '', extraClasses = '', tr
 
 export function buildOptionButton(text, reqText = null) {
   return buildCard({ tag: 'button', title: text, stats: reqText ?? undefined });
+}
+
+/**
+ * Adds the arrow that says which way an option goes, to an option button — and
+ * does nothing when the option doesn't go a way.
+ *
+ * The rule lives here rather than in any caller, because the scene renderer and
+ * the curator's own panels both build navigation buttons and would otherwise
+ * answer it differently: a step *within* one continuous space has a direction (a
+ * road between outdoor places, a door between two rooms of one building), and
+ * crossing a threshold does not — going in or out of a building is not a compass
+ * move, which is the same line Entrances and Exits are drawn on. Geometry both
+ * sides is required; a scene without mapDefinitions is nowhere in particular.
+ *
+ * Marks the button as well as filling it, so the CSS never has to ask whether a
+ * card contains a marker. The marker is positioned against its card, and every
+ * ancestor above the card is `static` — asking with `:has()` would put the whole
+ * thing one unsupported selector away from resolving against the viewport
+ * instead, and dropping the arrow into a page corner. The code appending it
+ * already knows; it can say so.
+ *
+ * @param {object} engine - For the locale table and the manifest's regions.
+ * @param {object} scene - The scene the player is standing in.
+ * @param {object|null} destination - The scene the option leads to.
+ * @param {HTMLElement} button - The option button to mark and append to.
+ */
+export function addDirectionMarker(engine, scene, destination, button) {
+  const regions = engine.data.regions;
+  if (!destination) return;
+  if (isInteriorScene(scene, regions) !== isInteriorScene(destination, regions)) return;
+
+  const point = compassPoint(scene, destination);
+  if (!point) return;
+
+  const marker = createElement('span', CSS.OPTION_DIRECTION);
+  marker.dataset.point = point;
+  // One glyph drawn pointing north, turned a quarter-turn per point by CSS.
+  marker.style.setProperty('--turn', String(COMPASS_POINTS.indexOf(point)));
+  // The glyph is aria-hidden, so the point's name rides along for a screen
+  // reader — without it the direction would exist only for people who can see.
+  marker.innerHTML = `${iconHtml('arrow')}<span class="visually-hidden">${escapeHtml(engine.t(`ui.compass${point}`))}</span>`;
+
+  button.classList.add(CSS.CARD_DIRECTED);
+  button.appendChild(marker);
 }
 
 /**

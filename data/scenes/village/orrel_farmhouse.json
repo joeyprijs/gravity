@@ -1,0 +1,99 @@
+{
+  "id": "village_orrel_farmhouse",
+  "name": "Orrel Farmhouse",
+  "region": "village",
+  "interior": true,
+  "mapDefinitions": {
+    "top": 2740,
+    "left": 2350,
+    "width": 170,
+    "height": 100,
+    "background": "rgba(100, 85, 50, 0.9)"
+  },
+  "description": [
+    {
+      "text": "Seven people, one long table, and not a spare chair in the building — which is why Maev is standing to eat and refusing to discuss it. Dunstan has the fire end. Aldous has the other and the last word. Pip is under the table and has been forgotten about.",
+      "condition": {
+        "or": [
+          {
+            "segment": "evening"
+          },
+          {
+            "segment": "night"
+          }
+        ]
+      }
+    },
+    {
+      "text": "The biggest kitchen in Hollowbrook and it still isn't big enough. A table for seven with benches worn to a shine, boots in a landslide by the door, and a row of pegs where every coat is somebody's specific coat. Wren's school slate is propped where she will fall over it. There has not been a quiet hour in this room since the roof went on."
+    }
+  ],
+  "options": [
+    {
+      "text": "Talk to Maev",
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "maev_orrel"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Dunstan",
+      "condition": {
+        "or": [
+          {
+            "segment": "evening"
+          },
+          {
+            "segment": "night"
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "dunstan_orrel"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Gil",
+      "condition": {
+        "not": {
+          "segment": "day"
+        }
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "gil_orrel"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Aldous",
+      "condition": {
+        "not": {
+          "segment": "morning"
+        }
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "aldous_orrel"
+        }
+      ]
+    },
+    {
+      "text": "Step back out to the fields",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_south_fields"
+        }
+      ]
+    }
+  ]
+}

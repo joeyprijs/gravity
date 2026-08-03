@@ -293,6 +293,84 @@ test('flags a farmable check: success loots but nothing retires it', () => {
   assert.ok(!issuesFor(once).some(m => m.includes('can be re-rolled for duplicates')));
 });
 
+test('flags a farmable gift node, per route in — a guard one step up is not enough', () => {
+  // Node actions re-run on every visit, so a second way back into a node that
+  // hands over an item is a second copy of it. The guard has to sit on the
+  // responses that reach the node: gating the route *into* the response's own
+  // node covers only that path, which is how Halda's token got duplicated.
+  const data = makeToolkitData();
+  data.npcs.elder.conversations.gift = {
+    npcText: 'Take this.',
+    actions: [
+      { type: 'loot', item: 'potion' },
+      { type: 'set_flag', flag: 'gifted', value: true },
+    ],
+    responses: [{ text: 'Thanks.', actions: [{ type: 'leave' }] }],
+  };
+  data.npcs.elder.conversations.more.responses.push(
+    { text: 'Anything for me?', actions: [{ type: 'goToConversation', node: 'gift' }] });
+
+  assert.ok(issuesFor(data).some(m => m.includes('reaches gift node "gift" ungated')));
+
+  // Gated on a flag the gift node's own actions set: clean.
+  const gated = makeToolkitData();
+  gated.npcs.elder.conversations.gift = data.npcs.elder.conversations.gift;
+  gated.npcs.elder.conversations.more.responses.push({
+    text: 'Anything for me?',
+    condition: { not: { flag: 'gifted', value: true } },
+    actions: [{ type: 'goToConversation', node: 'gift' }],
+  });
+  assert.ok(!issuesFor(gated).some(m => m.includes('ungated')));
+
+  // A second route in must carry its own guard — the whole point.
+  const twoRoutes = makeToolkitData();
+  twoRoutes.npcs.elder.conversations.gift = data.npcs.elder.conversations.gift;
+  twoRoutes.npcs.elder.conversations.more.responses.push({
+    text: 'Anything for me?',
+    condition: { not: { flag: 'gifted', value: true } },
+    actions: [{ type: 'goToConversation', node: 'gift' }],
+  });
+  twoRoutes.npcs.elder.conversations.start.responses.push(
+    { text: 'Back again.', actions: [{ type: 'goToConversation', node: 'gift' }] });
+  assert.ok(issuesFor(twoRoutes).some(m => m.includes('response "Back again." reaches gift node "gift" ungated')));
+
+  // A gift on the start node has no response to gate: saying hello displays it,
+  // so it hands the item over on every conversation and the per-route check
+  // above would never see it.
+  const onStart = makeToolkitData();
+  onStart.npcs.elder.conversations.start.actions = [{ type: 'loot', item: 'potion' }];
+  assert.ok(issuesFor(onStart).some(m => m.includes('every time the player talks to this NPC')));
+
+  // Paying gold out is not a gift.
+  const payment = makeToolkitData();
+  payment.npcs.elder.conversations.gift = {
+    npcText: 'Five coins.',
+    actions: [{ type: 'loot', item: 'gold', amount: -5 }],
+    responses: [{ text: 'Done.', actions: [{ type: 'leave' }] }],
+  };
+  payment.npcs.elder.conversations.more.responses.push(
+    { text: 'A room, please.', actions: [{ type: 'goToConversation', node: 'gift' }] });
+  assert.ok(!issuesFor(payment).some(m => m.includes('ungated')));
+});
+
+test('flags an interior scene with no map geometry, by scene flag or by region', () => {
+  // A building is drawn from its rooms' geometry. One with none can never be
+  // placed, and the map silently omits it — so the validator has to say it.
+  const data = makeToolkitData();
+  data.scenes.hut = { title: 'Hut', interior: true };
+  assert.ok(issuesFor(data).some(m => m.includes('marked interior but has no mapDefinitions')));
+
+  const viaRegion = makeToolkitData();
+  viaRegion.regions = { keep: { name: 'The Keep', interior: true } };
+  viaRegion.scenes.hall = { title: 'Hall', region: 'keep' };
+  assert.ok(issuesFor(viaRegion).some(m => m.includes('marked interior (region "keep") but has no mapDefinitions')));
+
+  // With geometry, or not interior at all: clean.
+  const placed = makeToolkitData();
+  placed.scenes.hut = { title: 'Hut', interior: true, mapDefinitions: { top: 0, left: 0, width: 10, height: 10 } };
+  assert.ok(!issuesFor(placed).some(m => m.includes('no mapDefinitions')));
+});
+
 test('skillRetry: flags an undeclared resource, bad cost, and negative restRestore', () => {
   const data = makeToolkitData();
   data.rules.skillRetry = { resource: 'luckPoints', cost: 0, restRestore: -1 };

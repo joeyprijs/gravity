@@ -1,0 +1,12 @@
+{
+  "name": "Iron Sword",
+  "type": "Weapon",
+  "slot": "Right Hand",
+  "description": "Straight, evenly ground, and honest. Hedda's mark is stamped at the hilt.",
+  "value": 40,
+  "attributes": {
+    "damageRoll": "1d8",
+    "attackAttribute": "strength",
+    "actionPoints": 1
+  }
+}

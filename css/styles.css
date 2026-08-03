@@ -45,6 +45,7 @@
   /* Map Visuals */
   --minimap-bg: rgba(0, 0, 0, 0.55);
   --map-node-border: rgba(255, 255, 255, 0.18);
+  --map-building-outline: rgba(255, 255, 255, 0.45);
   --map-node-text: rgba(255, 255, 255, 0.65);
 
   /* Typography */
@@ -339,6 +340,41 @@ button.card:disabled {
 .card__title {
   display: block;
   font-weight: 600;
+}
+
+/* Which way a move goes, on the card's trailing edge. Absolutely positioned so
+   the text's left edge stays flush with every other option in the panel — the
+   directional ones gain a column without the list going ragged. One glyph drawn
+   pointing north, turned a quarter-turn per cardinal point (--turn is its index
+   in COMPASS_POINTS).
+
+   The card is marked by the code that appends the marker (addDirectionMarker),
+   not found with :has(). Every ancestor above the card is static, so if that
+   selector went unsupported the marker would resolve against the viewport and
+   land in a page corner — too much to hang on one selector when the appending
+   code already knows. */
+.card--directed {
+  position: relative;
+  padding-right: calc(var(--spacing) * 5);
+}
+
+.option-direction {
+  position: absolute;
+  right: calc(var(--spacing) * 2);
+  top: 0;
+  bottom: 0;
+  /* `.card > * + *` spaces a card's stacked lines. This one is not in that
+     stack — it is pinned to the edge — so it opts out, or it hangs 8px low. */
+  margin: 0;
+  display: flex;
+  align-items: center;
+  color: var(--text-secondary);
+}
+
+.option-direction .icon {
+  width: 1.15em;
+  height: 1.15em;
+  transform: rotate(calc(var(--turn) * 90deg));
 }
 
 .card__body {
@@ -945,6 +981,37 @@ button.section-toggle--collapsed .section-toggle__label::before {
   text-overflow: ellipsis;
   width: 100%;
   line-height: 1.2;
+}
+
+/* A building on the full map: an outline gathering the rooms the player has
+   walked, named above them. The rooms keep their own colours — the outline is
+   the only thing that says they are one building, which is why it sits outside
+   their edges (outline-offset) instead of under them, where the rooms tile
+   their building exactly and would hide it. */
+.map-node--building {
+  border-color: transparent;
+  outline: 1px dashed var(--map-building-outline);
+  outline-offset: 3px;
+  overflow: visible;
+}
+
+/* The name sits above the building rather than over its rooms. A building that
+   backs onto a road puts that name on top of the neighbour, so it carries its
+   own backing to stay readable wherever it lands. */
+.map-node--building .map-node__label {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
+  max-width: none;
+  margin-bottom: 6px;
+  padding: 1px 6px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.6);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 /* ==========================================================================

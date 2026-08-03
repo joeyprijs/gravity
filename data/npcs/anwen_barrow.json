@@ -1,0 +1,26 @@
+{
+  "name": "Anwen Barrow",
+  "conversations": {
+    "start": {
+      "npcText": "Don't lean there, love, you'll wear the flour. Set the dough before light, out by midday, and then I've the whole afternoon to be sick of the smell of it.",
+      "responses": [
+        {
+          "text": "It smells wonderful.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "I'll keep clear of the flour.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

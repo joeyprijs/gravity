@@ -1,0 +1,53 @@
+{
+  "id": "home_hallway",
+  "name": "Hallway",
+  "region": "player_home",
+  "mapDefinitions": {
+    "top": 1910,
+    "left": 2480,
+    "width": 180,
+    "height": 90,
+    "background": "rgba(55, 45, 35, 0.9)"
+  },
+  "description": [
+    {
+      "text": "The hall is black but for the fanlight over the door, which lays a pale shape across the slates. The house ticks as it cools. One pair of boots by the scraper, which is yours, and a row of empty pegs above it.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "A long hall running the front of the house, flagged in slate and colder than any room off it. Pegs for coats, a boot scraper worn to a curve by generations of feet, and a visitors' book open on a stand beside the door — open because nobody has had cause to close it, at a page four years old."
+    }
+  ],
+  "options": [
+    {
+      "text": "Go through to the living room",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "home_living_room"
+        }
+      ]
+    },
+    {
+      "text": "Enter Museum Lobby",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "home_museum"
+        }
+      ]
+    },
+    {
+      "text": "Step outside to the hill path",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_hill_path"
+        }
+      ]
+    }
+  ]
+}

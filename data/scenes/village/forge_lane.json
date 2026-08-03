@@ -1,0 +1,111 @@
+{
+  "id": "village_forge_lane",
+  "name": "Forge Lane",
+  "region": "village",
+  "mapDefinitions": {
+    "top": 2310,
+    "left": 2760,
+    "width": 300,
+    "height": 100,
+    "background": "rgba(85, 70, 55, 0.9)"
+  },
+  "description": [
+    {
+      "text": "The lane is dark and the forge is cold, its shutter down. Four doorways, four banked fires behind them, and an old woman's chair standing empty on the step of the second cottage.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "Hedda's forge sets the whole lane ringing — you feel it in the ground before you hear it. Beyond the smithy stand three cottages: a chair on the step of the first, a wheelwright's yard stacked with felloes at the second, and the reeve's house at the end, the only one in Hollowbrook with a painted door.",
+      "condition": {
+        "segment": "day"
+      }
+    },
+    {
+      "text": "The forge is quiet but the doors are open all down the lane, and the smell of hot iron hangs about in the cool. A chair sits on the step of the first cottage, the wheelwright's yard is stacked with felloes at the second, and the reeve's painted door closes the lane at the end."
+    }
+  ],
+  "options": [
+    {
+      "text": "Go into the smithy",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_smithy"
+        }
+      ]
+    },
+    {
+      "text": "Go into the Fenwick cottage",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_fenwick_cottage"
+        }
+      ]
+    },
+    {
+      "text": "Go into the Marrow cottage",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_marrow_cottage"
+        }
+      ]
+    },
+    {
+      "text": "Knock at the reeve's house",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_vance_house"
+        }
+      ]
+    },
+    {
+      "text": "Follow the lane on to the East Row",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_east_row"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Halda on her step",
+      "condition": {
+        "not": {
+          "segment": "night"
+        }
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "halda_fenwick"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Coll in his fort",
+      "condition": {
+        "segment": "day"
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "coll_marrow"
+        }
+      ]
+    },
+    {
+      "text": "Go back to the square",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_square"
+        }
+      ]
+    }
+  ]
+}

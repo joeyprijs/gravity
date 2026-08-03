@@ -1,0 +1,160 @@
+{
+  "id": "village_tavern",
+  "title": "The Brindled Goose",
+  "name": "The Common Room",
+  "region": "village_tavern",
+  "mapDefinitions": {
+    "top": 2190,
+    "left": 2605,
+    "width": 155,
+    "height": 80,
+    "background": "rgba(110, 70, 40, 0.9)"
+  },
+  "description": [
+    {
+      "text": "Every bench is taken and the room is one continuous noise. Josen Bramble is standing up to tell something in the corner with his arms out wide. Rosalind's pot is going, Iryna is crossing the floor with four mugs in two hands, and the fire has been built up past what the room needs. Bramm keeps a room up the back stair — five coins the night, and the key is on its hook.",
+      "condition": {
+        "or": [
+          {
+            "segment": "evening"
+          },
+          {
+            "segment": "night"
+          }
+        ]
+      }
+    },
+    {
+      "text": "Low black beams, a floor of stone flags, and eight benches waiting for an evening that has not started yet. A fire is kept in all day out of principle. The bar is three planks on barrels, worn pale where elbows go, and above it hangs a painted board of a goose that appears to be furious about something. Bramm keeps a room up the back stair — five coins the night."
+    }
+  ],
+  "options": [
+    {
+      "text": "Talk to Bramm",
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "bramm_hollow"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Rosalind",
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "rosalind_hollow"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Iryna",
+      "condition": {
+        "not": {
+          "segment": "evening"
+        }
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "iryna_hollow"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Kip in the yard doorway",
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "kip"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Josen in the corner",
+      "condition": {
+        "or": [
+          {
+            "segment": "evening"
+          },
+          {
+            "segment": "night"
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "josen_bramble"
+        }
+      ]
+    },
+    {
+      "text": "Take the key and go up the back stair",
+      "condition": {
+        "and": [
+          {
+            "gold": {
+              "at_least": 5
+            }
+          },
+          {
+            "not": {
+              "flag": "goose_room_paid",
+              "value": true
+            }
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "loot",
+          "item": "gold",
+          "amount": -5,
+          "log": false
+        },
+        {
+          "type": "set_flag",
+          "flag": "goose_room_paid",
+          "value": true
+        },
+        {
+          "type": "navigate",
+          "destination": "village_tavern_room"
+        }
+      ]
+    },
+    {
+      "text": "Go up to your room",
+      "condition": {
+        "flag": "goose_room_paid",
+        "value": true
+      },
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_tavern_room"
+        }
+      ]
+    },
+    {
+      "text": "Doze on the bench by the fire",
+      "timeCost": 1,
+      "actions": [
+        {
+          "type": "short_rest"
+        }
+      ]
+    },
+    {
+      "text": "Step back out to the square",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_square"
+        }
+      ]
+    }
+  ]
+}

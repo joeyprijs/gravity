@@ -1,0 +1,86 @@
+{
+  "id": "village_ashcroft_farmhouse",
+  "name": "Ashcroft Farmhouse",
+  "region": "village",
+  "interior": true,
+  "mapDefinitions": {
+    "top": 2740,
+    "left": 2520,
+    "width": 170,
+    "height": 100,
+    "background": "rgba(100, 90, 55, 0.9)"
+  },
+  "description": [
+    {
+      "text": "Nine at table counting Nella and Ruthe, and the twins have been separated, which never works and is attempted nightly. Faye eats with a book propped against the salt. Serrel says grace at a speed that suggests long practice with hungry children.",
+      "condition": {
+        "segment": "evening"
+      }
+    },
+    {
+      "text": "A farmhouse kitchen with a great deal going on in it: two hearth cranes, a churn, a bench of seed trays under the window, and nine sets of boots by the door in three sizes. Two identical school slates hang on the same nail. Somebody has drawn a badger on one of them.",
+      "condition": {
+        "segment": "night"
+      }
+    },
+    {
+      "text": "A wide, low kitchen with the day's work spread through it — seed trays under the window, the churn standing where it was left, and nine sets of boots by the door. Two identical school slates hang from one nail, and there is a badger drawn on one of them in a hand that has been told about this before."
+    }
+  ],
+  "options": [
+    {
+      "text": "Talk to Elowen",
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "elowen_ashcroft"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Faye",
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "faye_ashcroft"
+        }
+      ]
+    },
+    {
+      "text": "Talk to Serrel",
+      "condition": {
+        "not": {
+          "segment": "day"
+        }
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "serrel_ashcroft"
+        }
+      ]
+    },
+    {
+      "text": "Talk to the twins",
+      "condition": {
+        "segment": "evening"
+      },
+      "actions": [
+        {
+          "type": "dialogue",
+          "npc": "ashcroft_twins"
+        }
+      ]
+    },
+    {
+      "text": "Step back out to the fields",
+      "isBack": true,
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_south_fields"
+        }
+      ]
+    }
+  ]
+}

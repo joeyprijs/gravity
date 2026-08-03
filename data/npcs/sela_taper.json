@@ -1,0 +1,26 @@
+{
+  "name": "Sela Taper",
+  "conversations": {
+    "start": {
+      "npcText": "Wax from Nyssa's hill, wicks from the Looms, and light in every window in Hollowbrook — I'll take that trade over most. Ambry does the dipping now. She's ten and she's better at it than I was at twenty.",
+      "responses": [
+        {
+          "text": "Tell her I said so.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "It's a good trade.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -187,11 +187,17 @@
   },
   "tabs": [
     {
+      "id": "map-tab",
+      "localeKey": "ui.tabMap",
+      "icon": "map",
+      "widget": "map",
+      "default": true
+    },
+    {
       "id": "attributes-tab",
       "localeKey": "ui.tabAttributes",
       "icon": "sheet",
-      "widget": "attributes",
-      "default": true
+      "widget": "attributes"
     },
     {
       "id": "inventory-tab",
@@ -202,12 +208,6 @@
       "id": "quests-tab",
       "localeKey": "ui.tabQuests",
       "icon": "trophy"
-    },
-    {
-      "id": "map-tab",
-      "localeKey": "ui.tabMap",
-      "icon": "map",
-      "widget": "map"
     },
     {
       "id": "options-tab",

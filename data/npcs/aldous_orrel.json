@@ -1,0 +1,26 @@
+{
+  "name": "Aldous Orrel",
+  "conversations": {
+    "start": {
+      "npcText": "I walk the low field every morning to see how my son's got it wrong. He's got it right, mostly. I'd never say so — he'd stop asking me down and then what would my mornings be?",
+      "responses": [
+        {
+          "text": "Your secret's safe with me.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        },
+        {
+          "text": "That's a fine reason to walk.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
