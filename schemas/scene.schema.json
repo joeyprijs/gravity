@@ -387,7 +387,7 @@
     },
     "displays": {
       "type": "array",
-      "description": "Initial display cases defined in this scene.",
+      "description": "The display cases this room opens with. Read by the curator plugin, which owns them from there on (they live in its save data, not core state) — like museumSlot and museumHall, this is a plugin's field described here because scene files are validated against this schema.",
       "items": {
         "type": "object",
         "properties": {
@@ -402,12 +402,6 @@
               "string",
               "null"
             ]
-          },
-          "allowedTypes": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
           }
         },
         "required": [

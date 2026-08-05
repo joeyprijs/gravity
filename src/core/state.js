@@ -20,7 +20,9 @@ const MIGRATIONS = {
       data.chests = {};
     }
   },
-  // v2 → v3: displays map added for dynamic exhibits curation.
+  // v2 → v3: displays map added for dynamic exhibits curation. The map later
+  // moved into the curator's own bag (its plugin migration v2), which is where
+  // a loaded save ends up — this step only puts the field where that one looks.
   3: (data) => {
     if (!('displays' in data)) {
       data.displays = {};
@@ -98,7 +100,6 @@ function makeSkeletonState() {
     currentSceneId: null,
     returnSceneId: null,
     chests: {},
-    displays: {},
     visitedScenes: [],
     time: { ticks: 0 },
     timers: [],
@@ -157,9 +158,8 @@ class StateManager {
    *
    * Emitting methods: init, loadFromObject, reset, modifyPlayerStat,
    * modifyPlayerStats, addXP, spendStatPoint, applyCharCreation,
-   * addToInventory, removeFromInventory, equipItem, placeItemInDisplay,
-   * takeItemFromDisplay, advanceTime, setFlag, setMissionStatus,
-   * setMissionStage.
+   * addToInventory, removeFromInventory, equipItem, advanceTime, setFlag,
+   * setMissionStatus, setMissionStage.
    *
    * @param {(method: string, info: object) => void} fn - Receives the
    *   StateManager method name and an info object with its relevant arguments
@@ -922,107 +922,12 @@ class StateManager {
   }
 
   /**
-   * @param {string} sceneId - The scene to look up.
-   * @returns {Array<{id: string, name: string, item: string|null, allowedTypes: string[]|null}>}
-   *   The display cases registered for the scene (empty array if none).
-   */
-  getDisplaysForScene(sceneId) {
-    if (!this.state.displays) this.state.displays = {};
-    return this.state.displays[sceneId] ?? [];
-  }
-
-  /**
-   * The whole displays map — every scene's display cases, keyed by scene id.
-   * For consumers that must scan all exhibits at once (the curator's derived
-   * reputation) so they never reach into the raw state object.
-   * @returns {Object<string, Array<{id: string, name: string, item: string|null, allowedTypes: string[]|null}>>}
-   */
-  getAllDisplays() {
-    if (!this.state.displays) this.state.displays = {};
-    return this.state.displays;
-  }
-
-  /**
-   * Registers a new display case on a scene.
-   *
-   * @param {string} sceneId - The scene to add the display to.
-   * @param {{id?: string, name?: string, item?: string, allowedTypes?: string[]}} displayConfig
-   * @returns {string} The display's ID (generated when not supplied).
-   */
-  addDisplayToScene(sceneId, displayConfig) {
-    if (!this.state.displays) this.state.displays = {};
-    if (!this.state.displays[sceneId]) this.state.displays[sceneId] = [];
-
-    // Sequence suffix guarantees uniqueness even when two displays are added
-    // within the same millisecond (Date.now() alone would collide).
-    this._displaySeq = (this._displaySeq ?? 0) + 1;
-    const id = displayConfig.id || `display_${Date.now()}_${this._displaySeq}`;
-    const newDisplay = {
-      id,
-      name: displayConfig.name || "Display Case",
-      item: displayConfig.item || null,
-      allowedTypes: displayConfig.allowedTypes || null
-    };
-
-    this.state.displays[sceneId].push(newDisplay);
-    this.notifyListeners('displays');
-    return id;
-  }
-
-  /**
-   * Moves an item from the player inventory onto a display case.
-   *
-   * @param {string} sceneId - The scene holding the display.
-   * @param {string} displayId - The display case ID.
-   * @param {string} itemId - The item to place.
-   * @returns {boolean} False when the display or item doesn't exist.
-   */
-  placeItemInDisplay(sceneId, displayId, itemId) {
-    const displays = this.getDisplaysForScene(sceneId);
-    const display = displays.find(d => d.id === displayId);
-    if (!display) return false;
-
-    if (this.countPlayerItem(itemId, { includeEquipped: false }) <= 0) return false;
-
-    // The case's allowedTypes gate. Enforced only when an item database was
-    // provided to init() — headless tests may use ad-hoc IDs, like
-    // addToInventory's unknown-item check.
-    if (display.allowedTypes && Object.keys(this._items).length
-        && !display.allowedTypes.includes(this._items[itemId]?.type)) return false;
-
-    display.item = itemId;
-    this.removeFromInventory(itemId, 1, { silent: true });
-    this._emitMutation('placeItemInDisplay', { sceneId, displayId, itemId });
-    this.notifyListeners('inventory');
-    return true;
-  }
-
-  /**
-   * Moves the item on a display case back into the player inventory.
-   *
-   * @param {string} sceneId - The scene holding the display.
-   * @param {string} displayId - The display case ID.
-   * @returns {string|null} The item ID taken, or null when the display was empty/missing.
-   */
-  takeItemFromDisplay(sceneId, displayId) {
-    const displays = this.getDisplaysForScene(sceneId);
-    const display = displays.find(d => d.id === displayId);
-    if (!display || !display.item) return null;
-
-    const itemId = display.item;
-    display.item = null;
-    this.addToInventory(itemId, 1, { silent: true });
-    this._emitMutation('takeItemFromDisplay', { sceneId, displayId, itemId });
-    this.notifyListeners('inventory');
-    return itemId;
-  }
-
-
-  /**
    * Subscribes to state changes. Every mutation calls back with the full
-   * state and an optional hint ('stats', 'inventory', 'quests', 'map',
-   * 'displays', or undefined for a full update) so subscribers can re-render
-   * only the affected region.
+   * state and an optional hint ('stats', 'inventory', 'quests', 'map', 'time',
+   * or undefined for a full update) so subscribers can re-render only the
+   * affected region. A plugin may notify with a hint of its own (the curator
+   * uses 'displays'); an unrecognised hint updates nothing in particular,
+   * which is why a plugin's own render doesn't ride on it.
    *
    * @param {(state: object, hint?: string) => void} callback
    */

@@ -1,7 +1,7 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { gameState } from '../src/core/state.js';
-import curatorPlugin from '../src/plugins/curator.js';
+import curatorPlugin, { getDisplaysForScene } from '../src/plugins/curator.js';
 
 // The plugin's register function injects a reputation header into the page on
 // load. These tests run headless, so a one-method document stub makes that
@@ -185,6 +185,43 @@ function withMuseum(pluginConfigs = WING_CONFIG) {
   return made;
 }
 
+// A scene file's `displays` array is the room's starting furniture. The curator
+// seeds it on init/load rather than on scene render, so a room's cases are known
+// before anything renders that room and asks whether it has any.
+test('authored cases are seeded from the scene files on init', () => {
+  const { engine } = makeEngine();
+  engine.data.scenes = {
+    armor_wing: { name: 'Armor Wing', displays: [{ id: 'mannequin', name: 'Mannequin' }] },
+    kitchen: { name: 'Kitchen' },
+  };
+  curatorPlugin(engine);
+  gameState.init(TEST_RULES, TEST_ITEMS);
+
+  assert.deepEqual(getDisplaysForScene(gameState, 'armor_wing'),
+    [{ id: 'mannequin', name: 'Mannequin', item: null }]);
+  assert.deepEqual(getDisplaysForScene(gameState, 'kitchen'), [],
+    'a room that authors none has none');
+});
+
+test('a save\'s cases win over the authored ones, and seeding never doubles them', () => {
+  const { engine } = makeEngine();
+  engine.data.scenes = {
+    armor_wing: { name: 'Armor Wing', displays: [{ id: 'mannequin', name: 'Mannequin' }] },
+  };
+  curatorPlugin(engine);
+
+  const save = JSON.parse(JSON.stringify(gameState.state));
+  save.plugins = { curator: { displays: {
+    armor_wing: [{ id: 'mannequin', name: 'Mannequin', item: 'relic_crown' }],
+  } } };
+  assert.equal(gameState.loadFromObject(save), true);
+
+  // Seeded again on load, the authored case would either duplicate the row or
+  // reset it to empty — losing the relic the player put there.
+  assert.deepEqual(getDisplaysForScene(gameState, 'armor_wing'),
+    [{ id: 'mannequin', name: 'Mannequin', item: 'relic_crown' }]);
+});
+
 test('build_wing: charges the gold and records the wing in the save', () => {
   const { engine, registry } = withMuseum();
   registry.get('build_wing')({ type: 'build_wing', name: 'Pottery Wing' }, engine);
@@ -308,8 +345,15 @@ test('a pre-time (v3) save with the curator active runs core AND plugin migratio
   // worn, and exhibited.
   assert.deepEqual([...gameState.pluginState('curator').obtainedItems].sort(),
     ['relic_crown', 'relic_shard', 'rusty_sword']);
+  // Curator v2 moved the cases out of core state into the bag — and ran AFTER
+  // v1, whose backfill above reads the old top-level map (relic_shard is only
+  // ever exhibited, so it proves v1 still saw it).
+  assert.equal(gameState.state.displays, undefined, 'the top-level map is gone');
+  assert.deepEqual(gameState.pluginState('curator').displays, {
+    museum_room: [{ id: 'display_1', name: 'Case', item: 'relic_shard' }],
+  }, 'the cases came across intact');
   // Core and plugin versions are partitioned: the core counter never carries
   // the curator's number.
   assert.equal(gameState.state.saveVersion, 5);
-  assert.equal(gameState.state.pluginSaveVersions.curator, 1);
+  assert.equal(gameState.state.pluginSaveVersions.curator, 2);
 });

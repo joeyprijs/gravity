@@ -234,25 +234,6 @@ test('_resolveDiscovery: log key reflects found / found-more / fail', () => {
 
 // ── render preludes ───────────────────────────────────────────────────────────
 
-test('_registerInitialDisplays: registers scene displays once', () => {
-  const { sr } = makeSR();
-  const scene = { displays: [{ id: 'case1', name: 'Glass Case' }] };
-  sr._registerInitialDisplays(scene, 'museum');
-  sr._registerInitialDisplays(scene, 'museum');
-  const displays = gameState.getDisplaysForScene('museum');
-  assert.equal(displays.length, 1);
-  assert.equal(displays[0].id, 'case1');
-});
-
-test('_registerInitialDisplays: leaves save-restored displays untouched', () => {
-  const { sr } = makeSR();
-  gameState.addDisplayToScene('museum', { id: 'from_save', name: 'Old Case', item: 'rusty_sword' });
-  sr._registerInitialDisplays({ displays: [{ id: 'case1', name: 'Glass Case' }] }, 'museum');
-  const displays = gameState.getDisplaysForScene('museum');
-  assert.equal(displays.length, 1);
-  assert.equal(displays[0].id, 'from_save');
-});
-
 // What a reset keeps vs drops is resetAttempts' contract, owned by
 // skill-checks.test.js — here only the scene-side guard is worth a test.
 test('_resetSkillAttempts: checks never attempted are left alone', () => {

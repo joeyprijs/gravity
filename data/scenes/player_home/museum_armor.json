@@ -16,17 +16,11 @@
   "displays": [
     {
       "id": "armor_wing_mannequin",
-      "name": "Heavy Plate Mannequin",
-      "allowedTypes": [
-        "Armor"
-      ]
+      "name": "Heavy Plate Mannequin"
     },
     {
       "id": "armor_wing_shield_mount",
-      "name": "Wall Shield Mount",
-      "allowedTypes": [
-        "Armor"
-      ]
+      "name": "Wall Shield Mount"
     }
   ],
   "options": [

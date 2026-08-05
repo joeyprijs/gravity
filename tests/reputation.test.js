@@ -1,7 +1,13 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { gameState } from '../src/core/state.js';
-import { registerCuratorState, getMuseumReputation } from '../src/plugins/curator.js';
+import {
+  registerCuratorState,
+  getMuseumReputation,
+  addDisplayToScene,
+  placeItemInDisplay,
+  takeItemFromDisplay,
+} from '../src/plugins/curator.js';
 
 const TEST_RULES = {
   playerDefaults: {
@@ -78,16 +84,16 @@ test('exhibiting relics: dynamically updates museum reputation', () => {
   assert.equal(gameState.getPlayer().attributes.reputation, 35);
   assert.equal(getMuseumReputation(), 35); // permanent 35 + 0 display = 35
 
-  const displayId = gameState.addDisplayToScene('museum_room', { name: 'Exhibition Pedestal' });
+  const displayId = addDisplayToScene(gameState, 'museum_room', { name: 'Exhibition Pedestal' });
 
   // Place relic_crown on display
-  gameState.placeItemInDisplay('museum_room', displayId, 'relic_crown');
+  placeItemInDisplay(gameState, 'museum_room', displayId, 'relic_crown');
 
   // Museum reputation should be permanent (35) + display (relic_crown: 25) = 60
   assert.equal(getMuseumReputation(), 60);
 
   // Retrieve relic_crown from display
-  gameState.takeItemFromDisplay('museum_room', displayId);
+  takeItemFromDisplay(gameState, 'museum_room', displayId);
 
   // Museum reputation should drop back to 35
   assert.equal(getMuseumReputation(), 35);

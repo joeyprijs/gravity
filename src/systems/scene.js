@@ -70,8 +70,6 @@ export class SceneRenderer {
       return;
     }
 
-    this._registerInitialDisplays(scene, sceneId);
-
     // Passive checks roll BEFORE the description resolves, so conditional
     // description variants already see the flags they set. Their narration
     // logs after the description block (see below).
@@ -119,21 +117,6 @@ export class SceneRenderer {
     if (startsCombat && this._maybeStartAutoAttack(scene)) return;
 
     this.engine.scrollNarrativeToBottom();
-  }
-
-  // Auto-registers initial displays defined in the scene file, unless the
-  // scene already has displays registered in state (e.g. from a loaded save).
-  _registerInitialDisplays(scene, sceneId) {
-    if (!scene.displays?.length) return;
-    if (this.engine.state.getDisplaysForScene(sceneId).length > 0) return;
-    scene.displays.forEach(d => {
-      this.engine.state.addDisplayToScene(sceneId, {
-        id: d.id,
-        name: d.name,
-        item: d.item || null,
-        allowedTypes: d.allowedTypes || null
-      });
-    });
   }
 
   // Appends the scene description as a new narrative block — but only when the

@@ -46,6 +46,9 @@
     // `window.__SMOKE__` and the document title carry the verdict for
     // automation.
     import { RPGEngine } from './src/core/engine.js';
+    // The museum's cases are the curator's, so reading one goes through the
+    // plugin rather than the StateManager.
+    import { getDisplaysForScene } from './src/plugins/curator.js';
 
     // Set synchronously, before any await: the engine's DOMContentLoaded
     // listener may fire mid-module (the event doesn't wait for top-level
@@ -747,7 +750,7 @@
         panelCards().find(b => text(b).includes('Rusty Sword')).click();
         await until(() => panelCards().some(b => text(b).includes('Install New Display Case')), 'the dashboard again');
         assert(state.countPlayerItem('rusty_sword') === before + 1, 'the relic is in the player\'s bag');
-        const glassCase = state.getDisplaysForScene('home_museum_relics').find(d => d.name === 'Glass Case');
+        const glassCase = getDisplaysForScene(state, 'home_museum_relics').find(d => d.name === 'Glass Case');
         assert(glassCase.item === null, `the case is empty (holds ${glassCase.item})`);
 
         panelCards().find(b => text(b).includes('Return to Museum Lobby')).click();

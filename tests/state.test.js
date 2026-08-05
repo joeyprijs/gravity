@@ -214,14 +214,6 @@ test('withdrawFromChest: clamps to actual chest amount', () => {
   assert.equal(invEntry.amount, 2);
 });
 
-test('placeItemInDisplay: fails if item is not in inventory', () => {
-  gameState.addDisplayToScene('museum', { id: 'pedestal', name: 'Pedestal' });
-  const success = gameState.placeItemInDisplay('museum', 'pedestal', 'no_such_item');
-  assert.equal(success, false);
-  const displays = gameState.getDisplaysForScene('museum');
-  assert.equal(displays[0].item, null);
-});
-
 test('countPlayerItem: correctly counts and filters equipped vs unequipped items', () => {
   // Reset and initialize with starting items
   gameState.init(TEST_RULES);

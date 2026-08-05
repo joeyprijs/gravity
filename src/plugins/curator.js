@@ -5,10 +5,15 @@ import { CSS, EL, LOG } from "../core/config.js";
 // relics for the first time) plus a dynamic bonus from relics currently on
 // display. player.attributes.reputation is the derived sum.
 // Reputation recalculation hangs off the formal StateManager plugin API —
-// mutation hooks, a custom stat handler, and a save migration; no engine or
+// mutation hooks, a custom stat handler, and save migrations; no engine or
 // StateManager methods are wrapped. The plugin's own save data
-// (museumReputation, obtainedItems) lives in the sanctioned plugin bag,
-// state.pluginState('curator').
+// (museumReputation, obtainedItems, rooms, displays) lives in the sanctioned
+// plugin bag, state.pluginState('curator').
+//
+// The display cases are the museum's, not the engine's: the wings, the cases
+// standing in them, and what each case holds are all this plugin's state, and
+// the mutators live here beside them. The engine keeps `chests` — a container
+// any game can author — and knows nothing about exhibiting.
 
 // Hook registrations are per-StateManager: each registered manager gets its
 // own record holding the item database and (when the full plugin runs) the
@@ -21,8 +26,123 @@ import { CSS, EL, LOG } from "../core/config.js";
 const registrations = new WeakMap(); // StateManager → { items, engine }
 let curatorState = null;
 
-// The curator's save-data bag ({ museumReputation, obtainedItems, rooms }).
+// The curator's save-data bag ({ museumReputation, obtainedItems, rooms,
+// displays }).
 const bagOf = (state) => state.pluginState('curator');
+
+// The museum's display cases, keyed by scene id. They live in the bag beside
+// the wings that hold them: a case is museum furniture, not an engine feature —
+// nothing outside this plugin puts anything in one. (Chests are the engine's
+// container primitive; a case holds exactly one item whose identity feeds a
+// score, which is a different mechanic, not a chest with a smaller lid.)
+const displaysOf = (state) => (bagOf(state).displays ??= {});
+
+// Sequence suffix guarantees uniqueness even when two cases are installed
+// within the same millisecond (Date.now() alone would collide).
+let displaySeq = 0;
+
+// A case as it is stored: the authored/installed fields and nothing derived.
+function makeDisplay(config) {
+  displaySeq += 1;
+  return {
+    id: config.id || `display_${Date.now()}_${displaySeq}`,
+    name: config.name || "Display Case",
+    item: config.item || null,
+  };
+}
+
+/**
+ * The display cases registered for a scene (empty array if none).
+ * @param {object} state - The StateManager.
+ * @param {string} sceneId
+ * @returns {Array<{id: string, name: string, item: string|null}>}
+ */
+export function getDisplaysForScene(state, sceneId) {
+  return displaysOf(state)[sceneId] ?? [];
+}
+
+/**
+ * Every scene's cases, keyed by scene id — for the reputation walk, which has
+ * to scan the whole museum at once.
+ * @param {object} state - The StateManager.
+ * @returns {Object<string, Array<{id: string, name: string, item: string|null}>>}
+ */
+export function getAllDisplays(state) {
+  return displaysOf(state);
+}
+
+/**
+ * Installs a new case in a scene.
+ * @param {object} state - The StateManager.
+ * @param {string} sceneId
+ * @param {{id?: string, name?: string, item?: string}} config
+ * @returns {string} The case's id (generated when not supplied).
+ */
+export function addDisplayToScene(state, sceneId, config) {
+  const map = displaysOf(state);
+  const display = makeDisplay(config);
+  (map[sceneId] ??= []).push(display);
+  state.notifyListeners('displays');
+  return display.id;
+}
+
+/**
+ * Moves an item from the player's inventory into a case.
+ * @param {object} state - The StateManager.
+ * @param {string} sceneId
+ * @param {string} displayId
+ * @param {string} itemId
+ * @returns {boolean} False when the case or the item doesn't exist.
+ */
+export function placeItemInDisplay(state, sceneId, displayId, itemId) {
+  const display = getDisplaysForScene(state, sceneId).find(d => d.id === displayId);
+  if (!display) return false;
+  if (state.countPlayerItem(itemId, { includeEquipped: false }) <= 0) return false;
+
+  display.item = itemId;
+  state.removeFromInventory(itemId, 1, { silent: true });
+  // Before the notification, not after: the reputation the render is about to
+  // draw has to already count what now stands in this case. (This is why the
+  // engine's mutation hook fires where it does; owning the mutator, the plugin
+  // keeps the same order without one.)
+  refreshReputation(state);
+  state.notifyListeners('inventory');
+  return true;
+}
+
+/**
+ * Moves the item in a case back into the player's inventory.
+ * @param {object} state - The StateManager.
+ * @param {string} sceneId
+ * @param {string} displayId
+ * @returns {string|null} The item id taken, or null when the case was empty/missing.
+ */
+export function takeItemFromDisplay(state, sceneId, displayId) {
+  const display = getDisplaysForScene(state, sceneId).find(d => d.id === displayId);
+  if (!display?.item) return null;
+
+  const itemId = display.item;
+  display.item = null;
+  state.addToInventory(itemId, 1, { silent: true });
+  refreshReputation(state);
+  state.notifyListeners('inventory');
+  return itemId;
+}
+
+// A scene file's `displays` array is the museum's starting furniture — the two
+// cases the Armor Wing opens with. Seeded once per scene, and never over a save:
+// cases already in the bag are the ones the player installed and filled.
+// Runs on init/load/reset rather than on scene render, because the panel and the
+// scene decorator both ask whether a room has cases while rendering it, which is
+// too late to be discovering them.
+function syncAuthoredDisplays(engine) {
+  if (!engine) return;
+  const map = displaysOf(engine.state);
+  for (const [sceneId, scene] of Object.entries(engine.data.scenes)) {
+    if (!scene.displays?.length || map[sceneId]?.length) continue;
+    map[sceneId] = scene.displays.map(makeDisplay);
+  }
+}
 
 // What building a wing costs when the game's config doesn't say — the demo's
 // configured price. One constant because two places must agree on it: the
@@ -39,7 +159,7 @@ export function getMuseumReputation() {
 // the reputation of every relic currently on display.
 function updateReputation(state, items) {
   let rep = bagOf(state).museumReputation ?? 0;
-  const displays = state.getAllDisplays();
+  const displays = getAllDisplays(state);
   for (const sceneId in displays) {
     for (const display of displays[sceneId]) {
       if (display.item && items[display.item]) {
@@ -48,6 +168,13 @@ function updateReputation(state, items) {
     }
   }
   state.setPlayerAttribute('reputation', rep);
+}
+
+// Recomputes reputation for a state whose item database is only known to its
+// registration — the display mutators above are module functions, so they can't
+// close over the `items` the register call was given.
+function refreshReputation(state) {
+  updateReputation(state, registrations.get(state)?.items ?? {});
 }
 
 // First-time acquisition of a reputation-bearing item awards its reputation
@@ -92,17 +219,16 @@ export function registerCuratorState(state, items = {}, engine = null) {
       case 'init':
       case 'loadFromObject':
       case 'reset':
-        // Rooms first: a loaded save's wings must be on the map (and their
-        // display cases addressable) before anything reads the museum.
+        // Wings first, then the cases standing in them, then what they are
+        // worth: each step reads the one before it. (Built wings carry no
+        // authored cases — the player installs those — but a wing's scene has
+        // to exist before anything walks data.scenes looking for them.)
         syncMuseumRooms(reg.engine);
+        syncAuthoredDisplays(reg.engine);
         updateReputation(state, reg.items);
         break;
       case 'addToInventory':
         handleAcquisition(state, reg.items, info.itemId);
-        break;
-      case 'placeItemInDisplay':
-      case 'takeItemFromDisplay':
-        updateReputation(state, reg.items);
         break;
     }
   });
@@ -136,6 +262,18 @@ export function registerCuratorState(state, items = {}, engine = null) {
     }
     delete data.museumReputation;
     delete data.obtainedItems;
+  });
+
+  // v2: the displays map moved out of core state into this bag, where the wings
+  // holding those cases already lived. MUST run after v1, which reads
+  // data.displays for its obtainedItems backfill — migrate() walks a plugin's
+  // versions in ascending order, so it does; anything that reorders them breaks
+  // that backfill silently.
+  state.registerMigration('curator', 2, (data) => {
+    if (!data.plugins) data.plugins = {};
+    const saved = data.plugins.curator ?? (data.plugins.curator = {});
+    saved.displays ??= data.displays ?? {};
+    delete data.displays;
   });
 }
 
@@ -303,7 +441,7 @@ export default function curatorPlugin(engine) {
     options: (scene, optionsContainer, _engine, sections) => {
       if (scene.showsReputation) showReputationLine(engine);
       const sceneId = engine.state.getCurrentSceneId();
-      const hasDisplays = engine.state.getDisplaysForScene(sceneId).length > 0;
+      const hasDisplays = getDisplaysForScene(engine.state, sceneId).length > 0;
       if (!isMuseumRoom(scene, hasDisplays)) return;
       // Named for the act, not the panel: this is the museum's "Open Personal
       // Chest", and handleOption logs its text as the player's choice. It sits
@@ -326,7 +464,7 @@ export default function curatorPlugin(engine) {
   // (startsCombat: the scene's autoAttack fires right after this emit).
   engine.on('scene:entered', ({ sceneId, scene, isEntry, startsCombat }) => {
     if (!isEntry || engine.inCombat || startsCombat) return;
-    if (!isMuseumRoom(scene, engine.state.getDisplaysForScene(sceneId).length > 0)) return;
+    if (!isMuseumRoom(scene, getDisplaysForScene(engine.state, sceneId).length > 0)) return;
     engine.setCustomUIOpen(true);
     new CuratorUI(engine).render();
   });
@@ -396,7 +534,7 @@ export class CuratorUI {
     // the room (the panel opens on arrival and IS what the room looks like);
     // drilled into a case, it is the case, so the heading follows you in.
     const display = context
-      ? this.engine.state.getDisplaysForScene(sceneId).find(d => d.id === context)
+      ? getDisplaysForScene(this.engine.state, sceneId).find(d => d.id === context)
       : null;
     const { panel, container, skillsContainer } = resetOptionsPanel(display?.name ?? (scene.title || scene.name));
 
@@ -528,7 +666,7 @@ export class CuratorUI {
     const exhibitsSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
     exhibitsSection.appendChild(createElement('div', CSS.SECTION_HEADING, this.engine.t('plugin.curator.curatorHeadingExhibits')));
 
-    const displays = this.engine.state.getDisplaysForScene(sceneId);
+    const displays = getDisplaysForScene(this.engine.state, sceneId);
     if (displays.length > 0) {
       displays.forEach(d => {
         const badge = d.item ? getItemLabel(this.engine.data.items, d.item) : this.engine.t('plugin.curator.curatorEmpty');
@@ -577,9 +715,7 @@ export class CuratorUI {
       const name = customName.trim() || defaultName;
 
       this.engine.state.modifyPlayerStat('gold', -installCost);
-      this.engine.state.addDisplayToScene(sceneId, {
-        name: name
-      });
+      addDisplayToScene(this.engine.state, sceneId, { name });
       this.engine.log(LOG.SYSTEM, this.engine.t('plugin.curator.curatorInstallSuccess', { cost: installCost, name }));
       this.render('dashboard');
     };
@@ -588,7 +724,7 @@ export class CuratorUI {
   }
 
   _renderInspectDisplay(container, panel, skillsContainer, sceneId, displayId) {
-    const displays = this.engine.state.getDisplaysForScene(sceneId);
+    const displays = getDisplaysForScene(this.engine.state, sceneId);
     const display = displays.find(d => d.id === displayId);
     if (!display || !display.item) {
       this.render('dashboard');
@@ -625,7 +761,7 @@ export class CuratorUI {
       stats: itemData ? itemCardStats(t, itemData, this.engine.state.getPlayer().attributes) : undefined,
     });
     itemCard.onclick = () => {
-      this.engine.state.takeItemFromDisplay(sceneId, displayId);
+      takeItemFromDisplay(this.engine.state, sceneId, displayId);
       this.engine.log(LOG.SYSTEM, this.engine.t('actions.displayTook', { name, display: display.name }));
       this.render('dashboard');
     };
@@ -635,7 +771,7 @@ export class CuratorUI {
   }
 
   _renderSelectArtifact(container, panel, skillsContainer, sceneId, displayId) {
-    const displays = this.engine.state.getDisplaysForScene(sceneId);
+    const displays = getDisplaysForScene(this.engine.state, sceneId);
     const display = displays.find(d => d.id === displayId);
     if (!display) {
       this.render('dashboard');
@@ -661,15 +797,15 @@ export class CuratorUI {
     const player = this.engine.state.getPlayer();
     const isEquipped = (itemId) => Object.values(player.equipment).includes(itemId);
 
-    // Filter inventory to show all non-equipped items. Special items are never
-    // exhibited — a story relic belongs in the pack, not behind glass. A case
-    // with allowedTypes only offers what it accepts (placeItemInDisplay
-    // enforces the same gate).
+    // Every case takes anything the player can part with. The museum is theirs;
+    // a case doesn't tell them what belongs in it. Special items are the one
+    // exception, and not the museum's rule — a story relic belongs in the pack,
+    // not behind glass, and every surface that parts the player from an item
+    // says the same.
     let eligibleItems = player.inventory.filter(invItem => {
       if (isEquipped(invItem.item)) return false;
       const itemData = this.engine.data.items[invItem.item];
       if (isSpecialItem(itemData)) return false;
-      if (display.allowedTypes && !display.allowedTypes.includes(itemData?.type)) return false;
       return !!itemData;
     });
 
@@ -681,7 +817,7 @@ export class CuratorUI {
 
         const btn = buildOptionButton(getItemLabel(this.engine.data.items, invItem.item, invItem.amount), badge);
         btn.onclick = () => {
-          this.engine.state.placeItemInDisplay(sceneId, displayId, invItem.item);
+          placeItemInDisplay(this.engine.state, sceneId, displayId, invItem.item);
           this.engine.log(LOG.SYSTEM, this.engine.t('actions.displayDeposited', { name, display: display.name }));
           this.render('dashboard');
         };
