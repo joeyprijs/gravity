@@ -179,8 +179,6 @@
     "shortRestExhausted": "You're too worn to rest again — you need a proper night's sleep.",
     "chestTook": "You retrieved the {name} from the chest.",
     "chestDeposited": "You placed the {name} in the chest.",
-    "displayTook": "You retrieved the {name} from the {display}.",
-    "displayDeposited": "You arranged the {name} in the {display}.",
     "lookAround": "Look Around",
     "lookAroundBadge": "Skill: Perception",
     "skillBadge": {

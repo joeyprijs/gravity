@@ -762,7 +762,7 @@ export class CuratorUI {
     });
     itemCard.onclick = () => {
       takeItemFromDisplay(this.engine.state, sceneId, displayId);
-      this.engine.log(LOG.SYSTEM, this.engine.t('actions.displayTook', { name, display: display.name }));
+      this.engine.log(LOG.SYSTEM, this.engine.t('plugin.curator.displayTook', { name, display: display.name }));
       this.render('dashboard');
     };
     detailSection.appendChild(itemCard);
@@ -818,7 +818,7 @@ export class CuratorUI {
         const btn = buildOptionButton(getItemLabel(this.engine.data.items, invItem.item, invItem.amount), badge);
         btn.onclick = () => {
           placeItemInDisplay(this.engine.state, sceneId, displayId, invItem.item);
-          this.engine.log(LOG.SYSTEM, this.engine.t('actions.displayDeposited', { name, display: display.name }));
+          this.engine.log(LOG.SYSTEM, this.engine.t('plugin.curator.displayDeposited', { name, display: display.name }));
           this.render('dashboard');
         };
         selectSection.appendChild(btn);
