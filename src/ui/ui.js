@@ -306,7 +306,7 @@ export class UIManager {
 
   // Map widget: the minimap structure MapManager.setup() wires up.
   _buildMapWidget(panel) {
-    panel.innerHTML = `<div class="${CSS.PANEL_SECTION}"><div class="minimap" id="minimap" title="${escapeHtml(this.engine.t('ui.minimapTitle'))}" hidden><div class="minimap__canvas" id="minimap-canvas"></div></div></div>`;
+    panel.innerHTML = `<div class="${CSS.PANEL_SECTION}"><div class="minimap" id="minimap" hidden><div class="minimap__canvas" id="minimap-canvas"></div></div></div>`;
   }
 
   // Options widget: the save/load/restart buttons. The click handlers bind in

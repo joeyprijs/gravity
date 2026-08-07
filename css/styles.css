@@ -983,6 +983,24 @@ button.section-toggle--collapsed .section-toggle__label::before {
   line-height: 1.2;
 }
 
+/* The minimap's hover name. A custom element rather than the native title
+   attribute, whose fixed ~1s hover delay reads as unresponsive — a player
+   pointing at a box wants its name now. Follows the cursor from JS
+   (MapManager._moveMapTooltip); pointer-events off so it never steals the
+   hover that placed it. */
+.map-tooltip {
+  position: fixed;
+  z-index: 50;
+  pointer-events: none;
+  padding: 2px 8px;
+  border: 1px solid var(--panel-border);
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.85);
+  color: var(--map-node-text);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
 /* A building on the full map: an outline gathering the rooms the player has
    walked, named above them. The rooms keep their own colours — the outline is
    the only thing that says they are one building, which is why it sits outside

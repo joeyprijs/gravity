@@ -172,7 +172,8 @@
         assert(!$('#minimap').hidden, 'the minimap is showing');
         const nodes = $$('#minimap-canvas .map-node');
         assert(nodes.length === 1, `the room the player woke up in is on it (got ${nodes.length} nodes)`);
-        assert(nodes[0].title === 'Cellar', `and it is the cellar (got "${nodes[0].title}")`);
+        const bootName = text(nodes[0].querySelector('.map-node__label'));
+        assert(bootName === 'Cellar', `and it is the cellar (got "${bootName}")`);
         assert(nodes[0].classList.contains('map-node--current'), 'marked as where they are');
       });
 
@@ -1112,9 +1113,17 @@
           'buildings paint under the world, never over it');
 
         // A name is unreadable at this scale, so the labels are hidden and come
-        // back as hover titles instead — which is the only way to tell one
-        // unlabeled box from another, and so has to stay on every one of them.
-        const hoverNames = $$('#minimap-canvas .map-node').map(n => n.title);
+        // back through the hover tooltip instead — which is the only way to
+        // tell one unlabeled box from another, and so has to work on every one.
+        const tipFor = (node) => {
+          const r = node.getBoundingClientRect();
+          node.dispatchEvent(new MouseEvent('mousemove', { bubbles: true,
+            clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }));
+          const tip = $('.map-tooltip');
+          return tip && !tip.hidden ? text(tip) : '';
+        };
+        const hoverNames = $$('#minimap-canvas .map-node').map(tipFor);
+        $('#minimap').dispatchEvent(new MouseEvent('mouseleave'));
         assert(hoverNames.length && hoverNames.every(Boolean),
           `every box names itself on hover (got ${hoverNames.join(', ')})`);
         assert(hoverNames.includes('Your House') && hoverNames.includes('Forge Lane'),

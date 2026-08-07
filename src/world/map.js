@@ -46,12 +46,22 @@ export class MapManager {
     // Anything that changes map appearance without moving the player must
     // call invalidateMinimap() first (as the map tab switch in ui.js does).
     this._minimapCacheKey = null;
+
+    // The shared hover tooltip for minimap boxes, created on first use.
+    this._tooltipEl = null;
   }
 
   // Wires the open/close triggers for the full-screen map overlay (minimap
   // click, close button, ESC, backdrop click).
   setup() {
-    document.getElementById(EL.MINIMAP).addEventListener('click', () => this.openFullMap());
+    const minimapEl = document.getElementById(EL.MINIMAP);
+    minimapEl.addEventListener('click', () => this.openFullMap());
+
+    // Instant hover names: the native title tooltip sits behind the browser's
+    // ~1s hover delay, so a custom element carries the label instead. Delegated
+    // to the minimap container because the canvas is rebuilt on every move.
+    minimapEl.addEventListener('mousemove', (e) => this._moveMapTooltip(e));
+    minimapEl.addEventListener('mouseleave', () => this._hideMapTooltip());
     document.getElementById(EL.FULLMAP_CLOSE).addEventListener('click', () => this.closeFullMap());
 
     document.addEventListener('keydown', (e) => {
@@ -95,6 +105,12 @@ export class MapManager {
       return;
     }
 
+    // Unhide before measuring: a [hidden] element has no offsetWidth, so the
+    // very first render (boot, or a save loaded from the character screen)
+    // would fall back to MINIMAP_SIZE and project everything for the wrong
+    // square — then cache it. The fallback still covers the panel itself
+    // being hidden (inactive map tab), which the tab switch re-renders.
+    minimapEl.hidden = false;
     const size = minimapEl.offsetWidth || MINIMAP_SIZE;
     const view = this._minimapView(currentSceneId, placements, size);
 
@@ -107,10 +123,6 @@ export class MapManager {
 
     for (const { def, label, background, isCurrent } of placements) {
       const node = this._buildMapNode(label, isCurrent);
-      // The name is already built into the node and hidden at this scale, so it
-      // comes back as the hover title — the way the top bar's icons keep their
-      // labels. Unlabeled boxes you can name by pointing at them.
-      node.title = label;
       node.style.top    = ((def.top  - view.top)  * view.scale) + 'px';
       node.style.left   = ((def.left - view.left) * view.scale) + 'px';
       node.style.width  = (def.width  * view.scale) + 'px';
@@ -120,7 +132,6 @@ export class MapManager {
     }
 
     canvasEl.replaceWith(fresh);
-    minimapEl.hidden = false;
     this._minimapCacheKey = currentSceneId;
   }
 
@@ -143,6 +154,7 @@ export class MapManager {
     canvasEl.style.height = `${height}px`;
 
     this._renderSceneNodes(canvasEl, this._fullMapPlacements(currentSceneId));
+    this._hideMapTooltip();
     overlay.hidden = false;
 
     // Center the scroll viewport on the player's scene. requestAnimationFrame
@@ -160,6 +172,32 @@ export class MapManager {
 
   closeFullMap() {
     document.getElementById(EL.FULLMAP_OVERLAY).hidden = true;
+  }
+
+  // Shows the hovered box's name at the cursor, or hides it between boxes.
+  // The name is already built into the node and hidden at this scale, so the
+  // tooltip reads it back out. Unlabeled boxes you can name by pointing at them.
+  _moveMapTooltip(e) {
+    const node = e.target.closest(`.${CSS.MAP_NODE}`);
+    const label = node?.querySelector(`.${CSS.MAP_NODE_LABEL}`)?.textContent;
+    if (!label) {
+      this._hideMapTooltip();
+      return;
+    }
+
+    if (!this._tooltipEl) {
+      this._tooltipEl = document.createElement('div');
+      this._tooltipEl.className = CSS.MAP_TOOLTIP;
+      document.body.appendChild(this._tooltipEl);
+    }
+    this._tooltipEl.textContent = label;
+    this._tooltipEl.style.left = `${e.clientX + 12}px`;
+    this._tooltipEl.style.top = `${e.clientY + 16}px`;
+    this._tooltipEl.hidden = false;
+  }
+
+  _hideMapTooltip() {
+    if (this._tooltipEl) this._tooltipEl.hidden = true;
   }
 
   // Forces a full minimap redraw on the next renderMinimap call — for changes

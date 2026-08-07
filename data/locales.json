@@ -121,7 +121,6 @@
     "equippedSection": "Equipped",
     "equippedTo": "Equipped: {slot}",
     "worldMapTitle": "World Map",
-    "minimapTitle": "Click to open full map",
     "itemRequires": "Requires: {name}",
     "locationDialogue": "{name}",
     "locationMerchant": "{name}",
