@@ -3,20 +3,6 @@
 // navigator.languages).
 
 /**
- * Picks the active language from the languages a game ships and the user's
- * preference list. Preference tags are matched case-insensitively against the
- * available codes, first as the exact tag (e.g. "pt-BR"), then by base code
- * (e.g. "pt").
- *
- * @param {string[]} [available] - Language codes the game has a locale file for
- *   (the manifest's `locales` keys).
- * @param {readonly string[]} [preferred] - User preference list, most preferred
- *   first (typically `navigator.languages`).
- * @param {string} [fallback='en'] - Language used when no preference matches.
- * @returns {string} The resolved language code: the first preference with an
- *   available match, else the fallback, else the first available language.
- */
-/**
  * Locale-aware list joining ("A, B, and C" in English, with each language's
  * own separators and conjunction) — list grammar never lives in code.
  *
@@ -40,6 +26,20 @@ export function isOne(language, count) {
   return new Intl.PluralRules(language).select(count) === 'one';
 }
 
+/**
+ * Picks the active language from the languages a game ships and the user's
+ * preference list. Preference tags are matched case-insensitively against the
+ * available codes, first as the exact tag (e.g. "pt-BR"), then by base code
+ * (e.g. "pt").
+ *
+ * @param {string[]} [available] - Language codes the game has a locale file for
+ *   (the manifest's `locales` keys).
+ * @param {readonly string[]} [preferred] - User preference list, most preferred
+ *   first (typically `navigator.languages`).
+ * @param {string} [fallback='en'] - Language used when no preference matches.
+ * @returns {string} The resolved language code: the first preference with an
+ *   available match, else the fallback, else the first available language.
+ */
 export function resolveLanguage(available = [], preferred = [], fallback = 'en') {
   const norm = (tag) => String(tag).toLowerCase();
   for (const tag of preferred) {

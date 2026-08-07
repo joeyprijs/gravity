@@ -509,7 +509,6 @@ export function attrRowHtml({ label, valueHtml, icon = '', extraClasses = '', tr
  * array of lines). Returns the button element — caller sets .onclick and
  * .disabled.
  */
-
 export function buildOptionButton(text, reqText = null) {
   return buildCard({ tag: 'button', title: text, stats: reqText ?? undefined });
 }
