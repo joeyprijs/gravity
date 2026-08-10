@@ -282,7 +282,7 @@ export function equipmentAttributeBonuses(itemData) {
 // Item attributes the generic stat-line loop must skip: authoring data that
 // isn't a player-facing stat (a scene id on a card helps nobody), and
 // attackAttribute, which gets its own "Uses:" line above the loop.
-const HIDDEN_ITEM_ATTRS = new Set(['teleportScene', 'attackAttribute', 'actionPoints']);
+const HIDDEN_ITEM_ATTRS = new Set(['teleportScene', 'attackAttribute', 'actionPoints', 'damageAttribute']);
 
 /**
  * The display name of an attribute (actions.skillBadgeFree.<id>), falling
@@ -310,16 +310,20 @@ export function attributeLabel(t, attrId) {
  * @param {object} itemData - The item definition from data/items.
  * @param {Object<string, number>} [attributes] - The wielder's attributes,
  *   used to show the governing attribute's current modifier.
+ * @param {{current: number, max: number}|null} [uses] - The item's remaining
+ *   rest-limited uses (state.getItemUses) — live state, so the caller looks
+ *   it up. Null/omitted renders no uses line.
  * @returns {string[]} Stat lines, possibly empty.
  */
-export function itemStatLines(t, itemData, attributes = {}) {
+export function itemStatLines(t, itemData, attributes = {}, uses = null) {
   const lines = [];
   const apCost = itemData.attributes?.actionPoints;
   if (apCost !== undefined) {
     lines.push(t('itemStats.actionPoints', { value: apCost }));
   }
-  // The hit line shows the governing attribute with the wielder's current
-  // modifier ("Uses: Strength +2") — accuracy is the wielder's, so show theirs.
+  // The hit line spells out the attack roll ("Attack: 1d20 + Strength") —
+  // accuracy is the wielder's, so their current modifier rides along as a
+  // locale param for locales that want to show it.
   const attackAttr = itemData.attributes?.attackAttribute;
   if (attackAttr) {
     const mod = attributes[attackAttr] ?? 0;
@@ -341,10 +345,31 @@ export function itemStatLines(t, itemData, attributes = {}) {
         continue;
       }
       if (typeof v === 'object') continue;
+      // The damage line carries the wielder-scaling attribute when the weapon
+      // names one ("Damage: 8d6 + Intelligence") — one stat, one line.
+      if (k === 'damageRoll' && itemData.attributes.damageAttribute) {
+        lines.push(t('itemStats.damageRollWithAttribute', {
+          value: v, attribute: attributeLabel(t, itemData.attributes.damageAttribute),
+        }));
+        continue;
+      }
+      // targets is semantic ("all" or a cap), so its line is a dedicated key,
+      // not the raw data value.
+      if (k === 'targets') {
+        lines.push(v === 'all' ? t('itemStats.targetsAll') : t('itemStats.targets', { value: v }));
+        continue;
+      }
       const key = `itemStats.${k}`;
       const line = t(key, { value: v });
       lines.push(line !== key ? line : `${k}: ${v}`);
     }
+  }
+  // The remaining rest-limited uses trail the item's fixed facts — live
+  // state, not a property of the item. The line names the rest that brings
+  // the charges back, so the key splits on the refresh.
+  if (uses) {
+    lines.push(t(uses.refresh === 'short_rest' ? 'itemStats.usesShortRest' : 'itemStats.usesFullRest',
+      { current: uses.current, max: uses.max }));
   }
   return lines;
 }
@@ -365,11 +390,13 @@ export function itemStatLines(t, itemData, attributes = {}) {
  * @param {boolean} [options.slot=true] - Whether to lead with the slot row. The
  *   equipped list passes false: its cards already say "Equipped: Torso", and a
  *   card must not state the same fact twice.
+ * @param {{current: number, max: number}|null} [options.uses=null] - Remaining
+ *   rest-limited uses (see itemStatLines).
  * @returns {string[]|undefined} Stat lines, or undefined if the item has none
  *   (buildCard's `stats` takes undefined for "no stat block").
  */
-export function itemCardStats(t, itemData, attributes = {}, { slot = true } = {}) {
-  const lines = itemStatLines(t, itemData, attributes);
+export function itemCardStats(t, itemData, attributes = {}, { slot = true, uses = null } = {}) {
+  const lines = itemStatLines(t, itemData, attributes, uses);
   // Where it's worn leads, because it's what the player checks first on gear.
   // Only armor's slot is shown: a weapon or spell goes to whichever hand is
   // free whatever it declares (see pickHand), so printing its slot would lie.

@@ -1,0 +1,18 @@
+{
+  "name": "Fireball",
+  "type": "Spell",
+  "slot": "Right Hand",
+  "description": "Hurl a roaring sphere of flame and choose where it bursts. Anything caught inside is not spared.",
+  "value": 300,
+  "attributes": {
+    "damageRoll": "3d6",
+    "damageAttribute": "intelligence",
+    "attackAttribute": "intelligence",
+    "actionPoints": 3,
+    "targets": 3,
+    "uses": {
+      "max": 3,
+      "refresh": "full_rest"
+    }
+  }
+}

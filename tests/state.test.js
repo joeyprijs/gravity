@@ -254,7 +254,7 @@ test('loadFromObject: applies a valid save and migrates an old one forward', () 
   const ok = gameState.loadFromObject({ player: {}, log: [] }); // no saveVersion → migrates from 0
   assert.equal(ok, true);
   assert.equal(gameState.getPlayer().name, ''); // migration 1 added player.name
-  assert.equal(gameState.state.saveVersion, 5); // brought up to the current version
+  assert.equal(gameState.state.saveVersion, 6); // brought up to the current version
   assert.deepEqual(gameState.state.time, { ticks: 0 }); // migration 4 seeded the clock
   assert.deepEqual(gameState.state.timers, []);
 });
@@ -274,6 +274,21 @@ test('migrate v5: bare mission status strings become { status } objects, stages 
   const again = JSON.parse(JSON.stringify(gameState.state));
   gameState.loadFromObject(again);
   assert.deepEqual(gameState.state.missions.escape, { status: 'active', stage: 'find_key' });
+});
+
+test('migrate v6: a save without itemUses loads with every rest-limited use available, spent uses survive a round-trip', () => {
+  const items = { fire_spell: { name: 'F', type: 'Spell', attributes: { uses: { max: 3, refresh: 'short_rest' } } } };
+  gameState.init(TEST_RULES, items);
+  const ok = gameState.loadFromObject({ saveVersion: 5, player: { name: 'x' }, log: [] });
+  assert.equal(ok, true);
+  assert.deepEqual(gameState.getItemUses('fire_spell'), { current: 3, max: 3, refresh: 'short_rest' });
+  assert.equal(gameState.getItemUses('unknown_or_unlimited'), null);
+
+  // A current save with spent uses survives a reload untouched.
+  gameState.spendItemUse('fire_spell');
+  const again = JSON.parse(JSON.stringify(gameState.state));
+  gameState.loadFromObject(again);
+  assert.deepEqual(gameState.getItemUses('fire_spell'), { current: 2, max: 3, refresh: 'short_rest' });
 });
 
 test('getMissionStage: falls back to the first declared stage for started missions without one', () => {
@@ -441,7 +456,7 @@ test('registerMigration: requires a plugin id and a positive integer version, re
 test('plugin migrations run on their own version line, partitioned from the core counter', () => {
   const ok = gameState.loadFromObject({ player: {}, log: [] }); // v0 save
   assert.equal(ok, true);
-  assert.equal(gameState.state.saveVersion, 5);                    // core line untouched by the plugin
+  assert.equal(gameState.state.saveVersion, 6);                    // core line untouched by the plugin
   assert.equal(gameState.state.pluginSaveVersions.demo, 1);        // plugin line stamped separately
   assert.deepEqual(gameState.state.plugins.demo, { seeded: true }); // and the migration ran
 
@@ -461,7 +476,7 @@ test('migrate: a pre-partition save stamped 5 by a plugin adopts the core versio
     saveVersion: 5, player: { name: 'x' }, log: [],
     missions: { escape: 'active' }, // pre-v5 string shape proves v5 ran
   });
-  assert.equal(gameState.state.saveVersion, 5);
+  assert.equal(gameState.state.saveVersion, 6);
   assert.deepEqual(gameState.state.missions.escape, { status: 'active' }, 'the v5 mission migration ran after adoption');
   assert.equal(gameState.state.pluginSaveVersions.demo, 1); // the plugin line still catches up
 });

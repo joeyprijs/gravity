@@ -195,6 +195,26 @@ test('full_rest refills the short-rest pool along with HP', () => {
   assert.equal(gameState.getPlayer().resources.shortRests.current, 2);
 });
 
+test('rests restore rest-limited item uses: a short rest only the short_rest items, a full rest everything', () => {
+  const items = {
+    fire_spell: { name: 'F', type: 'Spell', attributes: { uses: { max: 3, refresh: 'short_rest' } } },
+    big_spell:  { name: 'B', type: 'Spell', attributes: { uses: { max: 2, refresh: 'full_rest' } } },
+  };
+  gameState.init(SHORT_REST_RULES, items);
+  const { run } = makeEngine({ rules: SHORT_REST_RULES, items });
+  gameState.spendItemUse('fire_spell');
+  gameState.spendItemUse('big_spell');
+
+  run({ type: ACTIONS.SHORT_REST });
+  assert.equal(gameState.getItemUses('fire_spell').current, 3, 'a breather brings the short-rest spell back');
+  assert.equal(gameState.getItemUses('big_spell').current, 1, 'the full-rest spell stays spent');
+
+  gameState.spendItemUse('fire_spell');
+  run({ type: ACTIONS.FULL_REST });
+  assert.equal(gameState.getItemUses('fire_spell').current, 3);
+  assert.equal(gameState.getItemUses('big_spell').current, 2, 'a night restores everything');
+});
+
 test('short_rest: a string log override narrates instead of the default yield', () => {
   gameState.init(SHORT_REST_RULES);
   const { run, calls } = makeEngine({ rules: SHORT_REST_RULES });

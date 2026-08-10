@@ -1,6 +1,7 @@
 import { test, beforeEach, afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { CombatSystem } from '../src/systems/combat.js';
+import { splashTargets } from '../src/ui/combat-ui.js';
 import { gameState } from '../src/core/state.js';
 import { ENEMY_CLAW_ID } from '../src/core/config.js';
 
@@ -287,6 +288,259 @@ test('playerAttack: calls endCombat when last enemy is defeated', () => {
   cs.playerAttack(weapon, enemy);
 
   assert.ok(endCombatCalled, 'endCombat should be called when last enemy dies');
+
+  Math.random = orig;
+});
+
+// ─── rest-limited uses (attributes.uses) ─────────────────────────────────────
+
+test('playerAttack: a rest-limited spell spends one use per cast, hit or miss, and refuses when spent', () => {
+  const orig = Math.random;
+  Math.random = () => 0.9999; // always hits AC 5
+
+  const spell = {
+    id: 'test_fireball', name: 'Test Fireball', type: 'Spell',
+    attributes: { actionPoints: 1, damageRoll: '1d6', uses: { max: 2, refresh: 'full_rest' } },
+  };
+  const items = { test_fireball: spell };
+  gameState.init(TEST_RULES, items);
+  const cs = makeCS(items);
+  cs.engine.setMode('combat');
+  const enemy = makeEnemy({ hp: 100, ac: 5 });
+  cs.enemies = [enemy];
+
+  cs.playerAttack(spell, enemy);
+  assert.deepEqual(gameState.getItemUses('test_fireball'), { current: 1, max: 2, refresh: 'full_rest' });
+
+  Math.random = () => 0; // the second cast misses — the use is spent regardless
+  cs.playerAttack(spell, enemy);
+  assert.deepEqual(gameState.getItemUses('test_fireball'), { current: 0, max: 2, refresh: 'full_rest' });
+
+  // Spent: the cast resolves nothing — no damage, no AP, no negative uses.
+  Math.random = () => 0.9999;
+  const hpBefore = enemy.attributes.healthPoints;
+  const apBefore = ap();
+  cs.playerAttack(spell, enemy);
+  assert.equal(enemy.attributes.healthPoints, hpBefore, 'no damage may land on a refused cast');
+  assert.equal(ap(), apBefore, 'no AP spends on a refused cast');
+  assert.deepEqual(gameState.getItemUses('test_fireball'), { current: 0, max: 2, refresh: 'full_rest' });
+
+  Math.random = orig;
+});
+
+// ─── playerAttackMulti (targets: "all") ────────────────────────────────────────
+
+// Minimal AoE weapon fixture — one cast strikes every living enemy.
+function makeAoeWeapon({ actionPoints = 3, damageRoll = '1d6', attackAttribute, damageAttribute } = {}) {
+  return { name: 'Test Blast', type: 'Spell', attributes: { actionPoints, damageRoll, attackAttribute, damageAttribute, targets: 'all' } };
+}
+
+test('playerAttackMulti: one roll catches every enemy it meets and misses the rest', () => {
+  const orig = Math.random;
+  Math.random = () => 0.9999; // d20 → 20
+
+  const cs = makeCS();
+  cs.engine.setMode('combat');
+  const caught = makeEnemy({ hp: 100, ac: 5 });
+  const missed = makeEnemy({ hp: 100, ac: 100 });
+  cs.enemies = [caught, missed];
+
+  cs.playerAttackMulti(makeAoeWeapon());
+
+  assert.ok(caught.attributes.healthPoints < 100, 'the roll meets AC 5 — damage lands');
+  assert.equal(missed.attributes.healthPoints, 100, 'the same roll cannot meet AC 100');
+
+  Math.random = orig;
+});
+
+test('playerAttackMulti: each caught enemy takes its own damage roll', () => {
+  // One d20 (max), then two independent d6s: 6 for the first enemy, 1 for
+  // the second — distinct deltas prove per-target dice.
+  const rolls = [0.9999, 0.9999, 0];
+  const orig = Math.random;
+  Math.random = () => rolls.shift() ?? 0;
+
+  const cs = makeCS();
+  cs.engine.setMode('combat');
+  const first = makeEnemy({ hp: 100, ac: 5 });
+  const second = makeEnemy({ hp: 100, ac: 5 });
+  cs.enemies = [first, second];
+
+  cs.playerAttackMulti(makeAoeWeapon());
+
+  assert.equal(first.attributes.healthPoints, 94);
+  assert.equal(second.attributes.healthPoints, 99);
+
+  Math.random = orig;
+});
+
+test('playerAttackMulti: spends the AP cost once, not per enemy', () => {
+  const orig = Math.random;
+  Math.random = () => 0.9999;
+
+  const cs = makeCS();
+  cs.engine.setMode('combat');
+  cs.enemies = [makeEnemy({ hp: 100, ac: 5 }), makeEnemy({ hp: 100, ac: 5 })];
+  const apBefore = ap();
+
+  cs.playerAttackMulti(makeAoeWeapon({ actionPoints: 1 }));
+
+  assert.equal(ap(), apBefore - 1);
+
+  Math.random = orig;
+});
+
+test('playerAttackMulti: a cast the turn budget cannot afford resolves nothing', () => {
+  const orig = Math.random;
+  Math.random = () => 0.9999;
+
+  const cs = makeCS();
+  cs.engine.setMode('combat');
+  const enemy = makeEnemy({ hp: 100, ac: 5 });
+  cs.enemies = [enemy];
+
+  gameState.modifyPlayerStat('ap', -3); // drain the pool to 0
+  cs.playerAttackMulti(makeAoeWeapon({ actionPoints: 3 }));
+
+  assert.equal(enemy.attributes.healthPoints, 100, 'no damage may land on a refused spend');
+  assert.equal(ap(), 0);
+
+  Math.random = orig;
+});
+
+test('playerAttackMulti: calls endCombat once when the cast fells every enemy', () => {
+  const orig = Math.random;
+  Math.random = () => 0.9999;
+
+  const cs = makeCS();
+  cs.engine.setMode('combat');
+  cs.enemies = [makeEnemy({ hp: 1, ac: 1 }), makeEnemy({ hp: 1, ac: 1 })];
+
+  let endCombatCalls = 0;
+  cs.endCombat = (isVictory) => { endCombatCalls++; assert.equal(isVictory, true); };
+
+  cs.playerAttackMulti(makeAoeWeapon());
+
+  assert.equal(endCombatCalls, 1);
+
+  Math.random = orig;
+});
+
+test('splashTargets: a window on the enemy line, centered where the ends allow', () => {
+  const [a, b, c, d, e] = ['a', 'b', 'c', 'd', 'e'];
+  const line = [a, b, c, d, e];
+
+  // Mid-line: the target sits in the middle of the window.
+  assert.deepEqual(splashTargets(line, c, 3), [b, c, d]);
+  // At the ends the window clamps instead of wrapping — a blast on the
+  // front never catches the back rank.
+  assert.deepEqual(splashTargets(line, a, 3), [a, b, c]);
+  assert.deepEqual(splashTargets(line, e, 3), [c, d, e]);
+  // An even cap leans forward: the target plus the next in line.
+  assert.deepEqual(splashTargets(line, c, 2), [c, d]);
+  // A cap covering everyone is everyone, whatever was clicked.
+  assert.deepEqual(splashTargets(line, b, 5), line);
+  assert.deepEqual(splashTargets(line, b, 9), line);
+});
+
+test('playerAttackMulti: an explicit target list burns only the chosen', () => {
+  const orig = Math.random;
+  Math.random = () => 0.9999;
+
+  const cs = makeCS();
+  cs.engine.setMode('combat');
+  const first = makeEnemy({ hp: 100, ac: 5 });
+  const spared = makeEnemy({ hp: 100, ac: 5 });
+  const third = makeEnemy({ hp: 100, ac: 5 });
+  cs.enemies = [first, spared, third];
+
+  const weapon = makeAoeWeapon();
+  weapon.attributes.targets = 3;
+  cs.playerAttackMulti(weapon, [first, third]);
+
+  assert.ok(first.attributes.healthPoints < 100);
+  assert.equal(spared.attributes.healthPoints, 100, 'an unaimed enemy is untouched');
+  assert.ok(third.attributes.healthPoints < 100);
+
+  Math.random = orig;
+});
+
+test('playerAttackMulti: a dead enemy is not a target', () => {
+  const orig = Math.random;
+  Math.random = () => 0.9999;
+
+  const cs = makeCS();
+  cs.engine.setMode('combat');
+  const dead = makeEnemy({ hp: 0, ac: 1 });
+  const living = makeEnemy({ hp: 100, ac: 1 });
+  cs.enemies = [dead, living];
+
+  cs.playerAttackMulti(makeAoeWeapon());
+
+  assert.equal(dead.attributes.healthPoints, 0, 'the fallen take no further damage');
+  assert.ok(living.attributes.healthPoints < 100);
+
+  Math.random = orig;
+});
+
+// ─── damageAttribute ─────────────────────────────────────────────────────────
+
+test('playerAttack: the weapon\'s damageAttribute joins the damage total and breakdown', () => {
+  const orig = Math.random;
+  Math.random = () => 0.9999; // d20 → 20, 1d6 → 6
+
+  gameState.init({
+    ...TEST_RULES,
+    playerDefaults: {
+      ...TEST_RULES.playerDefaults,
+      attributes: { ...TEST_RULES.playerDefaults.attributes, intelligence: 3 },
+    },
+  });
+  const cs = makeCS();
+  cs.engine.t = (key, p) => p ? `${key}:${JSON.stringify(p)}` : key;
+  cs.engine.setMode('combat');
+  const enemy = makeEnemy({ hp: 100, ac: 5 });
+  cs.enemies = [enemy];
+
+  const logged = [];
+  cs.engine.log = (type, message) => logged.push(message);
+  const weapon = makeWeapon({ actionPoints: 1, damageRoll: '1d6' });
+  weapon.attributes.damageAttribute = 'intelligence';
+  cs.playerAttack(weapon, enemy);
+
+  assert.equal(enemy.attributes.healthPoints, 91); // 6 + 3 Intelligence
+  assert.match(logged[1], /"damage":9/);
+  assert.match(logged[1], /6 \+ 3 Intelligence/);
+
+  Math.random = orig;
+});
+
+test('_resolveEnemyAttacks: the enemy\'s own attribute powers the weapon\'s damageAttribute', () => {
+  const orig = Math.random;
+  Math.random = () => 0.9999;
+
+  const cs = makeCS();
+  const weapon = makeWeapon({ actionPoints: 1, damageRoll: '1d6' });
+  weapon.attributes.damageAttribute = 'strength';
+  const enemy = makeEnemy();
+  enemy.attributes.strength = 2;
+  const result = cs._resolveEnemyAttacks(weapon, 1, enemy);
+
+  assert.equal(result.totalDamage, 8); // 6 + 2 Strength
+
+  Math.random = orig;
+});
+
+test('_rollDamage: a negative attribute cannot heal the target', () => {
+  const orig = Math.random;
+  Math.random = () => 0; // 1d6 → 1
+
+  const cs = makeCS();
+  const weapon = makeWeapon({ damageRoll: '1d6' });
+  weapon.attributes.damageAttribute = 'strength';
+  const result = cs._rollDamage(weapon, { strength: -5 });
+
+  assert.equal(result.total, 0); // clamped, not -4
 
   Math.random = orig;
 });

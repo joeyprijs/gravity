@@ -7,6 +7,10 @@
   "attributes": {
     "damageRoll": "2d6",
     "attackAttribute": "intelligence",
-    "actionPoints": 2
+    "actionPoints": 2,
+    "uses": {
+      "max": 3,
+      "refresh": "short_rest"
+    }
   }
 }

@@ -510,24 +510,39 @@ test('flags bad levelUp.statPoints, customAttributes max, and item attribute ref
   data.rules.customAttributes.push({ id: 'grit', default: 3, max: 1 });
   data.locale.actions.skillBadge.grit = 'Grit {dc}';
   data.locale.actions.skillBadgeFree.grit = 'Grit';
-  data.items.wand = { name: 'Wand', type: 'Spell', attributes: { attackAttribute: 'sorcery' } };
+  data.items.wand = { name: 'Wand', type: 'Spell', attributes: { attackAttribute: 'sorcery', damageAttribute: 'willpower' } };
   data.items.ring = { name: 'Ring', type: 'Armor', attributes: { attributeBonuses: { agility: 1 } } };
   const messages = issuesFor(data);
   assert.ok(messages.some(m => m.includes('levelUp.statPoints must be a non-negative integer')));
   assert.ok(messages.some(m => m.includes('"grit": max must be a number')));
   assert.ok(messages.some(m => m.includes('attackAttribute "sorcery" is not a declared attribute')));
+  assert.ok(messages.some(m => m.includes('damageAttribute "willpower" is not a declared attribute')));
   assert.ok(messages.some(m => m.includes('attributeBonuses key "agility" is not a declared attribute')));
+
+  // targets: "all" and a cap >= 2 pass; anything else is flagged.
+  const badTargets = makeToolkitData();
+  badTargets.items.bomb = { name: 'Bomb', type: 'Weapon', attributes: { targets: 1 } };
+  badTargets.items.storm = { name: 'Storm', type: 'Spell', attributes: { targets: 'everyone' } };
+  badTargets.items.burst = { name: 'Burst', type: 'Spell', attributes: { targets: 3 } };
+  badTargets.items.quake = { name: 'Quake', type: 'Spell', attributes: { targets: 'all' } };
+  const targetIssues = issuesFor(badTargets).filter(m => m.includes('targets must be "all" or an integer >= 2'));
+  assert.ok(targetIssues.some(m => m.includes('(got 1)')));
+  assert.ok(targetIssues.some(m => m.includes('(got "everyone")')));
+  assert.equal(targetIssues.length, 2, 'the valid cap and "all" pass');
 });
 
 test('flags a combat NPC whose weapon attackAttribute is missing from its stat block', () => {
   const data = makeToolkitData();
-  data.items.wand = { name: 'Wand', type: 'Spell', attributes: { attackAttribute: 'perception' } };
+  data.items.wand = { name: 'Wand', type: 'Spell', attributes: { attackAttribute: 'perception', damageAttribute: 'charisma' } };
   data.npcs.goblin.equipment = { 'Right Hand': 'wand' };
-  assert.ok(issuesFor(data).some(m => m.includes('declares no perception attribute')));
+  assert.ok(issuesFor(data).some(m => m.includes('(attackAttribute "perception") but declares no perception attribute')));
+  assert.ok(issuesFor(data).some(m => m.includes('(damageAttribute "charisma") but declares no charisma attribute')));
 
-  // Declaring the attribute clears the warning.
+  // Declaring the attributes clears the warnings.
   data.npcs.goblin.attributes.perception = 2;
+  data.npcs.goblin.attributes.charisma = 1;
   assert.ok(!issuesFor(data).some(m => m.includes('declares no perception attribute')));
+  assert.ok(!issuesFor(data).some(m => m.includes('declares no charisma attribute')));
 });
 
 test('flags an unknown item type and an undeclared equipment slot', () => {

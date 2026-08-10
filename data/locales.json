@@ -154,8 +154,13 @@
   "itemStats": {
     "slot": "Slot: {value}",
     "actionPoints": "Action Points: {value}",
-    "hit": "Uses: {attribute} {value}",
+    "hit": "Attack: 1d20 + {attribute}",
+    "usesFullRest": "Charges: {current}/{max} (per long rest)",
+    "usesShortRest": "Charges: {current}/{max} (per short rest)",
     "damageRoll": "Damage: {value}",
+    "damageRollWithAttribute": "Damage: {value} + {attribute}",
+    "targetsAll": "Targets: all enemies",
+    "targets": "Targets: up to {value} enemies",
     "healingAmount": "Healing: {value}",
     "armorClassBonus": "Bonus: +{value} Armor Class",
     "reputation": "Reputation: {value}",
@@ -181,12 +186,12 @@
     "lookAround": "Look Around",
     "lookAroundBadge": "Skill: Perception",
     "skillBadge": {
-      "perception": "Uses: Perception {mod}",
-      "charisma": "Uses: Charisma {mod}",
-      "stealth": "Uses: Stealth {mod}",
-      "strength": "Uses: Strength {mod}",
-      "intelligence": "Uses: Intelligence {mod}",
-      "luck": "Uses: Luck {mod}"
+      "perception": "Roll: 1d20 + Perception",
+      "charisma": "Roll: 1d20 + Charisma",
+      "stealth": "Roll: 1d20 + Stealth",
+      "strength": "Roll: 1d20 + Strength",
+      "intelligence": "Roll: 1d20 + Intelligence",
+      "luck": "Roll: 1d20 + Luck"
     },
     "skillBadgeDc": "Difficulty Check: {dc}",
     "skillBadgeFree": {
@@ -217,6 +222,7 @@
     "teleported": "Use the {name}",
     "alreadyHere": "You are already here.",
     "notEnoughAP": "You're too spent for that. It takes {cost} AP.",
+    "noUsesLeft": "The {name} has no charges left — rest to recover them.",
     "noCombatSave": "Cannot save during combat.",
     "noCombatTeleport": "There's no slipping away like that mid-fight!"
   },
@@ -233,6 +239,11 @@
     "endTurn": "End Turn",
     "attackHit": "You attack with {weapon}: {roll} ({breakdown}) vs AC {ac}, hit!",
     "attackMiss": "You attack with {weapon}: {roll} ({breakdown}) vs AC {ac}, miss!",
+    "aoeAttack": "You unleash {weapon} on every enemy: {roll} ({breakdown}).",
+    "aoeAttackTargets": "You unleash {weapon} at {names}: {roll} ({breakdown}).",
+    "aoeHit": "{target} (AC {ac}) is caught: takes {damage} damage ({dice}: {rollStr}).",
+    "aoeMiss": "It misses {target} (AC {ac}).",
+    "allEnemiesHeading": "All Enemies",
     "enemyTakesDamage": "{target} takes {damage} damage ({dice}: {rollStr}).",
     "enemyAttack": "{name} attacks with {weapon} {times}, {parts}.",
     "enemyAttackHits": "{count} hits: {rolls}",

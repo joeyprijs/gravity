@@ -230,6 +230,11 @@ export class RPGEngine {
       // ever see carriedItems in its { item, amount } object form.
       normalizeCarriedItems(npcs);
 
+      // Stamp each item definition with its manifest id, so consumers handed
+      // a bare definition (the combat attack list) can key per-item state
+      // (player.itemUses) without a reverse lookup.
+      Object.entries(items).forEach(([id, item]) => { item.id = id; });
+
       this.data = { items, npcs, scenes, missions, tables, regions: manifest.regions || {}, worldMapSize: manifest.worldMapSize || DEFAULT_WORLD_MAP_SIZE, minimapRadius: manifest.minimapRadius ?? null, locale: this.data.locale, rules, flags };
 
       // Note: registerMissions and registerSceneFlags are called by init()

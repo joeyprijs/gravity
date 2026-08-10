@@ -238,10 +238,9 @@
         assert($('#scene-narrative .scene'), 'a scene block rendered');
         assert($$('#scene-options .card').length >= 1, 'at least one option card');
         const badge = text($('#scene-options-skills .card .card__stats'));
-        // "Uses:", the same word a weapon card uses for the attribute its
-        // attack rolls with — never "Bonus:", which on a card means a bonus
-        // the item grants.
-        assert(badge.includes('Uses:'), `skill badge "${badge}" shows the modifier`);
+        // "Roll:" spells out the check the same way an item card spells its
+        // attack — never "Bonus:", which on a card means a bonus the item grants.
+        assert(badge.includes('Roll:') && badge.includes('1d20 +'), `skill badge "${badge}" spells out the roll`);
         assert(!badge.includes('Bonus:'), `skill badge "${badge}" does not borrow the item card's word`);
         assert(badge.includes('Difficulty Check'), `skill badge "${badge}" shows the DC`);
       });
@@ -368,8 +367,8 @@
           `armorClassBonus reads the same way (got ${JSON.stringify(rows('Leather Armor'))})`);
 
         // The weapon row is a different fact — the wielder's accuracy, not a
-        // worn bonus — so it no longer borrows the word "Bonus".
-        assert(rows('Rusty Sword').some(([l, v]) => l === 'Uses:' && v === 'Strength +0'),
+        // worn bonus — so it spells out the attack roll instead.
+        assert(rows('Rusty Sword').some(([l, v]) => l === 'Attack:' && v === '1d20 + Strength'),
           `a weapon states what it rolls with (got ${JSON.stringify(rows('Rusty Sword'))})`);
         assert(!rows('Rusty Sword').some(([l]) => l === 'Slot:'),
           'and never claims a slot — the engine picks the hand');
@@ -1263,6 +1262,53 @@
         assert(th.textTransform === 'uppercase', `old headers keep their styling (got ${th.textTransform})`);
         assert(td.fontStyle === 'italic', `old empty cells keep theirs (got ${td.fontStyle})`);
         assert(parseFloat(getComputedStyle(table.querySelector('td')).paddingTop) > 0, 'and the cells keep their padding');
+      });
+
+      await step('a fireball splashes from the enemy it is thrown at', async () => {
+        // The capped multi-target surface (targets: N): the attack reads like
+        // any other — one button under each enemy — and the click centers the
+        // blast there, catching neighbours in encounter order up to the cap.
+        // One roll against every caught AC, per-target damage. Enemy AC is
+        // pinned to 1 so the d20 cannot miss, AP is zeroed so the goblins
+        // never swing back, and xpReward is stripped so ending the fight
+        // can't skew later asserts.
+        const engine = window.gameEngine;
+        const player = engine.state.getPlayer();
+        const prevRightHand = player.equipment['Right Hand'];
+        player.equipment['Right Hand'] = 'fireball';
+
+        const before = $$('.scene--combat').length;
+        engine.combatSystem.startCombat(['goblin_guard', 'goblin_grunt'], {});
+        await until(() => $$('.scene--combat').length > before, 'the combat block to open');
+
+        const fireballs = $$('#scene-options-panel button.card').filter(b => text(b).includes('Fireball'));
+        assert(fireballs.length === 2, `one fireball button under each enemy, like any attack (got ${fireballs.length})`);
+        assert(!$$('#scene-options-panel .section-heading').some(h => text(h) === 'All Enemies'),
+          'a capped attack claims no field-wide section');
+        // Stat lines render as label/value elements, so textContent carries
+        // no space after the colon — match the value halves.
+        assert(text(fireballs[0]).includes('3d6 + Intelligence'), 'the card names the wielder-scaled damage');
+        assert(text(fireballs[0]).includes('up to 3 enemies'), 'and the splash cap');
+        assert(text(fireballs[0]).includes('Charges:3/3 (per long rest)'), 'and the rest-limited charges, naming their rest');
+
+        const cs = engine.combatSystem;
+        cs.enemies.forEach(e => Object.assign(e.attributes,
+          { healthPoints: 500, armorClass: 1, actionPoints: 0, xpReward: 0 }));
+
+        // Thrown at the grunt (second section) — the cap covers its
+        // neighbour too, so one click singes both goblins.
+        fireballs[1].click();
+        await until(() => cs.enemies.every(e => e.attributes.healthPoints < 500), 'both goblins singed by the one cast');
+
+        // The cast spent one rest-limited use, and the rebuilt button says so.
+        assert(engine.state.getItemUses('fireball').current === 2, 'the cast spent a use');
+        await until(() => $$('#scene-options-panel button.card').some(b => text(b).includes('Charges:2/3')),
+          'the attack button to show the spent charge');
+
+        cs.endCombat(true);
+        await until(() => !engine.inCombat, 'the fight closed');
+        player.equipment['Right Hand'] = prevRightHand;
+        engine.state.refreshItemUses('full_rest'); // leave the uses fresh for later steps
       });
 
       await step('buying and selling are narrated, the trade buttons are the choice', async () => {

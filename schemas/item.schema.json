@@ -53,6 +53,25 @@
           "pattern": "^((\\d+)d(\\d+)([\\+\\-]\\d+)?|\\d+\\-\\d+)$",
           "description": "Damage formula: Standard NdF[+/-M] (e.g. '1d6+1') or range (e.g. '1-4')."
         },
+        "damageAttribute": {
+          "type": "string",
+          "description": "Attribute added to this weapon/spell's damage rolls (e.g. \"intelligence\"). The wielder's value applies — player or enemy."
+        },
+        "targets": {
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": [
+                "all"
+              ]
+            },
+            {
+              "type": "integer",
+              "minimum": 2
+            }
+          ],
+          "description": "Multi-target attack: one hit roll compared against each target's AC, every enemy caught taking its own damage roll. \"all\" strikes every living enemy with one click; an integer splashes from the enemy the player attacks — the blast centers on them and catches neighbours in encounter order, up to that many. Omit for a single-target attack."
+        },
         "armorClassBonus": {
           "type": "integer",
           "description": "Flat AC protection added when equipped. Used for Armor."
@@ -79,6 +98,29 @@
           "type": "integer",
           "minimum": 0,
           "description": "Action Points (AP) required to swing/equip/use inside combat."
+        },
+        "uses": {
+          "type": "object",
+          "description": "Rest-limited uses (simplified spell slots): the item can be used at most max times between rests. Omit for an unlimited item.",
+          "properties": {
+            "max": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Uses available between rests."
+            },
+            "refresh": {
+              "type": "string",
+              "enum": [
+                "short_rest",
+                "full_rest"
+              ],
+              "description": "The rest that restores the uses. A full rest always restores everything; \"short_rest\" additionally restores them on a short rest. Defaults to \"full_rest\"."
+            }
+          },
+          "required": [
+            "max"
+          ],
+          "additionalProperties": false
         },
         "reputation": {
           "type": "integer",

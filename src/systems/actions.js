@@ -69,6 +69,9 @@ function handleFullRest(action, engine) {
   // world, only a full rest brings it back (see handleShortRest).
   const shortRest = engine.data.rules?.shortRest;
   if (shortRest?.resource) engine.state.modifyPlayerStat(shortRest.resource, 'full');
+  // Rest-limited item uses (attributes.uses) all come back with a night's
+  // sleep, whichever rest they refresh on.
+  engine.state.refreshItemUses('full_rest');
   if (action.log !== false) {
     // A string override is authored prose — the world's answer, narrated. The
     // default is the act's yield, amended onto the [Player] option line that
@@ -114,6 +117,8 @@ function handleShortRest(action, engine) {
   }
   engine.state.modifyPlayerStat('hp', amount);
   engine.state.modifyPlayerStat(config.resource, -1);
+  // A breather also brings back the item uses that refresh on a short rest.
+  engine.state.refreshItemUses('short_rest');
 
   if (action.log !== false) {
     // Same split as full_rest: authored prose narrates; the default yield

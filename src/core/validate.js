@@ -140,6 +140,19 @@ function validateItems(ctx) {
     const attackAttr = item.attributes?.attackAttribute;
     if (attackAttr && !ctx.knownSkills.has(attackAttr))
       ctx.add(group, `attributes.attackAttribute "${attackAttr}" is not a declared attribute (playerDefaults.attributes or customAttributes)`);
+    const damageAttr = item.attributes?.damageAttribute;
+    if (damageAttr && !ctx.knownSkills.has(damageAttr))
+      ctx.add(group, `attributes.damageAttribute "${damageAttr}" is not a declared attribute (playerDefaults.attributes or customAttributes)`);
+    const targets = item.attributes?.targets;
+    if (targets !== undefined && targets !== 'all' && !(Number.isInteger(targets) && targets >= 2))
+      ctx.add(group, `attributes.targets must be "all" or an integer >= 2 (got ${JSON.stringify(targets)})`);
+    const uses = item.attributes?.uses;
+    if (uses !== undefined) {
+      if (!Number.isInteger(uses?.max) || uses.max < 1)
+        ctx.add(group, `attributes.uses.max must be a positive integer (got ${JSON.stringify(uses?.max)})`);
+      if (uses?.refresh !== undefined && uses.refresh !== 'short_rest' && uses.refresh !== 'full_rest')
+        ctx.add(group, `attributes.uses.refresh must be "short_rest" or "full_rest" (got ${JSON.stringify(uses.refresh)})`);
+    }
     for (const key of Object.keys(item.attributes?.attributeBonuses ?? {})) {
       if (!ctx.knownSkills.has(key))
         ctx.add(group, `attributeBonuses key "${key}" is not a declared attribute (playerDefaults.attributes or customAttributes)`);
@@ -378,9 +391,11 @@ function validateNpcs(ctx) {
       const wielded = Object.values(npc.equipment || {}).filter(Boolean);
       if (!wielded.length && ctx.rules?.fallbackWeapons?.enemy) wielded.push(ctx.rules.fallbackWeapons.enemy);
       for (const itemId of wielded) {
-        const attr = ctx.items[itemId]?.attributes?.attackAttribute;
-        if (attr && npc.attributes[attr] === undefined)
-          ctx.add(group, `wields "${itemId}" (attackAttribute "${attr}") but declares no ${attr} attribute — its attacks roll +0; add "${attr}" to the NPC's attributes`);
+        for (const field of ['attackAttribute', 'damageAttribute']) {
+          const attr = ctx.items[itemId]?.attributes?.[field];
+          if (attr && npc.attributes[attr] === undefined)
+            ctx.add(group, `wields "${itemId}" (${field} "${attr}") but declares no ${attr} attribute — its attacks roll +0; add "${attr}" to the NPC's attributes`);
+        }
       }
     }
 

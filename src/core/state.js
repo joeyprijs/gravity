@@ -6,7 +6,7 @@ const MAX_LOG_ENTRIES = 200;
 // Increment when the save schema changes. loadFromObject() migrates older saves
 // forward so they remain compatible. Each migration function receives the raw
 // parsed data object and mutates it in-place.
-const SAVE_VERSION = 5;
+const SAVE_VERSION = 6;
 
 const MIGRATIONS = {
   // v0 → v1: player.name was added; give it an empty default on older saves.
@@ -41,6 +41,9 @@ const MIGRATIONS = {
       if (typeof entry === 'string') data.missions[id] = { status: entry };
     }
   },
+  // v5 → v6: player.itemUses added (rest-limited item uses). An absent entry
+  // means "full", so older saves load with every use available.
+  6: (data) => { if (!('itemUses' in data.player)) data.player.itemUses = {}; },
 };
 
 // Saves written before plugin migrations had their own version line (see
@@ -114,6 +117,9 @@ function makeDefaultState(rules) {
   });
   // Banked level-up stat points (rules.levelUp.statPoints per level).
   player.statPoints = 0;
+  // Remaining uses of rest-limited items (itemId → remaining). An absent
+  // entry means "full" — see getItemUses.
+  player.itemUses = {};
   return {
     ...makeSkeletonState(),
     player,
@@ -541,6 +547,59 @@ class StateManager {
     }
     if (!changed) return;
     this._emitMutation('modifyPlayerStats', { deltas });
+    this.notifyListeners('stats');
+  }
+
+  /**
+   * The remaining uses of a rest-limited item (attributes.uses). Only spent
+   * counts are stored (player.itemUses); an absent entry reads as full, so
+   * saves that predate an item's uses cap load with every use available.
+   *
+   * @param {string} itemId - The item id (key in data/items).
+   * @returns {{current: number, max: number, refresh: string}|null} Null when
+   *   the item declares no uses cap — an unlimited item. refresh names the
+   *   rest that restores the uses ('short_rest' or the default 'full_rest').
+   */
+  getItemUses(itemId) {
+    const uses = this._items[itemId]?.attributes?.uses;
+    if (!Number.isInteger(uses?.max) || uses.max < 1) return null;
+    const current = this.state.player.itemUses?.[itemId] ?? uses.max;
+    return { current, max: uses.max, refresh: uses.refresh ?? 'full_rest' };
+  }
+
+  /**
+   * Spends one use of a rest-limited item, clamped at 0. A no-op for items
+   * without a uses cap.
+   *
+   * @param {string} itemId - The item id (key in data/items).
+   */
+  spendItemUse(itemId) {
+    const uses = this.getItemUses(itemId);
+    if (!uses) return;
+    (this.state.player.itemUses ??= {})[itemId] = Math.max(0, uses.current - 1);
+    this._emitMutation('spendItemUse', { itemId });
+    this.notifyListeners('stats');
+  }
+
+  /**
+   * Restores rest-limited item uses at a rest boundary. A full rest restores
+   * everything; a short rest only the items that declare
+   * uses.refresh: "short_rest" (the default refresh is the full rest).
+   *
+   * @param {'full_rest'|'short_rest'} rest - The rest being taken.
+   */
+  refreshItemUses(rest) {
+    const spent = this.state.player.itemUses ?? {};
+    let changed = false;
+    for (const itemId of Object.keys(spent)) {
+      const refresh = this._items[itemId]?.attributes?.uses?.refresh ?? 'full_rest';
+      if (rest === 'full_rest' || refresh === rest) {
+        delete spent[itemId];
+        changed = true;
+      }
+    }
+    if (!changed) return;
+    this._emitMutation('refreshItemUses', { rest });
     this.notifyListeners('stats');
   }
 

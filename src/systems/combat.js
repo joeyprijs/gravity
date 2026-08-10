@@ -137,6 +137,26 @@ export class CombatSystem {
   }
 
   /**
+   * Spends one use of a rest-limited weapon/spell (attributes.uses), or
+   * refuses when none remain. The spend lands before the attack resolves —
+   * the cast is committed hit or miss, and ending combat by the kill can't
+   * dodge it. Unlimited items pass through untouched.
+   *
+   * @param {object} weapon - The item object being used.
+   * @returns {boolean} True if the attack may proceed.
+   */
+  _spendItemUse(weapon) {
+    const uses = this.engine.state.getItemUses(weapon.id);
+    if (!uses) return true;
+    if (uses.current < 1) {
+      this.engine.log(LOG.SYSTEM, this.engine.t('player.noUsesLeft', { name: weapon.name }));
+      return false;
+    }
+    this.engine.state.spendItemUse(weapon.id);
+    return true;
+  }
+
+  /**
    * Executes a player attack using an equipped weapon/spell against a target enemy.
    *
    * @param {object} weapon - The item object being used (Weapon/Spell type).
@@ -152,6 +172,7 @@ export class CombatSystem {
       this.engine.log(LOG.SYSTEM, this.engine.t('player.notEnoughAP', { cost: apCost }));
       return;
     }
+    if (!this._spendItemUse(weapon)) return;
 
     // Accuracy is the wielder's: d20 + the weapon's governing attribute
     // (attributes.attackAttribute — strength for a sword, intelligence for a
@@ -164,7 +185,7 @@ export class CombatSystem {
     const breakdown = rollBreakdown(baseRoll, attrMod, attrId ? skillLabel(this.engine, attrId) : '');
 
     if (hitRoll >= targetEnemy.attributes.armorClass) {
-      const dmgResult = parseDamage(weapon.attributes.damageRoll);
+      const dmgResult = this._rollDamage(weapon, this.engine.state.getPlayer().attributes);
       targetEnemy.attributes.healthPoints -= dmgResult.total;
 
       this.engine.log(LOG.PLAYER, this.engine.t('combat.attackHit', {
@@ -187,6 +208,82 @@ export class CombatSystem {
     }), 'damage');
 
     this.engine._spendAP(apCost);
+  }
+
+  /**
+   * Executes a player attack that strikes several enemies with one cast
+   * (attributes.targets): one hit roll, compared against each target's AC,
+   * with every enemy caught taking its own damage roll.
+   *
+   * @param {object} weapon - The item object being used (targets: "all" or a cap).
+   * @param {object[]|null} [targetEnemies] - The enemies in the blast
+   *   (targets: N — splashTargets around the enemy the player attacked).
+   *   Null strikes every living enemy (targets: "all").
+   */
+  playerAttackMulti(weapon, targetEnemies = null) {
+    // Same precheck as playerAttack: damage lands before the spend.
+    const apCost = weapon.attributes?.actionPoints ?? 0;
+    if (this.remainingTurnBudget() < apCost) {
+      this.engine.log(LOG.SYSTEM, this.engine.t('player.notEnoughAP', { cost: apCost }));
+      return;
+    }
+    if (!this._spendItemUse(weapon)) return;
+
+    const player = this.engine.state.getPlayer();
+    const attrId = weapon.attributes?.attackAttribute;
+    const attrMod = attrId ? (player.attributes[attrId] ?? 0) : 0;
+    const baseRoll = roll(1, MAX_D20_ROLL);
+    const hitRoll = baseRoll + attrMod;
+    const breakdown = rollBreakdown(baseRoll, attrMod, attrId ? skillLabel(this.engine, attrId) : '');
+
+    const living = (targetEnemies ?? this.enemies).filter(e => e.attributes.healthPoints > 0);
+
+    // An aimed cast names its chosen targets; "all" speaks of the field.
+    this.engine.log(LOG.PLAYER, targetEnemies
+      ? this.engine.t('combat.aoeAttackTargets', {
+          weapon: weapon.name, roll: hitRoll, breakdown,
+          names: formatList(this.engine.language, living.map(e => e.name))
+        })
+      : this.engine.t('combat.aoeAttack', {
+          weapon: weapon.name, roll: hitRoll, breakdown
+        }), 'damage');
+
+    for (const enemy of living) {
+      if (hitRoll >= enemy.attributes.armorClass) {
+        const dmgResult = this._rollDamage(weapon, player.attributes);
+        enemy.attributes.healthPoints -= dmgResult.total;
+        this.engine.log(LOG.PLAYER, this.engine.t('combat.aoeHit', {
+          target: enemy.name, ac: enemy.attributes.armorClass,
+          damage: dmgResult.total, dice: weapon.attributes.damageRoll, rollStr: dmgResult.string
+        }), 'damage');
+      } else {
+        this.engine.log(LOG.PLAYER, this.engine.t('combat.aoeMiss', {
+          target: enemy.name, ac: enemy.attributes.armorClass
+        }), 'damage');
+      }
+    }
+
+    // Defeats resolve after every target has taken its share of the one cast.
+    for (const enemy of living) {
+      if (enemy.attributes.healthPoints <= 0 && this._handleEnemyDefeat(enemy)) return;
+    }
+
+    this.engine._spendAP(apCost);
+  }
+
+  // One damage roll for a weapon in a wielder's hands: the dice, plus the
+  // wielder's damageAttribute when the weapon names one — damage scales with
+  // its wielder the same way accuracy does (attackAttribute), player or enemy.
+  _rollDamage(weapon, wielderAttributes) {
+    const result = parseDamage(weapon.attributes.damageRoll);
+    const attrId = weapon.attributes?.damageAttribute;
+    const mod = attrId ? (wielderAttributes[attrId] ?? 0) : 0;
+    if (!mod) return result;
+    return {
+      // Clamped like parseDamage — negative damage would heal the target.
+      total: Math.max(0, result.total + mod),
+      string: `${result.string} ${mod < 0 ? '-' : '+'} ${Math.abs(mod)} ${skillLabel(this.engine, attrId)}`
+    };
   }
 
   /**
@@ -344,7 +441,7 @@ export class CombatSystem {
         hits++;
         hitRolls.push(this.engine.t('combat.enemyAttackRoll', { roll: hitRoll, breakdown, ac: player.attributes.ac }));
 
-        const dmgResult = parseDamage(eWeapon.attributes.damageRoll);
+        const dmgResult = this._rollDamage(eWeapon, enemy.attributes);
         totalDamage += dmgResult.total;
         damageRolls.push(dmgResult.string);
 

@@ -57,6 +57,11 @@
         "type": "loot",
         "item": "healing_potion",
         "amount": 1
+      },
+      {
+        "type": "loot",
+        "item": "fireball",
+        "amount": 1
       }
     ],
     "condition": {

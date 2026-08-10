@@ -17,6 +17,13 @@ test('itemStatLines: AP, hit attribute with wielder modifier, then attributes in
   // Missing attribute value reads as +0; no governing attribute → no hit line.
   assert.match(itemStatLines(t, item)[1], /itemStats\.hit.*"\+0"/);
   assert.deepEqual(itemStatLines(t, { attributes: {} }), []);
+
+  // A rest-limited item's live remaining count trails the fixed facts, and
+  // the line's key splits on which rest brings the charges back.
+  const withUses = itemStatLines(t, item, { strength: 2 }, { current: 1, max: 3, refresh: 'full_rest' });
+  assert.match(withUses.at(-1), /itemStats\.usesFullRest.*"current":1.*"max":3/);
+  const shortRest = itemStatLines(t, item, {}, { current: 2, max: 3, refresh: 'short_rest' });
+  assert.match(shortRest.at(-1), /itemStats\.usesShortRest/);
 });
 
 test('itemStatLines: attributeBonuses render one line per entry', () => {
