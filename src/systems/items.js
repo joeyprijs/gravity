@@ -11,7 +11,7 @@ import { parseDamage } from './dice.js';
 function applyStatEffect(engine, itemData, value, stat, msgKey, extraParams = {}) {
   if (!value) return false;
   let amount = value;
-  let rollSuffix = "";
+  let rollSuffix = '';
   if (typeof amount === 'string') {
     const result = parseDamage(amount);
     rollSuffix = engine.t('player.rollSuffix', { dice: amount, roll: result.string });

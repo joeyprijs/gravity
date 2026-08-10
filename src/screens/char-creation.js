@@ -1,5 +1,5 @@
 import { CSS, EL } from '../core/config.js';
-import { getByPath } from '../core/utils.js';
+import { createElement, getByPath } from '../core/utils.js';
 
 // CharCreationScreen manages the pre-game character creation overlay.
 // It lets the player enter a name and distribute a small point budget across
@@ -21,7 +21,8 @@ export class CharCreationScreen {
     this.rules = rules;
     this.state = state;
     this.overlay = document.getElementById(EL.CHAR_CREATION);
-    const stats = rules.charCreation?.stats || [];
+
+    const stats = rules.charCreation?.stats ?? [];
     // Track how many points have been spent on each stat
     this.spent = Object.fromEntries(stats.map(s => [s.id, 0]));
     // Increment buttons per stat ID — kept here so the rules config objects
@@ -38,146 +39,101 @@ export class CharCreationScreen {
   _render() {
     this.overlay.innerHTML = '';
 
-    const panel = document.createElement('div');
-    panel.className = `${CSS.CC_PANEL} ${CSS.PANEL}`;
-
-    const title = document.createElement('h1');
-    title.className = CSS.CC_TITLE;
-    title.textContent = this.t('charCreation.title');
-    panel.appendChild(title);
-
-    panel.appendChild(this._buildNameSection());
-    panel.appendChild(this._buildStatsSection());
-    panel.appendChild(this._buildActionsRow());
+    const panel = createElement('div', [CSS.CC_PANEL, CSS.PANEL]);
+    panel.append(
+      createElement('h1', CSS.CC_TITLE, this.t('charCreation.title')),
+      this._buildNameSection(),
+      this._buildStatsSection(),
+      this._buildActionsRow(),
+    );
 
     this.overlay.appendChild(panel);
   }
 
   // Name input with a random suggestion from the names table.
   _buildNameSection() {
-    const nameSection = document.createElement('div');
-    nameSection.className = CSS.CC_SECTION;
-    const nameLabel = document.createElement('label');
-    nameLabel.className = CSS.CC_LABEL;
-    nameLabel.textContent = this.t('charCreation.nameLabel');
-    const nameInput = document.createElement('input');
-    nameInput.type = 'text';
-    nameInput.className = CSS.CC_NAME_INPUT;
-    nameInput.placeholder = this.t('charCreation.namePlaceholder');
-    nameInput.maxLength = 32;
-    nameInput.autocomplete = 'off';
-    nameInput.addEventListener('input', () => this._updateConfirmBtn());
-    if (this.names.length) {
-      nameInput.value = this.names[Math.floor(Math.random() * this.names.length)];
-    }
-    nameSection.appendChild(nameLabel);
-    nameSection.appendChild(nameInput);
-    this.nameInput = nameInput;
-    return nameSection;
+    const section = createElement('div', CSS.CC_SECTION);
+    const label = createElement('label', CSS.CC_LABEL, this.t('charCreation.nameLabel'));
+
+    const input = createElement('input', CSS.CC_NAME_INPUT);
+    Object.assign(input, {
+      type: 'text',
+      placeholder: this.t('charCreation.namePlaceholder'),
+      maxLength: 32,
+      autocomplete: 'off',
+    });
+    input.addEventListener('input', () => this._updateConfirmBtn());
+    if (this.names.length) input.value = this.names[Math.floor(Math.random() * this.names.length)];
+
+    section.append(label, input);
+    this.nameInput = input;
+    return section;
   }
 
   // Point-allocation section: the remaining-points counter plus one row per
   // stat declared in rules.charCreation.stats.
   _buildStatsSection() {
-    const statsSection = document.createElement('div');
-    statsSection.className = CSS.CC_SECTION;
-    const statsTitle = document.createElement('div');
-    statsTitle.className = CSS.CC_LABEL;
-    statsTitle.textContent = this.t('charCreation.statPoints');
-    statsSection.appendChild(statsTitle);
+    const section = createElement('div', CSS.CC_SECTION);
+    const title = createElement('div', CSS.CC_LABEL, this.t('charCreation.statPoints'));
 
-    this.pointsEl = document.createElement('span');
-    this.pointsEl.className = CSS.CC_POINTS;
+    this.pointsEl = createElement('span', CSS.CC_POINTS);
     this._updatePointsDisplay();
-    statsTitle.appendChild(this.pointsEl);
+    title.appendChild(this.pointsEl);
 
-    const grid = document.createElement('div');
-    grid.className = CSS.CC_STAT_GRID;
-    const stats = this.rules.charCreation?.stats || [];
+    const grid = createElement('div', CSS.CC_STAT_GRID);
+    const stats = this.rules.charCreation?.stats ?? [];
     stats.forEach(stat => grid.appendChild(this._buildStatRow(stat)));
-    statsSection.appendChild(grid);
-    return statsSection;
+
+    section.append(title, grid);
+    return section;
   }
 
   // One stat row: label + description on the left, −/value/+ controls on the right.
   _buildStatRow(stat) {
-    const row = document.createElement('div');
-    row.className = CSS.CC_STAT_ROW;
+    const info = createElement('div', CSS.CC_STAT_INFO);
+    info.append(
+      // Use localeKey for locale lookup (avoids dot-path traversal issues)
+      createElement('span', CSS.CC_STAT_LABEL, this.t(`charCreation.stats.${stat.localeKey}.label`)),
+      createElement('span', CSS.CC_STAT_DESC, this.t(`charCreation.stats.${stat.localeKey}.description`)),
+    );
 
-    const info = document.createElement('div');
-    info.className = CSS.CC_STAT_INFO;
-    const statLabel = document.createElement('span');
-    statLabel.className = CSS.CC_STAT_LABEL;
-    // Use localeKey for locale lookup (avoids dot-path traversal issues)
-    statLabel.textContent = this.t(`charCreation.stats.${stat.localeKey}.label`);
-    const statDesc = document.createElement('span');
-    statDesc.className = CSS.CC_STAT_DESC;
-    statDesc.textContent = this.t(`charCreation.stats.${stat.localeKey}.description`);
-    info.appendChild(statLabel);
-    info.appendChild(statDesc);
+    const valueEl = createElement('span', CSS.CC_STAT_VALUE);
+    const decrementBtn = createElement('button', [CSS.BTN, CSS.CC_STAT_BTN], '−');
+    const incrementBtn = createElement('button', [CSS.BTN, CSS.CC_STAT_BTN], '+');
 
-    const controls = document.createElement('div');
-    controls.className = CSS.CC_STAT_CONTROLS;
-
-    const decrementBtn = document.createElement('button');
-    decrementBtn.className = `${CSS.BTN} ${CSS.CC_STAT_BTN}`;
-    decrementBtn.textContent = '−';
-    decrementBtn.onclick = () => {
-      if (this.spent[stat.id] > 0) {
-        this.spent[stat.id]--;
-        this._updateStatRow(stat, valueEl, decrementBtn, incrementBtn);
-        this._updatePointsDisplay();
-        this._updateConfirmBtn();
-      }
+    const spend = (delta) => {
+      this.spent[stat.id] += delta;
+      this._updateStatRow(stat, valueEl, decrementBtn, incrementBtn);
+      this._updatePointsDisplay();
+      this._updateConfirmBtn();
     };
+    decrementBtn.onclick = () => { if (this.spent[stat.id] > 0) spend(-1); };
+    incrementBtn.onclick = () => { if (this.pointsRemaining > 0) spend(1); };
 
-    const valueEl = document.createElement('span');
-    valueEl.className = CSS.CC_STAT_VALUE;
-    this._setStatValueText(valueEl, stat);
+    const controls = createElement('div', CSS.CC_STAT_CONTROLS);
+    controls.append(decrementBtn, valueEl, incrementBtn);
 
-    const incrementBtn = document.createElement('button');
-    incrementBtn.className = `${CSS.BTN} ${CSS.CC_STAT_BTN}`;
-    incrementBtn.textContent = '+';
-    incrementBtn.onclick = () => {
-      if (this.pointsRemaining > 0) {
-        this.spent[stat.id]++;
-        this._updateStatRow(stat, valueEl, decrementBtn, incrementBtn);
-        this._updatePointsDisplay();
-        this._updateConfirmBtn();
-      }
-    };
-
-    controls.appendChild(decrementBtn);
-    controls.appendChild(valueEl);
-    controls.appendChild(incrementBtn);
-    row.appendChild(info);
-    row.appendChild(controls);
+    const row = createElement('div', CSS.CC_STAT_ROW);
+    row.append(info, controls);
 
     this._incrementBtns.set(stat.id, incrementBtn);
-
     this._updateStatRow(stat, valueEl, decrementBtn, incrementBtn);
     return row;
   }
 
   // Confirm + Load Save buttons.
   _buildActionsRow() {
-    const actions = document.createElement('div');
-    actions.className = CSS.CC_ACTIONS;
+    const actions = createElement('div', CSS.CC_ACTIONS);
 
-    this.confirmBtn = document.createElement('button');
-    this.confirmBtn.className = `${CSS.BTN} ${CSS.CC_CONFIRM_BTN}`;
-    this.confirmBtn.textContent = this.t('charCreation.confirmBtn');
+    this.confirmBtn = createElement('button', [CSS.BTN, CSS.CC_CONFIRM_BTN], this.t('charCreation.confirmBtn'));
     this.confirmBtn.onclick = () => this._confirm();
     this._updateConfirmBtn();
-    actions.appendChild(this.confirmBtn);
 
     // Load save button — lets returning players skip char creation
-    const loadBtn = document.createElement('button');
-    loadBtn.className = `${CSS.BTN} ${CSS.CC_LOAD_BTN}`;
-    loadBtn.textContent = this.t('charCreation.loadSaveBtn');
+    const loadBtn = createElement('button', [CSS.BTN, CSS.CC_LOAD_BTN], this.t('charCreation.loadSaveBtn'));
     loadBtn.onclick = () => document.getElementById(EL.FILE_UPLOAD).click();
-    actions.appendChild(loadBtn);
 
+    actions.append(this.confirmBtn, loadBtn);
     return actions;
   }
 
@@ -215,7 +171,7 @@ export class CharCreationScreen {
 
     // One sanctioned mutation — StateManager owns the point-buy semantics
     // (raising a resource cap raises the resource itself; see applyCharCreation).
-    const stats = this.rules.charCreation?.stats || [];
+    const stats = this.rules.charCreation?.stats ?? [];
     this.state.applyCharCreation(name, stats.map(stat => ({
       id: stat.id,
       bonus: this.spent[stat.id] * stat.bonusPerPoint,

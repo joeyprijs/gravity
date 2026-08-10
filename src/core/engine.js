@@ -253,7 +253,7 @@ export class RPGEngine {
       // their action types.
       return manifest;
     } catch (e) {
-      console.error("Failed to load game data:", e);
+      console.error('Failed to load game data:', e);
       this.log(LOG.SYSTEM, this.t('system.dataError'));
       return null;
     }

@@ -107,7 +107,7 @@ export class DialogueSystem {
     this.engine.state.setCheckState(CHECK_KEYS.dialogueDc(npcId), {});
 
     if (npc.conversations) {
-      this.renderDialogue("start");
+      this.renderDialogue('start');
     } else {
       this.renderDialogueFallback(); // Minimal default greetings for flavor-only NPCs
     }
@@ -144,7 +144,7 @@ export class DialogueSystem {
    *   every time the player backs out of the store).
    * @param {boolean} [optionsOnly=false] - If true, skips appending narrative text blocks.
    */
-  renderDialogue(nodeId = "start", overrideText = null, optionsOnly = false) {
+  renderDialogue(nodeId = 'start', overrideText = null, optionsOnly = false) {
     const node = this.currentNPC.conversations[nodeId];
     if (!node) {
       console.warn(`[Gravity] renderDialogue: unknown conversation node "${nodeId}" on NPC "${this.currentNPC.name}"`);
@@ -154,7 +154,7 @@ export class DialogueSystem {
     if (!optionsOnly) {
       const displayString = overrideText || node.npcText;
 
-      if (nodeId === "start") {
+      if (nodeId === 'start') {
         this.engine.openScene(CSS.SCENE_DIALOGUE);
         this.engine.currentSceneEl.appendChild(
           buildSceneDescription(this.currentNPC.name, `[${this.currentNPC.name}] ${displayString}`)
@@ -339,7 +339,7 @@ export class DialogueSystem {
 
       const exitStr = this.currentNPC.storeExitText || this.engine.t('dialogue.comeAgain');
       if (this.currentNPC.conversations) {
-        this.renderDialogue("start", exitStr);
+        this.renderDialogue('start', exitStr);
       } else {
         this.renderDialogueFallback(exitStr);
       }

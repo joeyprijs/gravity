@@ -130,9 +130,7 @@ export class CombatSystem {
 
     this.renderer.render();
 
-    if (this.anyEnemyGoesFirst) {
-      this.enemyTurn('before');
-    }
+    if (this.anyEnemyGoesFirst) this.enemyTurn('before');
   }
 
   /**

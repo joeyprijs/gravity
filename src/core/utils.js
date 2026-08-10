@@ -48,18 +48,11 @@ export function setByPath(obj, path, value) {
  * @param {string} [textContent] - Optional plain-text content.
  * @returns {HTMLElement} The constructed DOM element.
  */
-export function createElement(tag, className = "", textContent = "") {
+export function createElement(tag, className = '', textContent = '') {
   const el = document.createElement(tag);
-  if (className) {
-    if (Array.isArray(className)) {
-      el.classList.add(...className.filter(Boolean));
-    } else {
-      el.className = className;
-    }
-  }
-  if (textContent) {
-    el.textContent = textContent;
-  }
+  if (Array.isArray(className)) el.classList.add(...className.filter(Boolean));
+  else if (className) el.className = className;
+  if (textContent) el.textContent = textContent;
   return el;
 }
 
@@ -158,15 +151,13 @@ export function createSectionToggles(groupKey) {
  */
 export function clearElement(elementOrId) {
   const el = typeof elementOrId === 'string' ? document.getElementById(elementOrId) : elementOrId;
-  if (el) {
-    el.innerHTML = '';
-  }
+  if (el) el.innerHTML = '';
 }
 
 /**
  * Returns the display label for an item: its name from the items data map
  * (falling back to the raw ID) plus an "(xN)" suffix when amount > 1.
- * @param {Object} itemsData - The item database (engine.data.items).
+ * @param {object} itemsData - The item database (engine.data.items).
  * @param {string} itemId - The item identifier.
  * @param {number} [amount=1] - Stack size.
  * @returns {string} e.g. "Healing Potion (x3)".
@@ -295,9 +286,7 @@ export function attributeLabel(t, attrId) {
 export function itemStatLines(t, itemData, attributes = {}, uses = null) {
   const lines = [];
   const apCost = itemData.attributes?.actionPoints;
-  if (apCost !== undefined) {
-    lines.push(t('itemStats.actionPoints', { value: apCost }));
-  }
+  if (apCost !== undefined) lines.push(t('itemStats.actionPoints', { value: apCost }));
   // The hit line spells out the attack roll ("Attack: 1d20 + Strength") —
   // accuracy is the wielder's, so their current modifier rides along as a
   // locale param for locales that want to show it.

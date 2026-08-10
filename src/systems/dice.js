@@ -43,7 +43,7 @@ export function rollTable(table) {
  *   - string: A human-readable breakdown of individual die rolls (e.g., "4+3+2" or "3-1").
  */
 export function parseDamage(dmgString) {
-  if (!dmgString) return { total: 1, string: "1" };
+  if (!dmgString) return { total: 1, string: '1' };
 
   // Legacy range syntax (e.g., "1-4"). Evaluated first because the standard
   // dice regex does not parse bare hyphens without a 'd' designator.
@@ -54,7 +54,7 @@ export function parseDamage(dmgString) {
     // NaN and silently corrupt combat math.
     if (parts.length !== 2 || !Number.isFinite(a) || !Number.isFinite(b)) {
       console.warn(`[Gravity] parseDamage: malformed range "${dmgString}". Defaulting to a flat roll of 1.`);
-      return { total: 1, string: "1" };
+      return { total: 1, string: '1' };
     }
     // min/max so a descending declaration ("4-1") still rolls a valid range.
     return { total: roll(Math.min(a, b), Math.max(a, b)), string: dmgString };
@@ -69,7 +69,7 @@ export function parseDamage(dmgString) {
 
   if (!match) {
     console.warn(`[Gravity] parseDamage: unrecognized dice format "${dmgString}". Defaulting to a flat roll of 1.`);
-    return { total: 1, string: "1" };
+    return { total: 1, string: '1' };
   }
 
   const numDice = parseInt(match[1], 10);

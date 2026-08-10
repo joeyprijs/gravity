@@ -24,9 +24,7 @@ const MIGRATIONS = {
   // moved into the curator's own bag (its plugin migration v2), which is where
   // a loaded save ends up — this step only puts the field where that one looks.
   3: (data) => {
-    if (!('displays' in data)) {
-      data.displays = {};
-    }
+    if (!('displays' in data)) data.displays = {};
   },
   // v3 → v4: world clock and timers added.
   4: (data) => {
@@ -357,9 +355,7 @@ class StateManager {
 
   appendLog(entry) {
     this.state.log.push(entry);
-    if (this.state.log.length > MAX_LOG_ENTRIES) {
-      this.state.log.shift();
-    }
+    if (this.state.log.length > MAX_LOG_ENTRIES) this.state.log.shift();
   }
 
   // Extends the newest choice entry in place — the yield-amend path (see
@@ -604,35 +600,21 @@ class StateManager {
   // The delta application shared by modifyPlayerStat and modifyPlayerStats —
   // no handler dispatch, no notification.
   _applyStatDelta(stat, amount) {
-    const p = this.state.player;
-    switch (stat) {
-      case 'hp':
-        p.resources.hp.current = Math.max(0, Math.min(p.resources.hp.current + amount, p.resources.hp.max));
-        break;
-      case 'maxHp':
-        p.resources.hp.max += amount;
-        break;
-      case 'ap':
-        p.resources.ap.current = Math.max(0, Math.min(p.resources.ap.current + amount, p.resources.ap.max));
-        break;
-      case 'maxAp':
-        p.resources.ap.max += amount;
-        break;
-      case 'gold':
-        p.resources.gold += amount;
-        break;
-      default: {
-        // Any declared { current, max } resource is modifiable by name and
-        // clamped to [0, max] — this is how games add their own resources
-        // (e.g. a "luckPoints" retry currency) without engine changes.
-        const res = p.resources?.[stat];
-        if (res && typeof res === 'object' && 'current' in res) {
-          res.current = Math.max(0, Math.min(res.current + amount, res.max));
-        } else if (p.attributes && stat in p.attributes) {
-          p.attributes[stat] += amount;
-        }
-        break;
-      }
+    const { resources, attributes } = this.state.player;
+
+    if (stat === 'maxHp') { resources.hp.max += amount; return; }
+    if (stat === 'maxAp') { resources.ap.max += amount; return; }
+    if (stat === 'gold')  { resources.gold += amount; return; }
+
+    // Any declared { current, max } resource — hp and ap included — is
+    // modifiable by name and clamped to [0, max]. This is how games add
+    // their own resources (e.g. a "luckPoints" retry currency) without
+    // engine changes.
+    const res = resources?.[stat];
+    if (res && typeof res === 'object' && 'current' in res) {
+      res.current = Math.max(0, Math.min(res.current + amount, res.max));
+    } else if (attributes && stat in attributes) {
+      attributes[stat] += amount;
     }
   }
 
@@ -903,9 +885,7 @@ class StateManager {
   // Intentionally no notifyListeners() — scene rendering drives its own display
   // update, and triggering a full UI re-render here would be redundant.
   addVisitedScene(sceneId) {
-    if (!this.state.visitedScenes.includes(sceneId)) {
-      this.state.visitedScenes.push(sceneId);
-    }
+    if (!this.state.visitedScenes.includes(sceneId)) this.state.visitedScenes.push(sceneId);
   }
 
   getReturnSceneId() { return this.state.returnSceneId; }

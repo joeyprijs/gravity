@@ -28,27 +28,16 @@ export class CombatRenderer {
    * @returns {object[]} Item definitions, in slot order.
    */
   getAvailableAttacks() {
-    const player = this.cs.engine.state.getPlayer();
-    const attacks = [];
+    const { equipment } = this.cs.engine.state.getPlayer();
+    const items = this.cs.engine.data.items;
 
-    let hasWeapon = false;
-    WEAPON_SLOTS.forEach(slot => {
-      const itemId = player.equipment[slot];
-      if (itemId && this.cs.engine.data.items[itemId]) {
-        const item = this.cs.engine.data.items[itemId];
-        if (item.type === 'Weapon' || item.type === 'Spell') {
-          attacks.push(item);
-          hasWeapon = true;
-        }
-      }
-    });
+    const wielded = WEAPON_SLOTS
+      .map(slot => items[equipment[slot]])
+      .filter(item => item?.type === 'Weapon' || item?.type === 'Spell');
+    if (wielded.length) return wielded;
 
-    if (!hasWeapon) {
-      const fallbackId = this.cs.engine.data.rules?.fallbackWeapons?.player;
-      const unarmed = fallbackId ? this.cs.engine.data.items[fallbackId] : null;
-      if (unarmed) attacks.push(unarmed);
-    }
-    return attacks;
+    const unarmed = items[this.cs.engine.data.rules?.fallbackWeapons?.player];
+    return unarmed ? [unarmed] : [];
   }
 
   // Renders the game-over screen: the death notice in the narrative log and

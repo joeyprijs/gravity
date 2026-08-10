@@ -49,8 +49,10 @@ export class MapManager {
     this._tooltipEl = null;
   }
 
-  // Wires the open/close triggers for the full-screen map overlay (minimap
-  // click, close button, ESC, backdrop click).
+  /**
+   * Wires the open/close triggers for the full-screen map overlay (minimap
+   * click, close button, ESC, backdrop click).
+   */
   setup() {
     const minimapEl = document.getElementById(EL.MINIMAP);
     minimapEl.addEventListener('click', () => this.openFullMap());
@@ -168,6 +170,7 @@ export class MapManager {
     }
   }
 
+  /** Hides the full-screen world map overlay. */
   closeFullMap() {
     document.getElementById(EL.FULLMAP_OVERLAY).hidden = true;
   }
@@ -198,8 +201,10 @@ export class MapManager {
     if (this._tooltipEl) this._tooltipEl.hidden = true;
   }
 
-  // Forces a full minimap redraw on the next renderMinimap call — for changes
-  // that alter the map without moving the player (see the cache-key note above).
+  /**
+   * Forces a full minimap redraw on the next renderMinimap call — for changes
+   * that alter the map without moving the player (see the cache-key note above).
+   */
   invalidateMinimap() {
     this._minimapCacheKey = null;
   }

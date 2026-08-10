@@ -511,9 +511,7 @@ export class UIManager {
   update(hint) {
     const player = this.engine.state.getPlayer();
 
-    if (!hint || hint === 'stats' || hint === 'time') {
-      this._updateTimeBar();
-    }
+    if (!hint || hint === 'stats' || hint === 'time') this._updateTimeBar();
 
     if (!hint || hint === 'stats') {
       document.querySelectorAll('[data-stat-bind]').forEach(el => {
@@ -530,35 +528,27 @@ export class UIManager {
       this.inventoryUI.renderInventory(player, this._newItems);
     }
 
-    if (!hint || hint === 'quests') {
-      this.questUI.render(this._newQuests);
-    }
+    if (!hint || hint === 'quests') this.questUI.render(this._newQuests);
 
-    if (!hint || hint === 'map') {
-      this.map.renderMinimap();
-    }
+    if (!hint || hint === 'map') this.map.renderMinimap();
   }
 
   // Offers an encoded save string (from this.engine.state.getSaveString()) as a
   // timestamped file download. Counterpart of the load path above.
   _downloadSave(encoded) {
-    const blob = new Blob([encoded], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(new Blob([encoded], { type: 'application/json' }));
 
-    const dt = new Date();
-    const y = dt.getFullYear();
-    const m = String(dt.getMonth() + 1).padStart(2, '0');
-    const d = String(dt.getDate()).padStart(2, '0');
-    const h = String(dt.getHours()).padStart(2, '0');
-    const min = String(dt.getMinutes()).padStart(2, '0');
-    const name = `Gravity_${y}${m}${d}_${h}${min}.json`;
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`
+      + `_${pad(now.getHours())}${pad(now.getMinutes())}`;
 
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const link = createElement('a');
+    link.href = url;
+    link.download = `Gravity_${stamp}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
     URL.revokeObjectURL(url);
   }
 

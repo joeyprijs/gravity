@@ -43,7 +43,7 @@ function makeDisplay(config) {
   displaySeq += 1;
   return {
     id: config.id || `display_${Date.now()}_${displaySeq}`,
-    name: config.name || "Display Case",
+    name: config.name || 'Display Case',
     item: config.item || null,
   };
 }
@@ -443,7 +443,7 @@ export default function curatorPlugin(engine) {
       const btn = buildOptionButton(engine.t('plugin.curator.curatorOpen'));
       btn.onclick = () => engine.scene.handleOption({
         text: engine.t('plugin.curator.curatorOpen'),
-        actions: [{ type: "manage_exhibits" }]
+        actions: [{ type: 'manage_exhibits' }]
       });
       (sections?.actions ?? optionsContainer).appendChild(btn);
     }
@@ -464,7 +464,7 @@ export default function curatorPlugin(engine) {
   });
 
   // 3. Register custom action handlers
-  engine.registerAction("build_wing", (action, engine) => {
+  engine.registerAction('build_wing', (action, engine) => {
     const hall = findHall(engine);
     // No layout, no construction: a built wing's map geometry is derived from
     // museumLayout, so without one the wing would land nowhere. The hall's
@@ -491,7 +491,7 @@ export default function curatorPlugin(engine) {
     engine.log(LOG.SYSTEM, engine.t('plugin.curator.wingBuiltLog', { cost, name }));
   });
 
-  engine.registerAction("manage_exhibits", (action, engine) => {
+  engine.registerAction('manage_exhibits', (action, engine) => {
     engine.setCustomUIOpen(true);
     new CuratorUI(engine).render();
   });
@@ -793,7 +793,7 @@ export class CuratorUI {
     // and a case doesn't tell them what belongs in it. Special items are the
     // one exception, and it's not the museum's rule: every surface that parts
     // the player from an item filters them out.
-    let eligibleItems = player.inventory.filter(invItem => {
+    const eligibleItems = player.inventory.filter(invItem => {
       if (isEquipped(invItem.item)) return false;
       const itemData = this.engine.data.items[invItem.item];
       if (isSpecialItem(itemData)) return false;

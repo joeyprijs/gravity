@@ -54,19 +54,11 @@ export function evaluateCondition(condition, state) {
   if (!condition) return true;
 
   // Combinators recurse before any leaf is considered.
-  if (condition.and) {
-    return condition.and.every(c => evaluateCondition(c, state));
-  }
-  if (condition.or) {
-    return condition.or.some(c => evaluateCondition(c, state));
-  }
-  if (condition.not) {
-    return !evaluateCondition(condition.not, state);
-  }
+  if (condition.and) return condition.and.every(c => evaluateCondition(c, state));
+  if (condition.or) return condition.or.some(c => evaluateCondition(c, state));
+  if (condition.not) return !evaluateCondition(condition.not, state);
 
-  if ('flag' in condition) {
-    return state.getFlag(condition.flag) === condition.value;
-  }
+  if ('flag' in condition) return state.getFlag(condition.flag) === condition.value;
 
   if ('mission' in condition) {
     // `stage` is "the player is doing this right now" — exact current stage,
@@ -112,21 +104,14 @@ export function evaluateCondition(condition, state) {
     return condition.count ? totalCount >= condition.count : totalCount > 0;
   }
 
-  if ('level' in condition) {
-    return compare(player.level, condition.level);
-  }
-
-  if ('gold' in condition) {
-    return compare(player.resources.gold, condition.gold);
-  }
+  if ('level' in condition) return compare(player.level, condition.level);
+  if ('gold' in condition) return compare(player.resources.gold, condition.gold);
 
   // Any declared attribute (perception, stealth, …) is a leaf by name, so
   // rules.customAttributes gate content without engine changes. Iterate the
   // condition's own keys, not the player's whole attribute map.
   for (const key of Object.keys(condition)) {
-    if (key in attrs) {
-      return compare(attrs[key], condition[key]);
-    }
+    if (key in attrs) return compare(attrs[key], condition[key]);
   }
 
   console.warn('[Gravity] evaluateCondition: unrecognized condition node:', condition);
