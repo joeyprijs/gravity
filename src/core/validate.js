@@ -1,7 +1,7 @@
-import { GOLD_ITEM_ID, ITEM_TYPES, TIMER_SAFE_ACTIONS } from "./config.js";
+import { GOLD_ITEM_ID, ITEM_TYPES, TIMER_SAFE_ACTIONS } from './config.js';
 // The icon set owns its own name list; validation reads it from there rather
 // than keeping a second copy that could drift.
-import { ICON_NAMES } from "./icons.js";
+import { ICON_NAMES } from './icons.js';
 
 // Load-time validation of all game data. Pure functions over the loaded data
 // object — no DOM, no engine — so authors get fail-fast feedback on boot and

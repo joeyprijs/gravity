@@ -17,8 +17,8 @@
 // Combinators `and` (array), `or` (array), and `not` (single child) nest
 // arbitrarily. Like dice.js, this module is DOM- and engine-free.
 
-import { MISSION_STATUS } from "../core/config.js";
-import { getDay, getSegment } from "./time.js";
+import { MISSION_STATUS } from '../core/config.js';
+import { getDay, getSegment } from './time.js';
 
 /**
  * Compares a live numeric value against a condition operand: a bare number

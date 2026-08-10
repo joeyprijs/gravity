@@ -1,6 +1,6 @@
-import { LOG, WEAPON_SLOTS } from "../core/config.js";
-import { equipmentAttributeBonuses } from "../core/utils.js";
-import { parseDamage } from "./dice.js";
+import { LOG, WEAPON_SLOTS } from '../core/config.js';
+import { equipmentAttributeBonuses } from '../core/utils.js';
+import { parseDamage } from './dice.js';
 
 // Item lifecycle logic: using consumables, equipping and unequipping gear.
 // The engine exposes thin delegates (engine.useItem / equipItem / unequipItem)

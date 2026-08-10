@@ -1,11 +1,11 @@
-import { createElement, buildSceneDescription, buildOptionButton, isSpecialItem, resetOptionsPanel } from "../core/utils.js";
-import { ACTIONS, CHECK_KEYS, CSS, FLAG_KEYS, LOG } from "../core/config.js";
-import { evaluateCondition } from "./condition.js";
+import { createElement, buildSceneDescription, buildOptionButton, isSpecialItem, resetOptionsPanel } from '../core/utils.js';
+import { ACTIONS, CHECK_KEYS, CSS, FLAG_KEYS, LOG } from '../core/config.js';
+import { evaluateCondition } from './condition.js';
 import {
   runCheckAttempt, checkPresentation, normalizeOutcomes,
   getAttempts, isResolved,
   spendRetryCost
-} from "./skill-checks.js";
+} from './skill-checks.js';
 
 // Actions that move the conversation to a new panel (node, store, or scene).
 // _runActions reports these as "navigated" so callers skip re-rendering the

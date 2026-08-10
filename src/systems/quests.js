@@ -1,5 +1,5 @@
-import { LOG, MISSION_STATUS } from "../core/config.js";
-import { evaluateCondition } from "./condition.js";
+import { LOG, MISSION_STATUS } from '../core/config.js';
+import { evaluateCondition } from './condition.js';
 
 // QuestSystem processes quest triggers — scene questTrigger blocks and the
 // questTrigger action — and drives staged missions: explicit forward stage

@@ -1,5 +1,5 @@
-import { createElement, buildCard } from "../core/utils.js";
-import { CSS, EL, MISSION_STATUS } from "../core/config.js";
+import { createElement, buildCard } from '../core/utils.js';
+import { CSS, EL, MISSION_STATUS } from '../core/config.js';
 
 // QuestUI renders the quest log sidebar panel.
 export class QuestUI {

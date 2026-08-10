@@ -1,5 +1,5 @@
-import { buildCard, createElement, buildOptionButton, getItemLabel, isSpecialItem, itemCardStats, resetOptionsPanel } from "../core/utils.js";
-import { CSS, LOG } from "../core/config.js";
+import { buildCard, createElement, buildOptionButton, getItemLabel, isSpecialItem, itemCardStats, resetOptionsPanel } from '../core/utils.js';
+import { CSS, LOG } from '../core/config.js';
 
 // ChestUI renders the deposit/withdraw panel for a chest (opened by the
 // manage_chest action): the chest's contents and the player's inventory as

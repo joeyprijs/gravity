@@ -1,6 +1,6 @@
-import { createElement, buildCard, createSectionToggles, getItemLabel, itemCardStats } from "../core/utils.js";
-import { EL, CSS } from "../core/config.js";
-import { itemHasUse } from "../systems/items.js";
+import { createElement, buildCard, createSectionToggles, getItemLabel, itemCardStats } from '../core/utils.js';
+import { EL, CSS } from '../core/config.js';
+import { itemHasUse } from '../systems/items.js';
 
 // Group key for the inventory's in-memory section collapse state — a
 // per-session UI preference reset on reload, not saved (see

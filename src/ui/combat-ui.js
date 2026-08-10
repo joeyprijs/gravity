@@ -1,5 +1,5 @@
-import { createElement, buildSceneDescription, buildOptionButton, resetOptionsPanel, itemStatLines } from "../core/utils.js";
-import { EL, CSS, WEAPON_SLOTS } from "../core/config.js";
+import { createElement, buildSceneDescription, buildOptionButton, resetOptionsPanel, itemStatLines } from '../core/utils.js';
+import { EL, CSS, WEAPON_SLOTS } from '../core/config.js';
 
 // The enemies a capped multi-target attack (targets: N) catches around a
 // primary target: a window of up to N on the living-enemies line (authored

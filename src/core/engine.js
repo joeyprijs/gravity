@@ -1,19 +1,19 @@
-import { gameState } from "./state.js";
-import { CombatSystem } from "../systems/combat.js";
-import { DialogueSystem } from "../systems/dialogue.js";
-import { QuestSystem } from "../systems/quests.js";
-import { NarrativeLog } from "../systems/narrative.js";
-import { UIManager } from "../ui/ui.js";
-import { SceneRenderer } from "../systems/scene.js";
-import { AudioSystem } from "../systems/audio.js";
-import { DEFAULT_WORLD_MAP_SIZE, LOG, TIMER_SAFE_ACTIONS } from "./config.js";
-import { resolveLanguage } from "./i18n.js";
-import { normalizeCarriedItems, validateGameData } from "./validate.js";
-import { registerBuiltinActions } from "../systems/actions.js";
-import * as items from "../systems/items.js";
-import { getDay, getSegment } from "../systems/time.js";
-import { CharCreationScreen } from "../screens/char-creation.js";
-import curatorPlugin from "../plugins/curator.js";
+import { gameState } from './state.js';
+import { CombatSystem } from '../systems/combat.js';
+import { DialogueSystem } from '../systems/dialogue.js';
+import { QuestSystem } from '../systems/quests.js';
+import { NarrativeLog } from '../systems/narrative.js';
+import { UIManager } from '../ui/ui.js';
+import { SceneRenderer } from '../systems/scene.js';
+import { AudioSystem } from '../systems/audio.js';
+import { DEFAULT_WORLD_MAP_SIZE, LOG, TIMER_SAFE_ACTIONS } from './config.js';
+import { resolveLanguage } from './i18n.js';
+import { normalizeCarriedItems, validateGameData } from './validate.js';
+import { registerBuiltinActions } from '../systems/actions.js';
+import * as items from '../systems/items.js';
+import { getDay, getSegment } from '../systems/time.js';
+import { CharCreationScreen } from '../screens/char-creation.js';
+import curatorPlugin from '../plugins/curator.js';
 
 // Plugins that ship with the engine, statically imported so they load without
 // dynamic import() (e.g. on the file:// protocol). The manifest still declares
@@ -40,7 +40,11 @@ export class RPGEngine {
 
     // Populated by loadData(). Kept as an empty shell here so subsystems
     // constructed below can safely reference this.engine.data without null checks.
-    this.data = { items: {}, npcs: {}, scenes: {}, missions: {}, tables: {}, regions: {}, worldMapSize: DEFAULT_WORLD_MAP_SIZE, minimapRadius: null, locale: {}, rules: null, flags: {} };
+    this.data = {
+      items: {}, npcs: {}, scenes: {}, missions: {}, tables: {}, regions: {},
+      worldMapSize: DEFAULT_WORLD_MAP_SIZE, minimapRadius: null,
+      locale: {}, rules: null, flags: {},
+    };
 
     // Active language code. Resolved properly in loadData() once the manifest's
     // declared locales are known; 'en' until then.
@@ -235,7 +239,13 @@ export class RPGEngine {
       // (player.itemUses) without a reverse lookup.
       Object.entries(items).forEach(([id, item]) => { item.id = id; });
 
-      this.data = { items, npcs, scenes, missions, tables, regions: manifest.regions || {}, worldMapSize: manifest.worldMapSize || DEFAULT_WORLD_MAP_SIZE, minimapRadius: manifest.minimapRadius ?? null, locale: this.data.locale, rules, flags };
+      this.data = {
+        items, npcs, scenes, missions, tables,
+        regions: manifest.regions || {},
+        worldMapSize: manifest.worldMapSize || DEFAULT_WORLD_MAP_SIZE,
+        minimapRadius: manifest.minimapRadius ?? null,
+        locale: this.data.locale, rules, flags,
+      };
 
       // Note: registerMissions and registerSceneFlags are called by init()
       // after this.state.init(rules) — they must NOT be called here. Data

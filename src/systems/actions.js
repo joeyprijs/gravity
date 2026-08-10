@@ -1,6 +1,6 @@
-import { LOG, ACTIONS, GOLD_ITEM_ID } from "../core/config.js";
-import { parseDamage } from "./dice.js";
-import { ticksUntilSegment } from "./time.js";
+import { LOG, ACTIONS, GOLD_ITEM_ID } from '../core/config.js';
+import { parseDamage } from './dice.js';
+import { ticksUntilSegment } from './time.js';
 
 // Built-in action handlers for the scene option action pipeline.
 // Each handler receives (action, engine) — the action object from the pipeline

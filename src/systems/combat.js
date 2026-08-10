@@ -1,9 +1,9 @@
-import { buildSceneDescription } from "../core/utils.js";
-import { MAX_D20_ROLL, CSS, LOG, WEAPON_SLOTS, ENEMY_CLAW_ID } from "../core/config.js";
-import { roll, parseDamage } from "./dice.js";
-import { rollBreakdown, skillLabel } from "./skill-checks.js";
-import { formatList, isOne } from "../core/i18n.js";
-import { CombatRenderer } from "../ui/combat-ui.js";
+import { buildSceneDescription } from '../core/utils.js';
+import { MAX_D20_ROLL, CSS, LOG, WEAPON_SLOTS, ENEMY_CLAW_ID } from '../core/config.js';
+import { roll, parseDamage } from './dice.js';
+import { rollBreakdown, skillLabel } from './skill-checks.js';
+import { formatList, isOne } from '../core/i18n.js';
+import { CombatRenderer } from '../ui/combat-ui.js';
 
 // CombatSystem manages the full lifecycle of a turn-based encounter:
 //
@@ -88,9 +88,8 @@ export class CombatSystem {
         this.engine.t('combat.fightingTitle', { names }),
         // A solo enemy introduces itself at the top of the fight — but only
         // when nothing else framed the encounter. On an ambush the scene
-        // description printed a heartbeat earlier already narrated this exact
-        // instant, so printing both says it twice (and would mean recording
-        // two narration clips for one beat). Whoever framed it owns the prose.
+        // description a heartbeat earlier already narrated this instant;
+        // whoever framed it owns the prose.
         !fromSceneEntry && this.enemies.length === 1 ? (this.enemies[0].description || null) : null,
         this.engine.t.bind(this.engine)
       )

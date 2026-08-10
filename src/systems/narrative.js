@@ -1,5 +1,5 @@
-import { createElement, buildSceneDescription } from "../core/utils.js";
-import { EL, CSS } from "../core/config.js";
+import { createElement, buildSceneDescription } from '../core/utils.js';
+import { EL, CSS } from '../core/config.js';
 
 // NarrativeLog manages the scrollable narrative panel — the stream of scene
 // descriptions, player choices, and system messages that forms the game log.

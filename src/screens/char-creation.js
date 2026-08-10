@@ -1,5 +1,5 @@
-import { CSS, EL } from "../core/config.js";
-import { getByPath } from "../core/utils.js";
+import { CSS, EL } from '../core/config.js';
+import { getByPath } from '../core/utils.js';
 
 // CharCreationScreen manages the pre-game character creation overlay.
 // It lets the player enter a name and distribute a small point budget across

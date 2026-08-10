@@ -1,5 +1,5 @@
-import { MISSION_STATUS } from "./config.js";
-import { equipmentAttributeBonuses, getByPath, setByPath } from "./utils.js";
+import { MISSION_STATUS } from './config.js';
+import { equipmentAttributeBonuses, getByPath, setByPath } from './utils.js';
 
 const MAX_LOG_ENTRIES = 200;
 
@@ -90,8 +90,7 @@ function migrate(data, pluginMigrations = {}) {
   }
 }
 
-// The empty state shape — every field a save file carries. The constructor's
-// skeleton (player {}, no scene) until init(rules) fills in the player.
+// The empty state shape — every field a save file carries.
 function makeSkeletonState() {
   return {
     saveVersion: SAVE_VERSION,
@@ -136,9 +135,8 @@ const LEGACY_CHECK_PREFIXES = ['skill_dc_', 'dialogue_dc_', 'dialogue_resolved_'
 // stays in sync automatically. The state object is serialized for save files.
 class StateManager {
   constructor() {
-    // Minimal skeleton state. Properly initialized by init(rules) once
-    // rules.json is loaded. This skeleton is sufficient for registerMissions()
-    // and registerSceneFlags() which are called during data loading.
+    // Skeleton until init(rules) runs — enough for registerMissions() and
+    // registerSceneFlags(), which are called during data loading.
     this.state = makeSkeletonState();
     this.listeners = [];
     this._rules = null;

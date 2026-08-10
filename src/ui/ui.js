@@ -1,12 +1,12 @@
-import { attrRowHtml, clearElement, collapseAllSections, createElement, createSectionToggles, escapeHtml, getByPath } from "../core/utils.js";
-import { EL, CSS, LOG } from "../core/config.js";
-import { iconHtml } from "../core/icons.js";
-import { getDay, getSegment } from "../systems/time.js";
-import { skillLabel } from "../systems/skill-checks.js";
-import { MapManager } from "../world/map.js";
-import { ChestUI } from "./chest-ui.js";
-import { QuestUI } from "./quest-ui.js";
-import { InventoryUI } from "./inventory-ui.js";
+import { attrRowHtml, clearElement, collapseAllSections, createElement, createSectionToggles, escapeHtml, getByPath } from '../core/utils.js';
+import { EL, CSS, LOG } from '../core/config.js';
+import { iconHtml } from '../core/icons.js';
+import { getDay, getSegment } from '../systems/time.js';
+import { skillLabel } from '../systems/skill-checks.js';
+import { MapManager } from '../world/map.js';
+import { ChestUI } from './chest-ui.js';
+import { QuestUI } from './quest-ui.js';
+import { InventoryUI } from './inventory-ui.js';
 
 // Group key for the sheet's in-memory section collapse state — a per-session
 // UI preference reset on reload, not saved (see createSectionToggles).
@@ -60,16 +60,14 @@ export class UIManager {
       else if (action === 'unequip') this.engine.unequipItem(slot);
     });
 
-    // A dot marks what the player hasn't looked at, so resting the pointer on a
-    // dotted card spends it there and then — reading down a list clears the
-    // dots as you go, instead of every one of them lingering until the next tab
-    // switch. It takes a deliberate hover (NEW_DOT_DWELL_MS): a pointer
-    // sweeping across the list, or cards sliding under a parked cursor while
-    // the panel scrolls, must not wipe dots the player never looked at. The
-    // new-set is updated too, or the next render paints the dot back on.
-    // Delegated like the click above, and covers every dotted card in the
-    // panel — an item in the inventory, a quest in the log. mouseover/mouseout
-    // (not enter/leave) bubble, so one listener each is enough.
+    // A dot marks what the player hasn't looked at; resting the pointer on a
+    // dotted card spends it there and then, so reading down a list clears dots
+    // as you go. The dwell delay (NEW_DOT_DWELL_MS) keeps a sweeping pointer —
+    // or cards sliding under a parked cursor while the panel scrolls — from
+    // wiping dots the player never looked at. The new-set is updated too, or
+    // the next render paints the dot back on. Delegated like the click above;
+    // mouseover/mouseout (not enter/leave) bubble, so one listener each covers
+    // every dotted card in the panel.
     let dwell = null;   // { card, timer } — the card being looked at, if any
     const panel = document.getElementById(EL.PLAYER_PANEL);
     panel.addEventListener('mouseover', (e) => {
@@ -250,14 +248,11 @@ export class UIManager {
 
   // Dots a tab — and its new entries — when something worth noticing is
   // *added* to its panel: a found/gifted item, a started/advanced quest, a
-  // bankable level-up point. A dot marks only what the player can't see:
-  // the tab dot goes on inactive tabs alone — a gain into the tab on screen
-  // is already visible as its card dot (or its collapsed section's heading
-  // dot). Driven by the mutation bus (gains only, never removals/uses).
-  // Stats that also live in the scene top bar (HP/AC/AP/gold/luck) are
-  // deliberately not signalled here — they're already in view. State is
-  // in-memory: opening or leaving the tab clears its dot, and a reload/load
-  // starts clean.
+  // bankable level-up point. A dot marks only what the player can't see: the
+  // tab dot goes on inactive tabs alone, and top-bar stats (HP/AC/AP/gold/
+  // luck) are never signalled — they're already in view. Driven by the
+  // mutation bus (gains only, never removals/uses). State is in-memory:
+  // opening or leaving the tab clears its dot, and a reload/load starts clean.
   _setupTabNotifier() {
     let prevStatPoints = this.engine.state.getPlayer()?.statPoints ?? 0;
     const dot = (tabId) => {

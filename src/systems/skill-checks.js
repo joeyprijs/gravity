@@ -1,6 +1,6 @@
-import { MAX_D20_ROLL, LOG } from "../core/config.js";
-import { attributeLabel } from "../core/utils.js";
-import { roll } from "./dice.js";
+import { MAX_D20_ROLL, LOG } from '../core/config.js';
+import { attributeLabel } from '../core/utils.js';
+import { roll } from './dice.js';
 
 // Default tier margins. A roll beating the DC by criticalMargin or more lands
 // on the critical tier; a roll missing the DC by up to partialMargin lands on
@@ -348,10 +348,7 @@ export function getAttempts(state, checkKey, entryKey) {
 }
 
 /**
- * Records one attempt for a check (see getAttempts).
- * @param {object} state - The StateManager holding the flag.
- * @param {string} checkKey - The checkState key holding the check-state map (see CHECK_KEYS).
- * @param {string|number} entryKey - Key of the specific check inside the map.
+ * Records one attempt for a check (same keys as getAttempts).
  * @returns {number} The updated attempt count.
  */
 export function recordAttempt(state, checkKey, entryKey) {
@@ -376,12 +373,7 @@ export function isResolved(state, checkKey, entryKey) {
   return !!map[`resolved_${entryKey}`];
 }
 
-/**
- * Permanently retires a check (see isResolved).
- * @param {object} state - The StateManager holding the flag.
- * @param {string} checkKey - The checkState key holding the check-state map (see CHECK_KEYS).
- * @param {string|number} entryKey - Key of the specific check inside the map.
- */
+/** Permanently retires a check (same keys as isResolved). */
 export function markResolved(state, checkKey, entryKey) {
   const map = state.getCheckState(checkKey) || {};
   map[`resolved_${entryKey}`] = true;

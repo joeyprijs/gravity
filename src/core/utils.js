@@ -1,5 +1,5 @@
-import { CSS, EL } from "./config.js";
-import { iconHtml } from "./icons.js";
+import { CSS, EL } from './config.js';
+import { iconHtml } from './icons.js';
 
 /**
  * Reads a value from a nested object using a dot-separated path.
@@ -79,12 +79,8 @@ export function escapeHtml(str) {
     .replaceAll("'", '&#39;');
 }
 
-// Section expand state, held in memory only — deliberately not persisted.
-// A section is collapsed until the player opens it, and an expansion lasts
-// only as long as they stay in the tab — switching tabs shuts every section
-// again (see collapseAllSections), so a panel is always entered as the short
-// list of headings it starts as. The map is keyed by group so the state
-// survives the panel re-renders within one visit.
+// Section expand state, keyed by group so it survives panel re-renders within
+// one visit. In memory only — see createSectionToggles for the policy.
 const sectionExpandState = new Map();
 
 // Every toggle group built this session, so collapseAllSections can reach a
@@ -92,25 +88,18 @@ const sectionExpandState = new Map();
 // once per UI object and the game reloads on restart, so this never grows.
 const sectionGroups = new Set();
 
-/**
- * Shuts every section in every panel — what tab switching does. Opening a tab
- * should present it the way it presents itself the first time: headings only,
- * and what's behind them is the player's next choice, not a leftover from the
- * last visit.
- */
+/** Shuts every section in every panel. Called on tab switch. */
 export function collapseAllSections() {
   for (const group of sectionGroups) group.collapseAll();
 }
 
 /**
- * Collapse/expand wiring for section-toggle headings. The expanded-key set
- * lives in memory (see sectionExpandState) — a per-session UI preference,
- * never saved, and dropped entirely on a tab switch. Every section starts
- * collapsed: the panel opens as a short list of headings that names what it
- * holds, so its shape is legible before the player has learned it, and opening
- * one is their choice. Collapsing hides the body element in place — no
- * re-render, so its bindings and buttons survive. Used by the inventory panel
- * and the sheet tab, each with its own group key.
+ * Collapse/expand wiring for section-toggle headings. Every section starts
+ * collapsed, so a panel always opens as a short list of headings; expansions
+ * are a per-session UI preference — never saved, and dropped on every tab
+ * switch. Collapsing hides the body element in place — no re-render, so its
+ * bindings and buttons survive. Used by the inventory panel and the sheet
+ * tab, each with its own group key.
  *
  * @param {string} groupKey - Identifies this section group's in-memory state.
  * @returns {{isCollapsed: function(string): boolean,
@@ -128,10 +117,8 @@ export function createSectionToggles(groupKey) {
   // the entry, so this holds live nodes rather than accumulating detached ones.
   const wired = new Map();
   const group = {
-    // Whether a section is currently collapsed — render decisions that hinge
-    // on visibility (e.g. the heading's new-content dot) read this. A section
-    // this session hasn't opened counts as collapsed, which is how a first
-    // render already knows to flag new content behind a heading.
+    // Read by render decisions that hinge on visibility (e.g. the heading's
+    // new-content dot). A section never opened this session counts as collapsed.
     isCollapsed(key) { return !expanded.has(key); },
     // Applies the current state to a heading/body pair and flips it on heading
     // clicks. onclick, not addEventListener, so re-wiring after a re-render
@@ -146,15 +133,13 @@ export function createSectionToggles(groupKey) {
       heading.onclick = () => {
         const nowCollapsed = expanded.delete(key);
         if (!nowCollapsed) expanded.add(key);
-        // Expanding reveals the contents — the heading's new-content dot has
-        // done its job.
+        // Expanding reveals the contents — the new-content dot has done its job.
         if (!nowCollapsed) heading.classList.remove(CSS.SECTION_TOGGLE_NOTIFY);
         applyState(nowCollapsed);
       };
     },
-    // Forgets every expansion and shuts what's on screen now. The DOM pass is
-    // what a hidden, un-re-rendered panel needs; clearing the set is what the
-    // next render needs.
+    // Clears the set (what the next render needs) and hides what's on screen
+    // now (what a hidden, un-re-rendered panel needs).
     collapseAll() {
       expanded.clear();
       for (const { heading, body } of wired.values()) {
@@ -192,12 +177,10 @@ export function getItemLabel(itemsData, itemId, amount = 1) {
 }
 
 /**
- * True for a Special item — the story/required category that never leaves the
- * pack by the player's hand: it can't be sold to a merchant, put in a display
- * case, or stowed in a chest. Every surface that parts the player from an item
- * filters on this. Scripted effects (a quest turn-in, a scene that consumes it)
- * still remove it normally — the rule is about the player's choices, not the
- * engine's reach.
+ * True for a Special item — the story/required category the player can never
+ * part with by choice: not sellable, not displayable, not stowable in a chest.
+ * Every surface that parts the player from an item filters on this. Scripted
+ * effects (a quest turn-in, a scene that consumes it) still remove it normally.
  * @param {object|null} itemData - The item definition from data/items.
  * @returns {boolean}
  */
@@ -210,9 +193,8 @@ export function isSpecialItem(itemData) {
  * world. A building of one room marks itself (`interior` on the scene); the
  * rooms of a bigger one are grouped by a region flagged `interior`.
  *
- * The map draws buildings from this and the interactions panel sorts a door into
- * one apart from a road out of here, so both ask the same question here — two
- * answers would let the map and the panel disagree about what a place is.
+ * The map draws buildings from this and the interactions panel sorts doors
+ * apart from roads by it — both ask here so they can't disagree.
  *
  * @param {object|null} scene - The scene definition.
  * @param {Object<string, object>} regions - The manifest's regions map.
@@ -225,25 +207,20 @@ export function isInteriorScene(scene, regions) {
 /**
  * The four cardinal points, clockwise from north.
  *
- * Four, not eight: a diagonal arrow is genuinely harder to read at option size —
- * the eye takes "up" and "right" instantly and has to stop and work out
- * "up-and-right". Roads are still *authored* in eight-point order, which needs
- * the finer resolution to be deterministic; what the player is shown rounds to
- * the nearest cardinal, which is the unit they think in.
+ * Four, not eight: a diagonal arrow is harder to read at option size — the eye
+ * takes "up" instantly but has to work out "up-and-right". Roads are still
+ * authored in eight-point order (which needs the finer resolution to be
+ * deterministic); what the player sees rounds to the nearest cardinal.
  */
 export const COMPASS_POINTS = Object.freeze(['N', 'E', 'S', 'W']);
 
 /**
  * Which way one scene lies from another, as a compass point.
  *
- * The map's coordinates are where the world records direction — the prose used
- * to carry it ("take the forge lane east"), which left the one piece of
- * navigational meaning in the game trapped in a string a translator has to get
- * right. Derived here instead, it survives translation.
- *
- * Rounded to a compass point rather than kept as an angle, deliberately: a road
- * bearing 340° is read as *north* by anyone looking at it, and an exact angle
- * would point somewhere nobody perceives.
+ * Derived from map coordinates rather than authored in prose ("take the forge
+ * lane east"), so the game's one piece of navigational meaning isn't trapped
+ * in a string a translator has to get right. Rounded to a compass point on
+ * purpose: a road bearing 340° reads as north to anyone looking at it.
  *
  * @param {object|null} from - Scene the player is standing in.
  * @param {object|null} to - Scene the road leads to.
@@ -375,13 +352,11 @@ export function itemStatLines(t, itemData, attributes = {}, uses = null) {
 }
 
 /**
- * The stat lines of an item CARD — itemStatLines wrapped in where the thing is
- * worn and what it is worth. Both are card things, not attack-button things:
- * the slot is gear bookkeeping and worth is what a merchant pays, neither of
- * which combat needs. An item a merchant won't pay for (value 0, the Special
- * items, the quest keys) stays quiet about it. Shared by every surface that
- * presents an item as a card (inventory, the curator's exhibits) so the same
- * item reads the same in all of them.
+ * The stat lines of an item CARD — itemStatLines plus slot and value, the two
+ * facts cards show and attack buttons don't. An item a merchant won't pay for
+ * (value 0) shows no value line. Shared by every surface that presents an item
+ * as a card (inventory, the curator's exhibits) so the same item reads the
+ * same in all of them.
  *
  * @param {function} t - The engine's translate function.
  * @param {object} itemData - The item definition from data/items.
@@ -414,7 +389,9 @@ export function itemCardStats(t, itemData, attributes = {}, { slot = true, uses 
  * re-appended as the container's first child; pass reminderText to also update
  * its text.
  * @param {string|null} [reminderText=null] - New text for the location reminder.
- * @returns {{panel: HTMLElement, container: HTMLElement, talkContainer: HTMLElement, actionsContainer: HTMLElement, skillsContainer: HTMLElement, reminder: HTMLElement|null}}
+ * @returns {{panel: HTMLElement, container: HTMLElement,
+ *   talkContainer: HTMLElement, actionsContainer: HTMLElement,
+ *   skillsContainer: HTMLElement, reminder: HTMLElement|null}}
  */
 export function resetOptionsPanel(reminderText = null) {
   const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
@@ -541,23 +518,18 @@ export function buildOptionButton(text, reqText = null) {
 }
 
 /**
- * Adds the arrow that says which way an option goes, to an option button — and
- * does nothing when the option doesn't go a way.
+ * Adds the direction arrow to a navigation option button — only for moves
+ * within one continuous space. A road between outdoor places or a door between
+ * two rooms has a direction; crossing a building's threshold does not (the
+ * same line Entrances and Exits are drawn on). The rule lives here because the
+ * scene renderer and the curator's panels both build navigation buttons and
+ * must agree on it. Geometry on both sides is required; a scene without
+ * mapDefinitions is nowhere in particular.
  *
- * The rule lives here rather than in any caller, because the scene renderer and
- * the curator's own panels both build navigation buttons and would otherwise
- * answer it differently: a step *within* one continuous space has a direction (a
- * road between outdoor places, a door between two rooms of one building), and
- * crossing a threshold does not — going in or out of a building is not a compass
- * move, which is the same line Entrances and Exits are drawn on. Geometry both
- * sides is required; a scene without mapDefinitions is nowhere in particular.
- *
- * Marks the button as well as filling it, so the CSS never has to ask whether a
- * card contains a marker. The marker is positioned against its card, and every
- * ancestor above the card is `static` — asking with `:has()` would put the whole
- * thing one unsupported selector away from resolving against the viewport
- * instead, and dropping the arrow into a page corner. The code appending it
- * already knows; it can say so.
+ * Marks the button with a class instead of letting CSS ask via `:has()`: the
+ * marker is positioned against its card, every ancestor above the card is
+ * `static`, and where `:has()` is unsupported the arrow would resolve against
+ * the viewport and land in a page corner.
  *
  * @param {object} engine - For the locale table and the manifest's regions.
  * @param {object} scene - The scene the player is standing in.
@@ -576,25 +548,17 @@ export function addDirectionMarker(engine, scene, destination, button) {
   marker.dataset.point = point;
   // One glyph drawn pointing north, turned a quarter-turn per point by CSS.
   marker.style.setProperty('--turn', String(COMPASS_POINTS.indexOf(point)));
-  // The glyph is aria-hidden, so the point's name rides along for a screen
-  // reader — without it the direction would exist only for people who can see.
+  // The glyph is aria-hidden; the point's name rides along for screen readers.
   marker.innerHTML = `${iconHtml('arrow')}<span class="visually-hidden">${escapeHtml(engine.t(`ui.compass${point}`))}</span>`;
 
   button.classList.add(CSS.CARD_DIRECTED);
   button.appendChild(marker);
 }
 
-/**
- * Builds one stat line for a card: "Action Points: 1" becomes a label span
- * ("Action Points:") and a value span ("1") so CSS can put every value of a
- * card in its own column. Stat lines are locale strings, so the split is on
- * the line's first colon — a line without one (a bare badge like "Deposit")
- * stays a single span that spans the whole row.
- *
- * @param {string} tag - 'li' in container cards, 'span' in button cards.
- * @param {string} line - The rendered stat line.
- * @returns {HTMLElement}
- */
+// One stat line for a card: "Action Points: 1" splits on its first colon into
+// label and value spans so CSS can column-align card values. A line without a
+// colon (a bare badge like "Deposit") stays a single full-row span. tag is
+// 'li' in container cards, 'span' in button cards.
 function buildStatLine(tag, line) {
   const el = createElement(tag);
   const colon = line.indexOf(':');

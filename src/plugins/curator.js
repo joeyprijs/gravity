@@ -1,28 +1,28 @@
-import { buildCard, buildOptionButton, addDirectionMarker, createElement, escapeHtml, getItemLabel, isSpecialItem, itemCardStats, resetOptionsPanel } from "../core/utils.js";
-import { CSS, EL, LOG } from "../core/config.js";
+import { buildCard, buildOptionButton, addDirectionMarker, createElement, escapeHtml, getItemLabel, isSpecialItem, itemCardStats, resetOptionsPanel } from '../core/utils.js';
+import { CSS, EL, LOG } from '../core/config.js';
 
-// The curator's reputation model: a permanent score (earned by acquiring
-// relics for the first time) plus a dynamic bonus from relics currently on
-// display. player.attributes.reputation is the derived sum.
-// Reputation recalculation hangs off the formal StateManager plugin API —
-// mutation hooks, a custom stat handler, and save migrations; no engine or
-// StateManager methods are wrapped. The plugin's own save data
-// (museumReputation, obtainedItems, rooms, displays) lives in the sanctioned
-// plugin bag, state.pluginState('curator').
+// The curator plugin: the museum's wings, display cases, and reputation.
 //
-// The display cases are the museum's, not the engine's: the wings, the cases
-// standing in them, and what each case holds are all this plugin's state, and
-// the mutators live here beside them. The engine keeps `chests` — a container
-// any game can author — and knows nothing about exhibiting.
+// Reputation is a derived stat: a permanent score (earned by acquiring relics
+// for the first time) plus a bonus from relics currently on display, summed
+// into player.attributes.reputation. Everything hangs off the formal
+// StateManager plugin API — mutation hooks, a custom stat handler, save
+// migrations; no engine or StateManager methods are wrapped. All plugin save
+// data (museumReputation, obtainedItems, rooms, displays) lives in the
+// sanctioned bag, state.pluginState('curator').
+//
+// The display cases are the museum's, not the engine's: the engine keeps
+// `chests` (a container any game can author) and knows nothing about
+// exhibiting. A case holds exactly one item whose identity feeds a score —
+// a different mechanic, not a chest with a smaller lid.
 
 // Hook registrations are per-StateManager: each registered manager gets its
-// own record holding the item database and (when the full plugin runs) the
-// engine, and the hook callbacks read through that record — so two engines
-// booted in one page (a manual-boot harness, the test suite) each keep their
-// own reputation current instead of the first registration winning forever.
-// Repeat registrations only refresh the record (the test suite re-inits state
-// per test). curatorState tracks the most recent registration for the
-// module-level getMuseumReputation() export.
+// own record ({ items, engine }) that the hook callbacks read through, so two
+// engines booted in one page (a manual-boot harness, the test suite) each
+// keep their own reputation current instead of the first registration winning
+// forever. Repeat registrations only refresh the record (the test suite
+// re-inits state per test). curatorState tracks the most recent registration
+// for the module-level getMuseumReputation() export.
 const registrations = new WeakMap(); // StateManager → { items, engine }
 let curatorState = null;
 
@@ -30,11 +30,8 @@ let curatorState = null;
 // displays }).
 const bagOf = (state) => state.pluginState('curator');
 
-// The museum's display cases, keyed by scene id. They live in the bag beside
-// the wings that hold them: a case is museum furniture, not an engine feature —
-// nothing outside this plugin puts anything in one. (Chests are the engine's
-// container primitive; a case holds exactly one item whose identity feeds a
-// score, which is a different mechanic, not a chest with a smaller lid.)
+// The museum's display cases, keyed by scene id — stored in the bag beside
+// the wings that hold them (see the header note on cases vs chests).
 const displaysOf = (state) => (bagOf(state).displays ??= {});
 
 // Sequence suffix guarantees uniqueness even when two cases are installed
@@ -101,10 +98,8 @@ export function placeItemInDisplay(state, sceneId, displayId, itemId) {
 
   display.item = itemId;
   state.removeFromInventory(itemId, 1, { silent: true });
-  // Before the notification, not after: the reputation the render is about to
-  // draw has to already count what now stands in this case. (This is why the
-  // engine's mutation hook fires where it does; owning the mutator, the plugin
-  // keeps the same order without one.)
+  // Recompute before the notification: the render it triggers must already
+  // count what now stands in this case.
   refreshReputation(state);
   state.notifyListeners('inventory');
   return true;
@@ -129,12 +124,11 @@ export function takeItemFromDisplay(state, sceneId, displayId) {
   return itemId;
 }
 
-// A scene file's `displays` array is the museum's starting furniture — the two
-// cases the Armor Wing opens with. Seeded once per scene, and never over a save:
-// cases already in the bag are the ones the player installed and filled.
-// Runs on init/load/reset rather than on scene render, because the panel and the
-// scene decorator both ask whether a room has cases while rendering it, which is
-// too late to be discovering them.
+// A scene file's `displays` array is the museum's starting furniture. Seeded
+// once per scene, and never over a save: cases already in the bag are the ones
+// the player installed and filled. Runs on init/load/reset rather than on
+// scene render — the panel and the scene decorator both ask whether a room has
+// cases while rendering it, which is too late to be discovering them.
 function syncAuthoredDisplays(engine) {
   if (!engine) return;
   const map = displaysOf(engine.state);
@@ -518,7 +512,7 @@ export default function curatorPlugin(engine) {
     console.warn('[Gravity] curator: no tab with widget "attributes" — the reputation stat renders nowhere');
 }
 
-// standalone CuratorUI dashboard logic
+// The curator panel: dashboard, case inspection, and artifact selection.
 export class CuratorUI {
   constructor(engine) {
     this.engine = engine;
@@ -673,10 +667,8 @@ export class CuratorUI {
         const btn = buildOptionButton(d.name, badge);
         btn.onclick = () => {
           // Panel buttons are not scene options, so handleOption's choice log
-          // never runs for them — stepping up to a case logs itself, in the
-          // player's voice and as the act, the way "Open Personal Chest" does.
-          // The card stays terse (a name and its relic); the log line carries
-          // the act, exactly as the chest's "Done" button logs "Close Chest".
+          // never runs for them — stepping up to a case logs itself as the
+          // act, in the player's voice, the way the chest's buttons do.
           if (d.item) {
             this.engine.log(LOG.PLAYER, this.engine.t('plugin.curator.displayApproach', { display: d.name }), 'choice');
             this.render('inspect_display', d.id);
@@ -779,9 +771,8 @@ export class CuratorUI {
       return;
     }
 
-    // 1. The way out. The same words as the filled case's — stepping away is
-    // stepping away, whatever is or isn't standing there. The log line is the
-    // one that distinguishes them: this one records the case left empty.
+    // 1. The way out. Same words as the filled case's back button; the log
+    // line is what distinguishes them (this one records the case left empty).
     const cancelBtn = buildOptionButton(this.engine.t('plugin.curator.curatorBack'));
     cancelBtn.onclick = () => {
       this.engine.log(LOG.PLAYER,
@@ -798,11 +789,10 @@ export class CuratorUI {
     const player = this.engine.state.getPlayer();
     const isEquipped = (itemId) => Object.values(player.equipment).includes(itemId);
 
-    // Every case takes anything the player can part with. The museum is theirs;
-    // a case doesn't tell them what belongs in it. Special items are the one
-    // exception, and not the museum's rule — a story relic belongs in the pack,
-    // not behind glass, and every surface that parts the player from an item
-    // says the same.
+    // A case takes anything the player can part with — the museum is theirs,
+    // and a case doesn't tell them what belongs in it. Special items are the
+    // one exception, and it's not the museum's rule: every surface that parts
+    // the player from an item filters them out.
     let eligibleItems = player.inventory.filter(invItem => {
       if (isEquipped(invItem.item)) return false;
       const itemData = this.engine.data.items[invItem.item];

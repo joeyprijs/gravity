@@ -1,18 +1,16 @@
-import { clearElement, isInteriorScene } from "../core/utils.js";
-import { MINIMAP_SIZE, MAP_PADDING, MAP_NODE_DEFAULT_BG, CSS, EL } from "../core/config.js";
+import { clearElement, isInteriorScene } from '../core/utils.js';
+import { MINIMAP_SIZE, MAP_PADDING, MAP_NODE_DEFAULT_BG, CSS, EL } from '../core/config.js';
 
 // Every scene a scene can send the player to: the destinations of the navigate
 // actions in its *options*. This is the map's notion of a door, and what one
 // step of sight is measured along.
 //
-// Options only, deliberately. A door is something the player can see standing
-// here — a button on the panel, whatever its condition currently says, because
-// a door they can see but not yet open is still a door they have seen. Where a
-// skill check navigates, the destination is the *reward* for passing it: a
-// passage found by searching, a ledge reached by climbing. Walking those
-// pipelines would draw the secret on the map before it was discovered, which is
-// the one thing one-step sight exists to stop. `onVictory` stays in — the road
-// past a fight is a road, and the option offering the fight is right there.
+// Options only, deliberately: an option is a door the player can see standing
+// here, whatever its condition currently says. Where a skill check navigates,
+// the destination is the *reward* for passing it — walking those pipelines
+// would draw the secret on the map before it was discovered. `onVictory`
+// stays in: the road past a fight is a road, and the option offering the
+// fight is right there.
 function sceneNavigationTargets(scene) {
   const targets = [];
   const walk = (actions) => {
@@ -272,9 +270,7 @@ export class MapManager {
 
   // A building the player has been inside, drawn around the rooms they walked:
   // an outline with the building's name above it. Rooms tile their building
-  // exactly, so without this a house reads as loose boxes with nothing saying
-  // which building — or whose — they belong to, and prefixing every room name
-  // ("Player Kitchen") would say it in the ugliest possible way.
+  // exactly, so without this a house reads as loose boxes that nothing names.
   //
   // Bounded by the rooms *walked*, not the whole footprint: a half-explored
   // dungeon must not have its extent drawn before it is earned.

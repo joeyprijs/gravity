@@ -1,15 +1,15 @@
-import { clearElement, createElement, buildSceneDescription, buildOptionButton, addDirectionMarker, getItemLabel, isInteriorScene, resetOptionsPanel } from "../core/utils.js";
-import { CHECK_KEYS, CSS, FLAG_KEYS, GOLD_ITEM_ID, LOG, MAX_D20_ROLL } from "../core/config.js";
-import { evaluateCondition } from "./condition.js";
-import { formatList } from "../core/i18n.js";
-import { roll, rollTable } from "./dice.js";
-import { resolveTimeCost } from "./time.js";
+import { clearElement, createElement, buildSceneDescription, buildOptionButton, addDirectionMarker, getItemLabel, isInteriorScene, resetOptionsPanel } from '../core/utils.js';
+import { CHECK_KEYS, CSS, FLAG_KEYS, GOLD_ITEM_ID, LOG, MAX_D20_ROLL } from '../core/config.js';
+import { evaluateCondition } from './condition.js';
+import { formatList } from '../core/i18n.js';
+import { roll, rollTable } from './dice.js';
+import { resolveTimeCost } from './time.js';
 import {
   runCheckAttempt, checkPresentation, normalizeOutcomes,
   getAttempts, isResolved, resetAttempts,
   spendRetryCost, pickVariant,
   rollBreakdown, skillLabel
-} from "./skill-checks.js";
+} from './skill-checks.js';
 
 // SceneRenderer handles navigating to scenes, resolving their descriptions,
 // and rendering their option buttons. It is the main driver of scene-to-scene
@@ -218,24 +218,18 @@ export class SceneRenderer {
       return opt.actions?.some(a => a.type === 'return') ?? false;
     };
 
-    // Which section an option lands in follows from what its pipeline does, for
-    // the same reason isBackOption does — the action type says so in every
-    // locale. The unheaded first list is where the player can GO without leaving
-    // where they are: a road on, a door to the next room. Talking to somebody is
-    // its own section. Everything left is an act performed here — resting,
-    // eating, opening a chest, starting a fight — and lands under Actions,
-    // whatever action type it is built from.
+    // Which section an option lands in follows from what its pipeline does —
+    // the action type says so in every locale, for the same reason isBackOption
+    // checks types, not words. The unheaded first list is moves within the same
+    // space (a road on, a door to the next room); talking is its own section;
+    // everything left is an act performed here and lands under Actions.
     const startsAction = (opt, type) => opt.actions?.some(a => a.type === type) ?? false;
 
-    // Crossing a threshold is a different kind of move from walking on, so those
-    // options are listed apart — decided, like every other section, by what the
-    // pipeline does: here by what kind of place it leads to.
-    //
-    // Outdoors that means the doors into buildings (**Entrances**). Inside one it
-    // means the ways back out (**Exits**) — a navigate to somewhere that isn't
-    // this building, or a teleport, which leaves whatever else it does. Neither
-    // split applies to a move that stays on the same side of the threshold: a
-    // road between two outdoor places, or a door between two rooms of one house.
+    // Threshold crossings are listed apart from walking on: outdoors that means
+    // doors into buildings (Entrances), inside it means ways back out (Exits —
+    // a navigate to somewhere outside this building, or a return). Moves that
+    // stay on the same side of the threshold get neither split: a road between
+    // two outdoor places, or a door between two rooms of one house.
     const regions = this.engine.data.regions;
     const outdoors = !isInteriorScene(scene, regions);
     // Destinations that actually resolve. An unknown one is a typo, and reading
@@ -256,11 +250,9 @@ export class SceneRenderer {
       || (opt.actions || []).some(a => a.type === 'return')
     );
 
-    // Where an option leads, unfiltered. Whether that *has* a direction —
-    // a step within one space does, crossing a threshold doesn't — is
-    // addDirectionMarker's question, because the curator builds navigation
-    // buttons of its own and the two must not answer it differently. Road prose
-    // no longer names its direction; the marker does, in every language.
+    // Where an option leads, unfiltered — whether the move *has* a direction
+    // is addDirectionMarker's question. Road prose no longer names its
+    // direction; the marker does, in every language.
     const destinationOf = (opt) => navTargets(opt)[0] ?? null;
 
     (scene.options || []).forEach(opt => {
@@ -331,12 +323,10 @@ export class SceneRenderer {
     [...enterOpts].sort(backLast).forEach(opt => renderOptionBtn(opt, entrancesContainer));
     [...exitOpts].sort(backLast).forEach(opt => renderOptionBtn(opt, exitsContainer));
     talkOpts.forEach(opt => renderOptionBtn(opt, talkContainer));
-    // Acts render in authored order — where a rest sits in the section is the
-    // scene author's call, like whether the scene offers one at all. A rest's
-    // card says what it does, item-style: a full rest lists everything it
-    // gives back, a short rest its heal and the pool's remaining uses — and
-    // the short rest disables (rather than hides) at an empty pool, so what a
-    // full rest would give back stays visible.
+    // Acts render in authored order — where a rest sits is the scene author's
+    // call, like whether the scene offers one at all. A rest's card says what
+    // it does, item-style; the short rest disables (rather than hides) at an
+    // empty pool, so what a full rest would give back stays visible.
     actionOpts.forEach(opt => {
       if (startsAction(opt, 'full_rest')) {
         renderOptionBtn(opt, actionsContainer, this._fullRestStats());
