@@ -1,5 +1,5 @@
-import { createElement, buildSceneDescription, buildOptionButton, resetOptionsPanel, itemStatLines } from '../core/utils.js';
-import { EL, CSS, WEAPON_SLOTS } from '../core/config.js';
+import { createElement, buildSceneDescription, buildOptionButton, resetOptionsPanel, itemStatLines, handSlots } from '../core/utils.js';
+import { EL, CSS } from '../core/config.js';
 
 // The enemies a capped multi-target attack (targets: N) catches around a
 // primary target: a window of up to N on the living-enemies line (authored
@@ -35,7 +35,7 @@ export class CombatRenderer {
     const { equipment } = this.cs.engine.state.getPlayer();
     const items = this.cs.engine.data.items;
 
-    const held = WEAPON_SLOTS
+    const held = handSlots(this.cs.engine.data.rules)
       .map(slot => items[equipment[slot]])
       .filter(item => item?.type === 'Weapon' || item?.type === 'Spell');
     const attacks = held.length

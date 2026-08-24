@@ -1,7 +1,6 @@
 {
   "name": "Rusty Sword",
   "type": "Weapon",
-  "slot": "Right Hand",
   "description": "An old, chipped blade. Better than nothing.",
   "value": 5,
   "attributes": {

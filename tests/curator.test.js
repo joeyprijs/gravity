@@ -17,7 +17,14 @@ const TEST_RULES = {
     resources: { hp: { current: 10, max: 10 }, ap: { current: 3, max: 3 }, gold: 100 },
     attributes: { ac: 10, initiative: 0, reputation: 0 },
     inventory: [],
-    equipment: {},
+    equipmentSlots: [
+      { id: 'head', kind: 'head' },
+      { id: 'body', kind: 'body' },
+      { id: 'left_hand', kind: 'hand' },
+      { id: 'right_hand', kind: 'hand' },
+      { id: 'left_ring', kind: 'ring' },
+      { id: 'right_ring', kind: 'ring' },
+    ],
   },
   customAttributes: [],
   startingScene: 'home_museum',
@@ -328,7 +335,7 @@ test('a pre-time (v3) save with the curator active runs core AND plugin migratio
       resources: { hp: { current: 10, max: 10 }, ap: { current: 3, max: 3 }, gold: 5 },
       attributes: { ac: 10, initiative: 0, reputation: 0 },
       inventory: [{ item: 'relic_crown', amount: 1 }],
-      equipment: { 'Right Hand': 'rusty_sword' },
+      equipment: { 'Right Hand': 'rusty_sword' },  // a v3 save speaks the pre-v7 slot names
     },
     flags: {}, missions: {}, chests: {},
     displays: { museum_room: [{ id: 'display_1', name: 'Case', item: 'relic_shard' }] },
@@ -354,6 +361,6 @@ test('a pre-time (v3) save with the curator active runs core AND plugin migratio
   }, 'the cases came across intact');
   // Core and plugin versions are partitioned: the core counter never carries
   // the curator's number.
-  assert.equal(gameState.state.saveVersion, 6);
+  assert.equal(gameState.state.saveVersion, 7);
   assert.equal(gameState.state.pluginSaveVersions.curator, 2);
 });

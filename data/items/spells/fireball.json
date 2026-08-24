@@ -1,7 +1,6 @@
 {
   "name": "Fireball",
   "type": "Spell",
-  "slot": "Right Hand",
   "description": "Hurl a roaring sphere of flame and choose where it bursts. Anything caught inside is not spared.",
   "value": 300,
   "attributes": {

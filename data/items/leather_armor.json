@@ -1,7 +1,7 @@
 {
   "name": "Leather Armor",
   "type": "Armor",
-  "slot": "Torso",
+  "slot": "body",
   "description": "Tough leather, provides basic protection.",
   "value": 25,
   "attributes": {

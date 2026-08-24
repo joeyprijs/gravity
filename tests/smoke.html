@@ -384,7 +384,7 @@
         // Worn bonuses read the same however they were authored — the amulet's
         // attributeBonuses and the armor's legacy armorClassBonus both say
         // "Bonus:", and neither uses the attribute name as its label.
-        assert(rows('Eagle-Eye Amulet').some(([l, v]) => l === 'Slot:' && v === 'Amulet'),
+        assert(rows('Eagle-Eye Amulet').some(([l, v]) => l === 'Slot:' && v === 'Necklace'),
           `the slot is a stat row, not a body line (got ${JSON.stringify(rows('Eagle-Eye Amulet'))})`);
         assert(!text(card('Eagle-Eye Amulet').querySelector('.card__body')).includes('Slot'),
           'and no longer a body line');
@@ -405,7 +405,8 @@
         const worn = $$('#inventory-tab .panel-section')
           .find(s => text(s.querySelector('.section-toggle')).includes('Equipped'))
           .querySelector('.card');
-        assert(text(worn.querySelector('.card__body')) === 'Equipped: Amulet', 'the equipped card names its slot');
+        assert(text(worn.querySelector('.card__body')) === 'Equipped: Necklace',
+          'the equipped card names its slot, through the locale rather than the raw id');
         assert(![...worn.querySelectorAll('.card__stat-label')].some(l => text(l) === 'Slot:'),
           'and does not repeat it as a stat row');
       });
@@ -450,7 +451,7 @@
         const equipment = () => window.gameEngine.state.getPlayer().equipment;
 
         equipCard('Rusty Sword').click();
-        assert(equipment()['Left Hand'] === 'rusty_sword', `first equip went to ${JSON.stringify(equipment())}`);
+        assert(equipment().left_hand === 'rusty_sword', `first equip went to ${JSON.stringify(equipment())}`);
 
         // The click is the user's act, so the line is the player's — the act
         // in imperative, with the engine-picked hand riding in the parens.
@@ -460,7 +461,7 @@
         assert(lastLog().classList.contains('scene__log--choice'), 'in the player\'s voice, not the narrator\'s');
 
         equipCard('Flames').click();
-        assert(equipment()['Right Hand'] === 'flames', `second equip went to ${JSON.stringify(equipment())}`);
+        assert(equipment().right_hand === 'flames', `second equip went to ${JSON.stringify(equipment())}`);
 
         // Clicking an equipped card takes it off again. Each click re-renders
         // the panel, so re-query rather than iterating a stale list.
@@ -472,6 +473,40 @@
         assert(Object.values(equipment()).every(id => !id), 'every slot empty after unequipping by click');
         assert(text(lastLog()).includes('Unequip the') && text(lastLog()).endsWith('(Right Hand)'),
           `unequipping logs as the act to match (got "${text(lastLog())}")`);
+      });
+
+      await step('a kind with two slots fills both before it swaps either', () => {
+        // The point of slot kinds: two rings coexist, on top of two full
+        // hands, because a ring competes only with the other ring.
+        const equipCard = (name) => $$('#inventory-tab button.card[data-action="equip"]').find(c => text(c).includes(name));
+        const equipment = () => window.gameEngine.state.getPlayer().equipment;
+
+        equipCard('Rusty Sword').click();
+        equipCard('Round Shield') && equipCard('Round Shield').click();
+        equipCard('Orrel Signet').click();
+        equipCard('Ember Ring').click();
+
+        // Stripping runs whatever the assertions do: a failure here used to
+        // leave gear on and take two later steps down with it.
+        try {
+          assert(equipment().left_ring === 'orrel_signet' && equipment().right_ring === 'ember_ring',
+            `both rings are worn at once (got ${JSON.stringify(equipment())})`);
+          assert(equipment().left_hand === 'rusty_sword',
+            'and neither ring displaced what the hands were holding');
+
+          // The worn card names the slot the engine chose. The card of an
+          // unworn ring names only the kind — which slot it lands in isn't
+          // decided until it goes on, so the card must not promise one.
+          const ring = $$('#inventory-tab .card').find(c => text(c).includes('Ember Ring'));
+          assert(text(ring).includes('Equipped: Right Ring'), `the worn card names its slot (got "${text(ring)}")`);
+        } finally {
+          let off = $('#inventory-tab button.card[data-action="unequip"]');
+          while (off) {
+            off.click();
+            off = $('#inventory-tab button.card[data-action="unequip"]');
+          }
+        }
+        assert(Object.values(equipment()).every(id => !id), 'stripped again for the steps that follow');
       });
 
       await step('options tab holds save/load/restart', () => {
@@ -1300,8 +1335,8 @@
         // can't skew later asserts.
         const engine = window.gameEngine;
         const player = engine.state.getPlayer();
-        const prevRightHand = player.equipment['Right Hand'];
-        player.equipment['Right Hand'] = 'fireball';
+        const prevRightHand = player.equipment.right_hand;
+        player.equipment.right_hand = 'fireball';
 
         const cs = await startFight(['goblin_guard', 'goblin_grunt']);
 
@@ -1330,7 +1365,7 @@
 
         cs.endCombat(true);
         await until(() => !engine.inCombat, 'the fight closed');
-        player.equipment['Right Hand'] = prevRightHand;
+        player.equipment.right_hand = prevRightHand;
         engine.state.refreshItemUses('full_rest'); // leave the uses fresh for later steps
       });
 
@@ -1341,7 +1376,7 @@
         const player = engine.state.getPlayer();
         const prev = { ...player.equipment };
         Object.assign(player.equipment, {
-          'Right Hand': 'iron_sword', 'Left Hand': 'round_shield', 'Head': 'cinderband',
+          right_hand: 'iron_sword', left_hand: 'round_shield', head: 'cinderband',
         });
 
         const cs = await startFight(['goblin_grunt']);
@@ -1352,7 +1387,7 @@
         assert(buttons().some(b => text(b).includes('Iron Sword')),
           'and the held weapon keeps its own button');
 
-        player.equipment['Head'] = null;
+        player.equipment.head = null;
         cs.renderer.render();
         assert(!buttons().some(b => text(b).includes('Spark')),
           'the spell goes with the circlet');

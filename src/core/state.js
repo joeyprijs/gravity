@@ -6,7 +6,7 @@ const MAX_LOG_ENTRIES = 200;
 // Increment when the save schema changes. loadFromObject() migrates older saves
 // forward so they remain compatible. Each migration function receives the raw
 // parsed data object and mutates it in-place.
-const SAVE_VERSION = 6;
+const SAVE_VERSION = 7;
 
 const MIGRATIONS = {
   // v0 → v1: player.name was added; give it an empty default on older saves.
@@ -42,6 +42,30 @@ const MIGRATIONS = {
   // v5 → v6: player.itemUses added (rest-limited item uses). An absent entry
   // means "full", so older saves load with every use available.
   6: (data) => { if (!('itemUses' in data.player)) data.player.itemUses = {}; },
+  // v6 → v7: equipment slots became declared data with semantic ids
+  // (rules.playerDefaults.equipmentSlots) instead of English display names,
+  // Torso and Legs merged into one body slot, and two ring slots appeared.
+  // Legs holds nothing in the demo, but a save may carry armor there: it
+  // takes the body slot if Torso left it free, and otherwise goes back to the
+  // pack rather than being dropped on the floor.
+  7: (data) => {
+    const old = data.player.equipment ?? {};
+    const equipment = {
+      head: old.Head ?? null,
+      necklace: old.Amulet ?? null,
+      body: old.Torso ?? old.Legs ?? null,
+      left_hand: old['Left Hand'] ?? null,
+      right_hand: old['Right Hand'] ?? null,
+      left_ring: null,
+      right_ring: null,
+    };
+    if (old.Legs && equipment.body !== old.Legs) {
+      const stack = data.player.inventory?.find(entry => entry.item === old.Legs);
+      if (stack) stack.amount = (stack.amount ?? 1) + 1;
+      else (data.player.inventory ??= []).push({ item: old.Legs, amount: 1 });
+    }
+    data.player.equipment = equipment;
+  },
 };
 
 // Saves written before plugin migrations had their own version line (see
@@ -112,6 +136,13 @@ function makeDefaultState(rules) {
   (rules.customAttributes ?? []).forEach(attr => {
     player.attributes[attr.id] = attr.default ?? 0;
   });
+  // The declared slots ARE the equipment map, all empty, in declaration
+  // order — which is the order the equipped panel renders them in. Holding
+  // the declaration and the live map separately would let them drift.
+  player.equipment = Object.fromEntries(
+    (player.equipmentSlots ?? []).map(slot => [slot.id, null])
+  );
+  delete player.equipmentSlots;
   // Banked level-up stat points (rules.levelUp.statPoints per level).
   player.statPoints = 0;
   // Remaining uses of rest-limited items (itemId → remaining). An absent

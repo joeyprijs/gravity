@@ -224,9 +224,10 @@ export const MINIMAP_SIZE = 200;
 // Pixel buffer around the map bounding box so scaled rooms keep clean margins
 export const MAP_PADDING = 40;
 
-// Equipment slots that can hold weapons/spells. Used by combat and inventory UI
-// to identify attackable items without hardcoding slot names in logic code.
-export const WEAPON_SLOTS = ['Left Hand', 'Right Hand'];
+// The one equipment slot kind the engine itself depends on: combat reads the
+// player's attacks, and an enemy's weapon, out of the slots declared with it.
+// Every other kind (ring, head, body...) is the game's own invention.
+export const HAND_SLOT_KIND = 'hand';
 
 // The item `type` vocabulary the engine branches on (equip flow, combat,
 // inventory grouping). Data may omit type (treated as Flavour); a declared

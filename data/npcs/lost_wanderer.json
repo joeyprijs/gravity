@@ -10,6 +10,6 @@
     "strength": 1
   },
   "equipment": {
-    "Right Hand": "simple_dagger"
+    "right_hand": "simple_dagger"
   }
 }

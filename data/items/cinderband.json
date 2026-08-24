@@ -1,7 +1,7 @@
 {
   "name": "Cinderband",
   "type": "Armor",
-  "slot": "Head",
+  "slot": "head",
   "description": "A thin iron circlet, blackened on one side where it lay too long in the coals. Worn, a small fire sits ready behind your eyes, and both your hands stay free.",
   "value": 60,
   "attributes": {

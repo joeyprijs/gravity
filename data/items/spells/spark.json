@@ -1,7 +1,6 @@
 {
   "name": "Spark",
   "type": "Spell",
-  "slot": "Right Hand",
   "description": "A short, spitting arc of light thrown from the fingertips. It singes more than it wounds, but it costs almost nothing to call.",
   "value": 80,
   "attributes": {

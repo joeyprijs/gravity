@@ -1,7 +1,7 @@
 {
   "name": "Padded Jerkin",
   "type": "Armor",
-  "slot": "Torso",
+  "slot": "body",
   "description": "Quilted linen stuffed with wool. Not proud armor, but it turns a graze into a bruise.",
   "value": 15,
   "attributes": {

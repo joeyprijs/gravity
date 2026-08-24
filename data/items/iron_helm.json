@@ -1,0 +1,11 @@
+{
+  "name": "Iron Helm",
+  "type": "Armor",
+  "slot": "head",
+  "description": "A plain riveted cap with a nose guard, heavier than it looks. Hedda beat it back into shape twice before selling it on.",
+  "value": 35,
+  "attributes": {
+    "armorClassBonus": 1,
+    "actionPoints": 1
+  }
+}

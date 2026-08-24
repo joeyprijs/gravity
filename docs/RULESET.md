@@ -134,9 +134,24 @@ When your AP hits 0, your turn ends by itself.
 
 There are no critical hits on attacks — a natural 20 is just a high roll.
 
+### What you can wear
+
+Seven slots, and each holds one thing:
+
+| Slot | What goes there |
+|---|---|
+| Head | A helmet, or a band or circlet |
+| Necklace | One necklace |
+| Body | One set of body armor — it covers chest, arms and legs together |
+| Left Hand, Right Hand | A weapon, a spell, or a shield |
+| Left Ring, Right Ring | One ring each |
+
+**Armor Class comes from the armor, not from the slot.** An Iron Helm on your head adds AC because it is a piece of armor; the Cinderband in the same slot adds none, because it is a band. Rings and necklaces add AC only if that is what the particular item does.
+
 ### Hands and weapons
 
-- You have two hand slots (Left Hand, Right Hand). Weapons **and spells** are held in a hand.
+- Weapons, spells **and shields** all take a hand. You have two, so a sword and a shield leave no room for a spell — unless a worn item grants it (see below).
+- A weapon or spell goes to a free hand first, and otherwise replaces its own kind: a new sword replaces the sword and leaves the shield alone.
 - Each equipped weapon or spell gives its own attack button per enemy.
 - Both hands empty? You fight with **Unarmed Strike**: 1 AP, 1d20 + Strength, 1d4 damage.
 
@@ -220,13 +235,9 @@ Scenes may also offer plain authored heals ("Rest here (+10 HP)") — those are 
 | **Special** | Hearthstone | A unique tool with its own action |
 | **Flavour** | Cellar Key, Sunstone Shard, relics | Story items; keys, quest goals, museum pieces |
 
-### Equipment slots
-
-Head, Amulet, Torso, Left Hand, Right Hand, Legs.
-
 ### Worn bonuses
 
-Armor pieces give bonuses **while worn**: Leather Armor gives +2 AC; the Eagle-Eye Amulet gives +1 Perception. Take it off, lose the bonus. Worn bonuses cannot push a stat past the point-buy cap trickery — the caps compare your base value.
+Armor pieces give bonuses **while worn**: Leather Armor gives +2 AC; the Iron Helm +1 AC; the Eagle-Eye Amulet +1 Perception; the Orrel Signet +1 Charisma. Take it off, lose the bonus. Worn bonuses cannot push a stat past the point-buy cap trickery — the caps compare your base value.
 
 ### The Hearthstone
 
@@ -289,6 +300,7 @@ Reputation is your museum's standing, and it comes from **relics**.
 | Clock, segments, time prices | `rules.json` → `time` |
 | Merchant buy-back ratio, swap-out AP price | `rules.json` → `merchantSellRatio`, `unequipApCost` |
 | A weapon's dice, costs, attributes, charges | The item's JSON in `data/items/` (spells in `data/items/spells/`) |
+| Which slots exist, and their order | `rules.json` → `playerDefaults.equipmentSlots` |
 | The spells a worn item grants | That item's `attributes.grantsSpells` |
 | A check's DC, tiers, budgets | The scene/NPC JSON in `data/scenes/`, `data/npcs/` |
 

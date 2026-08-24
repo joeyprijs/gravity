@@ -1,7 +1,7 @@
 {
   "name": "Wayfinder's Charm",
   "type": "Armor",
-  "slot": "Amulet",
+  "slot": "necklace",
   "description": "A worn iron disc on a leather cord, etched with a compass rose. Bron carried this through a dozen dungeons. It grants a quiet confidence.",
   "value": 40,
   "attributes": {

@@ -1,7 +1,6 @@
 {
   "name": "Hand Axe",
   "type": "Weapon",
-  "slot": "Right Hand",
   "description": "Short-hafted and heavier than it looks. Splits kindling as happily as anything else.",
   "value": 22,
   "attributes": {

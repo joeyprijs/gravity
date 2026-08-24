@@ -16,7 +16,14 @@ const TEST_RULES = {
       { item: 'flames',         amount: 1 },
       { item: 'healing_potion', amount: 2 },
     ],
-    equipment: {},
+    equipmentSlots: [
+      { id: 'head', kind: 'head' },
+      { id: 'body', kind: 'body' },
+      { id: 'left_hand', kind: 'hand' },
+      { id: 'right_hand', kind: 'hand' },
+      { id: 'left_ring', kind: 'ring' },
+      { id: 'right_ring', kind: 'ring' },
+    ],
   },
   customAttributes: [],
   startingScene: null,
@@ -188,7 +195,7 @@ test('getMissionStatus: unregistered mission returns not_started', () => {
 test('equipItem: fails and returns false if item is not in inventory', () => {
   const success = gameState.equipItem('Right Hand', 'no_such_item');
   assert.equal(success, false);
-  assert.equal(gameState.getPlayer().equipment['Right Hand'], undefined);
+  assert.equal(gameState.getPlayer().equipment.right_hand, null);
 });
 
 test('depositToChest: clamps to actual inventory amount', () => {
@@ -254,7 +261,7 @@ test('loadFromObject: applies a valid save and migrates an old one forward', () 
   const ok = gameState.loadFromObject({ player: {}, log: [] }); // no saveVersion → migrates from 0
   assert.equal(ok, true);
   assert.equal(gameState.getPlayer().name, ''); // migration 1 added player.name
-  assert.equal(gameState.state.saveVersion, 6); // brought up to the current version
+  assert.equal(gameState.state.saveVersion, 7); // brought up to the current version
   assert.deepEqual(gameState.state.time, { ticks: 0 }); // migration 4 seeded the clock
   assert.deepEqual(gameState.state.timers, []);
 });
@@ -289,6 +296,40 @@ test('migrate v6: a save without itemUses loads with every rest-limited use avai
   const again = JSON.parse(JSON.stringify(gameState.state));
   gameState.loadFromObject(again);
   assert.deepEqual(gameState.getItemUses('fire_spell'), { current: 2, max: 3, refresh: 'short_rest' });
+});
+
+test('migrate v7: old slot names become semantic ids, and Legs merges into body', () => {
+  gameState.init(TEST_RULES);
+  const ok = gameState.loadFromObject({
+    saveVersion: 6,
+    player: {
+      name: 'x',
+      inventory: [{ item: 'rope', amount: 1 }],
+      equipment: { Head: 'helm', Amulet: 'charm', Torso: 'jerkin', Legs: 'greaves', 'Left Hand': 'shield', 'Right Hand': 'sword' },
+    },
+    log: [],
+  });
+  assert.equal(ok, true);
+  assert.deepEqual(gameState.getPlayer().equipment, {
+    head: 'helm', necklace: 'charm', body: 'jerkin',
+    left_hand: 'shield', right_hand: 'sword',
+    left_ring: null, right_ring: null,
+  });
+  // Torso claimed the body slot, so the leg armor goes back to the pack
+  // rather than vanishing with the slot that held it.
+  assert.deepEqual(gameState.getPlayer().inventory,
+    [{ item: 'rope', amount: 1 }, { item: 'greaves', amount: 1 }]);
+});
+
+test('migrate v7: leg armor takes the body slot when nothing else claimed it', () => {
+  gameState.init(TEST_RULES);
+  gameState.loadFromObject({
+    saveVersion: 6,
+    player: { name: 'x', inventory: [], equipment: { Legs: 'greaves' } },
+    log: [],
+  });
+  assert.equal(gameState.getPlayer().equipment.body, 'greaves');
+  assert.deepEqual(gameState.getPlayer().inventory, [], 'and it is not also duplicated into the pack');
 });
 
 test('getMissionStage: falls back to the first declared stage for started missions without one', () => {
@@ -406,7 +447,7 @@ test('spendStatPoint: the cap compares base values, not gear-inflated ones', () 
   gameState.addXP(300); // bank 2 points
 
   // Simulate wearing the charm: equipment slot filled, live value raised.
-  p.equipment.Amulet = 'charm';
+  p.equipment.necklace = 'charm';
   p.attributes.perception = 1; // base 0 + worn 1
   assert.equal(gameState.playerBaseAttribute('perception'), 0);
   assert.equal(gameState.spendStatPoint('perception'), true);  // base 0 < cap 1 — gear must not block
@@ -456,7 +497,7 @@ test('registerMigration: requires a plugin id and a positive integer version, re
 test('plugin migrations run on their own version line, partitioned from the core counter', () => {
   const ok = gameState.loadFromObject({ player: {}, log: [] }); // v0 save
   assert.equal(ok, true);
-  assert.equal(gameState.state.saveVersion, 6);                    // core line untouched by the plugin
+  assert.equal(gameState.state.saveVersion, 7);                    // core line untouched by the plugin
   assert.equal(gameState.state.pluginSaveVersions.demo, 1);        // plugin line stamped separately
   assert.deepEqual(gameState.state.plugins.demo, { seeded: true }); // and the migration ran
 
@@ -476,7 +517,7 @@ test('migrate: a pre-partition save stamped 5 by a plugin adopts the core versio
     saveVersion: 5, player: { name: 'x' }, log: [],
     missions: { escape: 'active' }, // pre-v5 string shape proves v5 ran
   });
-  assert.equal(gameState.state.saveVersion, 6);
+  assert.equal(gameState.state.saveVersion, 7);
   assert.deepEqual(gameState.state.missions.escape, { status: 'active' }, 'the v5 mission migration ran after adoption');
   assert.equal(gameState.state.pluginSaveVersions.demo, 1); // the plugin line still catches up
 });

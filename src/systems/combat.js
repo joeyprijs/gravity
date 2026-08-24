@@ -1,5 +1,5 @@
-import { buildSceneDescription } from '../core/utils.js';
-import { MAX_D20_ROLL, CSS, LOG, WEAPON_SLOTS, ENEMY_CLAW_ID } from '../core/config.js';
+import { buildSceneDescription, handSlots } from '../core/utils.js';
+import { MAX_D20_ROLL, CSS, LOG, ENEMY_CLAW_ID } from '../core/config.js';
 import { roll, parseDamage } from './dice.js';
 import { rollBreakdown, skillLabel } from './skill-checks.js';
 import { formatList, isOne } from '../core/i18n.js';
@@ -399,12 +399,16 @@ export class CombatSystem {
     this.engine.state.modifyPlayerStat('ap', 'full');
   }
 
-  // The weapon an enemy attacks with: their Right Hand item, falling back to
-  // rules.fallbackWeapons.enemy (the core claw by default). Null when neither
-  // resolves to a loaded item.
+  // The weapon an enemy attacks with: the first hand slot of theirs holding a
+  // Weapon or Spell, falling back to rules.fallbackWeapons.enemy (the core
+  // claw by default). Reading the kind rather than one named hand means an
+  // enemy armed in either hand still swings, and an enemy carrying a shield
+  // in one hand doesn't try to hit anyone with it. Null when neither resolves
+  // to a loaded item.
   _resolveEnemyWeapon(enemy) {
-    const equipped = enemy.equipment?.[WEAPON_SLOTS[1]]; // Right Hand
-    const item = equipped ? this.engine.data.items[equipped] : null;
+    const item = handSlots(this.engine.data.rules)
+      .map(slot => this.engine.data.items[enemy.equipment?.[slot]])
+      .find(candidate => candidate?.type === 'Weapon' || candidate?.type === 'Spell');
     const fallbackId = this.engine.data.rules?.fallbackWeapons?.enemy ?? ENEMY_CLAW_ID;
     return item || this.engine.data.items[fallbackId] || null;
   }

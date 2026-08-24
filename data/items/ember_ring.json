@@ -1,0 +1,12 @@
+{
+  "name": "Ember Ring",
+  "type": "Armor",
+  "slot": "ring",
+  "description": "A twist of blackened copper with a bead of orange glass. It sits warm against the finger, and the fire it holds answers to a closed fist.",
+  "value": 70,
+  "attributes": {
+    "grantsSpells": [
+      "spark"
+    ]
+  }
+}

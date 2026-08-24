@@ -10,7 +10,7 @@
     "strength": 0
   },
   "equipment": {
-    "Right Hand": "rusty_sword"
+    "right_hand": "rusty_sword"
   },
   "carriedItems": [
     "healing_potion"

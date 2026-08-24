@@ -1,7 +1,6 @@
 {
   "name": "Flames",
   "type": "Spell",
-  "slot": "Right Hand",
   "description": "Conjure a burst of raw fire. Requires no weapon to cast.",
   "value": 100,
   "attributes": {

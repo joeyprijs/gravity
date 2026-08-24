@@ -1,4 +1,4 @@
-import { CSS, EL } from './config.js';
+import { CSS, EL, HAND_SLOT_KIND } from './config.js';
 import { iconHtml } from './icons.js';
 
 /**
@@ -232,6 +232,65 @@ export function compassPoint(from, to) {
   return COMPASS_POINTS[Math.round(degrees / step) % COMPASS_POINTS.length];
 }
 
+// The slot kind an item targets. Armor and everything else name their kind
+// outright; a Weapon or Spell defaults to a hand, so the hundreds of swords a
+// game may hold never have to repeat `"slot": "hand"`. Returns null for an
+// item that goes into no slot at all (a potion, a key).
+const HAND_TYPES = new Set(['Weapon', 'Spell']);
+
+/**
+ * The equipment slot kind an item asks for, or null when it wears nowhere.
+ * @param {object|null} itemData - The item definition from data/items.
+ * @returns {string|null}
+ */
+export function itemSlotKind(itemData) {
+  if (!itemData) return null;
+  return itemData.slot ?? (HAND_TYPES.has(itemData.type) ? HAND_SLOT_KIND : null);
+}
+
+/**
+ * The display name of an equipment slot (ui.equipmentSlots.<id>) or of a slot
+ * kind (itemStats.slotKinds.<kind>), falling back to the raw id. Slot ids are
+ * semantic (`left_ring`), so the wording is the locale's to own — a game in
+ * another language renames the slot without touching rules.json.
+ *
+ * @param {function} t - The engine's translate function.
+ * @param {string} id - A slot id, or a slot kind when `kind` is true.
+ * @param {boolean} [kind=false] - Look the name up as a kind, not an instance.
+ * @returns {string}
+ */
+export function slotLabel(t, id, kind = false) {
+  const key = kind ? `itemStats.slotKinds.${id}` : `ui.equipmentSlots.${id}`;
+  const name = t(key);
+  return name !== key ? name : id;
+}
+
+/**
+ * The declared equipment slots of one kind, in declaration order — which is
+ * also the order they render in. Slots are game-defined
+ * (rules.playerDefaults.equipmentSlots); only the `hand` kind is special to
+ * the engine, because combat reads the player's attacks from it.
+ *
+ * @param {object|null} rules - The loaded rules object.
+ * @param {string} kind - The slot kind (e.g. 'hand', 'ring').
+ * @returns {string[]} Slot ids.
+ */
+export function slotsOfKind(rules, kind) {
+  return (rules?.playerDefaults?.equipmentSlots ?? [])
+    .filter(slot => slot.kind === kind)
+    .map(slot => slot.id);
+}
+
+/**
+ * The slot ids a weapon or spell can occupy. Combat reads the player's
+ * attacks from these, and an enemy's weapon out of the same kind.
+ * @param {object|null} rules - The loaded rules object.
+ * @returns {string[]} Slot ids, in declaration order.
+ */
+export function handSlots(rules) {
+  return slotsOfKind(rules, HAND_SLOT_KIND);
+}
+
 /**
  * The attribute deltas one equipment piece carries while worn: its
  * attributeBonuses map, plus the legacy armorClassBonus folded into 'ac'.
@@ -375,10 +434,11 @@ export function itemStatLines(t, itemData, attributes = {}, uses = null, items =
 export function itemCardStats(t, itemData, attributes = {}, { slot = true, uses = null, items = null } = {}) {
   const lines = itemStatLines(t, itemData, attributes, uses, items);
   // Where it's worn leads, because it's what the player checks first on gear.
-  // Only armor's slot is shown: a weapon or spell goes to whichever hand is
-  // free whatever it declares (see pickHand), so printing its slot would lie.
+  // The KIND is what the card can honestly promise — which of a kind's slots
+  // the item lands in is decided at equip time (see pickSlot), so a ring says
+  // "Ring", not which hand it will end up on.
   if (slot && itemData.type === 'Armor' && itemData.slot) {
-    lines.unshift(t('itemStats.slot', { value: itemData.slot }));
+    lines.unshift(t('itemStats.slot', { value: slotLabel(t, itemData.slot, true) }));
   }
   if (itemData.value > 0) lines.push(t('itemStats.value', { value: itemData.value }));
   return lines.length > 0 ? lines : undefined;

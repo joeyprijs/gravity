@@ -1,4 +1,4 @@
-import { createElement, buildCard, createSectionToggles, getItemLabel, itemCardStats } from '../core/utils.js';
+import { createElement, buildCard, createSectionToggles, getItemLabel, itemCardStats, slotLabel } from '../core/utils.js';
 import { EL, CSS } from '../core/config.js';
 import { itemHasUse } from '../systems/items.js';
 
@@ -51,7 +51,7 @@ export class InventoryUI {
         if (!itemData) return;
         ul.appendChild(this._itemRow({
           title: itemData.name,
-          body: this.engine.t('ui.equippedTo', { slot }),
+          body: this.engine.t('ui.equippedTo', { slot: slotLabel(this.engine.t.bind(this.engine), slot) }),
           // No slot row here — "Equipped: Torso" above it already said so, and
           // it names the slot the item is actually IN, which for a hand item
           // is the one the engine picked rather than the one it declares.

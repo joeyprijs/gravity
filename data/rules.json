@@ -88,18 +88,52 @@
         "amount": 1
       },
       {
+        "item": "iron_helm",
+        "amount": 1
+      },
+      {
+        "item": "orrel_signet",
+        "amount": 1
+      },
+      {
+        "item": "ember_ring",
+        "amount": 1
+      },
+      {
         "item": "healing_potion",
         "amount": 2
       }
     ],
-    "equipment": {
-      "Head": null,
-      "Amulet": null,
-      "Torso": null,
-      "Left Hand": null,
-      "Right Hand": null,
-      "Legs": null
-    }
+    "equipmentSlots": [
+      {
+        "id": "head",
+        "kind": "head"
+      },
+      {
+        "id": "necklace",
+        "kind": "necklace"
+      },
+      {
+        "id": "body",
+        "kind": "body"
+      },
+      {
+        "id": "left_hand",
+        "kind": "hand"
+      },
+      {
+        "id": "right_hand",
+        "kind": "hand"
+      },
+      {
+        "id": "left_ring",
+        "kind": "ring"
+      },
+      {
+        "id": "right_ring",
+        "kind": "ring"
+      }
+    ]
   },
   "customAttributes": [
     {

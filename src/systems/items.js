@@ -1,5 +1,5 @@
-import { LOG, WEAPON_SLOTS } from '../core/config.js';
-import { equipmentAttributeBonuses } from '../core/utils.js';
+import { LOG } from '../core/config.js';
+import { equipmentAttributeBonuses, itemSlotKind, slotsOfKind, slotLabel } from '../core/utils.js';
 import { parseDamage } from './dice.js';
 
 // Item lifecycle logic: using consumables, equipping and unequipping gear.
@@ -113,35 +113,36 @@ export function useItem(engine, itemId) {
   }
 }
 
-// The item types held in a hand — the same pair combat reads its attacks from.
-// A weapon or spell goes to a hand whatever slot it declares (many declare
-// none at all), so the type decides, not the item's slot.
-const HAND_TYPES = new Set(['Weapon', 'Spell']);
-
 /**
- * The hand a weapon or spell goes into: an empty hand (left before right),
- * otherwise the hand holding the same type as the incoming item — a new
- * weapon replaces the weapon, a new spell the spell — so the pick is always
- * readable off the equipped section. Left when the types don't decide
- * (both hands hold the incoming type).
+ * The slot an item goes into, among the declared slots of the kind it asks
+ * for: an empty one first (in declaration order), otherwise the one holding
+ * the same item type — a new weapon replaces the weapon, a new spell the
+ * spell, a third ring the first ring — so the pick is always readable off the
+ * equipped section. The first slot of the kind when the types don't decide.
+ *
+ * A kind with a single slot (head, body) reduces to that slot; a kind with
+ * two (hand, ring) is what makes this more than a lookup.
  *
  * @param {object} engine - The RPGEngine instance.
  * @param {object} itemData - The item being equipped.
- * @returns {string} A hand slot name.
+ * @returns {string|undefined} A slot id, or undefined when the item wears
+ *   nowhere or names a kind this game declares no slot for.
  */
-function pickHand(engine, itemData) {
+function pickSlot(engine, itemData) {
+  const kind = itemSlotKind(itemData);
+  if (!kind) return undefined;
+  const slots = slotsOfKind(engine.data.rules, kind);
   const equipment = engine.state.getPlayer().equipment;
-  const empty = WEAPON_SLOTS.find(hand => !equipment[hand]);
+  const empty = slots.find(slot => !equipment[slot]);
   if (empty) return empty;
-  const sameType = WEAPON_SLOTS.find(hand => engine.data.items[equipment[hand]]?.type === itemData.type);
-  return sameType ?? WEAPON_SLOTS[0];
+  const sameType = slots.find(slot => engine.data.items[equipment[slot]]?.type === itemData.type);
+  return sameType ?? slots[0];
 }
 
 /**
  * Equips an item, swapping the worn attribute bonuses as one delta and
- * spending the item's AP cost. The slot is the engine's call: a hand item
- * alternates between the hands (see pickHand), everything else goes to the
- * slot it declares.
+ * spending the item's AP cost. Which slot it lands in is the engine's call:
+ * the item names a slot *kind* and pickSlot chooses the instance.
  *
  * @param {object} engine - The RPGEngine instance.
  * @param {string} itemId - The item to equip.
@@ -150,7 +151,7 @@ export function equipItem(engine, itemId) {
   if (engine.isGameOver) return;
   const itemData = engine.data.items[itemId];
   if (!itemData) return;
-  const targetSlot = HAND_TYPES.has(itemData.type) ? pickHand(engine, itemData) : itemData.slot;
+  const targetSlot = pickSlot(engine, itemData);
   if (!targetSlot) return;
 
   if (engine.state.countPlayerItem(itemId, { includeEquipped: false }) <= 0) return;
@@ -175,7 +176,7 @@ export function equipItem(engine, itemId) {
   engine.state.modifyPlayerStats(deltas);
   // The user's act, in their voice — the engine-picked hand rides along in
   // the parens (see STYLE.md, the narrative log's two voices).
-  engine.log(LOG.PLAYER, engine.t('player.equipped', { name: itemData.name, slot: targetSlot }), 'choice');
+  engine.log(LOG.PLAYER, engine.t('player.equipped', { name: itemData.name, slot: slotLabel(engine.t.bind(engine), targetSlot) }), 'choice');
   engine._spendAP(apCost);
 }
 
@@ -201,6 +202,6 @@ export function unequipItem(engine, slot) {
   engine.state.modifyPlayerStats(Object.fromEntries(
     Object.entries(bonuses).map(([key, bonus]) => [key, -bonus])
   ));
-  engine.log(LOG.PLAYER, engine.t('player.unequipped', { name: itemName, slot }), 'choice');
+  engine.log(LOG.PLAYER, engine.t('player.unequipped', { name: itemName, slot: slotLabel(engine.t.bind(engine), slot) }), 'choice');
   engine._spendAP(unequipCost);
 }

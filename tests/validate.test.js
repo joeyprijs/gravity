@@ -15,7 +15,7 @@ function makeCleanData() {
       goblin: {
         name: 'Goblin',
         attributes: { healthPoints: 5, armorClass: 7, actionPoints: 2 },
-        equipment: { 'Right Hand': 'sword' },
+        equipment: { right_hand: 'sword' },
         carriedItems: ['potion'],
       },
       elder: {
@@ -52,11 +52,24 @@ function makeCleanData() {
     tables: { loot: { entries: [{ item: 'potion' }, { item: 'gold', amount: 5 }] } },
     rules: {
       xpPerLevel: 100,
-      playerDefaults: { attributes: { ac: 10 } },
+      playerDefaults: {
+        attributes: { ac: 10 },
+        equipmentSlots: [
+          { id: 'head', kind: 'head' },
+          { id: 'left_hand', kind: 'hand' },
+          { id: 'right_hand', kind: 'hand' },
+          { id: 'left_ring', kind: 'ring' },
+          { id: 'right_ring', kind: 'ring' },
+        ],
+      },
       customAttributes: [{ id: 'perception', default: 0 }],
       fallbackWeapons: { player: 'sword', enemy: 'sword' },
     },
-    locale: { actions: { skillBadge: { perception: 'PER {dc}' }, skillBadgeFree: { perception: 'Perception' }, skillBadgeDc: 'DC {dc}' } },
+    locale: {
+      actions: { skillBadge: { perception: 'PER {dc}' }, skillBadgeFree: { perception: 'Perception' }, skillBadgeDc: 'DC {dc}' },
+      ui: { equipmentSlots: { head: 'Head', left_hand: 'Left Hand', right_hand: 'Right Hand', left_ring: 'Left Ring', right_ring: 'Right Ring' } },
+      itemStats: { slotKinds: { head: 'Head', hand: 'Hand', ring: 'Ring' } },
+    },
   };
 }
 
@@ -534,7 +547,7 @@ test('flags bad levelUp.statPoints, customAttributes max, and item attribute ref
 test('flags a combat NPC whose weapon attackAttribute is missing from its stat block', () => {
   const data = makeToolkitData();
   data.items.wand = { name: 'Wand', type: 'Spell', attributes: { attackAttribute: 'perception', damageAttribute: 'charisma' } };
-  data.npcs.goblin.equipment = { 'Right Hand': 'wand' };
+  data.npcs.goblin.equipment = { right_hand: 'wand' };
   assert.ok(issuesFor(data).some(m => m.includes('(attackAttribute "perception") but declares no perception attribute')));
   assert.ok(issuesFor(data).some(m => m.includes('(damageAttribute "charisma") but declares no charisma attribute')));
 
@@ -545,26 +558,55 @@ test('flags a combat NPC whose weapon attackAttribute is missing from its stat b
   assert.ok(!issuesFor(data).some(m => m.includes('declares no charisma attribute')));
 });
 
-test('flags an unknown item type and an undeclared equipment slot', () => {
+test('flags an unknown item type and a slot kind no slot declares', () => {
   const data = makeToolkitData();
-  data.rules.playerDefaults.equipment = { 'Head': null, 'Right Hand': null };
   data.items.gizmo = { name: 'Gizmo', type: 'Widget' };            // unknown type
-  data.items.hat = { name: 'Hat', type: 'Armor', slot: 'Face' };   // undeclared slot
-  data.items.helm = { name: 'Helm', type: 'Armor', slot: 'Head' }; // declared — clean
+  data.items.hat = { name: 'Hat', type: 'Armor', slot: 'face' };   // no slot of that kind
+  data.items.helm = { name: 'Helm', type: 'Armor', slot: 'head' }; // declared — clean
   const messages = issuesFor(data);
   assert.ok(messages.some(m => m.includes('type "Widget" is not a known item type')));
-  assert.ok(messages.some(m => m.includes('slot "Face" is not a declared equipment slot')));
-  assert.ok(!messages.some(m => m.includes('slot "Head"')));       // a declared slot is clean
+  assert.ok(messages.some(m => m.includes('slot "face" is not a declared equipment slot kind')));
+  assert.ok(!messages.some(m => m.includes('slot "head"')));       // a declared kind is clean
 });
 
 test('item type and slot: valid values and omitted fields pass', () => {
   const data = makeToolkitData();
-  data.rules.playerDefaults.equipment = { 'Right Hand': null };
-  data.items.blade = { name: 'Blade', type: 'Weapon', slot: 'Right Hand' };
-  data.items.trinket = { name: 'Trinket' };  // no type, no slot — a Flavour keepsake
+  data.items.blade = { name: 'Blade', type: 'Weapon' };  // the type implies the hand kind
+  data.items.trinket = { name: 'Trinket' };              // no type, no slot — a Flavour keepsake
   const messages = issuesFor(data);
   assert.ok(!messages.some(m => m.includes('is not a known item type')));
   assert.ok(!messages.some(m => m.includes('is not a declared equipment slot')));
+});
+
+test('equipmentSlots: flags a missing list, a duplicate id, and no hand to fight with', () => {
+  const data = makeToolkitData();
+  data.rules.playerDefaults.equipmentSlots = [
+    { id: 'head', kind: 'head' },
+    { id: 'head', kind: 'head' },
+    { id: 'trinket' },
+  ];
+  const messages = issuesFor(data);
+  assert.ok(messages.some(m => m.includes('duplicate slot id "head"')));
+  assert.ok(messages.some(m => m.includes('"trinket": missing kind')));
+  assert.ok(messages.some(m => m.includes('no slot of kind "hand"')),
+    'a game with nowhere to hold a weapon can never render an attack');
+
+  delete data.rules.playerDefaults.equipmentSlots;
+  assert.ok(issuesFor(data).some(m => m.includes('equipmentSlots must be a non-empty array')));
+});
+
+test('equipmentSlots: flags a slot or kind the locale cannot name', () => {
+  const data = makeToolkitData();
+  data.rules.playerDefaults.equipmentSlots.push({ id: 'tail', kind: 'tail' });
+  const messages = issuesFor(data);
+  assert.ok(messages.some(m => m.includes('missing locale entry at ui.equipmentSlots.tail')));
+  assert.ok(messages.some(m => m.includes('missing locale entry at itemStats.slotKinds.tail')));
+});
+
+test('NPC equipment names a slot id, not a kind', () => {
+  const data = makeToolkitData();
+  data.npcs.goblin.equipment = { hand: 'sword' };  // the kind, not one of its slots
+  assert.ok(issuesFor(data).some(m => m.includes('equipment["hand"] is not a declared equipment slot')));
 });
 
 test('grantsSpells: flags an unknown id and a grant that is not a Spell', () => {

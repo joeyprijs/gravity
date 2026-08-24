@@ -1,4 +1,4 @@
-import { GOLD_ITEM_ID, ITEM_TYPES, TIMER_SAFE_ACTIONS } from './config.js';
+import { GOLD_ITEM_ID, ITEM_TYPES, TIMER_SAFE_ACTIONS, HAND_SLOT_KIND } from './config.js';
 // The icon set owns its own name list; validation reads it from there rather
 // than keeping a second copy that could drift.
 import { ICON_NAMES } from './icons.js';
@@ -67,6 +67,7 @@ export function validateGameData(data, knownActionTypes) {
 
   validateTables(ctx);
   validateScenes(ctx);
+  validateEquipmentSlots(ctx);
   validateNpcs(ctx);
   validateItems(ctx);
   validateMissions(ctx);
@@ -120,6 +121,42 @@ function validateMissions(ctx) {
   }
 }
 
+// The declared equipment slots, guarded so a malformed declaration reports
+// once (in validateRules) instead of throwing in every check that reads it.
+function declaredSlotList(rules) {
+  const slots = rules?.playerDefaults?.equipmentSlots;
+  return Array.isArray(slots) ? slots.filter(slot => slot && typeof slot.id === 'string') : [];
+}
+
+// Equipment slots: the list must exist, ids must be unique, every slot needs a
+// kind, and at least one must be a `hand` — combat reads the player's attacks
+// from that kind alone, so a game without one has no way to fight.
+function validateEquipmentSlots(ctx) {
+  const group = 'Rules';
+  const slots = ctx.rules?.playerDefaults?.equipmentSlots;
+  if (!Array.isArray(slots) || !slots.length) {
+    ctx.add(group, 'playerDefaults.equipmentSlots must be a non-empty array of { id, kind } — the player has nowhere to equip anything');
+    return;
+  }
+  const seen = new Set();
+  for (const slot of slots) {
+    if (!slot || typeof slot.id !== 'string' || !slot.id)
+      { ctx.add(group, `equipmentSlots: every slot needs a string id (got ${JSON.stringify(slot)})`); continue; }
+    if (typeof slot.kind !== 'string' || !slot.kind)
+      ctx.add(group, `equipmentSlots "${slot.id}": missing kind — items target a kind, so a slot without one can never be filled`);
+    if (seen.has(slot.id)) ctx.add(group, `equipmentSlots: duplicate slot id "${slot.id}"`);
+    seen.add(slot.id);
+    if (!ctx.locale?.ui?.equipmentSlots?.[slot.id])
+      ctx.add(group, `equipmentSlots "${slot.id}": missing locale entry at ui.equipmentSlots.${slot.id}`);
+  }
+  if (!slots.some(slot => slot?.kind === HAND_SLOT_KIND))
+    ctx.add(group, `equipmentSlots: no slot of kind "${HAND_SLOT_KIND}" — weapons and spells would have nowhere to go and combat could never render an attack`);
+  for (const kind of new Set(slots.map(slot => slot?.kind).filter(Boolean))) {
+    if (!ctx.locale?.itemStats?.slotKinds?.[kind])
+      ctx.add(group, `equipmentSlots: missing locale entry at itemStats.slotKinds.${kind} — item cards would print the raw kind id`);
+  }
+}
+
 // Items: type must name a known item type; slot must name a declared
 // equipment slot; attribute references must name declared attributes
 // (playerDefaults attributes or customAttributes) — a typo'd type silently
@@ -127,16 +164,17 @@ function validateMissions(ctx) {
 // a typo'd attackAttribute silently rolls +0, and a typo'd attributeBonuses
 // key silently does nothing on equip.
 function validateItems(ctx) {
-  // Equipment slots are game-defined (rules.playerDefaults.equipment) — only
-  // the hand slots are engine-fixed. Validate authored slots against what the
-  // game actually declares, not a hardcoded list.
-  const declaredSlots = new Set(Object.keys(ctx.rules?.playerDefaults?.equipment ?? {}));
+  // Equipment slots are game-defined (rules.playerDefaults.equipmentSlots) —
+  // only the `hand` kind is engine-fixed, because combat reads attacks from
+  // it. An item names a KIND, not one of the slots: which slot of that kind
+  // it lands in is decided at equip time.
+  const declaredKinds = new Set(declaredSlotList(ctx.rules).map(slot => slot.kind));
   for (const [id, item] of Object.entries(ctx.items ?? {})) {
     const group = `Item "${id}"`;
     if (item.type !== undefined && !ITEM_TYPES.has(item.type))
       ctx.add(group, `type "${item.type}" is not a known item type (${[...ITEM_TYPES].join(', ')})`);
-    if (item.slot !== undefined && declaredSlots.size && !declaredSlots.has(item.slot))
-      ctx.add(group, `slot "${item.slot}" is not a declared equipment slot (playerDefaults.equipment: ${[...declaredSlots].join(', ') || 'none'})`);
+    if (item.slot !== undefined && declaredKinds.size && !declaredKinds.has(item.slot))
+      ctx.add(group, `slot "${item.slot}" is not a declared equipment slot kind (playerDefaults.equipmentSlots kinds: ${[...declaredKinds].join(', ') || 'none'})`);
     const attackAttr = item.attributes?.attackAttribute;
     if (attackAttr && !ctx.knownSkills.has(attackAttr))
       ctx.add(group, `attributes.attackAttribute "${attackAttr}" is not a declared attribute (playerDefaults.attributes or customAttributes)`);
@@ -390,8 +428,14 @@ function validateNpcs(ctx) {
       if (!ctx.items[entry.item]) ctx.add(group, `carriedItems → unknown item "${entry.item}"`);
     }
 
+    // An NPC's equipment is keyed by slot ID, not by kind — it names the
+    // exact slot, the way the player's saved equipment map does. A typo'd
+    // slot is silently never read, so the NPC fights bare-handed.
+    const declaredIds = new Set(declaredSlotList(ctx.rules).map(slot => slot.id));
     for (const [slot, itemId] of Object.entries(npc.equipment || {})) {
       if (itemId && !ctx.items[itemId]) ctx.add(group, `equipment[${slot}] → unknown item "${itemId}"`);
+      if (declaredIds.size && !declaredIds.has(slot))
+        ctx.add(group, `equipment["${slot}"] is not a declared equipment slot (playerDefaults.equipmentSlots ids: ${[...declaredIds].join(', ')})`);
     }
 
     // A combat-capable NPC whose weapon rolls an attackAttribute needs that

@@ -120,6 +120,15 @@
     "btnRestart": "Restart",
     "equippedSection": "Equipped",
     "equippedTo": "Equipped: {slot}",
+    "equipmentSlots": {
+      "head": "Head",
+      "necklace": "Necklace",
+      "body": "Body",
+      "left_hand": "Left Hand",
+      "right_hand": "Right Hand",
+      "left_ring": "Left Ring",
+      "right_ring": "Right Ring"
+    },
     "worldMapTitle": "World Map",
     "itemRequires": "Requires: {name}",
     "locationDialogue": "{name}",
@@ -162,6 +171,13 @@
     "targetsAll": "Targets: all enemies",
     "targets": "Targets: up to {value} enemies",
     "grantsSpell": "Grants: {name}",
+    "slotKinds": {
+      "head": "Head",
+      "necklace": "Necklace",
+      "body": "Body",
+      "hand": "Hand",
+      "ring": "Ring"
+    },
     "healingAmount": "Healing: {value}",
     "armorClassBonus": "Bonus: +{value} Armor Class",
     "reputation": "Reputation: {value}",

@@ -165,12 +165,20 @@ Player defaults, attributes, progression, economy, and the UI tabs:
       "initiative": 0
     },
     "inventory": [],
-    "equipment": {
-      "Head": null,
-      "Torso": null,
-      "Left Hand": null,
-      "Right Hand": null
-    }
+    "equipmentSlots": [
+      {
+        "id": "head",
+        "kind": "head"
+      },
+      {
+        "id": "left_hand",
+        "kind": "hand"
+      },
+      {
+        "id": "right_hand",
+        "kind": "hand"
+      }
+    ]
   },
   "customAttributes": [
     {
@@ -678,10 +686,33 @@ Item `type` is one of `Weapon`, `Spell`, `Armor`, `Consumable`, `Special`, or `F
 
 `Special` is the story/required category (the demo's Hearthstone). A Special item never leaves the pack by the player's hand: it's filtered out of the merchant's sell list, the display-case artifact picker, and the chest deposit list, so give it no `value`. It is still *used* like a consumable when it declares a use (`teleportScene`, `healingAmount`, …) and is otherwise an inert card. Scripted effects — a quest turn-in, a scene that consumes it — remove it normally; the rule governs the player's choices, not the engine's reach.
 
-Equipment `slot` names are **game-defined** — whatever keys appear in `rules.playerDefaults.equipment` (the demo uses `Head`, `Amulet`, `Torso`, `Left Hand`, `Right Hand`, `Legs`). Only the two hand slots are engine-fixed, because combat reads weapons from them. A weapon or spell goes to a hand by virtue of its `type`, so the engine picks the hand and the item's own `slot` is ignored (most weapons declare none): an empty hand first, left before right, and otherwise alternating left, right, left… Both `type` and `slot` are validated at boot.
+Equipment slots are **game-defined**, declared as an ordered list in `rules.playerDefaults.equipmentSlots` — the list *is* the player's empty equipment map, and its order is the order the equipped panel renders:
+
+```json
+{
+  "equipmentSlots": [
+    {
+      "id": "body",
+      "kind": "body"
+    },
+    {
+      "id": "left_hand",
+      "kind": "hand"
+    },
+    {
+      "id": "right_hand",
+      "kind": "hand"
+    }
+  ]
+}
+```
+
+An item names a **kind**, never a slot id, and the engine picks the instance when you equip it: an empty slot of that kind first (in declaration order), otherwise the one holding the same item type — a new weapon replaces the weapon, a new spell the spell, a third ring the first ring. That is what lets a kind have two slots: two rings coexist because a ring only ever competes with the other ring. A Weapon or Spell may omit `slot` entirely, since its type already means `hand`.
+
+Only the `hand` kind is engine-fixed: combat reads the player's attacks, and an enemy's weapon, from those slots alone. Every other kind is the game's invention — the demo declares `head`, `necklace`, `body`, `hand` ×2 and `ring` ×2. Slot ids are semantic, so their wording lives in the locale (`ui.equipmentSlots.<id>` for a slot, `itemStats.slotKinds.<kind>` for a kind), not in `rules.json`. An NPC's `equipment` map is keyed by slot **id**, not kind. All of it is validated at boot.
 
 *   `attackAttribute` names the attribute whose modifier the wielder adds to attack rolls — accuracy belongs to the character, not the weapon.
-*   Armor and relics use `attributes.attributeBonuses` (e.g. `{ "perception": 1 }`) and/or `armorClassBonus` to raise attributes while worn.
+*   Armor and relics use `attributes.attributeBonuses` (e.g. `{ "perception": 1 }`) and/or `armorClassBonus` to raise attributes while worn. AC is the **item's** business, not the slot's: an iron helm carries `armorClassBonus`, a circlet in the same slot carries none. The engine imposes no rule about which slots may defend, so how much of a character's AC comes from gear is the game's to decide.
 *   `attributes.grantsSpells` (e.g. `["spark"]`) lends the wearer spells from the item list while the item is equipped. A granted spell takes no hand, so it casts with both hands full, and it leaves the attack list on unequip. Charges belong to the spell, not the source: hold a spell and wear a grant of it, and one button draws on one pool.
 *   Consumable effects: `healingAmount` (number or dice notation) consumes the item; `teleportScene` makes a reusable travel item.
 

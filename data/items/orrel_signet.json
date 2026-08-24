@@ -1,0 +1,12 @@
+{
+  "name": "Orrel Signet",
+  "type": "Armor",
+  "slot": "ring",
+  "description": "A heavy silver band bearing the Orrel wheat-sheaf. Old money, worn thin at the shoulders, and people notice it before they notice you.",
+  "value": 45,
+  "attributes": {
+    "attributeBonuses": {
+      "charisma": 1
+    }
+  }
+}

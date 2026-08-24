@@ -14,7 +14,14 @@ const TEST_RULES = {
     resources: { hp: { current: 10, max: 10 }, ap: { current: 3, max: 3 }, gold: 0 },
     attributes: { ac: 10, initiative: 0 },
     inventory: [],
-    equipment: {},
+    equipmentSlots: [
+      { id: 'head', kind: 'head' },
+      { id: 'body', kind: 'body' },
+      { id: 'left_hand', kind: 'hand' },
+      { id: 'right_hand', kind: 'hand' },
+      { id: 'left_ring', kind: 'ring' },
+      { id: 'right_ring', kind: 'ring' },
+    ],
   },
   customAttributes: [],
   startingScene: null,
@@ -31,7 +38,7 @@ const ap    = () => gameState.getPlayer().resources.ap.current;
 // No DOM calls originate from the methods under test (renderer is overridden below).
 function makeMockEngine(items = {}) {
   const engine = {
-    data: { items, npcs: {} },
+    data: { items, npcs: {}, rules: { playerDefaults: { equipmentSlots: TEST_RULES.playerDefaults.equipmentSlots } } },
     state: gameState,
     t: (key) => key,
     log: () => {},
@@ -95,11 +102,11 @@ afterEach(() => mock.restoreAll());
 
 // ─── _resolveEnemyWeapon ─────────────────────────────────────────────────────
 
-test('_resolveEnemyWeapon: returns equipped Right Hand item', () => {
+test('_resolveEnemyWeapon: returns the weapon in a hand slot', () => {
   const sword = makeWeapon();
   const cs = makeCS({ sword });
   const enemy = makeEnemy();
-  enemy.equipment = { 'Right Hand': 'sword' };
+  enemy.equipment = { right_hand: 'sword' };
   assert.equal(cs._resolveEnemyWeapon(enemy), sword);
 });
 
@@ -790,20 +797,20 @@ test('_resolveEnemyAttacks: the enemy\'s own attribute powers the weapon\'s atta
 // runs here with no DOM behind it.
 function makeRenderer(items, equipment, rules = {}) {
   const cs = makeCS(items);
-  cs.engine.data.rules = rules;
+  cs.engine.data.rules = { ...cs.engine.data.rules, ...rules };
   Object.assign(gameState.getPlayer().equipment, equipment);
   return new CombatRenderer(cs);
 }
 
 const FLAMES = { id: 'flames', name: 'Flames', type: 'Spell', attributes: { actionPoints: 2, damageRoll: '2d6' } };
 const SWORD  = { id: 'sword', name: 'Sword', type: 'Weapon', attributes: { actionPoints: 1, damageRoll: '1d8' } };
-const SHIELD = { id: 'shield', name: 'Shield', type: 'Armor', slot: 'Left Hand', attributes: { armorClassBonus: 2 } };
-const CIRCLET = { id: 'circlet', name: 'Circlet', type: 'Armor', slot: 'Head', attributes: { grantsSpells: ['flames'] } };
+const SHIELD = { id: 'shield', name: 'Shield', type: 'Armor', slot: 'hand', attributes: { armorClassBonus: 2 } };
+const CIRCLET = { id: 'circlet', name: 'Circlet', type: 'Armor', slot: 'head', attributes: { grantsSpells: ['flames'] } };
 
 test('getAvailableAttacks: worn gear grants its spell with both hands full', () => {
   const renderer = makeRenderer(
     { flames: FLAMES, sword: SWORD, shield: SHIELD, circlet: CIRCLET },
-    { 'Left Hand': 'shield', 'Right Hand': 'sword', Head: 'circlet' }
+    { left_hand: 'shield', right_hand: 'sword', head: 'circlet' }
   );
   assert.deepEqual(renderer.getAvailableAttacks(), [SWORD, FLAMES],
     'the held weapon leads, the granted spell follows — no hand needed');
@@ -812,16 +819,16 @@ test('getAvailableAttacks: worn gear grants its spell with both hands full', () 
 test('getAvailableAttacks: the granted spell leaves the list when the item comes off', () => {
   const renderer = makeRenderer(
     { flames: FLAMES, sword: SWORD, circlet: CIRCLET },
-    { 'Right Hand': 'sword', Head: 'circlet' }
+    { right_hand: 'sword', head: 'circlet' }
   );
-  gameState.getPlayer().equipment.Head = null;
+  gameState.getPlayer().equipment.head = null;
   assert.deepEqual(renderer.getAvailableAttacks(), [SWORD]);
 });
 
 test('getAvailableAttacks: a spell held and granted at once is one button', () => {
   const renderer = makeRenderer(
     { flames: FLAMES, circlet: CIRCLET },
-    { 'Right Hand': 'flames', Head: 'circlet' }
+    { right_hand: 'flames', head: 'circlet' }
   );
   assert.deepEqual(renderer.getAvailableAttacks(), [FLAMES],
     'the charges are the spell\'s, so two sources must not split the pool across two buttons');
@@ -831,7 +838,7 @@ test('getAvailableAttacks: empty hands keep the unarmed fallback beside the gran
   const unarmed = { id: 'unarmed', name: 'Fists', type: 'Weapon', attributes: { actionPoints: 1, damageRoll: '1d4' } };
   const renderer = makeRenderer(
     { flames: FLAMES, circlet: CIRCLET, unarmed },
-    { Head: 'circlet' },
+    { head: 'circlet' },
     { fallbackWeapons: { player: 'unarmed' } }
   );
   assert.deepEqual(renderer.getAvailableAttacks(), [unarmed, FLAMES]);
