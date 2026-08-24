@@ -80,10 +80,14 @@ case "$verdict" in
     ;;
   "SMOKE: FAIL"*)
     echo "[smoke] $verdict" >&2
-    # The hash carries the failing step names; %20-style escapes are left as-is
-    # rather than shelling out to a decoder.
-    printf '%s' "$targets" | grep -o '#failed=[^"]*' | head -1 |
-      sed 's/#failed=/[smoke] failed steps: /; s/%20/ /g; s/%7C/|/g' >&2 || true
+    # The hash carries "step name — assertion message" per failure. python3 is
+    # already required (it serves the page), so the percent-escapes are decoded
+    # properly rather than by a handful of sed rules, and each failure prints
+    # on its own line — a red build is readable straight from the CI log.
+    printf '%s' "$targets" | grep -o '#failed=[^"]*' | head -1 | sed 's/#failed=//' |
+      python3 -c 'import sys, urllib.parse
+for failure in urllib.parse.unquote(sys.stdin.read().strip()).split(" | "):
+    print(f"[smoke] FAILED: {failure}")' >&2 || true
     echo "[smoke] reproduce: python3 -m http.server $PORT then open /tests/smoke.html" >&2
     exit 1
     ;;

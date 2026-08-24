@@ -98,11 +98,14 @@
       if (done) {
         document.title = failed.length ? `SMOKE: FAIL (${failed.length})` : `SMOKE: PASS (${results.length})`;
         window.__SMOKE__ = { done: true, passed: results.length - failed.length, failed: failed.length, results };
-        // Which steps failed, in the URL. A headless runner can read the title
-        // and the URL of a target over Chrome's plain-HTTP DevTools endpoint —
-        // so scripts/run-smoke.sh can name the broken step in CI output without
-        // a WebSocket client to reach into the page.
-        if (failed.length) location.hash = `failed=${encodeURIComponent(failed.map(r => r.name).join(' | '))}`;
+        // Which steps failed and why, in the URL. A headless runner can read
+        // the title and the URL of a target over Chrome's plain-HTTP DevTools
+        // endpoint — so scripts/run-smoke.sh can print the broken step AND its
+        // assertion message without a WebSocket client to reach into the page.
+        // The message is what makes a red CI build diagnosable from the log
+        // alone; without it the only recourse is reproducing locally.
+        if (failed.length) location.hash =
+          `failed=${encodeURIComponent(failed.map(r => `${r.name} — ${r.error}`).join(' | '))}`;
       }
     }
 
@@ -128,6 +131,30 @@
     // DOMContentLoaded, so the production boot listener can't fire here (it
     // guards against double-boot for exactly this case).
     window.gameEngine = new RPGEngine();
+
+    // ── Game helpers ───────────────────────────────────────────────────────
+
+    // Opens a fight the player is guaranteed to act first in, and resolves
+    // once its combat block is on screen.
+    //
+    // Initiative is 1d20 + the stat, so an enemy can out-roll the player and
+    // take a whole round before the first render — spending the player's HP,
+    // and on a bad roll ending the fight in a Game Over that replaces the
+    // options panel outright. A step asserting on the attack buttons then
+    // finds none, perhaps one run in three. These steps test the player's own
+    // controls, not the exchange, so the roll is stacked in their favor.
+    // startCombat reads the stat once, so it goes straight back afterwards
+    // and no caller has to remember to restore it.
+    async function startFight(enemyIds) {
+      const player = window.gameEngine.state.getPlayer();
+      const before = $$('.scene--combat').length;
+      const prevInitiative = player.attributes.initiative;
+      player.attributes.initiative = 100;
+      window.gameEngine.combatSystem.startCombat(enemyIds, {});
+      player.attributes.initiative = prevInitiative;
+      await until(() => $$('.scene--combat').length > before, 'the combat block to open');
+      return window.gameEngine.combatSystem;
+    }
 
     // ── The suite ──────────────────────────────────────────────────────────
     queueMicrotask(async () => {
@@ -1209,8 +1236,7 @@
         // thing establishing what the player is up against — it must survive.
         // Called directly: every combat *option* in the demo is multi-enemy,
         // which never shows a description anyway.
-        window.gameEngine.combatSystem.startCombat(['lost_wanderer'], {});
-        await until(() => $('.scene--combat'), 'the combat block to open');
+        await startFight(['lost_wanderer']);
         const body = $('.scene--combat .scene__description .scene__body');
         assert(body, 'a chosen fight keeps the enemy description');
         assert(text(body).includes('hollow-eyed'), `enemy described (got "${text(body)}")`);
@@ -1277,9 +1303,7 @@
         const prevRightHand = player.equipment['Right Hand'];
         player.equipment['Right Hand'] = 'fireball';
 
-        const before = $$('.scene--combat').length;
-        engine.combatSystem.startCombat(['goblin_guard', 'goblin_grunt'], {});
-        await until(() => $$('.scene--combat').length > before, 'the combat block to open');
+        const cs = await startFight(['goblin_guard', 'goblin_grunt']);
 
         const fireballs = $$('#scene-options-panel button.card').filter(b => text(b).includes('Fireball'));
         assert(fireballs.length === 2, `one fireball button under each enemy, like any attack (got ${fireballs.length})`);
@@ -1291,7 +1315,6 @@
         assert(text(fireballs[0]).includes('up to 3 enemies'), 'and the splash cap');
         assert(text(fireballs[0]).includes('Charges:3/3 (per long rest)'), 'and the rest-limited charges, naming their rest');
 
-        const cs = engine.combatSystem;
         cs.enemies.forEach(e => Object.assign(e.attributes,
           { healthPoints: 500, armorClass: 1, actionPoints: 0, xpReward: 0 }));
 
@@ -1321,15 +1344,7 @@
           'Right Hand': 'iron_sword', 'Left Hand': 'round_shield', 'Head': 'cinderband',
         });
 
-        // Initiative is a d20, so an enemy that out-rolls the player swings
-        // before the first render. The attack list is what's under test, not
-        // the exchange — pin the roll so the player always opens the round.
-        const prevInit = player.attributes.initiative;
-        player.attributes.initiative = 100;
-
-        const before = $$('.scene--combat').length;
-        engine.combatSystem.startCombat(['goblin_grunt'], {});
-        await until(() => $$('.scene--combat').length > before, 'the combat block to open');
+        const cs = await startFight(['goblin_grunt']);
 
         const buttons = () => $$('#scene-options-panel button.card');
         assert(buttons().some(b => text(b).includes('Spark')),
@@ -1338,12 +1353,12 @@
           'and the held weapon keeps its own button');
 
         player.equipment['Head'] = null;
-        engine.combatSystem.renderer.render();
+        cs.renderer.render();
         assert(!buttons().some(b => text(b).includes('Spark')),
           'the spell goes with the circlet');
 
-        engine.combatSystem.enemies.forEach(e => Object.assign(e.attributes, { healthPoints: 0, xpReward: 0 }));
-        engine.combatSystem.endCombat(true);
+        cs.enemies.forEach(e => Object.assign(e.attributes, { healthPoints: 0, xpReward: 0 }));
+        cs.endCombat(true);
         await until(() => !engine.inCombat, 'the fight closed');
 
         // The card says what the circlet does, by the spell's name.
@@ -1353,7 +1368,6 @@
           'the inventory card names the granted spell');
 
         Object.assign(player.equipment, prev);
-        player.attributes.initiative = prevInit;
       });
 
       await step('buying and selling are narrated, the trade buttons are the choice', async () => {
