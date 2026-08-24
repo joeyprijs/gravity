@@ -23,21 +23,34 @@ export class CombatRenderer {
 
   /**
    * The attacks the player can make: the Weapon/Spell items in their hand
-   * slots, or rules.fallbackWeapons.player (unarmed) when both are empty.
+   * slots, or rules.fallbackWeapons.player (unarmed) when both are empty —
+   * followed by the spells their worn gear grants (attributes.grantsSpells).
+   * A granted spell takes no hand, so it is castable with both hands full,
+   * and it leaves the list the moment its item comes off.
    *
-   * @returns {object[]} Item definitions, in slot order.
+   * @returns {object[]} Item definitions: the held attacks in slot order,
+   *   then the granted spells in equipment order, each listed once.
    */
   getAvailableAttacks() {
     const { equipment } = this.cs.engine.state.getPlayer();
     const items = this.cs.engine.data.items;
 
-    const wielded = WEAPON_SLOTS
+    const held = WEAPON_SLOTS
       .map(slot => items[equipment[slot]])
       .filter(item => item?.type === 'Weapon' || item?.type === 'Spell');
-    if (wielded.length) return wielded;
+    const attacks = held.length
+      ? held
+      : [items[this.cs.engine.data.rules?.fallbackWeapons?.player]].filter(Boolean);
 
-    const unarmed = items[this.cs.engine.data.rules?.fallbackWeapons?.player];
-    return unarmed ? [unarmed] : [];
+    // Worn gear grants its spells on top. A spell already in hand isn't
+    // offered twice — the charges are the spell's, not the source's, so a
+    // second button would only split one pool across two controls.
+    const granted = Object.values(equipment)
+      .flatMap(itemId => items[itemId]?.attributes?.grantsSpells ?? [])
+      .map(spellId => items[spellId])
+      .filter(item => item?.type === 'Spell');
+
+    return [...new Set([...attacks, ...granted])];
   }
 
   // Renders the game-over screen: the death notice in the narrative log and
@@ -129,7 +142,8 @@ export class CombatRenderer {
     const uses = this.cs.engine.state.getItemUses(att.id);
     const btn = buildOptionButton(
       this.cs.engine.t('combat.attackTarget', { name: att.name }),
-      itemStatLines(this.cs.engine.t.bind(this.cs.engine), att, this.cs.engine.state.getPlayer().attributes, uses));
+      itemStatLines(this.cs.engine.t.bind(this.cs.engine), att, this.cs.engine.state.getPlayer().attributes, uses,
+        this.cs.engine.data.items));
     if (this.cs.remainingTurnBudget() < (att.attributes?.actionPoints ?? 0)
         || (uses && uses.current < 1)) {
       btn.disabled = true;

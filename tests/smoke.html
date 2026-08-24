@@ -1311,6 +1311,51 @@
         engine.state.refreshItemUses('full_rest'); // leave the uses fresh for later steps
       });
 
+      await step('worn gear grants a spell that needs no hand', async () => {
+        // A Cinderband on the head casts Spark while both hands stay busy —
+        // and the spell leaves the options the instant the circlet comes off.
+        const engine = window.gameEngine;
+        const player = engine.state.getPlayer();
+        const prev = { ...player.equipment };
+        Object.assign(player.equipment, {
+          'Right Hand': 'iron_sword', 'Left Hand': 'round_shield', 'Head': 'cinderband',
+        });
+
+        // Initiative is a d20, so an enemy that out-rolls the player swings
+        // before the first render. The attack list is what's under test, not
+        // the exchange — pin the roll so the player always opens the round.
+        const prevInit = player.attributes.initiative;
+        player.attributes.initiative = 100;
+
+        const before = $$('.scene--combat').length;
+        engine.combatSystem.startCombat(['goblin_grunt'], {});
+        await until(() => $$('.scene--combat').length > before, 'the combat block to open');
+
+        const buttons = () => $$('#scene-options-panel button.card');
+        assert(buttons().some(b => text(b).includes('Spark')),
+          'the circlet casts with both hands full');
+        assert(buttons().some(b => text(b).includes('Iron Sword')),
+          'and the held weapon keeps its own button');
+
+        player.equipment['Head'] = null;
+        engine.combatSystem.renderer.render();
+        assert(!buttons().some(b => text(b).includes('Spark')),
+          'the spell goes with the circlet');
+
+        engine.combatSystem.enemies.forEach(e => Object.assign(e.attributes, { healthPoints: 0, xpReward: 0 }));
+        engine.combatSystem.endCombat(true);
+        await until(() => !engine.inCombat, 'the fight closed');
+
+        // The card says what the circlet does, by the spell's name.
+        engine.ui.inventoryUI.renderInventory(player);
+        const card = $$('#inventory-tab .card').find(c => text(c).includes('Cinderband'));
+        assert(card && text(card).includes('Grants:Spark'),
+          'the inventory card names the granted spell');
+
+        Object.assign(player.equipment, prev);
+        player.attributes.initiative = prevInit;
+      });
+
       await step('buying and selling are narrated, the trade buttons are the choice', async () => {
         // Money changing hands is a consequence, not a choice — same voice as
         // lifting a relic out of a case. The merchant lives deep in the dungeon,

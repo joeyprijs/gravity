@@ -682,6 +682,7 @@ Equipment `slot` names are **game-defined** — whatever keys appear in `rules.p
 
 *   `attackAttribute` names the attribute whose modifier the wielder adds to attack rolls — accuracy belongs to the character, not the weapon.
 *   Armor and relics use `attributes.attributeBonuses` (e.g. `{ "perception": 1 }`) and/or `armorClassBonus` to raise attributes while worn.
+*   `attributes.grantsSpells` (e.g. `["spark"]`) lends the wearer spells from the item list while the item is equipped. A granted spell takes no hand, so it casts with both hands full, and it leaves the attack list on unequip. Charges belong to the spell, not the source: hold a spell and wear a grant of it, and one button draws on one pool.
 *   Consumable effects: `healingAmount` (number or dice notation) consumes the item; `teleportScene` makes a reusable travel item.
 
 ### Loot Tables, Flags, Missions

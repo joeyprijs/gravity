@@ -157,6 +157,17 @@ function validateItems(ctx) {
       if (!ctx.knownSkills.has(key))
         ctx.add(group, `attributeBonuses key "${key}" is not a declared attribute (playerDefaults.attributes or customAttributes)`);
     }
+    // A granted spell that isn't a loaded Spell item is dropped from the
+    // attack list without a word — the wearer just never gets the button.
+    const granted = item.attributes?.grantsSpells;
+    if (granted !== undefined && !Array.isArray(granted))
+      ctx.add(group, `attributes.grantsSpells must be an array of item ids (got ${JSON.stringify(granted)})`);
+    for (const spellId of (Array.isArray(granted) ? granted : [])) {
+      if (!ctx.items[spellId])
+        ctx.add(group, `attributes.grantsSpells → unknown item "${spellId}"`);
+      else if (ctx.items[spellId].type !== 'Spell')
+        ctx.add(group, `attributes.grantsSpells → "${spellId}" is type "${ctx.items[spellId].type}", not "Spell" — only a Spell can be granted`);
+    }
   }
 }
 

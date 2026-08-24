@@ -84,6 +84,10 @@
         "amount": 1
       },
       {
+        "item": "cinderband",
+        "amount": 1
+      },
+      {
         "item": "healing_potion",
         "amount": 2
       }

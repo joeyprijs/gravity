@@ -157,6 +157,6 @@ export class InventoryUI {
   // translator and the player's current attributes.
   _itemStats(itemData, options) {
     return itemCardStats(this.engine.t.bind(this.engine), itemData, this.engine.state.getPlayer().attributes,
-      { ...options, uses: this.engine.state.getItemUses(itemData.id) });
+      { ...options, uses: this.engine.state.getItemUses(itemData.id), items: this.engine.data.items });
   }
 }

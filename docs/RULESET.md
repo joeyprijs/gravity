@@ -117,7 +117,7 @@ You have **3 AP** each turn. Your AP refills to full at the start of combat and 
 | Action | AP cost |
 |---|---|
 | Attack with a weapon | The weapon's cost (Rusty Sword: 1) |
-| Cast a spell | The spell's cost (Flames: 2, Fireball: 3) |
+| Cast a spell | The spell's cost (Spark: 1, Flames: 2, Fireball: 3) |
 | Attack unarmed | 1 |
 | Use an item (Healing Potion) | The item's cost (1) |
 | Take a piece of gear off | 1 |
@@ -143,8 +143,16 @@ There are no critical hits on attacks — a natural 20 is just a high roll.
 ### Spells and charges
 
 - A spell works like a weapon with a **limited number of casts** (charges).
-- Flames: 3 charges, back after a **short rest**. Fireball: 3 charges, back after a **long rest**.
+- Spark: 2 charges and Flames: 3 charges, both back after a **short rest**. Fireball: 3 charges, back after a **long rest**.
 - A charge is spent when you cast, **hit or miss**.
+
+### Spells from worn gear
+
+Some gear carries a spell. The Cinderband, a circlet you start with, grants **Spark**: 1 AP, 1d6, 2 charges per short rest.
+
+- Wear the item and you can cast the spell. It **takes no hand** — sword and shield both stay.
+- Take the item off and the spell leaves your options at once.
+- The charges belong to the **spell**, not to the item. Hold Spark in a hand as well and you still get one button drawing on one pool of 2.
 
 ### Hitting more than one enemy
 
@@ -206,8 +214,8 @@ Scenes may also offer plain authored heals ("Rest here (+10 HP)") — those are 
 | Type | Examples | What they do |
 |---|---|---|
 | **Weapon** | Rusty Sword, Hand Axe | Held in a hand; gives attacks |
-| **Spell** | Flames, Fireball | Held in a hand; attacks with charges |
-| **Armor** | Leather Armor, Eagle-Eye Amulet | Worn; passive bonuses while worn |
+| **Spell** | Spark, Flames, Fireball | Held in a hand, or granted by worn gear; attacks with charges |
+| **Armor** | Leather Armor, Eagle-Eye Amulet, Cinderband | Worn; passive bonuses, and may grant a spell |
 | **Consumable** | Healing Potion, Loaf of Bread | Used up; heals or feeds |
 | **Special** | Hearthstone | A unique tool with its own action |
 | **Flavour** | Cellar Key, Sunstone Shard, relics | Story items; keys, quest goals, museum pieces |
@@ -280,7 +288,8 @@ Reputation is your museum's standing, and it comes from **relics**.
 | Short rest healing and pool | `rules.json` → `shortRest`, `playerDefaults.resources.shortRests` |
 | Clock, segments, time prices | `rules.json` → `time` |
 | Merchant buy-back ratio, swap-out AP price | `rules.json` → `merchantSellRatio`, `unequipApCost` |
-| A weapon's dice, costs, attributes, charges | The item's JSON in `data/items/` |
+| A weapon's dice, costs, attributes, charges | The item's JSON in `data/items/` (spells in `data/items/spells/`) |
+| The spells a worn item grants | That item's `attributes.grantsSpells` |
 | A check's DC, tiers, budgets | The scene/NPC JSON in `data/scenes/`, `data/npcs/` |
 
 Deeper authoring detail: [CHECKS.md](CHECKS.md) for checks and time, [ACTIONS.md](ACTIONS.md) for the action pipeline, [ARCHITECTURE.md](ARCHITECTURE.md) for how the engine fits together.

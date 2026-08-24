@@ -567,6 +567,17 @@ test('item type and slot: valid values and omitted fields pass', () => {
   assert.ok(!messages.some(m => m.includes('is not a declared equipment slot')));
 });
 
+test('grantsSpells: flags an unknown id and a grant that is not a Spell', () => {
+  const data = makeToolkitData();
+  data.items.bolt = { name: 'Bolt', type: 'Spell', attributes: { damageRoll: '1d6', actionPoints: 1 } };
+  data.items.rope = { name: 'Rope', type: 'Special' };
+  data.items.circlet = { name: 'Circlet', type: 'Armor', attributes: { grantsSpells: ['bolt', 'ghost', 'rope'] } };
+  const messages = issuesFor(data);
+  assert.ok(messages.some(m => m.includes('grantsSpells → unknown item "ghost"')));
+  assert.ok(messages.some(m => m.includes('grantsSpells → "rope" is type "Special", not "Spell"')));
+  assert.ok(!messages.some(m => m.includes('"bolt"')), 'a real Spell is clean');
+});
+
 test('missions: flags duplicate stage ids, missing fields, and bad advanceWhen references', () => {
   const data = makeCleanData();
   data.missions.escape.stages = [

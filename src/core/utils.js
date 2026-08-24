@@ -281,9 +281,11 @@ export function attributeLabel(t, attrId) {
  * @param {{current: number, max: number}|null} [uses] - The item's remaining
  *   rest-limited uses (state.getItemUses) — live state, so the caller looks
  *   it up. Null/omitted renders no uses line.
+ * @param {Object<string, object>} [items] - The loaded item definitions, used
+ *   to name the spells this item grants. Omitted renders no grants line.
  * @returns {string[]} Stat lines, possibly empty.
  */
-export function itemStatLines(t, itemData, attributes = {}, uses = null) {
+export function itemStatLines(t, itemData, attributes = {}, uses = null, items = null) {
   const lines = [];
   const apCost = itemData.attributes?.actionPoints;
   if (apCost !== undefined) lines.push(t('itemStats.actionPoints', { value: apCost }));
@@ -307,6 +309,15 @@ export function itemStatLines(t, itemData, attributes = {}, uses = null) {
         for (const [attr, amt] of Object.entries(v)) {
           const value = amt >= 0 ? `+${amt}` : `${amt}`;
           lines.push(t('itemStats.attributeBonus', { attribute: attributeLabel(t, attr), value }));
+        }
+        continue;
+      }
+      // A granted spell renders one line per spell, naming the spell rather
+      // than its id — the id is authoring data, and no player knows it.
+      if (k === 'grantsSpells' && Array.isArray(v)) {
+        for (const spellId of v) {
+          const name = items?.[spellId]?.name;
+          if (name) lines.push(t('itemStats.grantsSpell', { name }));
         }
         continue;
       }
@@ -356,11 +367,13 @@ export function itemStatLines(t, itemData, attributes = {}, uses = null) {
  *   card must not state the same fact twice.
  * @param {{current: number, max: number}|null} [options.uses=null] - Remaining
  *   rest-limited uses (see itemStatLines).
+ * @param {Object<string, object>|null} [options.items=null] - The loaded item
+ *   definitions, to name granted spells (see itemStatLines).
  * @returns {string[]|undefined} Stat lines, or undefined if the item has none
  *   (buildCard's `stats` takes undefined for "no stat block").
  */
-export function itemCardStats(t, itemData, attributes = {}, { slot = true, uses = null } = {}) {
-  const lines = itemStatLines(t, itemData, attributes, uses);
+export function itemCardStats(t, itemData, attributes = {}, { slot = true, uses = null, items = null } = {}) {
+  const lines = itemStatLines(t, itemData, attributes, uses, items);
   // Where it's worn leads, because it's what the player checks first on gear.
   // Only armor's slot is shown: a weapon or spell goes to whichever hand is
   // free whatever it declares (see pickHand), so printing its slot would lie.

@@ -751,7 +751,7 @@ export class CuratorUI {
       title: name,
       body: itemData?.description,
       stats: itemData ? itemCardStats(t, itemData, this.engine.state.getPlayer().attributes,
-        { uses: this.engine.state.getItemUses(itemData.id) }) : undefined,
+        { uses: this.engine.state.getItemUses(itemData.id), items: this.engine.data.items }) : undefined,
     });
     itemCard.onclick = () => {
       takeItemFromDisplay(this.engine.state, sceneId, displayId);

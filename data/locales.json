@@ -161,6 +161,7 @@
     "damageRollWithAttribute": "Damage: {value} + {attribute}",
     "targetsAll": "Targets: all enemies",
     "targets": "Targets: up to {value} enemies",
+    "grantsSpell": "Grants: {name}",
     "healingAmount": "Healing: {value}",
     "armorClassBonus": "Bonus: +{value} Armor Class",
     "reputation": "Reputation: {value}",

@@ -72,6 +72,14 @@
           ],
           "description": "Multi-target attack: one hit roll compared against each target's AC, every enemy caught taking its own damage roll. \"all\" strikes every living enemy with one click; an integer splashes from the enemy the player attacks — the blast centers on them and catches neighbours in encounter order, up to that many. Omit for a single-target attack."
         },
+        "grantsSpells": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Item IDs of Spell items this item grants while equipped. A granted spell is castable without occupying a hand, and leaves the attack list on unequip. Its charges are the spell's own — a spell granted by two sources still draws from one pool."
+        },
         "armorClassBonus": {
           "type": "integer",
           "description": "Flat AC protection added when equipped. Used for Armor."

@@ -36,7 +36,7 @@ export class ChestUI {
       title: getItemLabel(this.engine.data.items, stack.item, stack.amount),
       stats: itemData
         ? itemCardStats(this.engine.t.bind(this.engine), itemData, this.engine.state.getPlayer().attributes,
-            { uses: this.engine.state.getItemUses(itemData.id) })
+            { uses: this.engine.state.getItemUses(itemData.id), items: this.engine.data.items })
         : undefined,
     });
   }
