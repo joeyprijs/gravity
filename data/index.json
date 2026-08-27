@@ -43,6 +43,7 @@
     "player_home": {
       "name": "Your House",
       "interior": true,
+      "known": true,
       "mapBackground": "rgba(80, 50, 20, 0.9)"
     },
     "village": {

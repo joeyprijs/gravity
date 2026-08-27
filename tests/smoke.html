@@ -1212,8 +1212,9 @@
       await step('focusing an option lights its destination on the minimap', async () => {
         // The peek answers "which room is this door?" without walking through
         // it. It follows focus — the arrow cursor and the WASD cycle alike —
-        // and only places already on the map may light up: an unvisited room
-        // has no box, and the peek must not draw one.
+        // and only places already on the map may light up: a room not yet on
+        // the map has no box, and the peek must not draw one. The house is a
+        // `known` region, so all of its rooms are on the map from boot.
         //
         // A BACKGROUND window (where an automated run lives) moves
         // document.activeElement without firing any focus events, so the
@@ -1249,12 +1250,13 @@
         unfocus();
         assert(peeked() === '', `leaving the option puts the light out (got "${peeked()}")`);
 
-        // The WASD cycle peeks too — and an unwalked room stays dark.
+        // The WASD cycle peeks too — and a known-but-unwalked room is already
+        // on the map, so it lights like any other.
         key('w');
         await until(() => place().includes('Living Room'), 'walked north to the living room');
         key('a');
         assert(focused() === "Enter Parents' Room", `the cycle sits on the west door (got ${focused()})`);
-        assert(peeked() === '', `but an unvisited room lights nothing (got "${peeked()}")`);
+        assert(peeked() === "Parents' Room", `and the known-but-unwalked room lights up (got "${peeked()}")`);
         key('ArrowUp');
         key('ArrowUp');
         assert(focused() === 'Enter Bedroom', `the cursor stepped up to the bedroom door (got ${focused()})`);

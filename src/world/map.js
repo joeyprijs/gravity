@@ -361,6 +361,15 @@ export class MapManager {
       }
     }
 
+    // Places known without walking them (a `known` region — see
+    // _knownSceneIds), added as themselves only: a known scene seeds no
+    // sight of its own, so knowledge reveals the region and nothing past it.
+    for (const id of this._knownSceneIds()) {
+      const key = this._interiorKeyOf(id);
+      if (key) buildings.add(key);
+      else rooms.add(id);
+    }
+
     // A building is drawn from its rooms' geometry, so one whose rooms carry no
     // mapDefinitions has no square to occupy. Dropping it here rather than
     // downstream keeps "known" meaning "drawable", so neither view has to think
@@ -464,12 +473,24 @@ export class MapManager {
     };
   }
 
-  // Every visited scene that has mapDefinitions, as { id, scene } pairs.
+  // Every scene the map treats as visited that has mapDefinitions, as
+  // { id, scene } pairs: walked scenes, plus the scenes of known regions.
   _visitedMapScenes() {
     const visited = new Set(this.engine.state.getVisitedScenes());
+    for (const id of this._knownSceneIds()) visited.add(id);
     return Object.entries(this.engine.data.scenes)
       .filter(([id, scene]) => visited.has(id) && scene.mapDefinitions)
       .map(([id, scene]) => ({ id, scene }));
+  }
+
+  // Every scene of a region flagged `known`: a place the player knows without
+  // having walked it — their own house, not the village around it. Map
+  // knowledge only; real visited-state (first-entry XP, triggers) is untouched.
+  _knownSceneIds() {
+    const regions = this.engine.data.regions || {};
+    return Object.entries(this.engine.data.scenes)
+      .filter(([, scene]) => regions[scene?.region]?.known)
+      .map(([id]) => id);
   }
 
   // Builds one labeled map-node element. The caller positions and sizes it —
