@@ -171,6 +171,14 @@ body {
   overflow-y: auto;
 }
 
+/* The tab nav's negative side margins reach into this panel's right padding.
+   Safari counts content in a scroll container's end padding as scrollable
+   overflow (Chrome does not), so without this the panel grows a horizontal
+   scrollbar that scrolls to nothing. */
+.game__player {
+  overflow-x: hidden;
+}
+
 .game__scene-options::-webkit-scrollbar,
 .game__player::-webkit-scrollbar {
   width: 6px;
