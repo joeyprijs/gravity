@@ -319,7 +319,7 @@ Available everywhere (scene options, `onVictory`, dialogue responses):
 | `set_flag` | `flag`, `value` | Write a flag. |
 | `log` | `message` | Print a narrator line. |
 | `manage_chest` | `chest` | Open a chest's deposit/withdraw panel. |
-| `grant_chapter` | `item`, `chapter` | Record that the player heard one chapter of a story book; the first chapter puts the book in the pack. Re-grants are silent no-ops. |
+| `grant_chapter` | `item`, `chapter?` | Record that the player heard one chapter of a story book; the first chapter puts the book in the pack. Omit `chapter` to grant them all — a book found already written. Re-grants are silent no-ops. |
 | `advance_time` | `amount` **or** `until` | Advance the world clock by ticks, or to the next start of a named segment (needs `rules.time`). |
 | `set_timer` | `id`, `afterTicks?`, `actions` | Arm a timer; its pipeline fires at the deadline. Re-arming an `id` replaces it. |
 | `cancel_timer` | `id` | Disarm a timer. |
@@ -684,9 +684,11 @@ Weapons, spells, armor, and consumables. All mechanical stats live inside `attri
 }
 ```
 
-Item `type` is one of `Weapon`, `Spell`, `Armor`, `Consumable`, `Special`, or `Flavour` (the default when omitted — keepsakes and key items). The type drives behavior: weapons and spells equip to a hand and attack; armor equips to its `slot`; consumables are drunk/used; flavour items just sit in the pack. In the inventory the card *is* the control — clicking an item equips, uses or unequips it, with no per-item buttons.
+Item `type` is one of `Weapon`, `Spell`, `Armor`, `Consumable`, `Book`, `Special`, or `Flavour` (the default when omitted — keepsakes and key items). The type drives behavior: weapons and spells equip to a hand and attack; armor equips to its `slot`; consumables are drunk/used; books hold a `story` and clicking one reads it; flavour items just sit in the pack. In the inventory the card *is* the control — clicking an item equips, uses or unequips it, with no per-item buttons.
 
-`Special` is the story/required category (the demo's Hearthstone). A Special item never leaves the pack by the player's hand: it's filtered out of the merchant's sell list, the display-case artifact picker, and the chest deposit list, so give it no `value`. The one carve-out is a Special item with a `story`: a display case accepts it — the case stands in the player's own museum, one click from the pack, and exhibiting stories is what the museum is for. A Special item is still *used* like a consumable when it declares a use (`teleportScene`, `healingAmount`, a `story` to read, …) and is otherwise an inert card. Scripted effects — a quest turn-in, a scene that consumes it — remove it normally; the rule governs the player's choices, not the engine's reach.
+`Book` is the story category: a Book declares a `story` and reading is its use — clicking its card replays the heard chapters into the log (see `grant_chapter`). Otherwise a book is an ordinary belonging: it can be sold, stowed in a chest, or exhibited in a display case, and an exhibited book stays readable through its own "Read" button on the case screen. Give it a `value` if the merchant should buy it — a sold story is the player's own loss to make.
+
+`Special` is the required category (the demo's Hearthstone). A Special item never leaves the pack by the player's hand: it's filtered out of the merchant's sell list, the display-case artifact picker, and the chest deposit list, so give it no `value`. It is still *used* like a consumable when it declares a use (`teleportScene`, `healingAmount`, …) and is otherwise an inert card. Scripted effects — a quest turn-in, a scene that consumes it — remove it normally; the rule governs the player's choices, not the engine's reach.
 
 Equipment slots are **game-defined**, declared as an ordered list in `rules.playerDefaults.equipmentSlots` — the list *is* the player's empty equipment map, and its order is the order the equipped panel renders:
 

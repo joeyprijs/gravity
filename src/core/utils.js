@@ -172,9 +172,6 @@ export function getItemLabel(itemsData, itemId, amount = 1) {
  * part with by choice: not sellable, not displayable, not stowable in a chest.
  * Every surface that parts the player from an item filters on this. Scripted
  * effects (a quest turn-in, a scene that consumes it) still remove it normally.
- * One caller carves out its own exception: the curator's display cases accept
- * a Special item that carries a story — a case is the player's own museum,
- * not a way to lose the book.
  * @param {object|null} itemData - The item definition from data/items.
  * @returns {boolean}
  */

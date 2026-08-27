@@ -156,10 +156,10 @@ test('a "luck" custom attribute is a plain attribute leaf', () => {
 });
 
 test('story leaf: true only for a granted chapter of that story', () => {
-  const state = makeState({ stories: { gertas_lamb: ['the_fair'] } });
-  assert.equal(evaluateCondition({ story: 'gertas_lamb', chapter: 'the_fair' }, state), true);
-  assert.equal(evaluateCondition({ story: 'gertas_lamb', chapter: 'the_mill' }, state), false);
-  assert.equal(evaluateCondition({ story: 'other_book', chapter: 'the_fair' }, state), false);
-  assert.equal(evaluateCondition({ not: { story: 'gertas_lamb', chapter: 'the_mill' } }, state), true,
+  const state = makeState({ stories: { gertas_story: ['the_dance'] } });
+  assert.equal(evaluateCondition({ story: 'gertas_story', chapter: 'the_dance' }, state), true);
+  assert.equal(evaluateCondition({ story: 'gertas_story', chapter: 'the_mill' }, state), false);
+  assert.equal(evaluateCondition({ story: 'other_book', chapter: 'the_dance' }, state), false);
+  assert.equal(evaluateCondition({ not: { story: 'gertas_story', chapter: 'the_mill' } }, state), true,
     'the resume gate: heard this far, not further');
 });

@@ -22,7 +22,7 @@ const ITEMS = {
   band:    { name: 'Band',    type: 'Armor',  slot: 'ring', attributes: {} },
   // A story book (the engine stamps item ids at load; the fixture stamps its own).
   book: {
-    id: 'book', name: 'Book', type: 'Special',
+    id: 'book', name: 'Book', type: 'Book',
     story: { chapters: [{ id: 'start', text: 'First.' }, { id: 'end', text: 'Last.' }] },
   },
 };

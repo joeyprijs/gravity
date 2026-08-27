@@ -9,8 +9,9 @@ const INVENTORY_SECTION_GROUP = 'inventory';
 
 // Item types used straight from the pack rather than equipped. A Special item
 // often carries a use (the Hearthstone's teleport) but need not — hence the
-// itemHasUse check at the call site, which keeps a story key an inert card.
-const USABLE_TYPES = new Set(['Consumable', 'Special']);
+// itemHasUse check at the call site, which keeps a use-less key an inert card.
+// A Book's use is always reading it.
+const USABLE_TYPES = new Set(['Consumable', 'Special', 'Book']);
 
 // InventoryUI renders the inventory and equipment sidebar panels. Every item
 // renders as a standard card (see buildCard) and an item you can act on IS

@@ -24,7 +24,7 @@ const TEST_RULES = {
 const TEST_ITEMS = {
   healing_potion: { name: 'Healing Potion' },
   storybook: {
-    name: 'Storybook', type: 'Special',
+    name: 'Storybook', type: 'Book',
     story: { chapters: [{ id: 'one', text: 'One.' }, { id: 'two', text: 'Two.' }] },
   },
 };
@@ -297,6 +297,17 @@ test('grant_chapter: the first chapter writes the book into the pack, later ones
   run({ type: ACTIONS.GRANT_CHAPTER, item: 'storybook', chapter: 'two' });
   assert.equal(gameState.countPlayerItem('storybook'), 1, 'the book is written once');
   assert.equal(calls.logs[1].message, 'story.chapterWritten');
+});
+
+test('grant_chapter: omitting the chapter grants every chapter — a found book', () => {
+  const { run, calls } = makeEngine();
+  run({ type: ACTIONS.GRANT_CHAPTER, item: 'storybook' });
+  assert.deepEqual(gameState.getStoryChapters('storybook'), ['one', 'two'], 'the whole story at once');
+  assert.equal(gameState.countPlayerItem('storybook'), 1, 'the find puts the book in the pack');
+  assert.equal(calls.logs[0].message, 'story.bookFound', 'logged as a find, not a writing');
+
+  run({ type: ACTIONS.GRANT_CHAPTER, item: 'storybook' });
+  assert.equal(calls.logs.length, 1, 'finding it again grants and logs nothing');
 });
 
 test('grant_chapter: re-grants are silent no-ops, unknown chapters are refused', () => {

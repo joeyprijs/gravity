@@ -12,7 +12,7 @@
 //   time:      { "time": { "at_least": 120 } }        absolute elapsed ticks
 //   day:       { "day": { "at_least": 3 } }           needs rules.time
 //   segment:   { "segment": "night" }                 needs rules.time
-//   story:     { "story": "gertas_lamb", "chapter": "the_fair" }  chapter heard
+//   story:     { "story": "gertas_story", "chapter": "the_dance" }  chapter heard
 //   attribute: { "stealth": { "more_than": 2 } }      any declared attribute
 //
 // Combinators `and` (array), `or` (array), and `not` (single child) nest

@@ -807,14 +807,11 @@ export class CuratorUI {
     // A case takes anything the player can part with — the museum is theirs,
     // and a case doesn't tell them what belongs in it. Special items are the
     // one exception, and it's not the museum's rule: every surface that parts
-    // the player from an item filters them out. A story book is Special too,
-    // but a case doesn't part the player from it — it stands in their own
-    // museum, one click from the pack — and exhibiting stories is what the
-    // museum is for, so books are offered.
+    // the player from an item filters them out.
     const eligibleItems = player.inventory.filter(invItem => {
       if (isEquipped(invItem.item)) return false;
       const itemData = this.engine.data.items[invItem.item];
-      if (isSpecialItem(itemData) && !itemData.story) return false;
+      if (isSpecialItem(itemData)) return false;
       return !!itemData;
     });
 

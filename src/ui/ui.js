@@ -102,15 +102,22 @@ export class UIManager {
       matches[(matches.indexOf(document.activeElement) + 1) % matches.length].focus();
     });
 
-    // The peek: focusing an option that leads somewhere lights that place on
-    // the minimap — the arrow cursor, the WASD cycle and Tab all qualify,
-    // because they all move focus. Cleared when focus leaves, on any click
-    // (Safari gives buttons no focus on click, so focusout alone would miss
-    // the mouse), and with the canvas itself on the next move.
+    // The peek: resting on an option that leads somewhere lights that place
+    // on the minimap — the pointer by hover, and the arrow cursor, the WASD
+    // cycle and Tab by focus. Every enter and leave recomputes the light
+    // whole, so mouse and keyboard trade it without stranding it; while both
+    // rest on options, the pointer wins (a moving hand over a standing
+    // cursor). Any click still clears it outright (Safari gives buttons no
+    // focus on click, so the leave events alone would miss the mouse), and
+    // the canvas itself clears with the next move.
     const optionsPanel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
-    optionsPanel.addEventListener('focusin', (e) =>
-      this.map.setPeek(e.target.closest('button')?.dataset.destination ?? null));
-    optionsPanel.addEventListener('focusout', () => this.map.setPeek(null));
+    const repeek = () => {
+      const hovered = optionsPanel.querySelector('button:hover');
+      const focused = optionsPanel.contains(document.activeElement) ? document.activeElement : null;
+      this.map.setPeek((hovered ?? focused)?.dataset.destination ?? null);
+    };
+    ['focusin', 'focusout', 'mouseover', 'mouseout']
+      .forEach(type => optionsPanel.addEventListener(type, repeek));
     optionsPanel.addEventListener('click', () => this.map.setPeek(null), true);
 
     // One delegated listener covers every inventory item card, present and

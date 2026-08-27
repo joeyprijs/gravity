@@ -212,12 +212,15 @@ function validateItems(ctx) {
 
 // A story book's declaration: chapters must be a non-empty list of uniquely
 // id'd { id, text } entries — the ids are what grant_chapter and story
-// conditions reference, the text is what reading the book prints. And the
-// book should be Special: every surface that parts the player from an item
-// (selling, chests, display cases) filters on that type, and a sellable book
-// walks the whole story out of the game with it.
+// conditions reference, the text is what reading the book prints. And story
+// and type Book must come as a pair: the type is what makes the card readable
+// in the pack, and the story is the only thing a Book can do.
 function validateStory(ctx, group, item) {
-  if (item.story === undefined) return;
+  if (item.story === undefined) {
+    if (item.type === 'Book')
+      ctx.add(group, 'is type "Book" but declares no story — there is nothing to read in it');
+    return;
+  }
   const chapters = item.story?.chapters;
   if (!Array.isArray(chapters) || !chapters.length) {
     ctx.add(group, 'story.chapters must be a non-empty array of { id, text }');
@@ -231,8 +234,8 @@ function validateStory(ctx, group, item) {
     if (ch?.id) seen.add(ch.id);
     if (!ch?.text) ctx.add(group, `${where}: missing "text" — reading the book would print nothing for it`);
   });
-  if (item.type !== 'Special')
-    ctx.add(group, `declares a story but is type "${item.type}" — make it "Special", or the player can sell the story out of the game`);
+  if (item.type !== 'Book')
+    ctx.add(group, `declares a story but is type "${item.type}" — make it "Book" so its card reads from the pack`);
 }
 
 // The set of attribute names a skillCheck may reference: the player's base
@@ -326,7 +329,9 @@ function validateActions(ctx, group, actions, where) {
         ctx.add(group, `${where}: grant_chapter → unknown item "${action.item}"`);
       else if (!storyItem.story)
         ctx.add(group, `${where}: grant_chapter → "${action.item}" declares no story`);
-      else if (!(storyItem.story.chapters ?? []).some(ch => ch.id === action.chapter))
+      // A missing chapter is the grant-everything form (a found book), so
+      // only a chapter that is PRESENT but unknown is an authoring mistake.
+      else if (action.chapter !== undefined && !(storyItem.story.chapters ?? []).some(ch => ch.id === action.chapter))
         ctx.add(group, `${where}: grant_chapter → unknown chapter "${action.chapter}" on "${action.item}"`);
     }
     if (action.type === 'combat') {

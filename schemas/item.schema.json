@@ -14,6 +14,7 @@
         "Spell",
         "Armor",
         "Consumable",
+        "Book",
         "Special",
         "Flavour"
       ],
@@ -34,7 +35,7 @@
     },
     "story": {
       "type": "object",
-      "description": "Declares this item a story book. The chapters are the story's full authored text, in telling order; which of them the player has HEARD is state, granted one at a time by grant_chapter actions (the first grant also puts the book in the pack). Using the book replays the heard chapters into the narrative log. A story book should be type Special so the story can't be sold away.",
+      "description": "Declares this item a story book. The chapters are the story's full authored text, in telling order; which of them the player has HEARD is state, granted one at a time by grant_chapter actions (the first grant also puts the book in the pack). Using the book replays the heard chapters into the narrative log. A story book must be type Book — that's what makes its card readable in the pack.",
       "properties": {
         "chapters": {
           "type": "array",

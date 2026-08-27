@@ -157,6 +157,7 @@
     "Spell": "Spells",
     "Armor": "Armor",
     "Consumable": "Consumables",
+    "Book": "Books",
     "Special": "Special",
     "Flavour": "Flavour"
   },
@@ -196,6 +197,7 @@
   },
   "story": {
     "bookStarted": "You write down what you heard. The {name} joins your pack.",
+    "bookFound": "The {name} joins your pack.",
     "chapterWritten": "You write it down in the {name}.",
     "emptyBook": "Its pages are still blank."
   },

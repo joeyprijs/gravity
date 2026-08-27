@@ -1,0 +1,22 @@
+{
+  "name": "Story of the Miller's Wife",
+  "type": "Book",
+  "value": 15,
+  "description": "Old Gerta's story, written down the way she told it. It holds as much as you stayed to hear.",
+  "story": {
+    "chapters": [
+      {
+        "id": "the_dance",
+        "text": "In the summer of nineteen, at the village fair, every boy danced like he was somebody. Odo the miller's son stood by the flour cart and told Gerta straight out that he could not dance a step and would not pretend otherwise — the only honest man at the fair. She married him by winter."
+      },
+      {
+        "id": "the_mill",
+        "text": "Then came forty years of flour. Children asleep on the sacks while the wheel turned, the flood in the bad year that took the ground floor and left them holding on to each other, the fire in the drying loft. And bread on the table every single morning — a thing nobody thanks you for until it stops."
+      },
+      {
+        "id": "the_quiet",
+        "text": "Odo has been gone nine years now, and the wheel stopped when he did. But sixty years happened in that house, and Gerta means them to outlast her, so she gave them away to be written down. A life keeps happening as long as somebody carries it; that is the whole of what Gerta knows, and she had a good one finding it out."
+      }
+    ]
+  }
+}

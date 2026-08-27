@@ -2,34 +2,34 @@
   "name": "Old Gerta",
   "conversations": {
     "start": {
-      "npcText": "Speak UP. No — closer. Right. You're the museum one. I went up there in nineteen and there was a two-headed lamb in a jar, and I have thought about that lamb every year since, and nobody wants to hear it.",
+      "npcText": "Speak UP. No — closer. Right. You're the museum one. Sixty years I kept this house in bread and not one soul ever asked me a thing about it. Sit, then.",
       "responses": [
         {
-          "text": "I want to hear about the lamb.",
+          "text": "Tell me your story. From the beginning.",
           "condition": {
             "not": {
-              "story": "gertas_lamb",
-              "chapter": "the_fair"
+              "story": "gertas_story",
+              "chapter": "the_dance"
             }
           },
           "actions": [
             {
               "type": "goToConversation",
-              "node": "fair"
+              "node": "dance"
             }
           ]
         },
         {
-          "text": "You were telling me about the lamb. Go on.",
+          "text": "You were telling me about Odo. Go on.",
           "condition": {
             "and": [
               {
-                "story": "gertas_lamb",
-                "chapter": "the_fair"
+                "story": "gertas_story",
+                "chapter": "the_dance"
               },
               {
                 "not": {
-                  "story": "gertas_lamb",
+                  "story": "gertas_story",
                   "chapter": "the_mill"
                 }
               }
@@ -43,17 +43,17 @@
           ]
         },
         {
-          "text": "You never said why you kept thinking about it.",
+          "text": "And after the mill years — what then?",
           "condition": {
             "and": [
               {
-                "story": "gertas_lamb",
+                "story": "gertas_story",
                 "chapter": "the_mill"
               },
               {
                 "not": {
-                  "story": "gertas_lamb",
-                  "chapter": "the_jar"
+                  "story": "gertas_story",
+                  "chapter": "the_quiet"
                 }
               }
             ]
@@ -61,15 +61,15 @@
           "actions": [
             {
               "type": "goToConversation",
-              "node": "jar"
+              "node": "quiet"
             }
           ]
         },
         {
-          "text": "I wrote it all down. The lamb has been heard.",
+          "text": "I wrote it all down, Gerta. Every word.",
           "condition": {
-            "story": "gertas_lamb",
-            "chapter": "the_jar"
+            "story": "gertas_story",
+            "chapter": "the_quiet"
           },
           "actions": [
             {
@@ -88,13 +88,13 @@
         }
       ]
     },
-    "fair": {
-      "npcText": "Nineteen, like I said. I was nine. Father took me up the hill in my cousin's shoes and there it was, in a jar by the window: two heads, eyes shut, like it was thinking two things at once. The whole village looked away. I stood and looked until father dragged me off.",
+    "dance": {
+      "npcText": "The fair, then, summer of nineteen. Every boy there danced like he was somebody. Odo stood by the flour cart and told me straight out he couldn't dance a step and wouldn't pretend otherwise. Only honest man at the fair. I married him by winter.",
       "actions": [
         {
           "type": "grant_chapter",
-          "item": "gertas_lamb",
-          "chapter": "the_fair"
+          "item": "gertas_story",
+          "chapter": "the_dance"
         }
       ],
       "responses": [
@@ -118,21 +118,21 @@
       ]
     },
     "mill": {
-      "npcText": "Then life, of course. I married Odo because he couldn't dance and SAID so — only honest man at the fair. Forty years of flour. Children on the sacks, the flood in the bad year, the loft fire. And every year, some quiet evening, that lamb would come back to me. I never told a soul why.",
+      "npcText": "Then the mill, and forty years of flour. Children asleep on the sacks while we worked. The flood in the bad year — we lost the ground floor and kept each other. The fire in the drying loft. And bread every single morning, which is a thing nobody thanks you for until it stops.",
       "actions": [
         {
           "type": "grant_chapter",
-          "item": "gertas_lamb",
+          "item": "gertas_story",
           "chapter": "the_mill"
         }
       ],
       "responses": [
         {
-          "text": "Why the lamb? Tell me.",
+          "text": "And then? Tell me the rest.",
           "actions": [
             {
               "type": "goToConversation",
-              "node": "jar"
+              "node": "quiet"
             }
           ]
         },
@@ -146,13 +146,13 @@
         }
       ]
     },
-    "jar": {
-      "npcText": "Because everyone looked AWAY, child. That lamb was born twice over and hardly seen at all. And then the jar cracked in some move or other, years back, and that was that — glass, lamb, and everyone who stood in that room, all gone but me. I'm the only place it still happens. So write it down. Then it happens to you too, and it'll outlast the pair of us. I had a good life. The lamb gets this much of one.",
+    "quiet": {
+      "npcText": "Odo's been gone nine years. The wheel stopped when he did — none of the children wanted the flour life, and I don't blame them. But sixty years happened in this house, child, and when I go they go with me, unless somebody writes them down. So write. A life keeps happening as long as somebody carries it. That's all I know, and I had a good one finding it out.",
       "actions": [
         {
           "type": "grant_chapter",
-          "item": "gertas_lamb",
-          "chapter": "the_jar"
+          "item": "gertas_story",
+          "chapter": "the_quiet"
         }
       ],
       "responses": [
@@ -167,7 +167,7 @@
       ]
     },
     "heard": {
-      "npcText": "Hmph. Took sixty years and the museum one to manage it. Good. Mind you write it legible.",
+      "npcText": "Hmph. Took sixty years and the museum one to ask. Good. Mind you write it legible.",
       "responses": [
         {
           "text": "Leave her to the good chair.",
