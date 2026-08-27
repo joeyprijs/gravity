@@ -7,7 +7,7 @@
     "left": 2385,
     "width": 280,
     "height": 70,
-    "kind": "road"
+    "background": "rgba(80, 75, 55, 0.9)"
   },
   "description": [
     {

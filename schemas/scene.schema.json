@@ -48,13 +48,6 @@
         "background": {
           "type": "string",
           "description": "CSS color expression used to draw room nodes on the map canvas."
-        },
-        "kind": {
-          "type": "string",
-          "enum": [
-            "road"
-          ],
-          "description": "Semantic map role. \"road\" draws the box in the shared road style (one gray, no border) so touching road boxes read as one network; an authored background still wins."
         }
       },
       "required": [
