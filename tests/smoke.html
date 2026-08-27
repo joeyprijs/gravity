@@ -221,14 +221,21 @@
         assert($('[data-section-body="skills"]').hidden, 'skills body starts hidden');
       });
 
+      await step('identity line names the character above the sections', () => {
+        // Name and level are who this is, not stats — they live in their own
+        // line above the sections, outside the collapsible bodies.
+        const identity = text($('.attr-list__identity'));
+        assert(identity.includes('Smoke Tester'), `identity shows the name (got "${identity}")`);
+        assert(/Level\s*1/.test(identity), `identity shows the level (got "${identity}")`);
+      });
+
       await step('character section: rows, plugin row, bound values', () => {
         const rows = $$('[data-section-body="character"] .attr-list__row');
         const labels = rows.map(r => text(r.querySelector('.attr-list__label')));
-        const expected = ['Name', 'Level', 'Hit Points', 'Armor Class', 'Initiative', 'Action Points', 'Luck Points', 'Gold', 'Reputation'];
+        const expected = ['Hit Points', 'Armor Class', 'Initiative', 'Action Points', 'Luck Points', 'Gold', 'Reputation'];
         assert(JSON.stringify(labels) === JSON.stringify(expected),
           `row labels ${JSON.stringify(labels)}`);
         const value = (label) => text(rows[labels.indexOf(label)].querySelector('.attr-list__value'));
-        assert(value('Name') === 'Smoke Tester', `name row shows "${value('Name')}"`);
         assert(value('Hit Points') === '10/10', `HP row shows "${value('Hit Points')}"`);
         assert(value('Reputation') === '0', `reputation row shows "${value('Reputation')}"`);
         // Level-up point-buy covers the char-creation stats: HP, AC, and
@@ -236,6 +243,10 @@
         assert($('[data-spend-attr="resources.hp.max"]'), 'HP row has a spend button');
         assert($('[data-spend-attr="attributes.ac"]'), 'AC row has a spend button');
         assert($('[data-spend-attr="attributes.initiative"]'), 'Initiative row has a spend button');
+        // Every row ends in the trailing slot that keeps the right-aligned
+        // values on one edge whether or not a spend button fills it.
+        assert(rows.every(r => r.lastElementChild.classList.contains('attr-list__slot')),
+          'every character row ends in the spend-button slot');
         // Every row is marked, including the plugin's (registerSheetRow icon).
         assert(rows.every(r => r.querySelector('.attr-list__label svg.icon')), 'every character row shows an icon');
       });

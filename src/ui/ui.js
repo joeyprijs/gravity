@@ -422,12 +422,12 @@ export class UIManager {
     </div>`;
   }
 
-  // Attributes widget: the character sheet. A character section (same stats
-  // as the scene top bar, plus name/level/initiative) above the
-  // custom-attribute list, both as label/value rows. With
-  // rules.levelUp.statPoints configured, each attribute row grows a spend
-  // button and a banked-points line, shown only while points are banked
-  // (see _updateStatPointControls).
+  // Attributes widget: the character sheet. An identity line (name and
+  // level — who this is, not a stat) above a character section (same stats
+  // as the scene top bar, plus initiative) above the custom-attribute list,
+  // both sections as label/value rows. With rules.levelUp.statPoints
+  // configured, each attribute row grows a spend button and a banked-points
+  // line, shown only while points are banked (see _updateStatPointControls).
   _buildSheetWidget(panel) {
     const rules = this.engine.data.rules;
     const canSpend = (rules.levelUp?.statPoints ?? 0) > 0;
@@ -435,33 +435,36 @@ export class UIManager {
     // charCreation.stats entries that aren't skills (HP, AC) grow a spend
     // button on their character row, resolved by this.engine.state.spendStatPoint.
     const creationIds = new Set((rules.charCreation?.stats ?? []).map(s => s.id));
+    // With point-buy configured, every row ends in the same fixed-width slot,
+    // holding its spend button or nothing — so the right-aligned values share
+    // one right edge whether or not a button trails them. Without point-buy no
+    // row has a button, so no slot: the values sit flush at the row's edge.
+    const slot = (inner = '') => canSpend ? `<span class="attr-list__slot">${inner}</span>` : '';
     const spendBtnHtml = (target) => canSpend && creationIds.has(target)
       ? `<button class="${CSS.BTN} attr-list__spend" data-spend-attr="${escapeHtml(target)}" title="${escapeHtml(this.engine.t('ui.spendStatPoint'))}" hidden>+</button>`
       : '';
     // The data-stat-bind spans ride the existing stats update loop.
-    // Row order groups by meaning: identity, combat, spendable pools,
-    // then wealth/standing (plugin sheetRows land in the last group).
+    // Row order groups by meaning: combat, spendable pools, then
+    // wealth/standing (plugin sheetRows land in the last group).
     // Each row carries the same icon its stat wears in the scene top bar, so
     // the two surfaces read as one vocabulary (see core/icons.js).
     const characterRows = [
-      attrRowHtml({ icon: 'person', label: this.engine.t('ui.statName'), valueHtml: bindSpan('name') }),
-      attrRowHtml({ icon: 'level', label: this.engine.t('ui.statLevel'), valueHtml: bindSpan('level') }),
-      attrRowHtml({ icon: 'heart', label: this.engine.t('ui.sheetHp'), valueHtml: `${bindSpan('resources.hp.current')}/${bindSpan('resources.hp.max')}`, trailingHtml: spendBtnHtml('resources.hp.max') }),
-      attrRowHtml({ icon: 'shield', label: this.engine.t('ui.sheetAc'), valueHtml: bindSpan('attributes.ac'), trailingHtml: spendBtnHtml('attributes.ac') }),
-      attrRowHtml({ icon: 'bolt', label: this.engine.t('ui.statInitiative'), valueHtml: bindSpan('attributes.initiative'), trailingHtml: spendBtnHtml('attributes.initiative') }),
-      attrRowHtml({ icon: 'sword', label: this.engine.t('ui.sheetAp'), valueHtml: `${bindSpan('resources.ap.current')}/${bindSpan('resources.ap.max')}` }),
-      ...this._headerResourceEntries().map(entry => attrRowHtml(entry)),
-      attrRowHtml({ icon: 'coin', label: this.engine.t('ui.statGold'), valueHtml: bindSpan('resources.gold') }),
-      ...this.engine.sheetRows.map(row => attrRowHtml({ icon: row.icon, label: row.label, valueHtml: bindSpan(row.bind) })),
+      attrRowHtml({ icon: 'heart', label: this.engine.t('ui.sheetHp'), valueHtml: `${bindSpan('resources.hp.current')}/${bindSpan('resources.hp.max')}`, trailingHtml: slot(spendBtnHtml('resources.hp.max')) }),
+      attrRowHtml({ icon: 'shield', label: this.engine.t('ui.sheetAc'), valueHtml: bindSpan('attributes.ac'), trailingHtml: slot(spendBtnHtml('attributes.ac')) }),
+      attrRowHtml({ icon: 'bolt', label: this.engine.t('ui.statInitiative'), valueHtml: bindSpan('attributes.initiative'), trailingHtml: slot(spendBtnHtml('attributes.initiative')) }),
+      attrRowHtml({ icon: 'sword', label: this.engine.t('ui.sheetAp'), valueHtml: `${bindSpan('resources.ap.current')}/${bindSpan('resources.ap.max')}`, trailingHtml: slot() }),
+      ...this._headerResourceEntries().map(entry => attrRowHtml({ ...entry, trailingHtml: slot() })),
+      attrRowHtml({ icon: 'coin', label: this.engine.t('ui.statGold'), valueHtml: bindSpan('resources.gold'), trailingHtml: slot() }),
+      ...this.engine.sheetRows.map(row => attrRowHtml({ icon: row.icon, label: row.label, valueHtml: bindSpan(row.bind), trailingHtml: slot() })),
     ].join('');
     // Skills carry their authored icon (rules.customAttributes[].icon).
     const items = (rules.customAttributes ?? []).map(attr => attrRowHtml({
       icon: attr.icon,
       label: skillLabel(this.engine, attr.id),
       valueHtml: bindSpan(`attributes.${escapeHtml(attr.id)}`),
-      trailingHtml: canSpend
+      trailingHtml: slot(canSpend
         ? `<button class="${CSS.BTN} attr-list__spend" data-spend-attr="${escapeHtml(attr.id)}" title="${escapeHtml(this.engine.t('ui.spendStatPoint'))}" hidden>+</button>`
-        : '',
+        : ''),
     })).join('');
     const sectionHeading = (key, labelText) =>
       `<button class="${CSS.SECTION_HEADING} ${CSS.SECTION_TOGGLE}" data-section="${key}">
@@ -469,11 +472,16 @@ export class UIManager {
       </button>`;
     // One panel-section wrapper per section, like the inventory panel —
     // the adjacent-sibling margin is what spaces the sections apart. The
-    // banked-points line tops the whole sheet (both sections hold
-    // spendable rows) and sits outside the collapsible bodies so a player
-    // with points to spend always sees the cue.
-    panel.innerHTML = `${canSpend ? `
-    <div class="${CSS.CARD} attr-list__points" hidden>${escapeHtml(this.engine.t('ui.statPoints'))} <span data-stat-bind="statPoints"></span></div>` : ''}
+    // identity line tops the sheet, outside the stat rows; below it the
+    // banked-points line (both sections hold spendable rows) also sits
+    // outside the collapsible bodies so a player with points to spend
+    // always sees the cue.
+    panel.innerHTML = `
+    <div class="attr-list__identity">
+      <span class="attr-list__identity-name" data-stat-bind="name"></span>
+      <span class="attr-list__identity-level">— ${escapeHtml(this.engine.t('ui.statLevel'))} <span data-stat-bind="level"></span></span>
+    </div>${canSpend ? `
+    <div class="attr-list__points" hidden>${escapeHtml(this.engine.t('ui.statPoints'))} <span data-stat-bind="statPoints"></span></div>` : ''}
     <div class="${CSS.PANEL_SECTION}">
       ${sectionHeading('character', this.engine.t('ui.sheetCharacterTitle'))}
       <div class="attr-list" data-section-body="character">${characterRows}</div>

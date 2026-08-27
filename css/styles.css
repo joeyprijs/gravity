@@ -521,7 +521,7 @@ button.section-toggle--collapsed .section-toggle__label::before {
 .attr-list__row {
   display: flex;
   align-items: center;
-  padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 0.5);
+  padding: calc(var(--spacing) * 1) calc(var(--spacing) * 0.5);
   border-bottom: 1px solid var(--panel-border);
 }
 
@@ -536,9 +536,9 @@ button.section-toggle--collapsed .section-toggle__label::before {
 }
 
 .attr-list__label {
-  /* The label column starts every value at the same x. It takes the larger
-     share because the values are mostly short numbers — a fraction rather
-     than a fixed width so translated labels get the same room. */
+  /* A fraction rather than a fixed width so translated labels get the same
+     room; the values read from the right edge, so the label only needs to
+     bound itself. */
   flex: 0 0 60%;
   /* Icon then label text, on one line: the icon is a marker for the label,
      so it stays as quiet as the label while the value keeps the emphasis. */
@@ -552,29 +552,58 @@ button.section-toggle--collapsed .section-toggle__label::before {
   color: var(--text-secondary);
 }
 
-/* Takes the rest of the row so a spend button still lands at the right edge. */
+/* Right-aligned in the row's remaining space: label left, value right is how
+   a sheet reads, and every value shares one right edge (the trailing slot
+   below keeps that true on rows with a spend button). */
 .attr-list__value {
   flex: 1;
   min-width: 0;
   font-weight: 700;
+  text-align: right;
 }
 
-/* Level-up point-buy cue at the top of the sheet (shown only while points
-   are banked). A card, because points waiting to be spent are the one thing
-   on this panel asking to be acted on — centered so it reads as an
-   announcement rather than another label/value row. The bottom margin matches
-   the panel-section gap so the Character section sits at the same rhythm
-   below it. */
-.attr-list__points {
-  color: var(--accent-color);
-  font-weight: 600;
-  text-align: center;
+/* The fixed-width slot every row ends in while point-buy is configured. It
+   holds the row's spend button or nothing, so the values line up whether or
+   not a button trails them (the button hides with its [hidden] rule, the
+   slot keeps the width). Sized to the button it reserves room for. */
+.attr-list__slot {
+  flex: 0 0 calc(var(--spacing) * 3.5);
+  margin-left: calc(var(--spacing) * 1.5);
+}
+
+/* The identity line above the sheet: who this is, kept out of the stat rows.
+   The name carries the weight; the level tags along muted. Bottom margin
+   matches the panel-section gap so everything below sits at one rhythm. */
+.attr-list__identity {
+  display: flex;
+  align-items: baseline;
+  gap: calc(var(--spacing) * 1);
   margin-bottom: calc(var(--spacing) * 3);
 }
 
-/* A small square; the .button flex centering keeps the + glyph centered. */
+.attr-list__identity-name {
+  font-size: var(--font-lg);
+  font-weight: 700;
+}
+
+.attr-list__identity-level {
+  color: var(--text-secondary);
+}
+
+/* Level-up point-buy cue under the identity line (shown only while points
+   are banked). A quiet status line, not a card — the "+" buttons on the rows
+   are the call to action; this only says why they appeared. The bottom margin
+   matches the panel-section gap so the Character section sits at the same
+   rhythm below it. */
+.attr-list__points {
+  color: var(--accent-color);
+  font-weight: 600;
+  margin-bottom: calc(var(--spacing) * 3);
+}
+
+/* A small square filling its row's trailing slot; the .button flex centering
+   keeps the + glyph centered. */
 .attr-list__spend {
-  margin-left: calc(var(--spacing) * 1.5);
   width: calc(var(--spacing) * 3.5);
   height: calc(var(--spacing) * 3.5);
   padding: 0;
