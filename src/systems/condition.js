@@ -12,6 +12,7 @@
 //   time:      { "time": { "at_least": 120 } }        absolute elapsed ticks
 //   day:       { "day": { "at_least": 3 } }           needs rules.time
 //   segment:   { "segment": "night" }                 needs rules.time
+//   story:     { "story": "gertas_lamb", "chapter": "the_fair" }  chapter heard
 //   attribute: { "stealth": { "more_than": 2 } }      any declared attribute
 //
 // Combinators `and` (array), `or` (array), and `not` (single child) nest
@@ -75,6 +76,13 @@ export function evaluateCondition(condition, state) {
       return target >= 0 && current >= target;
     }
     return state.getMissionStatus(condition.mission) === condition.status;
+  }
+
+  // Has the player heard this chapter of a story book? Granted chapters are
+  // the state the book itself replays, so gating on one can never disagree
+  // with what the book shows — the resume mechanism for long stories.
+  if ('story' in condition) {
+    return state.hasStoryChapter(condition.story, condition.chapter);
   }
 
   const player = state.getPlayer();

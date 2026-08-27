@@ -159,6 +159,16 @@ Open a chest's deposit/withdraw panel (a custom UI that takes over the interacti
 
 - `chest` *(string, required)* — the chest id. Chests are persistent containers stored per id in the save; a chest is created the first time something is deposited into it, so any id is valid.
 
+### `grant_chapter`
+
+Record that the player heard one chapter of a story book — an item declaring `story.chapters` (see `schemas/item.schema.json`). The book itself holds the full authored text; this action grants the *heard* state, one chapter at a time, wherever the listening happens (a conversation node, a scene option, an `onVictory`). Using the book replays exactly the granted chapters into the log, in the story's authored order, however out of order they were heard.
+
+- `item` *(string, required)* — the story book's item id.
+- `chapter` *(string, required)* — a chapter id from that item's `story.chapters`.
+- `log` — see [The `log` convention](#the-log-convention). The default line depends on the moment: the **first** chapter of a story writes the book into the player's pack and says so; every later chapter logs that it was written down.
+
+Granting is idempotent: a chapter already heard is a silent no-op — no duplicate item, no repeated log line — so a conversation node that grants on display can be revisited freely. Gate on progress with the story condition leaf, `{ "story": "book_id", "chapter": "id" }`, which is how a long story's teller offers "go on where you left off" instead of starting over. An unknown item or chapter warns and does nothing (and is flagged at boot).
+
 ### `advance_time`
 
 Advance the world clock. The tick counter always advances and due timers always fire, even without `rules.time` — what needs the config is everything derived from it: days, segments, the `until` form, and the clock's own passage narration. Provide **one** of:

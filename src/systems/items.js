@@ -45,9 +45,39 @@ const CONSUMABLE_EFFECTS = {
  * @returns {boolean}
  */
 export function itemHasUse(itemData) {
+  if (itemData?.story) return true;
   const attrs = itemData?.attributes;
   if (!attrs) return false;
   return !!attrs.teleportScene || Object.keys(CONSUMABLE_EFFECTS).some(attr => attrs[attr]);
+}
+
+/**
+ * Reading a story book: the [Player] act, then the narrator retells every
+ * chapter the player has heard, in the story's AUTHORED order — the granted
+ * list only answers "which", so a chapter heard out of sequence still lands
+ * where the life put it. The book stores no text of its own: it is a view
+ * over the granted state, always exactly as current as the listening. Books
+ * never consume, so a long story can be reread forever.
+ *
+ * Exported because reading doesn't care where the book stands: useItem reads
+ * it from the pack, and the curator's case inspection reads it on exhibit
+ * (via the engine.readStory delegate) — same replay, no inventory involved.
+ *
+ * @param {object} engine - The RPGEngine instance.
+ * @param {object} itemData - A story book's item definition (story required).
+ */
+export function readStory(engine, itemData) {
+  const openLine = engine.log(LOG.PLAYER, engine.t('player.readBook', { name: itemData.name }), 'choice');
+  const granted = engine.state.getStoryChapters(itemData.id);
+  const heard = itemData.story.chapters.filter(ch => granted.includes(ch.id));
+  if (!heard.length) {
+    engine.log(LOG.NARRATOR, engine.t('story.emptyBook'));
+  } else {
+    heard.forEach(ch => engine.log(LOG.NARRATOR, ch.text));
+  }
+  // A retelling is read from its beginning — land the log on the opening
+  // line, not at the bottom of a story that may run pages.
+  engine.scrollNarrativeToEntry?.(openLine);
 }
 
 // Teleport items are reusable — they never consume. Returns false when the
@@ -99,6 +129,8 @@ export function useItem(engine, itemId) {
     engine.state.removeFromInventory(itemId, 1);
   } else if (itemData.attributes?.teleportScene) {
     if (!teleport(engine, itemData)) return;
+  } else if (itemData.story) {
+    readStory(engine, itemData);
   }
 
   engine._spendAP(apCost);

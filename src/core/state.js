@@ -6,7 +6,7 @@ const MAX_LOG_ENTRIES = 200;
 // Increment when the save schema changes. loadFromObject() migrates older saves
 // forward so they remain compatible. Each migration function receives the raw
 // parsed data object and mutates it in-place.
-const SAVE_VERSION = 7;
+const SAVE_VERSION = 8;
 
 const MIGRATIONS = {
   // v0 → v1: player.name was added; give it an empty default on older saves.
@@ -66,6 +66,8 @@ const MIGRATIONS = {
     }
     data.player.equipment = equipment;
   },
+  // v7 → v8: stories map added (story books — granted chapter ids per book item).
+  8: (data) => { if (!('stories' in data)) data.stories = {}; },
 };
 
 // Saves written before plugin migrations had their own version line (see
@@ -124,6 +126,7 @@ function makeSkeletonState() {
     currentSceneId: null,
     returnSceneId: null,
     chests: {},
+    stories: {},
     visitedScenes: [],
     time: { ticks: 0 },
     timers: [],
@@ -192,7 +195,7 @@ class StateManager {
    * Emitting methods: init, loadFromObject, reset, modifyPlayerStat,
    * modifyPlayerStats, addXP, spendStatPoint, applyCharCreation,
    * addToInventory, removeFromInventory, equipItem, advanceTime, setFlag,
-   * setMissionStatus, setMissionStage.
+   * setMissionStatus, setMissionStage, grantStoryChapter.
    *
    * @param {(method: string, info: object) => void} fn - Receives the
    *   StateManager method name and an info object with its relevant arguments
@@ -907,6 +910,35 @@ class StateManager {
     const stages = this._missions?.[missionId]?.stages;
     if (!Array.isArray(stages)) return -1;
     return stages.findIndex(s => s.id === stageId);
+  }
+
+  // ── Story chapters ────────────────────────────────────────────────────────
+  // The chapters the player has heard of each story book (state.stories,
+  // keyed by the book's item id). Granted state written at listen time, never
+  // derived — the book item's authored chapter list owns text and order; this
+  // map only answers "which chapters have been heard".
+
+  /** @returns {string[]} The granted chapter ids (grant order, not authored order). */
+  getStoryChapters(storyId) { return this.state.stories?.[storyId] ?? []; }
+
+  hasStoryChapter(storyId, chapterId) { return this.getStoryChapters(storyId).includes(chapterId); }
+
+  /**
+   * Grants a story chapter. Idempotent: a chapter already granted returns
+   * false and emits nothing — hearing a story twice is not an event.
+   *
+   * @param {string} storyId - The story book's item id.
+   * @param {string} chapterId - The chapter id from the item's story.chapters.
+   * @returns {boolean} True when the chapter was newly granted.
+   */
+  grantStoryChapter(storyId, chapterId) {
+    if (this.hasStoryChapter(storyId, chapterId)) return false;
+    ((this.state.stories ??= {})[storyId] ??= []).push(chapterId);
+    this._emitMutation('grantStoryChapter', { storyId, chapterId });
+    // 'inventory': the book's card shows its chapter count, and nothing else
+    // in the UI renders granted chapters.
+    this.notifyListeners('inventory');
+    return true;
   }
 
   getCurrentSceneId() { return this.state.currentSceneId; }

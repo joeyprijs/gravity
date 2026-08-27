@@ -164,6 +164,29 @@ function handleManageChest(action, engine) {
   engine.ui.renderChestUI(action.chest);
 }
 
+// { type: "grant_chapter", item: "gertas_lamb", chapter: "the_fair" } — record
+// that the player heard one chapter of the story a book item retells. Granted
+// state is written here, at listen time, never derived from anything else.
+// The first chapter writes the book: the item lands in the pack the moment
+// there is something to put in it. Re-granting is a silent no-op — hearing a
+// chapter twice is not an event, so a re-listen never duplicates the log line.
+function handleGrantChapter(action, engine) {
+  const itemData = engine.data.items[action.item];
+  if (!itemData?.story?.chapters?.some(ch => ch.id === action.chapter)) {
+    console.warn(`[Gravity] grant_chapter: "${action.item}" has no story chapter "${action.chapter}" — ignored`);
+    return;
+  }
+  if (!engine.state.grantStoryChapter(action.item, action.chapter)) return;
+  const owned = engine.state.countPlayerItem(action.item) > 0;
+  if (!owned) engine.state.addToInventory(action.item, 1);
+  if (action.log !== false) {
+    const msg = typeof action.log === 'string'
+      ? engine.t(action.log)
+      : engine.t(owned ? 'story.chapterWritten' : 'story.bookStarted', { name: itemData.name });
+    engine.log(LOG.SYSTEM, msg, 'loot');
+  }
+}
+
 // ── Time actions ──────────────────────────────────────────────────────────
 
 // { type: "advance_time", amount: 8 } — advance the clock by a fixed amount.
@@ -211,6 +234,7 @@ export function registerBuiltinActions(engine) {
   engine.registerAction(ACTIONS.SET_FLAG,        handleSetFlag);
   engine.registerAction(ACTIONS.LOG,             handleLog);
   engine.registerAction(ACTIONS.MANAGE_CHEST,    handleManageChest);
+  engine.registerAction(ACTIONS.GRANT_CHAPTER,   handleGrantChapter);
   engine.registerAction(ACTIONS.ADVANCE_TIME,    handleAdvanceTime);
   engine.registerAction(ACTIONS.SET_TIMER,       handleSetTimer);
   engine.registerAction(ACTIONS.CANCEL_TIMER,    handleCancelTimer);

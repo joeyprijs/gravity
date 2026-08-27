@@ -23,6 +23,10 @@ const TEST_RULES = {
 
 const TEST_ITEMS = {
   healing_potion: { name: 'Healing Potion' },
+  storybook: {
+    name: 'Storybook', type: 'Special',
+    story: { chapters: [{ id: 'one', text: 'One.' }, { id: 'two', text: 'Two.' }] },
+  },
 };
 
 // Shortcuts to avoid repeating player.resources.* throughout tests.
@@ -279,4 +283,32 @@ test('set_timer arms on the live clock, re-arming an id replaces it, cancel_time
   run({ type: ACTIONS.CANCEL_TIMER, id: 'other' });
   const due = gameState.advanceTime(2);
   assert.deepEqual(due.map(t => t.id), ['alarm'], 'only the re-armed deadline came due');
+});
+
+// ── grant_chapter ─────────────────────────────────────────────────────────────
+
+test('grant_chapter: the first chapter writes the book into the pack, later ones only fill it', () => {
+  const { run, calls } = makeEngine();
+  run({ type: ACTIONS.GRANT_CHAPTER, item: 'storybook', chapter: 'one' });
+  assert.equal(gameState.countPlayerItem('storybook'), 1);
+  assert.deepEqual(gameState.getStoryChapters('storybook'), ['one']);
+  assert.equal(calls.logs[0].message, 'story.bookStarted');
+
+  run({ type: ACTIONS.GRANT_CHAPTER, item: 'storybook', chapter: 'two' });
+  assert.equal(gameState.countPlayerItem('storybook'), 1, 'the book is written once');
+  assert.equal(calls.logs[1].message, 'story.chapterWritten');
+});
+
+test('grant_chapter: re-grants are silent no-ops, unknown chapters are refused', () => {
+  const { run, calls } = makeEngine();
+  run({ type: ACTIONS.GRANT_CHAPTER, item: 'storybook', chapter: 'one' });
+  run({ type: ACTIONS.GRANT_CHAPTER, item: 'storybook', chapter: 'one' });
+  assert.deepEqual(gameState.getStoryChapters('storybook'), ['one']);
+  assert.equal(calls.logs.length, 1, 're-listening logs nothing');
+
+  const warn = mock.method(console, 'warn', () => {});
+  run({ type: ACTIONS.GRANT_CHAPTER, item: 'storybook', chapter: 'ghost' });
+  run({ type: ACTIONS.GRANT_CHAPTER, item: 'ghost_book', chapter: 'one' });
+  assert.deepEqual(gameState.getStoryChapters('storybook'), ['one'], 'bad references grant nothing');
+  assert.equal(warn.mock.callCount(), 2);
 });

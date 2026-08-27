@@ -746,12 +746,15 @@ export class CuratorUI {
     // case reads exactly as it does in the player's bag. And like there, the
     // card IS the control: clicking the relic takes it out of the case.
     const t = this.engine.t.bind(this.engine);
+    const story = itemData?.story
+      ? { granted: this.engine.state.getStoryChapters(itemData.id).length, total: itemData.story.chapters.length }
+      : null;
     const itemCard = buildCard({
       tag: 'button',
       title: name,
       body: itemData?.description,
       stats: itemData ? itemCardStats(t, itemData, this.engine.state.getPlayer().attributes,
-        { uses: this.engine.state.getItemUses(itemData.id), items: this.engine.data.items }) : undefined,
+        { uses: this.engine.state.getItemUses(itemData.id), items: this.engine.data.items, story }) : undefined,
     });
     itemCard.onclick = () => {
       takeItemFromDisplay(this.engine.state, sceneId, displayId);
@@ -759,6 +762,16 @@ export class CuratorUI {
       this.render('dashboard');
     };
     detailSection.appendChild(itemCard);
+
+    // An exhibited story book stays readable — the card keeps its one meaning
+    // (take it out, like every other exhibit), so reading is its own act
+    // below it. Offered however thin the telling: a half-heard story reads as
+    // the half-filled exhibit it is.
+    if (story) {
+      const readBtn = buildOptionButton(this.engine.t('plugin.curator.displayRead', { name }));
+      readBtn.onclick = () => this.engine.readStory(itemId);
+      detailSection.appendChild(readBtn);
+    }
 
     panel.insertBefore(detailSection, skillsContainer);
   }
@@ -792,11 +805,14 @@ export class CuratorUI {
     // A case takes anything the player can part with — the museum is theirs,
     // and a case doesn't tell them what belongs in it. Special items are the
     // one exception, and it's not the museum's rule: every surface that parts
-    // the player from an item filters them out.
+    // the player from an item filters them out. A story book is Special too,
+    // but a case doesn't part the player from it — it stands in their own
+    // museum, one click from the pack — and exhibiting stories is what the
+    // museum is for, so books are offered.
     const eligibleItems = player.inventory.filter(invItem => {
       if (isEquipped(invItem.item)) return false;
       const itemData = this.engine.data.items[invItem.item];
-      if (isSpecialItem(itemData)) return false;
+      if (isSpecialItem(itemData) && !itemData.story) return false;
       return !!itemData;
     });
 

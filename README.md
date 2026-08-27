@@ -293,6 +293,7 @@ Leaf shapes:
 | `{ "mission": "id", "status": "active" }` | Quest status (`not_started` / `active` / `complete` / `failed`) |
 | `{ "mission": "id", "stage": "collect" }` | Mission is active and exactly on this stage |
 | `{ "mission": "id", "stageReached": "collect" }` | Mission's recorded stage is at or past this one (by authored order; survives completion) |
+| `{ "story": "book_id", "chapter": "id" }` | The player has heard this chapter of a story book |
 | `{ "stealth": 2 }` | Any declared attribute threshold |
 | `{ "time": { "at_least": 120 } }` | Elapsed world-clock ticks |
 | `{ "day": { "at_least": 3 } }` / `{ "segment": "night" }` | Derived day / segment (requires `rules.time`) |
@@ -318,6 +319,7 @@ Available everywhere (scene options, `onVictory`, dialogue responses):
 | `set_flag` | `flag`, `value` | Write a flag. |
 | `log` | `message` | Print a narrator line. |
 | `manage_chest` | `chest` | Open a chest's deposit/withdraw panel. |
+| `grant_chapter` | `item`, `chapter` | Record that the player heard one chapter of a story book; the first chapter puts the book in the pack. Re-grants are silent no-ops. |
 | `advance_time` | `amount` **or** `until` | Advance the world clock by ticks, or to the next start of a named segment (needs `rules.time`). |
 | `set_timer` | `id`, `afterTicks?`, `actions` | Arm a timer; its pipeline fires at the deadline. Re-arming an `id` replaces it. |
 | `cancel_timer` | `id` | Disarm a timer. |
@@ -331,7 +333,7 @@ Conversation actions (`goToConversation` and `trade` warn and no-op outside an a
 | `leave` | — | Leave the conversation, back to the scene. |
 | `questTrigger` | `mission`, `status` *or* `stage` | Start (`"active"`), complete, or fail a mission — or jump forward to a named stage. `complete` and `failed` are terminal. |
 
-The state-changing actions (`loot`, `heal`, `full_rest`, `short_rest`, `advance_time`) take an optional `log`: `false` silences the default message, a string replaces it (resolved through the locale table first, so a locale key stays translatable; any other string logs as-is). `advance_time` has no default line, so only its string form does anything. Timer pipelines are restricted to *quiet* actions (`set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`) — a timer changes the world through flags, never by navigating or starting combat. Plugins register their own types (the curator plugin adds `manage_exhibits` and `build_wing`) — see the [Plugin API](#plugin-api). Every parameter above is documented in full in [`docs/ACTIONS.md`](docs/ACTIONS.md).
+The state-changing actions (`loot`, `heal`, `full_rest`, `short_rest`, `grant_chapter`, `advance_time`) take an optional `log`: `false` silences the default message, a string replaces it (resolved through the locale table first, so a locale key stays translatable; any other string logs as-is). `advance_time` has no default line, so only its string form does anything. Timer pipelines are restricted to *quiet* actions (`set_flag`, `log`, `questTrigger`, `set_timer`, `cancel_timer`) — a timer changes the world through flags, never by navigating or starting combat. Plugins register their own types (the curator plugin adds `manage_exhibits` and `build_wing`) — see the [Plugin API](#plugin-api). Every parameter above is documented in full in [`docs/ACTIONS.md`](docs/ACTIONS.md).
 
 ### Regions, Interiors, and the Map
 
@@ -684,7 +686,7 @@ Weapons, spells, armor, and consumables. All mechanical stats live inside `attri
 
 Item `type` is one of `Weapon`, `Spell`, `Armor`, `Consumable`, `Special`, or `Flavour` (the default when omitted — keepsakes and key items). The type drives behavior: weapons and spells equip to a hand and attack; armor equips to its `slot`; consumables are drunk/used; flavour items just sit in the pack. In the inventory the card *is* the control — clicking an item equips, uses or unequips it, with no per-item buttons.
 
-`Special` is the story/required category (the demo's Hearthstone). A Special item never leaves the pack by the player's hand: it's filtered out of the merchant's sell list, the display-case artifact picker, and the chest deposit list, so give it no `value`. It is still *used* like a consumable when it declares a use (`teleportScene`, `healingAmount`, …) and is otherwise an inert card. Scripted effects — a quest turn-in, a scene that consumes it — remove it normally; the rule governs the player's choices, not the engine's reach.
+`Special` is the story/required category (the demo's Hearthstone). A Special item never leaves the pack by the player's hand: it's filtered out of the merchant's sell list, the display-case artifact picker, and the chest deposit list, so give it no `value`. The one carve-out is a Special item with a `story`: a display case accepts it — the case stands in the player's own museum, one click from the pack, and exhibiting stories is what the museum is for. A Special item is still *used* like a consumable when it declares a use (`teleportScene`, `healingAmount`, a `story` to read, …) and is otherwise an inert card. Scripted effects — a quest turn-in, a scene that consumes it — remove it normally; the rule governs the player's choices, not the engine's reach.
 
 Equipment slots are **game-defined**, declared as an ordered list in `rules.playerDefaults.equipmentSlots` — the list *is* the player's empty equipment map, and its order is the order the equipped panel renders:
 

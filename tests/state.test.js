@@ -261,7 +261,7 @@ test('loadFromObject: applies a valid save and migrates an old one forward', () 
   const ok = gameState.loadFromObject({ player: {}, log: [] }); // no saveVersion → migrates from 0
   assert.equal(ok, true);
   assert.equal(gameState.getPlayer().name, ''); // migration 1 added player.name
-  assert.equal(gameState.state.saveVersion, 7); // brought up to the current version
+  assert.equal(gameState.state.saveVersion, 8); // brought up to the current version
   assert.deepEqual(gameState.state.time, { ticks: 0 }); // migration 4 seeded the clock
   assert.deepEqual(gameState.state.timers, []);
 });
@@ -497,7 +497,7 @@ test('registerMigration: requires a plugin id and a positive integer version, re
 test('plugin migrations run on their own version line, partitioned from the core counter', () => {
   const ok = gameState.loadFromObject({ player: {}, log: [] }); // v0 save
   assert.equal(ok, true);
-  assert.equal(gameState.state.saveVersion, 7);                    // core line untouched by the plugin
+  assert.equal(gameState.state.saveVersion, 8);                    // core line untouched by the plugin
   assert.equal(gameState.state.pluginSaveVersions.demo, 1);        // plugin line stamped separately
   assert.deepEqual(gameState.state.plugins.demo, { seeded: true }); // and the migration ran
 
@@ -517,7 +517,7 @@ test('migrate: a pre-partition save stamped 5 by a plugin adopts the core versio
     saveVersion: 5, player: { name: 'x' }, log: [],
     missions: { escape: 'active' }, // pre-v5 string shape proves v5 ran
   });
-  assert.equal(gameState.state.saveVersion, 7);
+  assert.equal(gameState.state.saveVersion, 8);
   assert.deepEqual(gameState.state.missions.escape, { status: 'active' }, 'the v5 mission migration ran after adoption');
   assert.equal(gameState.state.pluginSaveVersions.demo, 1); // the plugin line still catches up
 });
@@ -570,4 +570,22 @@ test('loadFromObject: seeds declared scene flags the save predates, never overwr
   });
   assert.equal(gameState.getFlag('gate_raised'), true, 'declared default seeded into the old save');
   assert.equal(gameState.getFlag('door_open'), true, 'saved values are preserved');
+});
+
+// ── Story chapters ────────────────────────────────────────────────────────────
+
+test('grantStoryChapter: grants once, refuses a re-grant, and keeps grant order', () => {
+  assert.equal(gameState.grantStoryChapter('gertas_lamb', 'the_mill'), true);
+  assert.equal(gameState.grantStoryChapter('gertas_lamb', 'the_fair'), true);
+  assert.equal(gameState.grantStoryChapter('gertas_lamb', 'the_mill'), false, 'hearing a chapter twice is not an event');
+  assert.deepEqual(gameState.getStoryChapters('gertas_lamb'), ['the_mill', 'the_fair']);
+  assert.equal(gameState.hasStoryChapter('gertas_lamb', 'the_fair'), true);
+  assert.equal(gameState.hasStoryChapter('gertas_lamb', 'the_jar'), false);
+});
+
+test('migrate v8: a pre-story save gains the stories map on load', () => {
+  const ok = gameState.loadFromObject({ saveVersion: 7, player: { name: 'x' }, log: [] });
+  assert.equal(ok, true);
+  assert.deepEqual(gameState.state.stories, {});
+  assert.equal(gameState.hasStoryChapter('gertas_lamb', 'the_fair'), false, 'accessors work on the migrated map');
 });

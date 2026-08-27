@@ -318,6 +318,13 @@ export class RPGEngine {
   useItem(itemId)          { return items.useItem(this, itemId); }
   equipItem(itemId)        { return items.equipItem(this, itemId); }
   unequipItem(slot)        { return items.unequipItem(this, slot); }
+  // Replays a story book's heard chapters into the log, wherever the book
+  // stands — unlike useItem it demands no inventory possession, which is how
+  // an exhibited book stays readable (the curator's case inspection).
+  readStory(itemId)        {
+    const itemData = this.data.items[itemId];
+    if (itemData?.story) items.readStory(this, itemData);
+  }
 
   // Deducts AP in combat. Returns false (blocking the action) if the cost
   // exceeds the player's remaining AP for the turn. The spend is then handed
@@ -462,6 +469,7 @@ export class RPGEngine {
   resetScene()                   { return this.scene.reset(); }
   handleQuestTrigger(trigger) { return this.questSystem.handleTrigger(trigger); }
   scrollNarrativeToBottom() { return this.narrative.scrollToBottom(); }
+  scrollNarrativeToEntry(entryEl) { return this.narrative.scrollToEntry(entryEl); }
 
   // ── Event system ────────────────────────────────────────────────────────
   // Minimal pub/sub. Subsystems subscribe in their constructors; emitters need

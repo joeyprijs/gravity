@@ -2,9 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { evaluateCondition } from '../src/systems/condition.js';
 
-function makeState({ flags = {}, inventory = [], equipment = {}, level = 1, gold = 0, missions = {}, stages = {}, currentStages = {}, attrs = {} } = {}) {
+function makeState({ flags = {}, inventory = [], equipment = {}, level = 1, gold = 0, missions = {}, stages = {}, currentStages = {}, attrs = {}, stories = {} } = {}) {
   return {
     getFlag: (f) => flags[f] ?? false,
+    hasStoryChapter: (s, c) => (stories[s] ?? []).includes(c),
     getPlayer: () => ({ inventory, equipment, level, resources: { gold }, attributes: attrs }),
     getMissionStatus: (m) => missions[m] ?? 'not_started',
     getMissionStage: (m) => currentStages[m] ?? null,
@@ -152,4 +153,13 @@ test('a "luck" custom attribute is a plain attribute leaf', () => {
   const state = makeState({ attrs: { luck: 2 } });
   assert.equal(evaluateCondition({ luck: { at_least: 2 } }, state), true);
   assert.equal(evaluateCondition({ luck: { at_least: 3 } }, state), false);
+});
+
+test('story leaf: true only for a granted chapter of that story', () => {
+  const state = makeState({ stories: { gertas_lamb: ['the_fair'] } });
+  assert.equal(evaluateCondition({ story: 'gertas_lamb', chapter: 'the_fair' }, state), true);
+  assert.equal(evaluateCondition({ story: 'gertas_lamb', chapter: 'the_mill' }, state), false);
+  assert.equal(evaluateCondition({ story: 'other_book', chapter: 'the_fair' }, state), false);
+  assert.equal(evaluateCondition({ not: { story: 'gertas_lamb', chapter: 'the_mill' } }, state), true,
+    'the resume gate: heard this far, not further');
 });

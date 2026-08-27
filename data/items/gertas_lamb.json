@@ -1,0 +1,21 @@
+{
+  "name": "Story of the Two-Headed Lamb",
+  "type": "Special",
+  "description": "Old Gerta's story, written down the way she told it. It holds as much as you stayed to hear.",
+  "story": {
+    "chapters": [
+      {
+        "id": "the_fair",
+        "text": "In the spring of nineteen, Gerta was nine years old. Her father took her up the hill to the museum in shoes borrowed from a cousin, and there, in a jar by the window, stood a two-headed lamb — eyes shut, as if thinking two things at once. The whole village looked away from it. Gerta stood and looked until her father dragged her off."
+      },
+      {
+        "id": "the_mill",
+        "text": "Then came a life. She married Odo the miller because he could not dance and was the only man at the fair honest enough to say so. Forty years of flour: children asleep on the sacks, the flood in the bad year, the fire in the drying loft, and bread every single morning. And every year, some quiet evening, the lamb came back to her. She never told a soul why."
+      },
+      {
+        "id": "the_jar",
+        "text": "Old now, with the mill gone quiet around her, she finally said why. The jar cracked in a move years ago and took the lamb with it, and of everyone who stood in that room, only Gerta is left — the one place the lamb still happened. So she gave the story away to be written down. A thing keeps happening as long as somebody carries it; that is the whole of what Gerta believes, and she had a good life believing it."
+      }
+    ]
+  }
+}

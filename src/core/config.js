@@ -41,6 +41,7 @@ export const ACTIONS = {
   SET_FLAG:        'set_flag',
   LOG:             'log',
   MANAGE_CHEST:    'manage_chest',
+  GRANT_CHAPTER:   'grant_chapter',
   ADVANCE_TIME:    'advance_time',
   SET_TIMER:       'set_timer',
   CANCEL_TIMER:    'cancel_timer',

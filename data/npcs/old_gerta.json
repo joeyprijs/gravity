@@ -6,14 +6,171 @@
       "responses": [
         {
           "text": "I want to hear about the lamb.",
+          "condition": {
+            "not": {
+              "story": "gertas_lamb",
+              "chapter": "the_fair"
+            }
+          },
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "fair"
+            }
+          ]
+        },
+        {
+          "text": "You were telling me about the lamb. Go on.",
+          "condition": {
+            "and": [
+              {
+                "story": "gertas_lamb",
+                "chapter": "the_fair"
+              },
+              {
+                "not": {
+                  "story": "gertas_lamb",
+                  "chapter": "the_mill"
+                }
+              }
+            ]
+          },
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "mill"
+            }
+          ]
+        },
+        {
+          "text": "You never said why you kept thinking about it.",
+          "condition": {
+            "and": [
+              {
+                "story": "gertas_lamb",
+                "chapter": "the_mill"
+              },
+              {
+                "not": {
+                  "story": "gertas_lamb",
+                  "chapter": "the_jar"
+                }
+              }
+            ]
+          },
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "jar"
+            }
+          ]
+        },
+        {
+          "text": "I wrote it all down. The lamb has been heard.",
+          "condition": {
+            "story": "gertas_lamb",
+            "chapter": "the_jar"
+          },
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "heard"
+            }
+          ]
+        },
+        {
+          "text": "Wish her a good day.",
           "actions": [
             {
               "type": "leave"
             }
           ]
+        }
+      ]
+    },
+    "fair": {
+      "npcText": "Nineteen, like I said. I was nine. Father took me up the hill in my cousin's shoes and there it was, in a jar by the window: two heads, eyes shut, like it was thinking two things at once. The whole village looked away. I stood and looked until father dragged me off.",
+      "actions": [
+        {
+          "type": "grant_chapter",
+          "item": "gertas_lamb",
+          "chapter": "the_fair"
+        }
+      ],
+      "responses": [
+        {
+          "text": "Keep listening.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "mill"
+            }
+          ]
         },
         {
-          "text": "I'll find that jar.",
+          "text": "That's enough for today.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "mill": {
+      "npcText": "Then life, of course. I married Odo because he couldn't dance and SAID so — only honest man at the fair. Forty years of flour. Children on the sacks, the flood in the bad year, the loft fire. And every year, some quiet evening, that lamb would come back to me. I never told a soul why.",
+      "actions": [
+        {
+          "type": "grant_chapter",
+          "item": "gertas_lamb",
+          "chapter": "the_mill"
+        }
+      ],
+      "responses": [
+        {
+          "text": "Why the lamb? Tell me.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "jar"
+            }
+          ]
+        },
+        {
+          "text": "I'll come back for the rest.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "jar": {
+      "npcText": "Because everyone looked AWAY, child. That lamb was born twice over and hardly seen at all. And then the jar cracked in some move or other, years back, and that was that — glass, lamb, and everyone who stood in that room, all gone but me. I'm the only place it still happens. So write it down. Then it happens to you too, and it'll outlast the pair of us. I had a good life. The lamb gets this much of one.",
+      "actions": [
+        {
+          "type": "grant_chapter",
+          "item": "gertas_lamb",
+          "chapter": "the_jar"
+        }
+      ],
+      "responses": [
+        {
+          "text": "Thank her for the story.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "heard": {
+      "npcText": "Hmph. Took sixty years and the museum one to manage it. Good. Mind you write it legible.",
+      "responses": [
+        {
+          "text": "Leave her to the good chair.",
           "actions": [
             {
               "type": "leave"

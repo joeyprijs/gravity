@@ -92,6 +92,7 @@ Conditions gate scene options, dialogue responses, description variants, and aut
 | `{ "mission": "id", "status": "active" }` | Quest status (`not_started`/`active`/`complete`/`failed`) |
 | `{ "mission": "id", "stage": "collect" }` | Mission is active and exactly on this stage |
 | `{ "mission": "id", "stageReached": "collect" }` | Mission's recorded stage is at or past this one (authored order; survives completion) |
+| `{ "story": "book_id", "chapter": "id" }` | The player has heard this chapter of a story book (granted via `grant_chapter`) |
 | `{ "level": 3 }` | Player level comparison |
 | `{ "gold": { "less_than": 10 } }` | Gold comparison |
 | `{ "<attribute>": 2 }` | Any custom attribute from `rules.customAttributes` |

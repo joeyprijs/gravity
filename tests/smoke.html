@@ -1405,6 +1405,85 @@
         Object.assign(player.equipment, prev);
       });
 
+      await step('a story heard in chapters fills a book the player can reread', async () => {
+        // Old Gerta's lamb: every chapter she tells is granted at listen time,
+        // and the first one writes the book into the pack. The book holds no
+        // text of its own — reading it replays exactly the chapters heard, in
+        // authored order — and the conversation's start node offers to resume
+        // where the listening stopped.
+        const engine = window.gameEngine;
+        const cards = () => $$('#scene-options-panel button.card');
+        const logTexts = () => $$('#scene-narrative .scene__log').map(el => {
+          const c = el.cloneNode(true); c.querySelector('.scene__log-prefix')?.remove(); return text(c);
+        });
+        const bookCard = () => $$('#inventory-tab .card').find(c => text(c).includes('Story of the Two-Headed Lamb'));
+
+        engine.renderScene('village_mill');
+        await until(() => cards().some(c => text(c) === 'Talk to Old Gerta'), 'the mill');
+        cards().find(c => text(c) === 'Talk to Old Gerta').click();
+        await until(() => cards().some(c => text(c) === 'I want to hear about the lamb.'), 'Gerta');
+        cards().find(c => text(c) === 'I want to hear about the lamb.').click();
+        await until(() => logTexts().some(t => t.startsWith('You write down what you heard')), 'the book written');
+        assert(engine.state.countPlayerItem('gertas_lamb') === 1, 'the first chapter put the book in the pack');
+        assert(text(bookCard()).includes('Chapters:1/3'),
+          `the card counts the heard chapters (got "${text(bookCard())}")`);
+
+        // Walk out mid-story: the start node now offers the resume, not the intro.
+        cards().find(c => text(c) === "That's enough for today.").click();
+        await until(() => cards().some(c => text(c) === 'Talk to Old Gerta'), 'back in the mill');
+        cards().find(c => text(c) === 'Talk to Old Gerta').click();
+        await until(() => cards().some(c => text(c).startsWith('You were telling me')), 'the resume response');
+        assert(!cards().some(c => text(c) === 'I want to hear about the lamb.'), 'the intro response retired');
+        cards().find(c => text(c).startsWith('You were telling me')).click();
+        await until(() => engine.state.hasStoryChapter('gertas_lamb', 'the_mill'), 'chapter two granted');
+        cards().find(c => text(c) === 'Why the lamb? Tell me.').click();
+        await until(() => engine.state.hasStoryChapter('gertas_lamb', 'the_jar'), 'chapter three granted');
+        cards().find(c => text(c) === 'Thank her for the story.').click();
+        await until(() => cards().some(c => text(c) === 'Talk to Old Gerta'), 'the story heard out');
+
+        // Reread it from the pack: the whole story, authored order, book kept.
+        assert(text(bookCard()).includes('Chapters:3/3'), 'the card reads full');
+        bookCard().click();
+        await until(() => logTexts().some(t => t.startsWith('Old now, with the mill gone quiet')), 'the retelling');
+        const logs = logTexts();
+        const open = logs.lastIndexOf('Open the Story of the Two-Headed Lamb');
+        assert(open >= 0, 'opening the book is the player\'s own line');
+        assert(logs[open + 1].startsWith('In the spring of nineteen'), `chapter one leads (got "${logs[open + 1]}")`);
+        assert(logs[open + 2].startsWith('Then came a life'), 'chapter two follows');
+        assert(logs[open + 3].startsWith('Old now'), 'chapter three closes');
+        assert(engine.state.countPlayerItem('gertas_lamb') === 1, 'reading never consumes the book');
+
+        // A story book is the museum's kind of thing: Special — unsellable,
+        // unstowable — yet a display case takes it, because a case is the
+        // player's own museum, not a way to lose the book. One click back out.
+        // Arriving at the wing usually opens the curator dashboard itself; a
+        // player who closed the panel by hand gets the scene with a "Curate
+        // the exhibits" act instead — accept either and end on the dashboard.
+        engine.renderScene('home_museum_relics');
+        await until(() => cards().some(c => text(c).includes('Mahogany Pedestal') || text(c) === 'Curate the exhibits'),
+          'the relic wing');
+        cards().find(c => text(c) === 'Curate the exhibits')?.click();
+        await until(() => cards().some(c => text(c).includes('Mahogany Pedestal')), 'the curator dashboard');
+        cards().find(c => text(c).includes('Mahogany Pedestal')).click();
+        await until(() => cards().some(c => text(c) === 'Step back'), 'the artifact picker');
+        cards().find(c => text(c).includes('Story of the Two-Headed Lamb')).click();
+        await until(() => cards().some(c => text(c).includes('Mahogany Pedestal')), 'the dashboard');
+        assert(engine.state.countPlayerItem('gertas_lamb') === 0, 'the book stands in the case');
+        cards().find(c => text(c).includes('Mahogany Pedestal')).click();
+        await until(() => cards().some(c => text(c) === 'Step back'), 'the inspect screen');
+
+        // An exhibited book stays readable: its own Read act replays the
+        // story without touching the case — the card keeps meaning take-out.
+        cards().find(c => text(c) === 'Read the Story of the Two-Headed Lamb').click();
+        await until(() => logTexts().filter(t => t === 'Open the Story of the Two-Headed Lamb').length === 2,
+          'the case-side retelling');
+        assert(engine.state.countPlayerItem('gertas_lamb') === 0, 'reading on exhibit does not retrieve');
+
+        cards().find(c => text(c).startsWith('Story of the Two-Headed Lamb')).click();
+        await until(() => cards().some(c => text(c).includes('Mahogany Pedestal')), 'the dashboard again');
+        assert(engine.state.countPlayerItem('gertas_lamb') === 1, 'and comes back to the pack');
+      });
+
       await step('buying and selling are narrated, the trade buttons are the choice', async () => {
         // Money changing hands is a consequence, not a choice — same voice as
         // lifting a relic out of a case. The merchant lives deep in the dungeon,

@@ -653,3 +653,42 @@ test('conditions: unknown stage references and stage+status combos are flagged',
   assert.ok(issues.some(i => i.message.includes('unknown stage "ghost" on mission "escape"')));
   assert.ok(issues.some(i => i.message.includes('both "stage" and "status"')));
 });
+
+// ── story books ───────────────────────────────────────────────────────────────
+
+test('story books: bad chapter shapes and a sellable type are flagged', () => {
+  const data = makeCleanData();
+  data.items.diary = {
+    name: 'Diary', type: 'Flavour',
+    story: { chapters: [{ id: 'a', text: 'A.' }, { id: 'a' }] },
+  };
+  const issues = validate(data);
+  assert.ok(issues.some(i => i.message.includes('duplicate chapter id "a"')));
+  assert.ok(issues.some(i => i.message.includes('missing "text"')));
+  assert.ok(issues.some(i => i.message.includes('type "Flavour"')), 'a non-Special book can be sold away');
+
+  data.items.diary = { name: 'Diary', type: 'Special', story: { chapters: [] } };
+  assert.ok(validate(data).some(i => i.message.includes('non-empty array')));
+});
+
+test('grant_chapter and story conditions: unknown books and chapters are flagged', () => {
+  const data = makeCleanData();
+  data.items.diary = { name: 'Diary', type: 'Special', story: { chapters: [{ id: 'a', text: 'A.' }] } };
+  data.scenes.cave.options[0].actions = [
+    { type: 'grant_chapter', item: 'ghost', chapter: 'a' },
+    { type: 'grant_chapter', item: 'sword', chapter: 'a' },
+    { type: 'grant_chapter', item: 'diary', chapter: 'ghost' },
+  ];
+  data.scenes.exit.options.push(
+    { text: 'x', condition: { story: 'sword', chapter: 'a' }, actions: [] },
+    { text: 'y', condition: { story: 'diary' }, actions: [] },
+  );
+  data.npcs.elder.conversations.start.responses[0].condition = { story: 'diary', chapter: 'ghost' };
+  const issues = validateGameData(data, new Set([...KNOWN_ACTIONS, 'grant_chapter']));
+  assert.ok(issues.some(i => i.message.includes('grant_chapter → unknown item "ghost"')));
+  assert.ok(issues.some(i => i.message.includes('"sword" declares no story')));
+  assert.ok(issues.some(i => i.message.includes('grant_chapter → unknown chapter "ghost" on "diary"')));
+  assert.ok(issues.some(i => i.message.includes('not a story book item')));
+  assert.ok(issues.some(i => i.message.includes('needs a "chapter"')));
+  assert.ok(issues.some(i => i.message.includes('unknown chapter "ghost" on story "diary"')));
+});

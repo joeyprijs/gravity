@@ -156,7 +156,10 @@ export class InventoryUI {
   // The card's stat lines (see itemCardStats), bound to the engine's
   // translator and the player's current attributes.
   _itemStats(itemData, options) {
+    const story = itemData.story
+      ? { granted: this.engine.state.getStoryChapters(itemData.id).length, total: itemData.story.chapters.length }
+      : null;
     return itemCardStats(this.engine.t.bind(this.engine), itemData, this.engine.state.getPlayer().attributes,
-      { ...options, uses: this.engine.state.getItemUses(itemData.id), items: this.engine.data.items });
+      { ...options, uses: this.engine.state.getItemUses(itemData.id), items: this.engine.data.items, story });
   }
 }
