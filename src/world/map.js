@@ -121,8 +121,8 @@ export class MapManager {
     fresh.id = EL.MINIMAP_CANVAS;
     fresh.className = CSS.MINIMAP_CANVAS;
 
-    for (const { id, key, def, label, background, isCurrent } of placements) {
-      const node = this._buildMapNode(label, isCurrent);
+    for (const { id, key, def, label, background, isCurrent, kind } of placements) {
+      const node = this._buildMapNode(label, isCurrent, false, kind === 'road');
       // What the box stands for, so setPeek can find it again: a room by its
       // scene id, a building by its interior key.
       if (id) node.dataset.scene = id;
@@ -131,7 +131,9 @@ export class MapManager {
       node.style.left   = ((def.left - view.left) * view.scale) + 'px';
       node.style.width  = (def.width  * view.scale) + 'px';
       node.style.height = (def.height * view.scale) + 'px';
-      node.style.background = background || MAP_NODE_DEFAULT_BG;
+      // A road with no authored color takes its fill from the road class —
+      // an inline background would always paint over it.
+      if (background || kind !== 'road') node.style.background = background || MAP_NODE_DEFAULT_BG;
       fresh.appendChild(node);
     }
 
@@ -260,7 +262,16 @@ export class MapManager {
     // Buildings first so the rooms paint over them: a building's square is a
     // bounding box, so it covers ground its rooms don't fill, and the world the
     // player is standing in must never end up underneath it.
-    return [...buildings, ...rooms];
+    return [...buildings, ...this._roadsFirst(rooms)];
+  }
+
+  // Roads under the places they meet: a road box often runs up to (or just
+  // under) a square or a yard, and the named place should own that ground.
+  _roadsFirst(placements) {
+    return [
+      ...placements.filter(p => p.kind === 'road'),
+      ...placements.filter(p => p.kind !== 'road')
+    ];
   }
 
   // What the full map draws: everywhere the player knows of, in as much detail
@@ -288,8 +299,8 @@ export class MapManager {
     // readable only if nothing paints after them.
     return [
       ...[...buildings].filter(key => !walked.has(key)).map(key => this._buildingPlacement(key)),
-      ...[...rooms].filter(id => scenes[id]?.mapDefinitions)
-        .map(id => this._roomPlacement(id, scenes[id], currentSceneId)),
+      ...this._roadsFirst([...rooms].filter(id => scenes[id]?.mapDefinitions)
+        .map(id => this._roomPlacement(id, scenes[id], currentSceneId))),
       ...insideRooms,
       // Only where there is something to group: a building drawn as a single
       // room is already named by that room, and an outline would just say it
@@ -446,6 +457,7 @@ export class MapManager {
     return {
       id,
       def: scene.mapDefinitions,
+      kind: scene.mapDefinitions.kind,
       label: scene.name || scene.title || id,
       background: scene.mapDefinitions.background,
       isCurrent: id === currentSceneId
@@ -462,11 +474,12 @@ export class MapManager {
 
   // Builds one labeled map-node element. The caller positions and sizes it —
   // the minimap scales coordinates, the full map uses them as authored.
-  _buildMapNode(labelText, isCurrentScene, isBuilding = false) {
+  _buildMapNode(labelText, isCurrentScene, isBuilding = false, isRoad = false) {
     const node = document.createElement('div');
     node.className = CSS.MAP_NODE;
     if (isCurrentScene) node.classList.add(CSS.MAP_NODE_CURRENT);
     if (isBuilding) node.classList.add(CSS.MAP_NODE_BUILDING);
+    if (isRoad) node.classList.add(CSS.MAP_NODE_ROAD);
 
     const label = document.createElement('span');
     label.className = CSS.MAP_NODE_LABEL;
@@ -494,15 +507,16 @@ export class MapManager {
   // coordinates, unscaled.
   _renderSceneNodes(canvasEl, placements) {
     clearElement(canvasEl);
-    for (const { def, label, background, isCurrent, isBuilding } of placements) {
-      const node = this._buildMapNode(label, isCurrent, isBuilding);
+    for (const { def, label, background, isCurrent, isBuilding, kind } of placements) {
+      const node = this._buildMapNode(label, isCurrent, isBuilding, kind === 'road');
       Object.assign(node.style, {
         top: def.top + 'px',
         left: def.left + 'px',
         width: def.width + 'px',
-        height: def.height + 'px',
-        background: background || MAP_NODE_DEFAULT_BG
+        height: def.height + 'px'
       });
+      // Same rule as the minimap: an uncolored road is filled by its class.
+      if (background || kind !== 'road') node.style.background = background || MAP_NODE_DEFAULT_BG;
 
       canvasEl.appendChild(node);
     }

@@ -7,7 +7,7 @@
     "left": 2525,
     "width": 90,
     "height": 70,
-    "background": "rgba(60, 70, 45, 0.9)"
+    "kind": "road"
   },
   "ambience": "audio/ambience/hill_path.m4a",
   "description": [

@@ -45,6 +45,7 @@
   /* Map Visuals */
   --minimap-bg: rgba(0, 0, 0, 0.55);
   --map-node-border: rgba(255, 255, 255, 0.18);
+  --map-road-bg: rgba(95, 95, 95, 0.9);
   --map-building-outline: rgba(255, 255, 255, 0.45);
   --map-node-text: rgba(255, 255, 255, 0.65);
 
@@ -978,6 +979,15 @@ button.section-toggle--collapsed .section-toggle__label::before {
   justify-content: center;
   overflow: hidden;
   transition: box-shadow 0.3s;
+}
+
+/* A road: one shared gray, its border transparent rather than removed — the
+   background still paints under the border-box, so touching road boxes merge
+   into a single network instead of a row of outlined rectangles. Before
+   --current in the file, so standing on a road still draws the accent border. */
+.map-node--road {
+  background: var(--map-road-bg);
+  border-color: transparent;
 }
 
 .map-node--current {

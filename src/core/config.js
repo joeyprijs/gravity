@@ -118,6 +118,7 @@ export const CSS = {
   MAP_NODE_CURRENT:       'map-node--current',
   MAP_NODE_PEEK:          'map-node--peek',
   MAP_NODE_BUILDING:      'map-node--building',
+  MAP_NODE_ROAD:          'map-node--road',
   MAP_NODE_LABEL:         'map-node__label',
   MINIMAP_CANVAS:         'minimap__canvas',
   MAP_TOOLTIP:            'map-tooltip',
