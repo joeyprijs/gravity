@@ -325,6 +325,15 @@ button.card {
   box-shadow: var(--btn-hover-shadow);
 }
 
+/* The keyboard cursor (see the keydown listener in ui.js). An explicit ring,
+   not the UA default: Safari draws no ring for focus moved by a script, so
+   the cursor would be invisible there. Plain :focus is safe here — a card
+   pressed by mouse leaves the panel on the re-render that follows. */
+#scene-options-panel .card:focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -1px;
+}
+
 button.card:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -974,6 +983,15 @@ button.section-toggle--collapsed .section-toggle__label::before {
 .map-node--current {
   border-color: var(--accent-color);
 
+}
+
+/* Where the focused option would take you (see setPeek in map.js). An
+   outline, not a border like --current: it adds nothing to the box's size,
+   and the two can sit on one node without fighting. */
+.map-node--peek {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 1px;
+  z-index: 1;
 }
 
 .map-node__label {

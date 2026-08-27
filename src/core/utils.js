@@ -428,11 +428,15 @@ export function itemStatLines(t, itemData, attributes = {}, uses = null, items =
  *   rest-limited uses (see itemStatLines).
  * @param {Object<string, object>|null} [options.items=null] - The loaded item
  *   definitions, to name granted spells (see itemStatLines).
+ * @param {{granted: number, total: number}|null} [options.story=null] - A
+ *   story book's heard-chapter progress — the card's visible sign that
+ *   listening filled more pages.
  * @returns {string[]|undefined} Stat lines, or undefined if the item has none
  *   (buildCard's `stats` takes undefined for "no stat block").
  */
-export function itemCardStats(t, itemData, attributes = {}, { slot = true, uses = null, items = null } = {}) {
+export function itemCardStats(t, itemData, attributes = {}, { slot = true, uses = null, items = null, story = null } = {}) {
   const lines = itemStatLines(t, itemData, attributes, uses, items);
+  if (story) lines.push(t('itemStats.storyChapters', { current: story.granted, total: story.total }));
   // Where it's worn leads, because it's what the player checks first on gear.
   // The KIND is what the card can honestly promise — which of a kind's slots
   // the item lands in is decided at equip time (see pickSlot), so a ring says

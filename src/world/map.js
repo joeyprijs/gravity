@@ -121,8 +121,12 @@ export class MapManager {
     fresh.id = EL.MINIMAP_CANVAS;
     fresh.className = CSS.MINIMAP_CANVAS;
 
-    for (const { def, label, background, isCurrent } of placements) {
+    for (const { id, key, def, label, background, isCurrent } of placements) {
       const node = this._buildMapNode(label, isCurrent);
+      // What the box stands for, so setPeek can find it again: a room by its
+      // scene id, a building by its interior key.
+      if (id) node.dataset.scene = id;
+      if (key) node.dataset.building = key;
       node.style.top    = ((def.top  - view.top)  * view.scale) + 'px';
       node.style.left   = ((def.left - view.left) * view.scale) + 'px';
       node.style.width  = (def.width  * view.scale) + 'px';
@@ -133,6 +137,28 @@ export class MapManager {
 
     canvasEl.replaceWith(fresh);
     this._minimapCacheKey = currentSceneId;
+  }
+
+  /**
+   * Lights the minimap box a considered move would lead to — the room itself,
+   * or, for an interior destination the current view doesn't draw, the
+   * building it is inside. Only what is already on the map can light up: an
+   * unvisited place has no box, and the peek must not reveal one. Pass null
+   * to clear. The mark otherwise clears with the canvas on the next move.
+   */
+  setPeek(sceneId) {
+    const canvas = document.getElementById(EL.MINIMAP_CANVAS);
+    if (!canvas) return;
+    canvas.querySelectorAll(`.${CSS.MAP_NODE_PEEK}`)
+      .forEach(n => n.classList.remove(CSS.MAP_NODE_PEEK));
+    if (!sceneId) return;
+
+    let target = canvas.querySelector(`[data-scene="${sceneId}"]`);
+    if (!target) {
+      const key = this._interiorKeyOf(sceneId);
+      if (key) target = canvas.querySelector(`[data-building="${key}"]`);
+    }
+    target?.classList.add(CSS.MAP_NODE_PEEK);
   }
 
   /**
@@ -391,6 +417,7 @@ export class MapManager {
     const rooms = this._buildingRooms(key);
 
     return {
+      key,
       def: this._enclosing(rooms),
       ...this._buildingFace(key, rooms),
       isCurrent: false
@@ -417,6 +444,7 @@ export class MapManager {
   // building avoid repeating the building's own name on the map.
   _roomPlacement(id, scene, currentSceneId) {
     return {
+      id,
       def: scene.mapDefinitions,
       label: scene.name || scene.title || id,
       background: scene.mapDefinitions.background,

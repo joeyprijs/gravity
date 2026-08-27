@@ -580,6 +580,7 @@ export class CuratorUI {
     // the one place indoors where doors don't show which way they go.
     const dest = back.actions?.find(a => a.type === 'navigate')?.destination;
     addDirectionMarker(this.engine, scene, this.engine.data.scenes[dest], backBtn);
+    if (this.engine.data.scenes[dest]) backBtn.dataset.destination = dest;
     backBtn.onclick = () => {
       this.engine.setCustomUIOpen(false);
       this.engine.scene.handleOption(back);   // logs the choice and walks out
@@ -615,6 +616,7 @@ export class CuratorUI {
       // Slot order already reads the way the map does; the marker says it
       // outright — the wings sit directly above and below the hall.
       addDirectionMarker(this.engine, scene, wing, btn);
+      btn.dataset.destination = id;
       btn.onclick = () => {
         this.engine.setCustomUIOpen(false);
         this.engine.scene.handleOption({ text, actions: [{ type: 'navigate', destination: id }] });
@@ -746,12 +748,15 @@ export class CuratorUI {
     // case reads exactly as it does in the player's bag. And like there, the
     // card IS the control: clicking the relic takes it out of the case.
     const t = this.engine.t.bind(this.engine);
+    const story = itemData?.story
+      ? { granted: this.engine.state.getStoryChapters(itemData.id).length, total: itemData.story.chapters.length }
+      : null;
     const itemCard = buildCard({
       tag: 'button',
       title: name,
       body: itemData?.description,
       stats: itemData ? itemCardStats(t, itemData, this.engine.state.getPlayer().attributes,
-        { uses: this.engine.state.getItemUses(itemData.id), items: this.engine.data.items }) : undefined,
+        { uses: this.engine.state.getItemUses(itemData.id), items: this.engine.data.items, story }) : undefined,
     });
     itemCard.onclick = () => {
       takeItemFromDisplay(this.engine.state, sceneId, displayId);
@@ -759,6 +764,16 @@ export class CuratorUI {
       this.render('dashboard');
     };
     detailSection.appendChild(itemCard);
+
+    // An exhibited story book stays readable — the card keeps its one meaning
+    // (take it out, like every other exhibit), so reading is its own act
+    // below it. Offered however thin the telling: a half-heard story reads as
+    // the half-filled exhibit it is.
+    if (story) {
+      const readBtn = buildOptionButton(this.engine.t('plugin.curator.displayRead', { name }));
+      readBtn.onclick = () => this.engine.readStory(itemId);
+      detailSection.appendChild(readBtn);
+    }
 
     panel.insertBefore(detailSection, skillsContainer);
   }

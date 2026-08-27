@@ -1,6 +1,6 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { equipItem, itemHasUse, unequipItem } from '../src/systems/items.js';
+import { equipItem, itemHasUse, unequipItem, useItem } from '../src/systems/items.js';
 import { gameState } from '../src/core/state.js';
 
 const LEFT = 'left_hand';
@@ -20,6 +20,11 @@ const ITEMS = {
   shield:  { name: 'Shield',  type: 'Armor',  slot: 'hand', attributes: { armorClassBonus: 2, actionPoints: 1 } },
   signet:  { name: 'Signet',  type: 'Armor',  slot: 'ring', attributes: { attributeBonuses: { ac: 1 } } },
   band:    { name: 'Band',    type: 'Armor',  slot: 'ring', attributes: {} },
+  // A story book (the engine stamps item ids at load; the fixture stamps its own).
+  book: {
+    id: 'book', name: 'Book', type: 'Book',
+    story: { chapters: [{ id: 'start', text: 'First.' }, { id: 'end', text: 'Last.' }] },
+  },
 };
 
 const SLOTS = [
@@ -172,4 +177,32 @@ test('itemHasUse: true for anything useItem can act on, false for inert gear', (
   assert.ok(!itemHasUse({ attributes: {} }));
   assert.ok(!itemHasUse({}), 'no attributes at all');
   assert.ok(!itemHasUse(null));
+});
+
+// ── story books ───────────────────────────────────────────────────────────────
+
+test('useItem: a story book replays heard chapters in authored order and is never consumed', () => {
+  const logs = [];
+  engine.log = (type, message, variant) => logs.push({ type, message, variant });
+  engine.data.scenes = {};
+  // Heard out of order — the retelling still follows the authored order.
+  gameState.grantStoryChapter('book', 'end');
+  gameState.grantStoryChapter('book', 'start');
+  useItem(engine, 'book');
+  assert.equal(logs[0].message, 'player.readBook');
+  assert.equal(logs[0].variant, 'choice');
+  assert.deepEqual(logs.slice(1).map(l => l.message), ['First.', 'Last.']);
+  assert.equal(gameState.countPlayerItem('book'), 1, 'reading never consumes the book');
+});
+
+test('useItem: a book with no heard chapters reads as blank pages', () => {
+  const logs = [];
+  engine.log = (type, message) => logs.push(message);
+  engine.data.scenes = {};
+  useItem(engine, 'book');
+  assert.deepEqual(logs, ['player.readBook', 'story.emptyBook']);
+});
+
+test('itemHasUse: a story book is readable, so its card is a control', () => {
+  assert.ok(itemHasUse({ story: { chapters: [{ id: 'a', text: 'A.' }] } }));
 });

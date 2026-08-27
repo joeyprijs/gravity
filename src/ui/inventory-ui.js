@@ -9,8 +9,9 @@ const INVENTORY_SECTION_GROUP = 'inventory';
 
 // Item types used straight from the pack rather than equipped. A Special item
 // often carries a use (the Hearthstone's teleport) but need not — hence the
-// itemHasUse check at the call site, which keeps a story key an inert card.
-const USABLE_TYPES = new Set(['Consumable', 'Special']);
+// itemHasUse check at the call site, which keeps a use-less key an inert card.
+// A Book's use is always reading it.
+const USABLE_TYPES = new Set(['Consumable', 'Special', 'Book']);
 
 // InventoryUI renders the inventory and equipment sidebar panels. Every item
 // renders as a standard card (see buildCard) and an item you can act on IS
@@ -156,7 +157,10 @@ export class InventoryUI {
   // The card's stat lines (see itemCardStats), bound to the engine's
   // translator and the player's current attributes.
   _itemStats(itemData, options) {
+    const story = itemData.story
+      ? { granted: this.engine.state.getStoryChapters(itemData.id).length, total: itemData.story.chapters.length }
+      : null;
     return itemCardStats(this.engine.t.bind(this.engine), itemData, this.engine.state.getPlayer().attributes,
-      { ...options, uses: this.engine.state.getItemUses(itemData.id), items: this.engine.data.items });
+      { ...options, uses: this.engine.state.getItemUses(itemData.id), items: this.engine.data.items, story });
   }
 }

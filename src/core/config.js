@@ -41,6 +41,7 @@ export const ACTIONS = {
   SET_FLAG:        'set_flag',
   LOG:             'log',
   MANAGE_CHEST:    'manage_chest',
+  GRANT_CHAPTER:   'grant_chapter',
   ADVANCE_TIME:    'advance_time',
   SET_TIMER:       'set_timer',
   CANCEL_TIMER:    'cancel_timer',
@@ -115,6 +116,7 @@ export const CSS = {
   // Map
   MAP_NODE:               'map-node',
   MAP_NODE_CURRENT:       'map-node--current',
+  MAP_NODE_PEEK:          'map-node--peek',
   MAP_NODE_BUILDING:      'map-node--building',
   MAP_NODE_LABEL:         'map-node__label',
   MINIMAP_CANVAS:         'minimap__canvas',
@@ -233,7 +235,7 @@ export const HAND_SLOT_KIND = 'hand';
 // inventory grouping). Data may omit type (treated as Flavour); a declared
 // type outside this set is an authoring typo — validateGameData flags it.
 // Keep in sync with the enum in schemas/item.schema.json (a test cross-checks).
-export const ITEM_TYPES = new Set(['Weapon', 'Spell', 'Armor', 'Consumable', 'Special', 'Flavour']);
+export const ITEM_TYPES = new Set(['Weapon', 'Spell', 'Armor', 'Consumable', 'Book', 'Special', 'Flavour']);
 
 // Fallback item ID used when an enemy has no weapon equipped. Must match an
 // entry in data/items/ and data/index.json. Overridable via rules.fallbackWeapons.enemy.

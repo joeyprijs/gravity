@@ -63,6 +63,7 @@ export class NarrativeLog {
    * @param {string} [variant='system'] - CSS variant suffix for styling.
    * @param {boolean} [persist=true] - When false, the entry is shown but not
    *   saved to the persisted log (used for transient notices like "loaded").
+   * @returns {HTMLElement} The appended entry element (see scrollToEntry).
    */
   log(type, message, variant = 'system', persist = true) {
     if (!this.currentSceneEl) this.openScene();
@@ -80,6 +81,7 @@ export class NarrativeLog {
     this.currentSceneEl.appendChild(p);
     this.scrollToBottom();
     if (persist) this.state?.appendLog({ type, message, variant });
+    return p;
   }
 
   /**
@@ -141,6 +143,21 @@ export class NarrativeLog {
     cancelAnimationFrame(this._scrollRaf);
     this._scrollRaf = requestAnimationFrame(() => {
       this.el.scrollTop = this.el.scrollHeight;
+    });
+  }
+
+  /**
+   * Scrolls the log so the given entry sits at the top of the panel — how a
+   * book's retelling starts on its first line instead of its last. Cancels
+   * the scroll-to-bottom the appended entries themselves queued, so this must
+   * be called after the last of them.
+   *
+   * @param {HTMLElement} entryEl - An entry element returned by log().
+   */
+  scrollToEntry(entryEl) {
+    cancelAnimationFrame(this._scrollRaf);
+    this._scrollRaf = requestAnimationFrame(() => {
+      this.el.scrollTop += entryEl.getBoundingClientRect().top - this.el.getBoundingClientRect().top;
     });
   }
 }

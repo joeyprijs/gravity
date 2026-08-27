@@ -2,18 +2,175 @@
   "name": "Old Gerta",
   "conversations": {
     "start": {
-      "npcText": "Speak UP. No — closer. Right. You're the museum one. I went up there in nineteen and there was a two-headed lamb in a jar, and I have thought about that lamb every year since, and nobody wants to hear it.",
+      "npcText": "Speak UP. No — closer. Right. You're the museum one. Sixty years I kept this house in bread and not one soul ever asked me a thing about it. Sit, then.",
       "responses": [
         {
-          "text": "I want to hear about the lamb.",
+          "text": "Tell me your story. From the beginning.",
+          "condition": {
+            "not": {
+              "story": "gertas_story",
+              "chapter": "the_dance"
+            }
+          },
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "dance"
+            }
+          ]
+        },
+        {
+          "text": "You were telling me about Odo. Go on.",
+          "condition": {
+            "and": [
+              {
+                "story": "gertas_story",
+                "chapter": "the_dance"
+              },
+              {
+                "not": {
+                  "story": "gertas_story",
+                  "chapter": "the_mill"
+                }
+              }
+            ]
+          },
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "mill"
+            }
+          ]
+        },
+        {
+          "text": "And after the mill years — what then?",
+          "condition": {
+            "and": [
+              {
+                "story": "gertas_story",
+                "chapter": "the_mill"
+              },
+              {
+                "not": {
+                  "story": "gertas_story",
+                  "chapter": "the_quiet"
+                }
+              }
+            ]
+          },
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "quiet"
+            }
+          ]
+        },
+        {
+          "text": "I wrote it all down, Gerta. Every word.",
+          "condition": {
+            "story": "gertas_story",
+            "chapter": "the_quiet"
+          },
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "heard"
+            }
+          ]
+        },
+        {
+          "text": "Wish her a good day.",
           "actions": [
             {
               "type": "leave"
             }
           ]
+        }
+      ]
+    },
+    "dance": {
+      "npcText": "The fair, then, summer of nineteen. Every boy there danced like he was somebody. Odo stood by the flour cart and told me straight out he couldn't dance a step and wouldn't pretend otherwise. Only honest man at the fair. I married him by winter.",
+      "actions": [
+        {
+          "type": "grant_chapter",
+          "item": "gertas_story",
+          "chapter": "the_dance"
+        }
+      ],
+      "responses": [
+        {
+          "text": "Keep listening.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "mill"
+            }
+          ]
         },
         {
-          "text": "I'll find that jar.",
+          "text": "That's enough for today.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "mill": {
+      "npcText": "Then the mill, and forty years of flour. Children asleep on the sacks while we worked. The flood in the bad year — we lost the ground floor and kept each other. The fire in the drying loft. And bread every single morning, which is a thing nobody thanks you for until it stops.",
+      "actions": [
+        {
+          "type": "grant_chapter",
+          "item": "gertas_story",
+          "chapter": "the_mill"
+        }
+      ],
+      "responses": [
+        {
+          "text": "And then? Tell me the rest.",
+          "actions": [
+            {
+              "type": "goToConversation",
+              "node": "quiet"
+            }
+          ]
+        },
+        {
+          "text": "I'll come back for the rest.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "quiet": {
+      "npcText": "Odo's been gone nine years. The wheel stopped when he did — none of the children wanted the flour life, and I don't blame them. But sixty years happened in this house, child, and when I go they go with me, unless somebody writes them down. So write. A life keeps happening as long as somebody carries it. That's all I know, and I had a good one finding it out.",
+      "actions": [
+        {
+          "type": "grant_chapter",
+          "item": "gertas_story",
+          "chapter": "the_quiet"
+        }
+      ],
+      "responses": [
+        {
+          "text": "Thank her for the story.",
+          "actions": [
+            {
+              "type": "leave"
+            }
+          ]
+        }
+      ]
+    },
+    "heard": {
+      "npcText": "Hmph. Took sixty years and the museum one to ask. Good. Mind you write it legible.",
+      "responses": [
+        {
+          "text": "Leave her to the good chair.",
           "actions": [
             {
               "type": "leave"

@@ -18,6 +18,7 @@
   "displayApproachEmpty":    "Step up to the empty {display}",
   "displayLeave":            "Step back from the {display}",
   "displayLeaveEmpty":       "Leave the {display} empty",
+  "displayRead":             "Read the {name}",
   "displayTook":             "You retrieved the {name} from the {display}.",
   "displayDeposited":        "You arranged the {name} in the {display}.",
   "wingBuild":               "Build a New Wing ({cost} Gold)",

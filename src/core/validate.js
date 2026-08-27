@@ -19,7 +19,7 @@ const COMBAT_NPC_ATTRIBUTES = ['healthPoints', 'armorClass', 'actionPoints'];
 // prevent that ambiguity.
 const RESERVED_CONDITION_KEYS = new Set([
   'and', 'or', 'not', 'flag', 'value', 'item', 'count', 'gold', 'level', 'mission', 'status',
-  'stage', 'stageReached', 'time', 'day', 'segment',
+  'stage', 'stageReached', 'time', 'day', 'segment', 'story', 'chapter',
 ]);
 
 // The outcome tier names a check's `outcomes` object may define.
@@ -206,7 +206,36 @@ function validateItems(ctx) {
       else if (ctx.items[spellId].type !== 'Spell')
         ctx.add(group, `attributes.grantsSpells → "${spellId}" is type "${ctx.items[spellId].type}", not "Spell" — only a Spell can be granted`);
     }
+    validateStory(ctx, group, item);
   }
+}
+
+// A story book's declaration: chapters must be a non-empty list of uniquely
+// id'd { id, text } entries — the ids are what grant_chapter and story
+// conditions reference, the text is what reading the book prints. And story
+// and type Book must come as a pair: the type is what makes the card readable
+// in the pack, and the story is the only thing a Book can do.
+function validateStory(ctx, group, item) {
+  if (item.story === undefined) {
+    if (item.type === 'Book')
+      ctx.add(group, 'is type "Book" but declares no story — there is nothing to read in it');
+    return;
+  }
+  const chapters = item.story?.chapters;
+  if (!Array.isArray(chapters) || !chapters.length) {
+    ctx.add(group, 'story.chapters must be a non-empty array of { id, text }');
+    return;
+  }
+  const seen = new Set();
+  chapters.forEach((ch, i) => {
+    const where = `story chapter #${i + 1}`;
+    if (!ch?.id) ctx.add(group, `${where}: missing "id"`);
+    else if (seen.has(ch.id)) ctx.add(group, `${where}: duplicate chapter id "${ch.id}"`);
+    if (ch?.id) seen.add(ch.id);
+    if (!ch?.text) ctx.add(group, `${where}: missing "text" — reading the book would print nothing for it`);
+  });
+  if (item.type !== 'Book')
+    ctx.add(group, `declares a story but is type "${item.type}" — make it "Book" so its card reads from the pack`);
 }
 
 // The set of attribute names a skillCheck may reference: the player's base
@@ -240,6 +269,15 @@ function validateCondition(ctx, group, condition, where) {
       ctx.add(group, `${where}: condition references unknown stage "${stageRef}" on mission "${condition.mission}"`);
     if ('stage' in condition && 'status' in condition)
       ctx.add(group, `${where}: condition has both "stage" and "status" — "stage" already implies active; the "status" is ignored`);
+  }
+  if ('story' in condition) {
+    const storyItem = ctx.items[condition.story];
+    if (!storyItem?.story)
+      ctx.add(group, `${where}: condition references "${condition.story}", which is not a story book item`);
+    else if (!condition.chapter)
+      ctx.add(group, `${where}: story condition needs a "chapter" — the chapter id to test for`);
+    else if (!(storyItem.story.chapters ?? []).some(ch => ch.id === condition.chapter))
+      ctx.add(group, `${where}: condition references unknown chapter "${condition.chapter}" on story "${condition.story}"`);
   }
   if ('day' in condition && !(ctx.rules?.time?.ticksPerDay > 0))
     ctx.add(group, `${where}: condition uses "day" but rules.time.ticksPerDay is not configured — it always evaluates false`);
@@ -285,6 +323,17 @@ function validateActions(ctx, group, actions, where) {
       ctx.add(group, `${where}: dialogue → unknown NPC "${action.npc}"`);
     if (action.type === 'questTrigger')
       validateQuestTrigger(ctx, group, action, `${where}: questTrigger`);
+    if (action.type === 'grant_chapter') {
+      const storyItem = ctx.items[action.item];
+      if (!storyItem)
+        ctx.add(group, `${where}: grant_chapter → unknown item "${action.item}"`);
+      else if (!storyItem.story)
+        ctx.add(group, `${where}: grant_chapter → "${action.item}" declares no story`);
+      // A missing chapter is the grant-everything form (a found book), so
+      // only a chapter that is PRESENT but unknown is an authoring mistake.
+      else if (action.chapter !== undefined && !(storyItem.story.chapters ?? []).some(ch => ch.id === action.chapter))
+        ctx.add(group, `${where}: grant_chapter → unknown chapter "${action.chapter}" on "${action.item}"`);
+    }
     if (action.type === 'combat') {
       validateEnemyList(ctx, group, action.enemies, `${where}: combat`);
       validateActions(ctx, group, action.onVictory, `${where}: combat.onVictory`);

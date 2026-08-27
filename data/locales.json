@@ -157,6 +157,7 @@
     "Spell": "Spells",
     "Armor": "Armor",
     "Consumable": "Consumables",
+    "Book": "Books",
     "Special": "Special",
     "Flavour": "Flavour"
   },
@@ -182,7 +183,8 @@
     "armorClassBonus": "Bonus: +{value} Armor Class",
     "reputation": "Reputation: {value}",
     "attributeBonus": "Bonus: {value} {attribute}",
-    "value": "Value: {value} Gold"
+    "value": "Value: {value} Gold",
+    "storyChapters": "Chapters: {current}/{total}"
   },
   "loot": {
     "foundGold": "You found {amount} Gold.",
@@ -192,6 +194,12 @@
     "foundItems": "You found {list}.",
     "gold": "Gold",
     "xpGained": "+{amount} XP"
+  },
+  "story": {
+    "bookStarted": "You write down what you heard. The {name} joins your pack.",
+    "bookFound": "The {name} joins your pack.",
+    "chapterWritten": "You write it down in the {name}.",
+    "emptyBook": "Its pages are still blank."
   },
   "actions": {
     "rested": "You rested and recovered HP.",
@@ -241,7 +249,8 @@
     "notEnoughAP": "You're too spent for that. It takes {cost} AP.",
     "noUsesLeft": "The {name} has no charges left — rest to recover them.",
     "noCombatSave": "Cannot save during combat.",
-    "noCombatTeleport": "There's no slipping away like that mid-fight!"
+    "noCombatTeleport": "There's no slipping away like that mid-fight!",
+    "readBook": "Open the {name}"
   },
   "combat": {
     "fightingTitle": "Combat: {names}",

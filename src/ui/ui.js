@@ -16,6 +16,12 @@ const SHEET_SECTION_GROUP = 'sheet';
 // as seen (see setup) — long enough that a sweep or a scroll past it doesn't.
 const NEW_DOT_DWELL_MS = 250;
 
+// WASD, each mapped to the compass point it walks (see setup). Letters are
+// matched lowercased, so Shift+W still walks north. The arrow keys are
+// deliberately absent: they move the selection cursor instead, so the two
+// conventions never fight over one key.
+const NAV_KEYS = { w: 'N', d: 'E', s: 'S', a: 'W' };
+
 // A data-stat-bind span for an innerHTML template — the stats update loop
 // (see update()) fills every bound span on each stats change. Shared by the
 // sheet's character section and the scene top bar.
@@ -46,6 +52,73 @@ export class UIManager {
     this._buildTopBar();
     this._setupTabNotifier();
     this.map.setup();
+
+    // Keyboard play, split over two conventions so they never share a key:
+    // WASD are verbs — press east, walk east — and the arrow keys are a menu
+    // cursor, stepping focus through every option in the panel, confirmed
+    // with Enter (the browser's own button activation). Both press the same
+    // buttons the mouse would, so every gate (conditions, item requirements,
+    // disabled) stays where it already is, and both go inert wherever those
+    // buttons aren't on screen: combat, dialogue, chests. WASD keys off the
+    // data-point markers addDirectionMarker leaves behind, which is what
+    // makes the curator's panels answer to it too.
+    document.addEventListener('keydown', (e) => {
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      const t = e.target;
+      if (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName ?? '')) return;
+      if (!document.getElementById(EL.FULLMAP_OVERLAY).hidden) return;
+      const key = e.key.toLowerCase();
+
+      if (key === 'arrowdown' || key === 'arrowup') {
+        // Repeats allowed: a held arrow rides the cursor down the list.
+        const options = [...document.querySelectorAll(
+          `#${EL.SCENE_OPTIONS_PANEL} button.${CSS.CARD}:not(:disabled)`
+        )];
+        if (!options.length) return;
+        e.preventDefault();   // the cursor moves; the page must not scroll
+        const at = options.indexOf(document.activeElement);
+        // Unfocused, down enters at the top and up at the bottom; both wrap.
+        const next = key === 'arrowdown' ? at + 1 : (at < 0 ? -1 : at - 1);
+        options[(next + options.length) % options.length].focus();
+        return;
+      }
+
+      if (e.repeat) return;
+      const point = NAV_KEYS[key];
+      if (!point) return;
+      const matches = [...document.querySelectorAll(
+        `#${EL.SCENE_OPTIONS_PANEL} .${CSS.CARD_DIRECTED}:not(:disabled)`
+      )].filter(b => b.querySelector(`.${CSS.OPTION_DIRECTION}[data-point="${point}"]`));
+      if (!matches.length) return;
+      e.preventDefault();
+      if (matches.length === 1) {
+        matches[0].click();
+        return;
+      }
+      // Two arrows can agree — two rooms down the same side of a house both
+      // point west. Silently favouring the first would strand the other
+      // beyond the keyboard's reach, so the key steps focus through them
+      // instead (wrapping), and Enter presses the focused one, natively.
+      matches[(matches.indexOf(document.activeElement) + 1) % matches.length].focus();
+    });
+
+    // The peek: resting on an option that leads somewhere lights that place
+    // on the minimap — the pointer by hover, and the arrow cursor, the WASD
+    // cycle and Tab by focus. Every enter and leave recomputes the light
+    // whole, so mouse and keyboard trade it without stranding it; while both
+    // rest on options, the pointer wins (a moving hand over a standing
+    // cursor). Any click still clears it outright (Safari gives buttons no
+    // focus on click, so the leave events alone would miss the mouse), and
+    // the canvas itself clears with the next move.
+    const optionsPanel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
+    const repeek = () => {
+      const hovered = optionsPanel.querySelector('button:hover');
+      const focused = optionsPanel.contains(document.activeElement) ? document.activeElement : null;
+      this.map.setPeek((hovered ?? focused)?.dataset.destination ?? null);
+    };
+    ['focusin', 'focusout', 'mouseover', 'mouseout']
+      .forEach(type => optionsPanel.addEventListener(type, repeek));
+    optionsPanel.addEventListener('click', () => this.map.setPeek(null), true);
 
     // One delegated listener covers every inventory item card, present and
     // future — no per-render rebinding. Cards call engine game-logic

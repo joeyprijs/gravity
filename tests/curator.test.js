@@ -361,6 +361,6 @@ test('a pre-time (v3) save with the curator active runs core AND plugin migratio
   }, 'the cases came across intact');
   // Core and plugin versions are partitioned: the core counter never carries
   // the curator's number.
-  assert.equal(gameState.state.saveVersion, 7);
+  assert.equal(gameState.state.saveVersion, 8);
   assert.equal(gameState.state.pluginSaveVersions.curator, 2);
 });
