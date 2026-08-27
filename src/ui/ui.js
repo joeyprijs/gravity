@@ -257,10 +257,16 @@ export class UIManager {
       if (tab.default) classes.push(CSS.TABS_BTN_ACTIVE);
       btn.className = classes.join(' ');
       btn.dataset.tab = tab.id;
-      // The icon sits beside the label, which keeps doing the explaining; a
-      // tab without an icon (rules.tabs[].icon) is just label-only.
-      const label = escapeHtml(this.engine.t(tab.localeKey));
-      btn.innerHTML = tab.icon ? `${iconHtml(tab.icon)}${label}` : label;
+      // The icon stands in for the label, same deal as the top bar's stats —
+      // the label survives as the hover title and as screen-reader-only text.
+      // A tab without an icon (rules.tabs[].icon) keeps its visible label.
+      const label = this.engine.t(tab.localeKey);
+      if (tab.icon) {
+        btn.title = label;
+        btn.innerHTML = `${iconHtml(tab.icon)}<span class="visually-hidden">${escapeHtml(label)}</span>`;
+      } else {
+        btn.innerHTML = escapeHtml(label);
+      }
       nav.appendChild(btn);
 
       // Panel div

@@ -614,12 +614,22 @@ button.section-toggle--collapsed .section-toggle__label::before {
  SIDEBAR: TABS
  ========================================================================== */
 
+/* Pinned to the top of the sidebar's scroll: the negative margins pull the
+   nav flush with the panel edges (the compensating padding restores its
+   place). --panel-bg is translucent, so it's layered over the page's solid
+   --bg-color here to keep scrolled content from showing through. */
 .tabs__nav {
   display: flex;
   flex-flow: row wrap;
-  margin-bottom: calc(var(--spacing) * 3);
+  position: sticky;
+  /* Matches the negative margin: pinning at plain 0 would leave the nav one
+     padding-width down, with content peeking through the strip above it. */
+  top: calc(var(--spacing) * -2.5);
+  z-index: 1;
+  background: linear-gradient(var(--panel-bg), var(--panel-bg)), var(--bg-color);
+  margin: calc(var(--spacing) * -2.5) calc(var(--spacing) * -2.5) calc(var(--spacing) * 3);
+  padding: calc(var(--spacing) * 2.5);
   border-bottom: 1px solid var(--panel-border);
-  padding-bottom: calc(var(--spacing) * 2.5);
   gap: var(--spacing);
   flex: 0 0 auto;
 }
@@ -629,10 +639,11 @@ button.section-toggle--collapsed .section-toggle__label::before {
   gap: calc(var(--spacing) * 0.75);
 }
 
-/* The icon is the label's companion here, so it stays as quiet as the label
-   until the tab is active, when both take the accent color. */
+/* The icon IS the tab now (the label lives on as the hover title and
+   screen-reader text), so it gets a little more size to carry that alone.
+   It stays quiet until the tab is active, when it takes the accent color. */
 .tabs__btn .icon {
-  font-size: 1.15em;
+  font-size: 1.3em;
 }
 
 .tabs__btn--active {
