@@ -1138,6 +1138,111 @@
           `the house reads round the compass (got ${marks('scene-options').join(' ')})`);
       });
 
+      await step('WASD walks the compass; the arrow keys drive the cursor', async () => {
+        // Two conventions on the same buttons the mouse would press: WASD
+        // walks the marked direction, the arrow keys step focus through every
+        // option (Enter presses the focused one — the browser's own
+        // behaviour, not ours to test). A key with nothing to press, or one
+        // struck while typing in a field, moves nobody.
+        const engine = window.gameEngine;
+        const key = (k, target = document) =>
+          target.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+        const place = () => text($('#scene-location-reminder'));
+        const focused = () => text(document.activeElement.querySelector('.card__title'));
+
+        engine.renderScene('village_square');
+        await until(() => place().includes('Village Square'), 'the square');
+        key('d');
+        await until(() => place().includes('Forge Lane'), 'd walked the east road');
+
+        engine.renderScene('village_square');
+        await until(() => place().includes('Village Square'), 'the square again');
+        key('a');
+        await until(() => place().includes('Mill Road'), 'a walked the west road');
+
+        // Arrows never walk: down enters the list at the top and steps on,
+        // up enters at the bottom, and both wrap round the whole panel —
+        // roads, doors, people and skills alike.
+        engine.renderScene('village_square');
+        await until(() => place().includes('Village Square'), 'the square once more');
+        document.activeElement.blur();
+        key('ArrowDown');
+        assert(focused() === 'Walk back up the north road', `down enters at the top (got ${focused()})`);
+        key('ArrowDown');
+        assert(focused() === 'Take the forge lane', `and steps on (got ${focused()})`);
+        key('ArrowUp');
+        key('ArrowUp');
+        assert(focused() === 'Read the notices nailed to the rowan',
+          `up wraps past the top to the last option (got ${focused()})`);
+        assert(place().includes('Village Square'), `the cursor never walked (at ${place()})`);
+
+        // The crossroads has no east road, so its key falls on nothing.
+        engine.renderScene('village_crossroads');
+        await until(() => place().includes('Crossroads'), 'the crossroads');
+        key('d');
+        await new Promise(r => setTimeout(r, 50));
+        assert(place().includes('Crossroads'), `no east road, no move (at ${place()})`);
+
+        // Struck inside a form field, the key is typing, not walking.
+        key('w', $('#file-upload'));
+        await new Promise(r => setTimeout(r, 50));
+        assert(place().includes('Crossroads'), `typing does not walk (at ${place()})`);
+
+        // Two arrows agree in the living room (both west doors). Walking the
+        // first would strand the second beyond the keyboard's reach, so the
+        // key steps focus through them and wraps — Enter presses the focused
+        // one, which is the browser's own behaviour, not ours to test.
+        engine.renderScene('home_living_room');
+        await until(() => place().includes('Living Room'), 'the living room');
+        key('a');
+        await new Promise(r => setTimeout(r, 50));
+        assert(place().includes('Living Room'), `a shared direction does not walk (at ${place()})`);
+        assert(focused() === "Enter Parents' Room", `the first press focuses the first west door (got ${focused()})`);
+        key('a');
+        assert(focused() === 'Enter Kitchen', `the next press steps on (got ${focused()})`);
+        key('a');
+        assert(focused() === "Enter Parents' Room", `and wraps (got ${focused()})`);
+
+        // A different key resolving to one road is not part of the cycle: it
+        // walks at once, focus or no focus.
+        key('s');
+        await until(() => place().includes('Hallway'), 'south walked out mid-cycle');
+      });
+
+      await step('focusing an option lights its destination on the minimap', async () => {
+        // The peek answers "which room is this door?" without walking through
+        // it. It follows focus — the arrow cursor and the WASD cycle alike —
+        // and only places already on the map may light up: an unvisited room
+        // has no box, and the peek must not draw one.
+        const key = (k) =>
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+        const place = () => text($('#scene-location-reminder'));
+        const focused = () => text(document.activeElement.querySelector('.card__title'));
+        const peeked = () => $$('.map-node--peek').map(n => text(n)).join();
+
+        // Still in the hallway from the step above. The living room has been
+        // walked, so the cursor resting on its door lights its box.
+        document.activeElement.blur();
+        key('ArrowDown');
+        assert(focused() === 'Go through to the living room', `the cursor sits on the door (got ${focused()})`);
+        assert(peeked() === 'Living Room', `and the walked room lights up (got "${peeked()}")`);
+
+        document.activeElement.blur();
+        assert(peeked() === '', `leaving the option puts the light out (got "${peeked()}")`);
+
+        // The WASD cycle peeks too — and an unwalked room stays dark.
+        key('w');
+        await until(() => place().includes('Living Room'), 'walked north to the living room');
+        key('a');
+        assert(focused() === "Enter Parents' Room", `the cycle sits on the west door (got ${focused()})`);
+        assert(peeked() === '', `but an unvisited room lights nothing (got "${peeked()}")`);
+        key('ArrowUp');
+        key('ArrowUp');
+        assert(focused() === 'Enter Bedroom', `the cursor stepped up to the bedroom door (got ${focused()})`);
+        assert(peeked() === 'Bedroom', `and the walked bedroom lights up (got "${peeked()}")`);
+        document.activeElement.blur();
+      });
+
       await step('the minimap: one open world outdoors, one building inside', async () => {
         // Outdoors is continuous — every outdoor room walked, whatever region it
         // belongs to — with each building drawn as the one square it occupies,

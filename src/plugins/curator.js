@@ -580,6 +580,7 @@ export class CuratorUI {
     // the one place indoors where doors don't show which way they go.
     const dest = back.actions?.find(a => a.type === 'navigate')?.destination;
     addDirectionMarker(this.engine, scene, this.engine.data.scenes[dest], backBtn);
+    if (this.engine.data.scenes[dest]) backBtn.dataset.destination = dest;
     backBtn.onclick = () => {
       this.engine.setCustomUIOpen(false);
       this.engine.scene.handleOption(back);   // logs the choice and walks out
@@ -615,6 +616,7 @@ export class CuratorUI {
       // Slot order already reads the way the map does; the marker says it
       // outright — the wings sit directly above and below the hall.
       addDirectionMarker(this.engine, scene, wing, btn);
+      btn.dataset.destination = id;
       btn.onclick = () => {
         this.engine.setCustomUIOpen(false);
         this.engine.scene.handleOption({ text, actions: [{ type: 'navigate', destination: id }] });

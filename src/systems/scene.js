@@ -289,6 +289,12 @@ export class SceneRenderer {
       const btn = buildOptionButton(opt.text, stats.length ? stats : null);
       addDirectionMarker(this.engine, scene, destinationOf(opt), btn);
 
+      // Where the option leads rides on the button, so focusing it can light
+      // the destination on the minimap (the peek listeners in ui.js).
+      const destId = (opt.actions || [])
+        .find(a => a.type === 'navigate' && this.engine.data.scenes[a.destination])?.destination;
+      if (destId) btn.dataset.destination = destId;
+
       if (disabled) btn.disabled = true;
       btn.onclick = () => this.handleOption(opt);
       target.appendChild(btn);
