@@ -182,6 +182,18 @@
         assert(tabs.every(t => t.querySelector('svg.icon')), 'every tab renders its rules.tabs[].icon');
         assert(!$('#map-tab').hidden, 'map panel visible');
         assert($('#attributes-tab').hidden && $('#inventory-tab').hidden, 'the rest are hidden');
+
+        // Icon-only buttons: the label is screen-reader text, and hovering a
+        // button names it through the shared cursor tooltip.
+        assert(tabs.every(t => t.querySelector('.visually-hidden')), 'every label is screen-reader text');
+        const r = tabs[2].getBoundingClientRect();
+        tabs[2].dispatchEvent(new MouseEvent('mousemove', { bubbles: true,
+          clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }));
+        const tip = $('.cursor-tooltip');
+        assert(tip && !tip.hidden && text(tip) === 'Inventory',
+          `hovering a tab names it (got "${tip && !tip.hidden ? text(tip) : ''}")`);
+        $('.tabs__nav').dispatchEvent(new MouseEvent('mouseleave'));
+        assert(tip.hidden, 'and leaving the nav hides the name');
       });
 
       await step('the minimap is drawn at boot, untouched', () => {
@@ -1306,7 +1318,7 @@
           const r = node.getBoundingClientRect();
           node.dispatchEvent(new MouseEvent('mousemove', { bubbles: true,
             clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }));
-          const tip = $('.map-tooltip');
+          const tip = $('.cursor-tooltip');
           return tip && !tip.hidden ? text(tip) : '';
         };
         const hoverNames = $$('#minimap-canvas .map-node').map(tipFor);

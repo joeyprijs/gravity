@@ -154,6 +154,34 @@ export function clearElement(elementOrId) {
   if (el) el.innerHTML = '';
 }
 
+// The one cursor-following hover tooltip, shared by every surface that names
+// things at the pointer (minimap boxes, tab icons). A custom element rather
+// than the native title attribute, whose fixed ~1s hover delay reads as
+// unresponsive — a player pointing at something wants its name now. Created
+// on first use; a single element suffices since only one thing is hovered.
+let cursorTooltipEl = null;
+
+/**
+ * Shows the shared tooltip with the given label, beside the cursor.
+ * @param {string} label - The text to show.
+ * @param {MouseEvent} e - The mousemove event carrying the cursor position.
+ */
+export function showCursorTooltip(label, e) {
+  if (!cursorTooltipEl) {
+    cursorTooltipEl = document.createElement('div');
+    cursorTooltipEl.className = CSS.CURSOR_TOOLTIP;
+    document.body.appendChild(cursorTooltipEl);
+  }
+  cursorTooltipEl.textContent = label;
+  cursorTooltipEl.style.left = `${e.clientX + 12}px`;
+  cursorTooltipEl.style.top = `${e.clientY + 16}px`;
+  cursorTooltipEl.hidden = false;
+}
+
+export function hideCursorTooltip() {
+  if (cursorTooltipEl) cursorTooltipEl.hidden = true;
+}
+
 /**
  * Returns the display label for an item: its name from the items data map
  * (falling back to the raw ID) plus an "(xN)" suffix when amount > 1.

@@ -1,4 +1,4 @@
-import { attrRowHtml, clearElement, collapseAllSections, createElement, createSectionToggles, escapeHtml, getByPath } from '../core/utils.js';
+import { attrRowHtml, clearElement, collapseAllSections, createElement, createSectionToggles, escapeHtml, getByPath, hideCursorTooltip, showCursorTooltip } from '../core/utils.js';
 import { EL, CSS, LOG } from '../core/config.js';
 import { iconHtml } from '../core/icons.js';
 import { getDay, getSegment } from '../systems/time.js';
@@ -258,15 +258,13 @@ export class UIManager {
       btn.className = classes.join(' ');
       btn.dataset.tab = tab.id;
       // The icon stands in for the label, same deal as the top bar's stats —
-      // the label survives as the hover title and as screen-reader-only text.
+      // the label survives as screen-reader-only text, which the hover
+      // tooltip below reads back out (the same trick as the minimap's boxes).
       // A tab without an icon (rules.tabs[].icon) keeps its visible label.
       const label = this.engine.t(tab.localeKey);
-      if (tab.icon) {
-        btn.title = label;
-        btn.innerHTML = `${iconHtml(tab.icon)}<span class="visually-hidden">${escapeHtml(label)}</span>`;
-      } else {
-        btn.innerHTML = escapeHtml(label);
-      }
+      btn.innerHTML = tab.icon
+        ? `${iconHtml(tab.icon)}<span class="visually-hidden">${escapeHtml(label)}</span>`
+        : escapeHtml(label);
       nav.appendChild(btn);
 
       // Panel div
@@ -286,6 +284,17 @@ export class UIManager {
 
       playerPanel.appendChild(panel);
     });
+
+    // Instant hover names via the shared cursor tooltip, reading the
+    // screen-reader label back out. Only icon-only buttons carry one — a
+    // label-only tab already says what it is.
+    nav.addEventListener('mousemove', (e) => {
+      const label = e.target.closest(`.${CSS.TABS_BTN}`)
+        ?.querySelector('.visually-hidden')?.textContent;
+      if (label) showCursorTooltip(label, e);
+      else hideCursorTooltip();
+    });
+    nav.addEventListener('mouseleave', () => hideCursorTooltip());
 
     // Tab switching
     nav.querySelectorAll(`.${CSS.TABS_BTN}`).forEach(btn => {

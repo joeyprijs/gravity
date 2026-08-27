@@ -1,4 +1,4 @@
-import { clearElement, isInteriorScene } from '../core/utils.js';
+import { clearElement, hideCursorTooltip, isInteriorScene, showCursorTooltip } from '../core/utils.js';
 import { MINIMAP_SIZE, MAP_PADDING, MAP_NODE_DEFAULT_BG, CSS, EL } from '../core/config.js';
 
 // Every scene a scene can send the player to: the destinations of the navigate
@@ -44,9 +44,6 @@ export class MapManager {
     // Anything that changes map appearance without moving the player must
     // call invalidateMinimap() first (as the map tab switch in ui.js does).
     this._minimapCacheKey = null;
-
-    // The shared hover tooltip for minimap boxes, created on first use.
-    this._tooltipEl = null;
   }
 
   /**
@@ -57,11 +54,11 @@ export class MapManager {
     const minimapEl = document.getElementById(EL.MINIMAP);
     minimapEl.addEventListener('click', () => this.openFullMap());
 
-    // Instant hover names: the native title tooltip sits behind the browser's
-    // ~1s hover delay, so a custom element carries the label instead. Delegated
-    // to the minimap container because the canvas is rebuilt on every move.
+    // Instant hover names via the shared cursor tooltip (see utils.js).
+    // Delegated to the minimap container because the canvas is rebuilt on
+    // every move.
     minimapEl.addEventListener('mousemove', (e) => this._moveMapTooltip(e));
-    minimapEl.addEventListener('mouseleave', () => this._hideMapTooltip());
+    minimapEl.addEventListener('mouseleave', () => hideCursorTooltip());
     document.getElementById(EL.FULLMAP_CLOSE).addEventListener('click', () => this.closeFullMap());
 
     document.addEventListener('keydown', (e) => {
@@ -180,7 +177,7 @@ export class MapManager {
     canvasEl.style.height = `${height}px`;
 
     this._renderSceneNodes(canvasEl, this._fullMapPlacements(currentSceneId));
-    this._hideMapTooltip();
+    hideCursorTooltip();
     overlay.hidden = false;
 
     // Center the scroll viewport on the player's scene. requestAnimationFrame
@@ -207,24 +204,8 @@ export class MapManager {
   _moveMapTooltip(e) {
     const node = e.target.closest(`.${CSS.MAP_NODE}`);
     const label = node?.querySelector(`.${CSS.MAP_NODE_LABEL}`)?.textContent;
-    if (!label) {
-      this._hideMapTooltip();
-      return;
-    }
-
-    if (!this._tooltipEl) {
-      this._tooltipEl = document.createElement('div');
-      this._tooltipEl.className = CSS.MAP_TOOLTIP;
-      document.body.appendChild(this._tooltipEl);
-    }
-    this._tooltipEl.textContent = label;
-    this._tooltipEl.style.left = `${e.clientX + 12}px`;
-    this._tooltipEl.style.top = `${e.clientY + 16}px`;
-    this._tooltipEl.hidden = false;
-  }
-
-  _hideMapTooltip() {
-    if (this._tooltipEl) this._tooltipEl.hidden = true;
+    if (label) showCursorTooltip(label, e);
+    else hideCursorTooltip();
   }
 
   /**

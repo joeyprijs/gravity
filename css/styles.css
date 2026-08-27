@@ -1017,12 +1017,12 @@ button.section-toggle--collapsed .section-toggle__label::before {
   line-height: 1.2;
 }
 
-/* The minimap's hover name. A custom element rather than the native title
-   attribute, whose fixed ~1s hover delay reads as unresponsive — a player
-   pointing at a box wants its name now. Follows the cursor from JS
-   (MapManager._moveMapTooltip); pointer-events off so it never steals the
-   hover that placed it. */
-.map-tooltip {
+/* The shared hover name for minimap boxes and tab icons. A custom element
+   rather than the native title attribute, whose fixed ~1s hover delay reads
+   as unresponsive — a player pointing at a box wants its name now. Follows
+   the cursor from JS (utils.js showCursorTooltip); pointer-events off so it
+   never steals the hover that placed it. */
+.cursor-tooltip {
   position: fixed;
   z-index: 50;
   pointer-events: none;

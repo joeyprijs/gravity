@@ -120,8 +120,10 @@ export const CSS = {
   MAP_NODE_BUILDING:      'map-node--building',
   MAP_NODE_LABEL:         'map-node__label',
   MINIMAP_CANVAS:         'minimap__canvas',
-  MAP_TOOLTIP:            'map-tooltip',
   FULLMAP_INNER:          'fullmap-overlay__inner',
+
+  // The shared cursor-following hover tooltip (minimap boxes, tab icons)
+  CURSOR_TOOLTIP:         'cursor-tooltip',
 
   // Layout
   PANEL:                  'panel',
