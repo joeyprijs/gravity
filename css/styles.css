@@ -1209,9 +1209,13 @@ button.section-toggle--collapsed .section-toggle__label::before {
   flex-shrink: 0;
 }
 
+/* The header names the view, it isn't content — so it takes the label voice. */
 .fullmap-overlay__title {
-  color: var(--text-primary);
-  font-size: var(--font-xl);
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .fullmap-overlay__inner {
@@ -1289,10 +1293,15 @@ button.section-toggle--collapsed .section-toggle__label::before {
   margin: auto;
 }
 
+/* Set as the sheet's letterhead — flush left over the one heavier rule —
+   because this screen IS the sheet being written for the first time. */
 .char-creation__title {
   font-size: var(--font-xl);
+  font-weight: 700;
   color: var(--text-primary);
-  text-align: center;
+  text-align: left;
+  padding-bottom: calc(var(--spacing) * 1.5);
+  border-bottom: calc(var(--spacing) * 0.25) solid var(--panel-border);
 }
 
 .char-creation__section {
@@ -1303,8 +1312,10 @@ button.section-toggle--collapsed .section-toggle__label::before {
 
 .char-creation__label {
   color: var(--text-secondary);
+  font-size: var(--font-sm);
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
 }
 
 .char-creation__points-remaining {
@@ -1377,6 +1388,7 @@ button.section-toggle--collapsed .section-toggle__label::before {
   text-align: center;
   color: var(--accent-color);
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .char-creation__actions {
