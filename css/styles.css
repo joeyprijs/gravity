@@ -26,7 +26,10 @@
   /* Buttons */
   /* Flat fills, no gradients or glows: a control is a box with a hairline,
      its hover state a flat accent tint and an accent border. The affordance
-     is the box itself, not the lighting. */
+     is the box itself, not the lighting. Controls alone get the soft corner
+     — panels and structural boxes stay square — so the radius itself says
+     "you can press this". */
+  --control-radius: 4px;
   --btn-bg: rgba(255, 255, 255, 0.03);
   --btn-hover-bg: rgba(var(--accent-color-rgb), 0.08);
   --btn-hover-shadow: none;
@@ -281,6 +284,7 @@ body {
   cursor: pointer;
   transition: all 0.3s ease;
   padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 1.75);
+  border-radius: var(--control-radius);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -325,6 +329,7 @@ body {
   /* Vertical padding in step with .button so a single-line card and a
      single-line button stand the same 48px. */
   padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2);
+  border-radius: var(--control-radius);
   transition: all 0.3s ease;
 }
 
@@ -1333,6 +1338,7 @@ button.section-toggle--collapsed .section-toggle__label::before {
   appearance: none;
   background: var(--list-item-bg);
   border: 1px solid var(--panel-border);
+  border-radius: var(--control-radius);
   color: var(--text-primary);
   padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2);
   font-family: inherit;
