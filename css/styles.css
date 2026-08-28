@@ -3,9 +3,9 @@
  ========================================================================== */
 :root {
   /* Global Colors */
-  --bg-color: #131315;
+  --bg-color: #0f0f11;
   --bg-gradient-start: #242428;
-  --bg-gradient-end: #131315;
+  --bg-gradient-end: #0f0f11;
   --text-primary: #f0f0f4;
   --text-secondary: #9a9aa3;
   --accent-color: #4a9eff;
@@ -19,21 +19,21 @@
   --xp-color: #10b981;
 
   /* Panels */
-  /* Opaque, one value-step above --bg-color: the panels are surfaces lifted
-     off the page's ground, not regions drawn onto it with rules. Their own
-     empty space then reads as padding inside a surface, not as dead page. */
-  --panel-bg: #1c1c1f;
+  /* Opaque, one clear value-step above --bg-color: the panels are surfaces
+     lifted off the page's ground, not regions drawn onto it with rules. Their
+     own empty space then reads as padding inside a surface, not as dead page. */
+  --panel-bg: #1e1e21;
   --panel-border: rgba(56, 56, 63, 0.5);
   --panel-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
 
   /* Buttons */
   /* Flat fills, no gradients or glows: a control is a box with a hairline,
      its hover state a flat accent tint and an accent border. The affordance
-     is the box itself, not the lighting. Controls alone get the soft corner
-     — panels and structural boxes stay square — so the radius itself says
-     "you can press this". The radius scales with the control (≈ height/12):
-     the same pixel radius curves a 24px mark twice as hard as a 48px button,
-     so each size class gets its own token to keep the curvature even. */
+     is the box itself, not the lighting. The corner radius scales with the
+     thing it rounds (≈ height/12, capped for surfaces): the same pixel
+     radius curves a 24px mark twice as hard as a 48px button, so each size
+     class gets its own token to keep the curvature even. */
+  --surface-radius: 8px;      /* panel class: the floating page surfaces */
   --control-radius: 4px;      /* 48px class: buttons, cards, inputs */
   --control-radius-sm: 3px;   /* 32px class: the creation steppers */
   --control-radius-xs: 2px;   /* 24px class: the sheet's spend marks */
@@ -177,6 +177,7 @@ body {
 .game__player {
   background: var(--panel-bg);
   box-shadow: 0 0 0 1px var(--panel-border);
+  border-radius: var(--surface-radius);
   padding: calc(var(--spacing) * 2.5);
   display: flex;
   flex-direction: column;
@@ -219,6 +220,10 @@ body {
 .game__scene {
   background: var(--panel-bg);
   box-shadow: 0 0 0 1px var(--panel-border);
+  border-radius: var(--surface-radius);
+  /* The topbar bleeds flush to the panel edges (negative margins); clip it
+     to the rounded corner instead of letting its square corners poke out. */
+  overflow: hidden;
   padding: calc(var(--spacing) * 4);
   display: flex;
   flex-direction: column;
@@ -1224,6 +1229,8 @@ button.section-toggle--collapsed .section-toggle__label::before {
   height: 90vh;
   background: var(--overlay-bg);
   border: 1px solid var(--panel-border);
+  border-radius: var(--surface-radius);
+  overflow: hidden;
 }
 
 .fullmap-overlay__header {
