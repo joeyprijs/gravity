@@ -10,13 +10,19 @@
   --text-secondary: #9a9aa3;
   --accent-color: #4a9eff;
   --accent-color-rgb: 74, 158, 255;
-  --accent-hover: #2582eb;
-  --gold-color: #f59e0b;
+  /* Lighter than the accent, not darker: on a dark ground a hovered control
+     lights up — darkening on hover is a light-theme habit. */
+  --accent-hover: #6db1ff;
+  /* Channel colors are tuned for the dark ground — lightness lifted, chroma
+     eased — so they read as light coming off the surface, not as stickers
+     designed for a white page (their previous values were stock light-theme
+     defaults). Gold leans parchment rather than traffic-amber. */
+  --gold-color: #e3b341;
 
   /* Stats Colors */
-  --health-color: #ef4444;
-  --ap-color: #f59e0b;
-  --xp-color: #10b981;
+  --health-color: #f85149;
+  --ap-color: #e3b341;
+  --xp-color: #3fb950;
 
   /* Panels */
   /* Opaque, one clear value-step above --bg-color: the panels are surfaces
