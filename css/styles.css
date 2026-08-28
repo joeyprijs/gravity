@@ -24,9 +24,12 @@
   --panel-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
 
   /* Buttons */
-  --btn-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
-  --btn-hover-bg: linear-gradient(135deg, rgba(var(--accent-color-rgb), 0.15), rgba(var(--accent-color-rgb), 0.05));
-  --btn-hover-shadow: 0 4px 15px rgba(var(--accent-color-rgb), 0.2);
+  /* Flat fills, no gradients or glows: a control is a box with a hairline,
+     its hover state a flat accent tint and an accent border. The affordance
+     is the box itself, not the lighting. */
+  --btn-bg: rgba(255, 255, 255, 0.03);
+  --btn-hover-bg: rgba(var(--accent-color-rgb), 0.08);
+  --btn-hover-shadow: none;
   --btn-disabled-bg: rgba(0, 0, 0, 0.3);
 
   /* Scrollbars */
@@ -423,6 +426,14 @@ button.card:disabled {
   grid-column: 1 / -1;
 }
 
+/* The muted-label/strong-value pairing from the sheet: the label column
+   stays in the stats' muted gray, the value column reads as content —
+   primary ink, tabular figures so a card's numbers set like a table. */
+.card__stat-value {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Card lists (inventory sections, quests): plain stacked columns. The gap
    sits between list rows, not on the card — an inventory item you can act on
    is a button card inside its <li>, so a card-anchored margin would collapse
@@ -462,11 +473,14 @@ button.section-toggle {
   border: 0;
   border-bottom: calc(var(--spacing) * 0.125) solid var(--panel-border);
   padding: 0 0 calc(var(--spacing) * 1.5);
-  /* Accent — the heading is a control, so it reads like one. The count keeps
-     its own muted colour. */
-  color: var(--accent-color);
+  /* The same microtype voice as .section-heading — the −/+ indicator is what
+     says "control" now, so the accent color doesn't have to. */
+  color: var(--text-secondary);
   font: inherit;
+  font-size: var(--font-sm);
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   text-align: left;
   cursor: pointer;
 }
@@ -494,6 +508,7 @@ button.section-toggle--collapsed .section-toggle__label::before {
 .section-toggle__count {
   color: var(--text-secondary);
   font-weight: 400;
+  font-variant-numeric: tabular-nums;
 }
 
 /* A section holding a new item shows the accent dot beside its count, so a
@@ -643,16 +658,6 @@ button.section-toggle--collapsed .section-toggle__label::before {
 .attr-list__spend:hover:not(:disabled) {
   background: none;
   box-shadow: none;
-}
-
-/* The sheet's headings drop to the same uppercase microtype as its level and
-   points lines — the hairline and the −/+ still say "control", so the accent
-   color no longer has to. Scoped: the inventory's toggles keep their voice. */
-.sheet button.section-toggle {
-  color: var(--text-secondary);
-  font-size: var(--font-sm);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
 }
 
 /* .button sets display:flex, which outranks the UA stylesheet's [hidden]
@@ -1015,10 +1020,16 @@ button.section-toggle--collapsed .section-toggle__label::before {
   margin-top: calc(var(--spacing) * 3);
 }
 
+/* Every heading in the game speaks the same quiet uppercase microtype —
+   grown on the sheet tab and rolled out from there. The hairline under it
+   does the separating; the type only has to name. */
 .section-heading {
   margin-bottom: calc(var(--spacing) * 2);
-  color: var(--text-primary);
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   border-bottom: calc(var(--spacing) * 0.125) solid var(--panel-border);
   padding-bottom: calc(var(--spacing) * 1.5);
 }
