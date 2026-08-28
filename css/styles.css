@@ -273,10 +273,14 @@ body {
   font-family: inherit;
   font-size: var(--font-md);
   font-weight: 600;
-  line-height: 1;
+  /* The card's vertical metrics (22px line in 2-spacing padding), so a
+     single-line button stands exactly as tall as a single-line card and the
+     two panels' controls read as one system. Fixed-size marks (the sheet's
+     spend "+", the creation steppers) set their own box and stay compact. */
+  line-height: 22px;
   cursor: pointer;
   transition: all 0.3s ease;
-  padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 1.75);
+  padding: calc(var(--spacing) * 2) calc(var(--spacing) * 1.75);
   display: flex;
   justify-content: center;
   align-items: center;
