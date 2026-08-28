@@ -19,7 +19,10 @@
   --xp-color: #10b981;
 
   /* Panels */
-  --panel-bg: rgba(28, 28, 31, 0.75);
+  /* Opaque, one value-step above --bg-color: the panels are surfaces lifted
+     off the page's ground, not regions drawn onto it with rules. Their own
+     empty space then reads as padding inside a surface, not as dead page. */
+  --panel-bg: #1c1c1f;
   --panel-border: rgba(56, 56, 63, 0.5);
   --panel-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
 
@@ -158,12 +161,16 @@ body {
  LAYOUT
  ========================================================================== */
 
+/* The page is a ground with three panels floating on it — an outer gutter
+   and gaps between the columns, so the layout reads as composed surfaces
+   rather than a frameset of full-bleed regions split by rules. */
 .game {
   width: 100vw;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: calc(var(--spacing) * 0);
+  gap: calc(var(--spacing) * 2);
+  padding: calc(var(--spacing) * 2);
 }
 
 .game__scene-options,
@@ -221,7 +228,7 @@ body {
 .game__main {
   display: grid;
   grid-template-columns: 360px 1fr 360px;
-  gap: calc(var(--spacing) * 0);
+  gap: calc(var(--spacing) * 2);
   flex-grow: 1;
   min-height: 0;
 }
