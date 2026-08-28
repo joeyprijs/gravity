@@ -436,10 +436,12 @@ export class UIManager {
     // button on their character row, resolved by this.engine.state.spendStatPoint.
     const creationIds = new Set((rules.charCreation?.stats ?? []).map(s => s.id));
     // With point-buy configured, every row ends in the same fixed-width slot,
-    // holding its spend button or nothing — so the right-aligned values share
-    // one right edge whether or not a button trails them. Without point-buy no
-    // row has a button, so no slot: the values sit flush at the row's edge.
-    const slot = (inner = '') => canSpend ? `<span class="attr-list__slot">${inner}</span>` : '';
+    // holding its spend button or nothing — so while points are banked the
+    // right-aligned values share one right edge whether or not a button
+    // trails them. The slots hide with the buttons (_updateStatPointControls):
+    // with nothing to spend, the values sit flush at the row's edge instead
+    // of holding a gutter for buttons that aren't there.
+    const slot = (inner = '') => canSpend ? `<span class="attr-list__slot" hidden>${inner}</span>` : '';
     const spendBtnHtml = (target) => canSpend && creationIds.has(target)
       ? `<button class="${CSS.BTN} attr-list__spend" data-spend-attr="${escapeHtml(target)}" title="${escapeHtml(this.engine.t('ui.spendStatPoint'))}" hidden>+</button>`
       : '';
@@ -595,6 +597,10 @@ export class UIManager {
     if (!pointsRow) return;
     const points = player.statPoints ?? 0;
     pointsRow.hidden = points <= 0;
+    // The trailing slots hide with the buttons: with nothing to spend the
+    // values sit flush at the row's edge; the button column only takes its
+    // room while it has buttons to show.
+    document.querySelectorAll('.attr-list__slot').forEach(s => { s.hidden = points <= 0; });
     const caps = new Map((this.engine.data.rules?.customAttributes ?? []).map(a => [a.id, a.max]));
     document.querySelectorAll('[data-spend-attr]').forEach(btn => {
       const max = caps.get(btn.dataset.spendAttr);

@@ -244,9 +244,12 @@
         assert($('[data-spend-attr="attributes.ac"]'), 'AC row has a spend button');
         assert($('[data-spend-attr="attributes.initiative"]'), 'Initiative row has a spend button');
         // Every row ends in the trailing slot that keeps the right-aligned
-        // values on one edge whether or not a spend button fills it.
+        // values on one edge whether or not a spend button fills it — and
+        // with nothing banked yet, the slots hide so the values sit flush.
         assert(rows.every(r => r.lastElementChild.classList.contains('attr-list__slot')),
           'every character row ends in the spend-button slot');
+        assert(rows.every(r => r.lastElementChild.hidden),
+          'the slots hide while no points are banked');
         // Every row is marked, including the plugin's (registerSheetRow icon).
         assert(rows.every(r => r.querySelector('.attr-list__label svg.icon')), 'every character row shows an icon');
       });

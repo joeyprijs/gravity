@@ -564,11 +564,19 @@ button.section-toggle--collapsed .section-toggle__label::before {
 
 /* The fixed-width slot every row ends in while point-buy is configured. It
    holds the row's spend button or nothing, so the values line up whether or
-   not a button trails them (the button hides with its [hidden] rule, the
-   slot keeps the width). Sized to the button it reserves room for. */
+   not a button trails them. The whole slot column hides while no points are
+   banked (_updateStatPointControls) — the values then sit flush at the
+   row's edge instead of holding a gutter for buttons that aren't there.
+   Sized to the button it reserves room for. */
 .attr-list__slot {
   flex: 0 0 calc(var(--spacing) * 3.5);
   margin-left: calc(var(--spacing) * 1.5);
+}
+
+/* Restated over the flex-item context so [hidden] actually collapses the
+   slot, same story as the spend button below. */
+.attr-list__slot[hidden] {
+  display: none;
 }
 
 /* The identity line above the sheet: who this is, kept out of the stat rows.
