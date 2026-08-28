@@ -749,10 +749,13 @@ button.section-toggle--collapsed .section-toggle__label::before {
   font-size: 1.3em;
 }
 
+/* The active tab wears the button hover state — same tokens, so "this is
+   where you are" and "this is what you're pointing at" are one visual word. */
 .tabs__btn--active {
   color: var(--accent-color);
   font-weight: bold;
-  background: rgba(var(--accent-color-rgb), 0.1);
+  background: var(--btn-hover-bg);
+  border-color: var(--accent-hover);
 }
 
 /* Notification dots — one mark, three hosts, each marking something the
