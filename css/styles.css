@@ -749,6 +749,20 @@ button.section-toggle--collapsed .section-toggle__label::before {
   flex: 0 0 auto;
 }
 
+/* The same scrim as the scene top bar: rows scrolling up dissolve into the
+   surface before they slide under the nav, instead of clipping mid-line
+   against its border. */
+.tabs__nav::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: calc(var(--spacing) * 3);
+  background: linear-gradient(var(--panel-bg), transparent);
+  pointer-events: none;
+}
+
 .tabs__btn {
   flex: 1;
   gap: calc(var(--spacing) * 0.75);
