@@ -827,11 +827,18 @@ button.section-toggle--collapsed .section-toggle__label::before {
 }
 
 .scene__topbar-stat-value {
-  font-weight: 700;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
+/* The clock speaks the same microtype as every other label in the game. */
 .scene__topbar-time {
   white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .scene__narrative {
@@ -968,11 +975,17 @@ button.section-toggle--collapsed .section-toggle__label::before {
 }
 
 /* No opacity dimming here: log variants are colored (damage red, loot gold),
-   and dimming those below ~4.5:1 contrast fails WCAG AA on the dark panel. */
+   and dimming those below ~4.5:1 contrast fails WCAG AA on the dark panel.
+   The speaker label is the one piece of the log that talks ABOUT the text
+   rather than being it, so it alone takes the game's microtype voice — the
+   body keeps its size, leading and measure untouched. */
 .scene__log-prefix {
   display: block;
+  font-size: var(--font-sm);
   font-weight: 600;
   font-family: var(--font-ui);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   /* Same gap as between grouped output lines (.scene__log--grouped). */
   margin-bottom: var(--spacing);
 }
