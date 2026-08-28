@@ -833,6 +833,25 @@ button.section-toggle--collapsed .section-toggle__label::before {
   padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 4);
   background: var(--list-item-bg);
   border-bottom: 1px solid var(--panel-border);
+  /* Lifted so the scrim below paints over the scrolling narrative (and its
+     positioned accent rails), never the other way around. */
+  position: relative;
+  z-index: 1;
+}
+
+/* The scrim: scrolled lines dissolve into the surface before they reach the
+   bar, instead of being sliced mid-line against its border — depth told with
+   ink, not lighting, so the bar needs no shadow. Sized past the narrative's
+   own top padding so a line fades out before it can touch the hairline. */
+.scene__topbar::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: calc(var(--spacing) * 4);
+  background: linear-gradient(var(--panel-bg), transparent);
+  pointer-events: none;
 }
 
 .scene__topbar-stats {
