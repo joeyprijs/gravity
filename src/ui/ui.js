@@ -429,6 +429,10 @@ export class UIManager {
   // configured, each attribute row grows a spend button and a banked-points
   // line, shown only while points are banked (see _updateStatPointControls).
   _buildSheetWidget(panel) {
+    // The sheet styles its shared parts (section toggles, spend buttons)
+    // through this scope class, so the restyle can't leak into the other
+    // panels those parts also serve.
+    panel.classList.add('sheet');
     const rules = this.engine.data.rules;
     const canSpend = (rules.levelUp?.statPoints ?? 0) > 0;
     // Level-up point-buy covers the same stats as character creation —
@@ -481,7 +485,7 @@ export class UIManager {
     panel.innerHTML = `
     <div class="attr-list__identity">
       <span class="attr-list__identity-name" data-stat-bind="name"></span>
-      <span class="attr-list__identity-level">— ${escapeHtml(this.engine.t('ui.statLevel'))} <span data-stat-bind="level"></span></span>
+      <span class="attr-list__identity-level">${escapeHtml(this.engine.t('ui.statLevel'))} <span data-stat-bind="level"></span></span>
     </div>${canSpend ? `
     <div class="attr-list__points" hidden>${escapeHtml(this.engine.t('ui.statPoints'))} <span data-stat-bind="statPoints"></span></div>` : ''}
     <div class="${CSS.PANEL_SECTION}">

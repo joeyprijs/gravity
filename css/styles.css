@@ -538,28 +538,32 @@ button.section-toggle--collapsed .section-toggle__label::before {
 .attr-list__label {
   /* A fraction rather than a fixed width so translated labels get the same
      room; the values read from the right edge, so the label only needs to
-     bound itself. */
+     bound itself. Muted: on a sheet the words are wayfinding, the numbers
+     are the content. */
   flex: 0 0 60%;
-  /* Icon then label text, on one line: the icon is a marker for the label,
-     so it stays as quiet as the label while the value keeps the emphasis. */
   display: flex;
   align-items: center;
-  gap: calc(var(--spacing) * 1.25);
+  color: var(--text-secondary);
 }
 
+/* The rows read as typography alone — the icon vocabulary stays on the top
+   bar, where there is no room for words. Hidden rather than dropped from the
+   markup: the rows (incl. plugin rows) still declare their icons, so the two
+   surfaces can't drift apart while the sheet chooses not to show them. */
 .attr-list__label .icon {
-  font-size: 1.1em;
-  color: var(--text-secondary);
+  display: none;
 }
 
 /* Right-aligned in the row's remaining space: label left, value right is how
    a sheet reads, and every value shares one right edge (the trailing slot
-   below keeps that true on rows with a spend button). */
+   below keeps that true on rows with a spend button). Tabular figures so the
+   column of numbers sets like a table, not a ragged flock. */
 .attr-list__value {
   flex: 1;
   min-width: 0;
-  font-weight: 700;
+  font-weight: 600;
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 /* The fixed-width slot every row ends in while point-buy is configured. It
@@ -569,7 +573,7 @@ button.section-toggle--collapsed .section-toggle__label::before {
    row's edge instead of holding a gutter for buttons that aren't there.
    Sized to the button it reserves room for. */
 .attr-list__slot {
-  flex: 0 0 calc(var(--spacing) * 3.5);
+  flex: 0 0 calc(var(--spacing) * 3);
   margin-left: calc(var(--spacing) * 1.5);
 }
 
@@ -579,43 +583,76 @@ button.section-toggle--collapsed .section-toggle__label::before {
   display: none;
 }
 
-/* The identity line above the sheet: who this is, kept out of the stat rows.
-   The name carries the weight; the level tags along muted. Bottom margin
+/* The identity line above the sheet, set as a letterhead: the name flush
+   left, the level as microtype flush right, and beneath them the one heavy
+   rule on the page — everything below hangs from hairlines. Bottom margin
    matches the panel-section gap so everything below sits at one rhythm. */
 .attr-list__identity {
   display: flex;
   align-items: baseline;
+  justify-content: space-between;
   gap: calc(var(--spacing) * 1);
+  padding-bottom: calc(var(--spacing) * 1.5);
+  /* Heavier than the hairlines but in their gray: the hierarchy comes from
+     the weight, not from a brighter ink. */
+  border-bottom: calc(var(--spacing) * 0.25) solid var(--panel-border);
   margin-bottom: calc(var(--spacing) * 3);
 }
 
 .attr-list__identity-name {
-  font-size: var(--font-lg);
+  font-size: var(--font-xl);
   font-weight: 700;
 }
 
 .attr-list__identity-level {
   color: var(--text-secondary);
+  font-size: var(--font-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 /* Level-up point-buy cue under the identity line (shown only while points
-   are banked). A quiet status line, not a card — the "+" buttons on the rows
-   are the call to action; this only says why they appeared. The bottom margin
-   matches the panel-section gap so the Character section sits at the same
-   rhythm below it. */
+   are banked). A quiet status line in the sheet's microtype voice — the "+"
+   buttons on the rows are the call to action; this only says why they
+   appeared, in the accent that marks it as live. The bottom margin matches
+   the panel-section gap so the Character section sits at the same rhythm
+   below it. */
 .attr-list__points {
   color: var(--accent-color);
+  font-size: var(--font-sm);
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   margin-bottom: calc(var(--spacing) * 3);
 }
 
 /* A small square filling its row's trailing slot; the .button flex centering
-   keeps the + glyph centered. */
+   keeps the + glyph centered. A ghost of the base button — hairline and an
+   accent glyph, no fill or glow — so a column of them reads as marks in the
+   margin rather than a stack of controls. */
 .attr-list__spend {
-  width: calc(var(--spacing) * 3.5);
-  height: calc(var(--spacing) * 3.5);
+  width: calc(var(--spacing) * 3);
+  height: calc(var(--spacing) * 3);
   padding: 0;
   font-size: var(--font-sm);
+  background: none;
+  color: var(--accent-color);
+}
+
+.attr-list__spend:hover:not(:disabled) {
+  background: none;
+  box-shadow: none;
+}
+
+/* The sheet's headings drop to the same uppercase microtype as its level and
+   points lines — the hairline and the −/+ still say "control", so the accent
+   color no longer has to. Scoped: the inventory's toggles keep their voice. */
+.sheet button.section-toggle {
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 /* .button sets display:flex, which outranks the UA stylesheet's [hidden]
