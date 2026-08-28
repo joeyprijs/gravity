@@ -28,8 +28,12 @@
      its hover state a flat accent tint and an accent border. The affordance
      is the box itself, not the lighting. Controls alone get the soft corner
      — panels and structural boxes stay square — so the radius itself says
-     "you can press this". */
-  --control-radius: 4px;
+     "you can press this". The radius scales with the control (≈ height/12):
+     the same pixel radius curves a 24px mark twice as hard as a 48px button,
+     so each size class gets its own token to keep the curvature even. */
+  --control-radius: 4px;      /* 48px class: buttons, cards, inputs */
+  --control-radius-sm: 3px;   /* 32px class: the creation steppers */
+  --control-radius-xs: 2px;   /* 24px class: the sheet's spend marks */
   --btn-bg: rgba(255, 255, 255, 0.03);
   --btn-hover-bg: rgba(var(--accent-color-rgb), 0.08);
   --btn-hover-shadow: none;
@@ -664,6 +668,7 @@ button.section-toggle--collapsed .section-toggle__label::before {
   font-size: var(--font-sm);
   background: none;
   color: var(--accent-color);
+  border-radius: var(--control-radius-xs);
 }
 
 .attr-list__spend:hover:not(:disabled) {
@@ -1393,6 +1398,7 @@ button.section-toggle--collapsed .section-toggle__label::before {
 .char-creation__stat-btn {
   width: 32px;
   height: 32px;
+  border-radius: var(--control-radius-sm);
 }
 
 .char-creation__stat-value {
