@@ -29,7 +29,9 @@
      lifted off the page's ground, not regions drawn onto it with rules. Their
      own empty space then reads as padding inside a surface, not as dead page. */
   --panel-bg: #1e1e21;
-  --panel-border: rgba(56, 56, 63, 0.5);
+  /* Solid and a clear step above the surfaces it sits on — the old
+     half-alpha value all but vanished into the panels. */
+  --panel-border: #3d3d44;
   --panel-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
 
   /* Buttons */
