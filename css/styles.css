@@ -761,7 +761,8 @@ button.section-toggle--collapsed .section-toggle__label::before {
 .tabs__nav::after {
   content: "";
   position: absolute;
-  top: 100%;
+  /* Past the border-bottom for the same reason as the scene top bar's scrim. */
+  top: calc(100% + 1px);
   left: 0;
   right: 0;
   height: calc(var(--spacing) * 3);
@@ -866,7 +867,10 @@ button.section-toggle--collapsed .section-toggle__label::before {
 .scene__topbar::after {
   content: "";
   position: absolute;
-  top: 100%;
+  /* Past the border, not at top:100%: the pseudo starts at the padding-box
+     edge — the exact 1px band the border-bottom occupies — and children
+     paint above their element's own border, so it would erase the rule. */
+  top: calc(100% + 1px);
   left: 0;
   right: 0;
   height: calc(var(--spacing) * 4);
