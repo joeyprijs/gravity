@@ -43,7 +43,8 @@
      class gets its own token to keep the curvature even. */
   --surface-radius: 8px;      /* panel class: the floating page surfaces */
   --control-radius: 4px;      /* 48px class: buttons, cards, inputs */
-  --control-radius-sm: 3px;   /* ~28-32px class: steppers, spend buttons */
+  --control-radius-sm: 3px;   /* 32px class: the creation steppers */
+  --control-radius-xs: 2px;   /* 24px class: the sheet's spend marks */
   --btn-bg: rgba(255, 255, 255, 0.03);
   --btn-hover-bg: rgba(var(--accent-color-rgb), 0.08);
   --btn-hover-shadow: none;
@@ -567,20 +568,22 @@ button.section-toggle--collapsed .section-toggle__label::before {
   display: none;
 }
 
-/* A fixed-rhythm cell rather than padded text: every row stands the shared
-   48px control height (the single-line button/card height), with its text
-   and its 32px spend button both centered in it. One height, one rhythm,
-   whatever the row holds — and no side padding, so the rows and their rules
-   sit flush with the panel's other lists. */
 .attr-list__row {
   display: flex;
   align-items: center;
-  min-height: calc(var(--spacing) * 6);
+  /* No side padding: the rows sit flush with the panel's other lists. */
+  padding: calc(var(--spacing) * 1) 0;
   border-bottom: 1px solid var(--panel-border);
 }
 
 .attr-list__row:last-child {
   border-bottom: none;
+}
+
+/* The section heading's own margin supplies the gap above the list — without
+   this the first row's padding stacks on it and the rows look detached. */
+.attr-list__row:first-child {
+  padding-top: 0;
 }
 
 .attr-list__label {
@@ -621,7 +624,7 @@ button.section-toggle--collapsed .section-toggle__label::before {
    row's edge instead of holding a gutter for buttons that aren't there.
    Sized to the button it reserves room for. */
 .attr-list__slot {
-  flex: 0 0 calc(var(--spacing) * 4);
+  flex: 0 0 calc(var(--spacing) * 3);
   margin-left: calc(var(--spacing) * 1.5);
 }
 
@@ -676,15 +679,22 @@ button.section-toggle--collapsed .section-toggle__label::before {
 }
 
 /* A small square filling its row's trailing slot; the .button flex centering
-   keeps the + glyph centered. A standard button, not a ghost mark: the slots
-   only exist while points are banked, so when these appear they are the
-   sheet's one call to action and should look as pressable as any button. */
+   keeps the + glyph centered. A ghost of the base button — hairline and an
+   accent glyph, no fill or glow — so a column of them reads as marks in the
+   margin rather than a stack of controls. */
 .attr-list__spend {
-  width: calc(var(--spacing) * 4);
-  height: calc(var(--spacing) * 4);
+  width: calc(var(--spacing) * 3);
+  height: calc(var(--spacing) * 3);
   padding: 0;
   font-size: var(--font-sm);
-  border-radius: var(--control-radius-sm);
+  background: none;
+  color: var(--accent-color);
+  border-radius: var(--control-radius-xs);
+}
+
+.attr-list__spend:hover:not(:disabled) {
+  background: none;
+  box-shadow: none;
 }
 
 /* .button sets display:flex, which outranks the UA stylesheet's [hidden]
