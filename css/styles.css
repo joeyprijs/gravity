@@ -43,8 +43,7 @@
      class gets its own token to keep the curvature even. */
   --surface-radius: 8px;      /* panel class: the floating page surfaces */
   --control-radius: 4px;      /* 48px class: buttons, cards, inputs */
-  --control-radius-sm: 3px;   /* 32px class: the creation steppers */
-  --control-radius-xs: 2px;   /* 24px class: the sheet's spend marks */
+  --control-radius-sm: 3px;   /* ~28-32px class: steppers, spend buttons */
   --btn-bg: rgba(255, 255, 255, 0.03);
   --btn-hover-bg: rgba(var(--accent-color-rgb), 0.08);
   --btn-hover-shadow: none;
@@ -623,8 +622,12 @@ button.section-toggle--collapsed .section-toggle__label::before {
    row's edge instead of holding a gutter for buttons that aren't there.
    Sized to the button it reserves room for. */
 .attr-list__slot {
-  flex: 0 0 calc(var(--spacing) * 3);
+  flex: 0 0 calc(var(--spacing) * 3.5);
   margin-left: calc(var(--spacing) * 1.5);
+  /* The 28px button stands 4px taller than the row's 24px text line; the
+     slot bleeds that into the row's padding so rows with and without a
+     button stay one height. */
+  margin-block: calc(var(--spacing) * -0.25);
 }
 
 /* Restated over the flex-item context so [hidden] actually collapses the
@@ -678,22 +681,15 @@ button.section-toggle--collapsed .section-toggle__label::before {
 }
 
 /* A small square filling its row's trailing slot; the .button flex centering
-   keeps the + glyph centered. A ghost of the base button — hairline and an
-   accent glyph, no fill or glow — so a column of them reads as marks in the
-   margin rather than a stack of controls. */
+   keeps the + glyph centered. A standard button, not a ghost mark: the slots
+   only exist while points are banked, so when these appear they are the
+   sheet's one call to action and should look as pressable as any button. */
 .attr-list__spend {
-  width: calc(var(--spacing) * 3);
-  height: calc(var(--spacing) * 3);
+  width: calc(var(--spacing) * 3.5);
+  height: calc(var(--spacing) * 3.5);
   padding: 0;
   font-size: var(--font-sm);
-  background: none;
-  color: var(--accent-color);
-  border-radius: var(--control-radius-xs);
-}
-
-.attr-list__spend:hover:not(:disabled) {
-  background: none;
-  box-shadow: none;
+  border-radius: var(--control-radius-sm);
 }
 
 /* .button sets display:flex, which outranks the UA stylesheet's [hidden]
