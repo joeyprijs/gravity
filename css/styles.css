@@ -570,7 +570,11 @@ button.section-toggle--collapsed .section-toggle__label::before {
 .attr-list__row {
   display: flex;
   align-items: center;
-  padding: calc(var(--spacing) * 1) calc(var(--spacing) * 0.5);
+  /* No side padding — the rows sit flush with the panel's other lists. The
+     vertical padding is sized so the 32px spend button keeps clear air to
+     the rules above and below it (the slot's negative margin only stops the
+     button from stretching the row, it doesn't buy it breathing room). */
+  padding: calc(var(--spacing) * 1.25) 0;
   border-bottom: 1px solid var(--panel-border);
 }
 
@@ -622,12 +626,12 @@ button.section-toggle--collapsed .section-toggle__label::before {
    row's edge instead of holding a gutter for buttons that aren't there.
    Sized to the button it reserves room for. */
 .attr-list__slot {
-  flex: 0 0 calc(var(--spacing) * 3.5);
+  flex: 0 0 calc(var(--spacing) * 4);
   margin-left: calc(var(--spacing) * 1.5);
-  /* The 28px button stands 4px taller than the row's 24px text line; the
+  /* The 32px button stands 8px taller than the row's 24px text line; the
      slot bleeds that into the row's padding so rows with and without a
      button stay one height. */
-  margin-block: calc(var(--spacing) * -0.25);
+  margin-block: calc(var(--spacing) * -0.5);
 }
 
 /* Restated over the flex-item context so [hidden] actually collapses the
@@ -685,8 +689,8 @@ button.section-toggle--collapsed .section-toggle__label::before {
    only exist while points are banked, so when these appear they are the
    sheet's one call to action and should look as pressable as any button. */
 .attr-list__spend {
-  width: calc(var(--spacing) * 3.5);
-  height: calc(var(--spacing) * 3.5);
+  width: calc(var(--spacing) * 4);
+  height: calc(var(--spacing) * 4);
   padding: 0;
   font-size: var(--font-sm);
   border-radius: var(--control-radius-sm);
