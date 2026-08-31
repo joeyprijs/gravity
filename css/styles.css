@@ -679,22 +679,15 @@ button.section-toggle--collapsed .section-toggle__label::before {
 }
 
 /* A small square filling its row's trailing slot; the .button flex centering
-   keeps the + glyph centered. A ghost of the base button — hairline and an
-   accent glyph, no fill or glow — so a column of them reads as marks in the
-   margin rather than a stack of controls. */
+   keeps the + glyph centered. Standard button styling at mark size: it wears
+   the same fill, hairline and hover as every other button, just small enough
+   to match the row's text line so the grid keeps its rhythm. */
 .attr-list__spend {
   width: calc(var(--spacing) * 3);
   height: calc(var(--spacing) * 3);
   padding: 0;
   font-size: var(--font-sm);
-  background: none;
-  color: var(--accent-color);
   border-radius: var(--control-radius-xs);
-}
-
-.attr-list__spend:hover:not(:disabled) {
-  background: none;
-  box-shadow: none;
 }
 
 /* .button sets display:flex, which outranks the UA stylesheet's [hidden]
