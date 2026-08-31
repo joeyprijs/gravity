@@ -567,25 +567,20 @@ button.section-toggle--collapsed .section-toggle__label::before {
   display: none;
 }
 
+/* A fixed-rhythm cell rather than padded text: every row stands the shared
+   48px control height (the single-line button/card height), with its text
+   and its 32px spend button both centered in it. One height, one rhythm,
+   whatever the row holds — and no side padding, so the rows and their rules
+   sit flush with the panel's other lists. */
 .attr-list__row {
   display: flex;
   align-items: center;
-  /* No side padding — the rows sit flush with the panel's other lists. The
-     vertical padding is sized so the 32px spend button keeps clear air to
-     the rules above and below it (the slot's negative margin only stops the
-     button from stretching the row, it doesn't buy it breathing room). */
-  padding: calc(var(--spacing) * 1.25) 0;
+  min-height: calc(var(--spacing) * 6);
   border-bottom: 1px solid var(--panel-border);
 }
 
 .attr-list__row:last-child {
   border-bottom: none;
-}
-
-/* The section heading's own margin supplies the gap above the list — without
-   this the first row's padding stacks on it and the rows look detached. */
-.attr-list__row:first-child {
-  padding-top: 0;
 }
 
 .attr-list__label {
@@ -628,10 +623,6 @@ button.section-toggle--collapsed .section-toggle__label::before {
 .attr-list__slot {
   flex: 0 0 calc(var(--spacing) * 4);
   margin-left: calc(var(--spacing) * 1.5);
-  /* The 32px button stands 8px taller than the row's 24px text line; the
-     slot bleeds that into the row's padding so rows with and without a
-     button stay one height. */
-  margin-block: calc(var(--spacing) * -0.5);
 }
 
 /* Restated over the flex-item context so [hidden] actually collapses the
