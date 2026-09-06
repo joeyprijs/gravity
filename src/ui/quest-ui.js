@@ -7,13 +7,10 @@ export class QuestUI {
     this.engine = engine;
   }
 
-  /**
-   * Renders the quest log: one card section per mission status — active,
-   * completed, failed — and an empty note when no quest has surfaced yet.
-   *
-   * @param {Set<string>|null} [newQuests] - Mission ids that progressed since
-   *   the player last viewed the tab; their cards wear the "new" dot.
-   */
+  // Renders the quest log: one card section per mission status — active,
+  // completed, failed — and an empty note when no quest has surfaced yet.
+  // newQuests holds the mission ids that progressed since the player last
+  // viewed the tab; their cards wear the "new" dot.
   render(newQuests = null) {
     const panel = document.getElementById(EL.TAB_QUESTS);
     if (!panel) return;

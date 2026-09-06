@@ -2,6 +2,7 @@ import { GOLD_ITEM_ID, ITEM_TYPES, TIMER_SAFE_ACTIONS, HAND_SLOT_KIND } from './
 // The icon set owns its own name list; validation reads it from there rather
 // than keeping a second copy that could drift.
 import { ICON_NAMES } from './icons.js';
+import { isResourcePool } from './utils.js';
 
 // Load-time validation of all game data. Pure functions over the loaded data
 // object — no DOM, no engine — so authors get fail-fast feedback on boot and
@@ -34,8 +35,6 @@ const TIME_COST_KINDS = new Set(['navigate', 'skillAttempt', 'fullRest']);
  * Data files may use the string shorthand (see npc.schema.json); the engine
  * normalizes once at load so every consumer sees a single shape. Runs before
  * validateGameData, which assumes the normalized form. Mutates in place.
- *
- * @param {Object<string, object>} npcs - The loaded NPC database.
  */
 export function normalizeCarriedItems(npcs) {
   for (const npc of Object.values(npcs || {})) {
@@ -51,10 +50,9 @@ export function normalizeCarriedItems(npcs) {
 /**
  * Validates all loaded game data and returns the issues found.
  *
- * @param {object} data - The engine's data object ({ items, npcs, scenes, missions, tables, rules, locale }).
- *   NPC carriedItems must already be normalized (see normalizeCarriedItems).
- * @param {Set<string>} knownActionTypes - Registered action type names (engine._actionRegistry keys).
- * @returns {{group: string, message: string}[]} One entry per issue; empty when the data is clean.
+ * knownActionTypes is the registered action type names. NPC carriedItems
+ * must already be normalized (see normalizeCarriedItems). Returns one
+ * { group, message } per issue; empty when the data is clean.
  */
 export function validateGameData(data, knownActionTypes) {
   const issues = [];
@@ -311,10 +309,14 @@ function validateEnemyList(ctx, group, enemyIds, where) {
 }
 
 // Validates a scene-option action pipeline (also used for onVictory pipelines).
-function validateActions(ctx, group, actions, where) {
+// npc, when given, is the conversation the actions run inside — its
+// goToConversation targets must be nodes of that NPC.
+function validateActions(ctx, group, actions, where, npc = null) {
   for (const action of (actions || [])) {
     if (!ctx.knownActionTypes.has(action.type))
       ctx.add(group, `${where}: unknown action type "${action.type}"`);
+    if (npc && action.type === 'goToConversation' && !npc.conversations?.[action.node])
+      ctx.add(group, `${where}: goToConversation → unknown node "${action.node}"`);
     if (action.type === 'navigate' && action.destination && !ctx.scenes[action.destination])
       ctx.add(group, `${where}: navigate → unknown destination "${action.destination}"`);
     if (action.type === 'loot' && action.item && !isKnownItem(ctx, action.item))
@@ -382,8 +384,12 @@ function warnIfSuccessFarmable(ctx, group, check, where) {
 }
 
 // Validates the check-flavor fields shared by scene skill options and dialogue
-// responses: outcome tiers, one-shot markers, attempt budgets.
-function validateCheck(ctx, group, check, where) {
+// responses: condition, pipelines, outcome tiers, one-shot markers, attempt
+// budgets.
+function validateCheck(ctx, group, check, where, npc = null) {
+  validateCondition(ctx, group, check.condition, where);
+  validateActions(ctx, group, check.actions, where, npc);
+  validateActions(ctx, group, check.onFailure, `${where}: onFailure`, npc);
   warnIfSuccessFarmable(ctx, group, check, where);
   if (check.resolveOnce && check.maxAttempts)
     ctx.add(group, `${where}: resolveOnce makes maxAttempts redundant (one roll IS the budget)`);
@@ -402,10 +408,10 @@ function validateCheck(ctx, group, check, where) {
       ctx.add(group, `${where}: both "onFailure" and outcomes.failure.actions — outcomes wins; drop one`);
     for (const [tierName, tier] of Object.entries(check.outcomes)) {
       if (tier && typeof tier === 'object')
-        validateActions(ctx, group, tier.actions, `${where}: outcomes.${tierName}`);
+        validateActions(ctx, group, tier.actions, `${where}: outcomes.${tierName}`, npc);
     }
   }
-  validateActions(ctx, group, check.onExhausted, `${where}: onExhausted`);
+  validateActions(ctx, group, check.onExhausted, `${where}: onExhausted`, npc);
 }
 
 function validateTables(ctx) {
@@ -434,11 +440,8 @@ function validateScenes(ctx) {
 
     for (const skill of (scene.skills || [])) {
       const where = `skill "${skill.text}"`;
-      validateCondition(ctx, group, skill.condition, where);
       validateSkillCheck(ctx, group, skill.skillCheck, where);
       validateCheck(ctx, group, skill, where);
-      validateActions(ctx, group, skill.actions, where);
-      validateActions(ctx, group, skill.onFailure, `${where}: onFailure`);
       for (const item of (skill.items || [])) {
         if (item.table && !ctx.tables[item.table])
           ctx.add(group, `${where} references unknown table "${item.table}"`);
@@ -507,23 +510,12 @@ function validateNpcs(ctx) {
 
     for (const [nodeId, node] of Object.entries(npc.conversations || {})) {
       const where = `conversation node "${nodeId}"`;
-      validateActions(ctx, group, node.actions, where);
-      validateConversationNodeRefs(ctx, group, npc, node.actions, where);
+      validateActions(ctx, group, node.actions, where, npc);
 
       for (const res of (node.responses || [])) {
         const resWhere = `${where}, response "${res.text}"`;
-        validateCondition(ctx, group, res.condition, resWhere);
         if (res.skillCheck && res.dc > 0) validateSkillCheck(ctx, group, res.skillCheck, resWhere);
-        validateCheck(ctx, group, res, resWhere);
-        validateActions(ctx, group, res.actions, resWhere);
-        validateActions(ctx, group, res.onFailure, `${resWhere}: onFailure`);
-        validateConversationNodeRefs(ctx, group, npc, res.actions, resWhere);
-        validateConversationNodeRefs(ctx, group, npc, res.onFailure, resWhere);
-        validateConversationNodeRefs(ctx, group, npc, res.onExhausted, resWhere);
-        for (const tier of Object.values(res.outcomes || {})) {
-          if (tier && typeof tier === 'object')
-            validateConversationNodeRefs(ctx, group, npc, tier.actions, resWhere);
-        }
+        validateCheck(ctx, group, res, resWhere, npc);
       }
     }
   }
@@ -568,13 +560,6 @@ function warnIfGiftFarmable(ctx, group, npc) {
   }
 }
 
-function validateConversationNodeRefs(ctx, group, npc, actions, where) {
-  for (const action of (actions || [])) {
-    if (action.type === 'goToConversation' && !npc.conversations?.[action.node])
-      ctx.add(group, `${where}: goToConversation → unknown node "${action.node}"`);
-  }
-}
-
 function validateRules(ctx) {
   const { rules, items, locale } = ctx;
   const group = 'Rules';
@@ -599,7 +584,7 @@ function validateRules(ctx) {
       ctx.add(group, 'shortRest needs a "resource" — the { current, max } pool each rest spends one use of');
     else if (shortRest.resource === 'hp' || shortRest.resource === 'ap')
       ctx.add(group, `shortRest.resource cannot be "${shortRest.resource}" — the pool is what a rest spends, not a stat it moves`);
-    else if (!(pool && typeof pool === 'object' && 'current' in pool))
+    else if (!isResourcePool(pool))
       ctx.add(group, `shortRest.resource "${shortRest.resource}" is not a declared { current, max } resource in playerDefaults.resources`);
     if (shortRest?.heal !== undefined && typeof shortRest.heal !== 'string' && !(shortRest.heal > 0))
       ctx.add(group, `shortRest.heal must be dice notation ("1d8") or a positive number (got ${JSON.stringify(shortRest.heal)})`);
@@ -672,10 +657,7 @@ function validateRules(ctx) {
   }
 
   const declaredResources = rules?.playerDefaults?.resources ?? {};
-  const isResource = (id) => {
-    const r = declaredResources[id];
-    return r && typeof r === 'object' && 'current' in r;
-  };
+  const isResource = (id) => isResourcePool(declaredResources[id]);
 
   // Retry currency: rules.skillRetry.resource must be a declared { current, max }
   // resource, cost positive, restRestore non-negative.

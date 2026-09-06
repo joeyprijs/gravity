@@ -118,8 +118,7 @@ export const ICON_NAMES = Object.freeze(Object.keys(ICONS));
  * template. The glyph is hidden from assistive tech: every caller pairs it
  * with a text label (visible on a tab, screen-reader-only in the top bar).
  *
- * @param {string} name - An ICON_NAMES entry.
- * @returns {string} The `<svg>` markup, or '' for an unknown name.
+ * Returns '' for an unknown name.
  */
 export function iconHtml(name) {
   const icon = ICONS[name];

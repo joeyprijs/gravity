@@ -26,7 +26,7 @@ This document explains how the engine boots, how the modules fit together, and �
 ```
 engine.js (orchestrator, mode machine, delegate API, event bus, registries)
 ├── core/state.js      StateManager (owned as engine.state), listeners, save/load + migrations
-├── core/config.js     CSS/EL registries, ACTIONS, FLAG_KEYS, constants
+├── core/config.js     CSS/EL registries, FLAG_KEYS, constants
 ├── core/validate.js   load-time game-data validation
 ├── core/i18n.js       language resolution, list/plural formatting (pure)
 ├── core/utils.js      DOM helpers (createElement, resetOptionsPanel, …)
@@ -37,7 +37,7 @@ engine.js (orchestrator, mode machine, delegate API, event bus, registries)
 │   ├── dialogue.js    conversation trees, merchant shops
 │   ├── quests.js      mission lifecycle + staged objectives (scene:entered + the mutation bus)
 │   ├── narrative.js   scrollable narrative log
-│   ├── audio.js       two-channel audio: region ambience loops + narration clips
+│   ├── audio.js       region ambience loops (Web Audio)
 │   ├── actions.js     built-in action handlers
 │   ├── items.js       item use / equip / unequip (consumable-effect table)
 │   ├── time.js        world-clock math: days, segments, time costs (pure)
@@ -101,7 +101,7 @@ Numeric leaves accept a bare number (meaning *at least*) or an operator object: 
 
 ## Actions
 
-Actions are the mutation pipeline: an array of `{ "type": ..., ...params }` objects executed in order by `engine.runActions()`. Every type — built-in or plugin — lives in one registry keyed by the strings in `config.js` `ACTIONS`; the built-ins are registered from `systems/actions.js`, the dialogue actions by `DialogueSystem` in its constructor. The **complete catalogue with parameters is in the README** ([Actions](../README.md#actions-mutations)); this section is the mechanism a contributor needs.
+Actions are the mutation pipeline: an array of `{ "type": ..., ...params }` objects executed in order by `engine.runActions()`. Every type — built-in or plugin — lives in one registry keyed by its type string; the built-ins are registered from `systems/actions.js`, the dialogue actions by `DialogueSystem` in its constructor. The **complete catalogue with parameters is in the README** ([Actions](../README.md#actions-mutations)); this section is the mechanism a contributor needs.
 
 - A handler receives `(action, engine)` and owns exactly one side effect. Navigation is its own `navigate` action, never a hidden consequence — this is what keeps pipelines composable and `snapshotNavigation` meaningful.
 - The conversation-bound actions (`goToConversation`, `trade`) warn and no-op when no dialogue is active; they share the global registry so scene options and conversation nodes extend through one mechanism.

@@ -1,4 +1,4 @@
-import { buildCard, createElement, buildOptionButton, getItemLabel, isSpecialItem, itemCardStats, resetOptionsPanel } from '../core/utils.js';
+import { buildCard, buildPanelSection, createElement, buildOptionButton, getItemLabel, isSpecialItem, itemCardStatsFor, resetOptionsPanel } from '../core/utils.js';
 import { CSS, LOG } from '../core/config.js';
 
 // ChestUI renders the deposit/withdraw panel for a chest (opened by the
@@ -34,11 +34,28 @@ export class ChestUI {
     return buildCard({
       tag: 'button',
       title: getItemLabel(this.engine.data.items, stack.item, stack.amount),
-      stats: itemData
-        ? itemCardStats(this.engine.t.bind(this.engine), itemData, this.engine.state.getPlayer().attributes,
-            { uses: this.engine.state.getItemUses(itemData.id), items: this.engine.data.items })
-        : undefined,
+      stats: itemData ? itemCardStatsFor(this.engine, itemData) : undefined,
     });
+  }
+
+  // One section of stacks: clicking a card moves one item and logs it under
+  // the given actions.* key; an empty section shows the placeholder instead.
+  _stackSection(heading, stacks, move, logKey, emptyEl) {
+    const section = buildPanelSection(heading);
+    if (stacks.length === 0) {
+      section.appendChild(emptyEl);
+      return section;
+    }
+    stacks.forEach(b => {
+      const btn = this._itemCard(b);
+      btn.onclick = () => {
+        move(b.item);
+        this.engine.log(LOG.SYSTEM, this.tAction(logKey, { name: getItemLabel(this.engine.data.items, b.item) }));
+        this.render();
+      };
+      section.appendChild(btn);
+    });
+    return section;
   }
 
   render() {
@@ -67,43 +84,13 @@ export class ChestUI {
     };
     container.appendChild(closeBtn);
 
-    const chestSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
-    chestSection.appendChild(createElement('div', CSS.SECTION_HEADING, this.tChest('Contents')));
-    if (chest.length > 0) {
-      chest.forEach(b => {
-        const name = getItemLabel(this.engine.data.items, b.item);
-        const btn = this._itemCard(b);
-        btn.onclick = () => {
-          this.engine.state.withdrawFromChest(this.chestId, b.item, 1);
-          this.engine.log(LOG.SYSTEM, this.tAction('Took', { name }));
-          this.render();
-        };
-        chestSection.appendChild(btn);
-      });
-    } else {
-      const emptyBtn = buildOptionButton(this.tChest('Empty'));
-      emptyBtn.disabled = true;
-      chestSection.appendChild(emptyBtn);
-    }
-    panel.insertBefore(chestSection, skillsContainer);
-
-    const invSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
-    invSection.appendChild(createElement('div', CSS.SECTION_HEADING, this.engine.t('ui.inventoryTitle')));
-    if (pInv.length > 0) {
-      pInv.forEach(b => {
-        const name = getItemLabel(this.engine.data.items, b.item);
-        const btn = this._itemCard(b);
-        btn.onclick = () => {
-          this.engine.state.depositToChest(this.chestId, b.item, 1);
-          this.engine.log(LOG.SYSTEM, this.tAction('Deposited', { name }));
-          this.render();
-        };
-        invSection.appendChild(btn);
-      });
-    } else {
-      invSection.appendChild(createElement('p', CSS.CARD_BODY, this.engine.t('ui.inventoryEmpty')));
-    }
-    panel.insertBefore(invSection, skillsContainer);
+    const emptyBtn = buildOptionButton(this.tChest('Empty'));
+    emptyBtn.disabled = true;
+    panel.insertBefore(this._stackSection(this.tChest('Contents'), chest,
+      item => this.engine.state.withdrawFromChest(this.chestId, item, 1), 'Took', emptyBtn), skillsContainer);
+    panel.insertBefore(this._stackSection(this.engine.t('ui.inventoryTitle'), pInv,
+      item => this.engine.state.depositToChest(this.chestId, item, 1), 'Deposited',
+      createElement('p', CSS.CARD_BODY, this.engine.t('ui.inventoryEmpty'))), skillsContainer);
 
     this.engine.scrollNarrativeToBottom();
   }

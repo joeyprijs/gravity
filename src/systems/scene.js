@@ -1,4 +1,4 @@
-import { clearElement, createElement, buildSceneDescription, buildOptionButton, addDirectionMarker, getItemLabel, isInteriorScene, resetOptionsPanel } from '../core/utils.js';
+import { clearElement, createElement, buildSceneDescription, buildOptionButton, addDirectionMarker, getItemLabel, isInteriorScene, isResourcePool, resetOptionsPanel } from '../core/utils.js';
 import { CHECK_KEYS, CSS, FLAG_KEYS, GOLD_ITEM_ID, LOG, MAX_D20_ROLL } from '../core/config.js';
 import { evaluateCondition } from './condition.js';
 import { formatList } from '../core/i18n.js';
@@ -38,30 +38,16 @@ export class SceneRenderer {
     }
     const scene = this.engine.data.scenes[sceneId];
     if (scene) {
-      // Loading into a location should sound like it — but stay quiet:
-      // ambience only, no narration replay. That includes a clip already
-      // mid-sentence from before the load — the null stops it.
       this.engine.audio?.syncAmbience(scene);
-      this.engine.audio?.playNarration(null);
       this.renderOptions(scene);
     }
   }
 
-  /**
-   * Renders a scene: its description, options, skills, and any auto-combat.
-   * No-op while combat is active.
-   *
-   * @param {string} sceneId - The id of the scene to render.
-   * @param {object} [opts]
-   * @param {boolean} [opts.skipAutoAttack=false] - Suppresses the scene's
-   *   autoAttack encounter. Used by the post-victory re-render so winning a
-   *   fight on an auto-attack scene doesn't immediately restart it.
-   * @param {boolean} [opts.skipNarration=false] - Renders the description
-   *   without starting its narration clip. Used by the post-victory re-render:
-   *   combat reset the description cache, so the block re-appends — but the
-   *   narrator already read this room on the way in.
-   */
-  render(sceneId, { skipAutoAttack = false, skipNarration = false } = {}) {
+  // Renders a scene: its description, options, skills, and any auto-combat.
+  // No-op while combat is active. skipAutoAttack suppresses the scene's
+  // autoAttack encounter — the post-victory re-render uses it so winning a
+  // fight on an auto-attack scene doesn't immediately restart it.
+  render(sceneId, { skipAutoAttack = false } = {}) {
     if (this.engine.inCombat) return;
 
     const scene = this.engine.data.scenes[sceneId];
@@ -80,22 +66,14 @@ export class SceneRenderer {
     // retry wording or refill their maxAttempts budgets mid-visit.
     const isEntry = this.engine.state.getCurrentSceneId() !== sceneId;
 
-    // addVisitedScene must be called BEFORE setCurrentSceneId because
-    // setCurrentSceneId triggers notifyListeners → ui.update() → renderMinimap(),
-    // which checks visitedScenes. If the order is reversed, the current scene
-    // would be absent from visitedScenes when the minimap first renders.
+    // Visited before current: the current-scene notification re-renders the
+    // minimap, which reads visitedScenes.
     this.engine.state.addVisitedScene(sceneId);
     this.engine.state.setCurrentSceneId(sceneId);
 
-    const appended = this._appendSceneDescription(scene, sceneId);
-
-    // Audio rides the description's own dedupe: ambience re-syncs on every
-    // render (a no-op while the loop is unchanged), narration plays exactly
-    // when a new description block was appended — covering the boot render
-    // (where currentSceneId is pre-seeded, so isEntry is false) while
-    // skipping skill-check re-renders and save restores.
+    this._appendSceneDescription(scene, sceneId);
+    // Re-syncing is a no-op while the loop is unchanged.
     this.engine.audio?.syncAmbience(scene);
-    if (appended && !skipNarration) this.engine.audio?.playNarration(this._resolveNarration(scene));
 
     passiveTexts.forEach(text => this.engine.log(LOG.NARRATOR, text));
     if (isEntry) this._resetSkillAttempts(scene, sceneId);
@@ -121,22 +99,20 @@ export class SceneRenderer {
 
   // Appends the scene description as a new narrative block — but only when the
   // scene or its description actually changed, preventing duplicate entries
-  // when options re-render. Returns whether a block was appended (the audio
-  // narration trigger rides the same dedupe).
+  // when options re-render.
   _appendSceneDescription(scene, sceneId) {
     const currentDesc = this._resolveDescription(scene);
-    if (this.lastRenderedSceneId === sceneId && this.lastRenderedDesc === currentDesc) return false;
+    if (this.lastRenderedSceneId === sceneId && this.lastRenderedDesc === currentDesc) return;
 
     this.engine.openScene();
     // Scene content comes from developer-authored JSON, not user input —
     // buildSceneDescription uses innerHTML for the body to allow basic formatting.
-    const descEl = buildSceneDescription(scene.title || scene.name, currentDesc, this.engine.t.bind(this.engine));
+    const descEl = buildSceneDescription(scene.title || scene.name, currentDesc, this.engine.t);
     this.engine.currentSceneEl.appendChild(descEl);
     this.engine.state.appendLog({ type: 'scene', title: scene.title || scene.name, desc: currentDesc });
 
     this.lastRenderedSceneId = sceneId;
     this.lastRenderedDesc = currentDesc;
-    return true;
   }
 
   // Passive checks: auto-rolled the first time the player enters the scene,
@@ -395,7 +371,7 @@ export class SceneRenderer {
     const config = this.engine.data.rules?.shortRest;
     if (!config?.resource) return null;
     const pool = this.engine.state.getPlayer().resources?.[config.resource];
-    if (!(pool && typeof pool === 'object' && 'current' in pool)) return null;
+    if (!isResourcePool(pool)) return null;
 
     return [
       this.engine.t('ui.restHealing', { value: String(config.heal ?? 1) }),
@@ -407,7 +383,7 @@ export class SceneRenderer {
   // whose pipeline full-rests (the bedroom's Long Rest). Derived from the
   // same rules handleFullRest reads, so the lines can't drift from the act.
   _fullRestStats() {
-    const t = this.engine.t.bind(this.engine);
+    const t = this.engine.t;
     const resourceLabel = (id) => {
       const key = `ui.resources.${id}`;
       return t(key) !== key ? t(key) : id;
@@ -424,12 +400,8 @@ export class SceneRenderer {
     return lines;
   }
 
-  /**
-   * Executes a chosen scene option: logs the choice (unless silenced) and runs
-   * its action pipeline.
-   *
-   * @param {object} opt - The option object from the scene's `options` array.
-   */
+  // Executes a chosen scene option: logs the choice (unless silenced) and runs
+  // its action pipeline.
   handleOption(opt) {
     if (this.engine.isGameOver) return; // only Load/Restart act after death
     if (opt.log !== false) this.engine.log(LOG.PLAYER, opt.text, 'choice');
@@ -516,7 +488,7 @@ export class SceneRenderer {
     const state = this._readDiscoveryState(skillKey, i, items);
     if (state.resolved || state.found.every(f => f)) return null;
 
-    const lowestDc = Math.min(...items.map(l => l.dc ?? 10).filter((_, idx) => !state.found[idx]));
+    const lowestDc = this._lowestHiddenDc(items, state);
     const p = checkPresentation(this.engine, opt, state.tries || 0, lowestDc);
     const btn = buildOptionButton(p.displayText, p.badge);
     if (p.blocked) {
@@ -532,6 +504,12 @@ export class SceneRenderer {
     return btn;
   }
 
+  // The DC a discovery roll is judged against: the easiest still-hidden
+  // item's — what the button's badge advertised for this attempt.
+  _lowestHiddenDc(items, state) {
+    return Math.min(...items.map(l => l.dc ?? 10).filter((_, idx) => !state.found[idx]));
+  }
+
   // Resolves one discovery attempt: rolls once against every still-hidden
   // item's DC, marks hits as found, awards the found loot, persists the
   // updated state, and re-renders the options. A maxAttempts budget that runs
@@ -544,7 +522,7 @@ export class SceneRenderer {
 
     // The DC the roll is narrated against: the easiest still-hidden item's —
     // the same number the button's badge advertised for this attempt.
-    const lowestDc = Math.min(...items.map(l => l.dc ?? 10).filter((_, idx) => !state.found[idx]));
+    const lowestDc = this._lowestHiddenDc(items, state);
 
     const newlyFound = [];
     items.forEach((l, idx) => {
@@ -731,12 +709,5 @@ export class SceneRenderer {
       if (d.condition && evaluateCondition(d.condition, this.engine.state)) return d;
     }
     return scene.description.find(d => !d.condition) ?? null;
-  }
-
-  // The narration clip for a scene entry: the resolved description variant's
-  // `narration` wins, the scene-level field is the fallback (and covers
-  // plain-string descriptions). Null when neither is authored.
-  _resolveNarration(scene) {
-    return this._resolveDescriptionVariant(scene)?.narration ?? scene.narration ?? null;
   }
 }

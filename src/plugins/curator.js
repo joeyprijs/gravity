@@ -1,4 +1,4 @@
-import { buildCard, buildOptionButton, addDirectionMarker, createElement, escapeHtml, getItemLabel, isSpecialItem, itemCardStats, resetOptionsPanel } from '../core/utils.js';
+import { buildCard, buildOptionButton, buildPanelSection, addDirectionMarker, createElement, escapeHtml, getItemLabel, isSpecialItem, itemCardStatsFor, resetOptionsPanel } from '../core/utils.js';
 import { CSS, EL, LOG } from '../core/config.js';
 
 // The curator plugin: the museum's wings, display cases, and reputation.
@@ -21,10 +21,8 @@ import { CSS, EL, LOG } from '../core/config.js';
 // engines booted in one page (a manual-boot harness, the test suite) each
 // keep their own reputation current instead of the first registration winning
 // forever. Repeat registrations only refresh the record (the test suite
-// re-inits state per test). curatorState tracks the most recent registration
-// for the module-level getMuseumReputation() export.
+// re-inits state per test).
 const registrations = new WeakMap(); // StateManager → { items, engine }
-let curatorState = null;
 
 // The curator's save-data bag ({ museumReputation, obtainedItems, rooms,
 // displays }).
@@ -34,8 +32,7 @@ const bagOf = (state) => state.pluginState('curator');
 // the wings that hold them (see the header note on cases vs chests).
 const displaysOf = (state) => (bagOf(state).displays ??= {});
 
-// Sequence suffix guarantees uniqueness even when two cases are installed
-// within the same millisecond (Date.now() alone would collide).
+// Generated case ids: display_<timestamp>_<sequence>.
 let displaySeq = 0;
 
 // A case as it is stored: the authored/installed fields and nothing derived.
@@ -48,33 +45,18 @@ function makeDisplay(config) {
   };
 }
 
-/**
- * The display cases registered for a scene (empty array if none).
- * @param {object} state - The StateManager.
- * @param {string} sceneId
- * @returns {Array<{id: string, name: string, item: string|null}>}
- */
+// The display cases registered for a scene (empty array if none).
 export function getDisplaysForScene(state, sceneId) {
   return displaysOf(state)[sceneId] ?? [];
 }
 
-/**
- * Every scene's cases, keyed by scene id — for the reputation walk, which has
- * to scan the whole museum at once.
- * @param {object} state - The StateManager.
- * @returns {Object<string, Array<{id: string, name: string, item: string|null}>>}
- */
-export function getAllDisplays(state) {
-  return displaysOf(state);
+function findDisplay(state, sceneId, displayId) {
+  return getDisplaysForScene(state, sceneId).find(d => d.id === displayId);
 }
 
-/**
- * Installs a new case in a scene.
- * @param {object} state - The StateManager.
- * @param {string} sceneId
- * @param {{id?: string, name?: string, item?: string}} config
- * @returns {string} The case's id (generated when not supplied).
- */
+
+// Installs a new case in a scene and returns its id (generated when the
+// config carries none).
 export function addDisplayToScene(state, sceneId, config) {
   const map = displaysOf(state);
   const display = makeDisplay(config);
@@ -83,16 +65,10 @@ export function addDisplayToScene(state, sceneId, config) {
   return display.id;
 }
 
-/**
- * Moves an item from the player's inventory into a case.
- * @param {object} state - The StateManager.
- * @param {string} sceneId
- * @param {string} displayId
- * @param {string} itemId
- * @returns {boolean} False when the case or the item doesn't exist.
- */
+// Moves an item from the player's inventory into a case. False when the case
+// or the item doesn't exist.
 export function placeItemInDisplay(state, sceneId, displayId, itemId) {
-  const display = getDisplaysForScene(state, sceneId).find(d => d.id === displayId);
+  const display = findDisplay(state, sceneId, displayId);
   if (!display) return false;
   if (state.countPlayerItem(itemId, { includeEquipped: false }) <= 0) return false;
 
@@ -105,15 +81,10 @@ export function placeItemInDisplay(state, sceneId, displayId, itemId) {
   return true;
 }
 
-/**
- * Moves the item in a case back into the player's inventory.
- * @param {object} state - The StateManager.
- * @param {string} sceneId
- * @param {string} displayId
- * @returns {string|null} The item id taken, or null when the case was empty/missing.
- */
+// Moves the item in a case back into the player's inventory. Returns the item
+// id taken, or null when the case was empty or missing.
 export function takeItemFromDisplay(state, sceneId, displayId) {
-  const display = getDisplaysForScene(state, sceneId).find(d => d.id === displayId);
+  const display = findDisplay(state, sceneId, displayId);
   if (!display?.item) return null;
 
   const itemId = display.item;
@@ -144,16 +115,16 @@ function syncAuthoredDisplays(engine) {
 // build_wing action that does the charging.
 const DEFAULT_WING_COST = 250;
 
-/** Returns the museum reputation currently shown to the player (permanent + display bonus). */
-export function getMuseumReputation() {
-  return curatorState?.getPlayer()?.attributes?.reputation ?? 0;
+// The museum reputation currently shown to the player (permanent + display bonus).
+export function getMuseumReputation(state) {
+  return state.getPlayer()?.attributes?.reputation ?? 0;
 }
 
 // Recomputes the derived reputation attribute from the permanent score plus
 // the reputation of every relic currently on display.
 function updateReputation(state, items) {
   let rep = bagOf(state).museumReputation ?? 0;
-  const displays = getAllDisplays(state);
+  const displays = displaysOf(state);
   for (const sceneId in displays) {
     for (const display of displays[sceneId]) {
       if (display.item && items[display.item]) {
@@ -190,7 +161,6 @@ function handleAcquisition(state, items, itemId) {
 // state-level tests call this on its own, and room synthesis stays out of
 // their way.
 export function registerCuratorState(state, items = {}, engine = null) {
-  curatorState = state;
   const existing = registrations.get(state);
   if (existing) {
     existing.items = items;
@@ -283,7 +253,7 @@ function showReputationLine(engine) {
   const line = createElement('div', 'curator-scene-rep');
   line.appendChild(createElement('span', 'curator-scene-rep__label', engine.t('plugin.curator.reputationLabel')));
   line.appendChild(createElement('span', 'curator-scene-rep__value',
-    engine.t('plugin.curator.museumReputationValue', { value: getMuseumReputation() })));
+    engine.t('plugin.curator.museumReputationValue', { value: getMuseumReputation(engine.state) })));
   reminder.appendChild(line);
 }
 
@@ -408,7 +378,6 @@ function syncMuseumRooms(engine) {
 }
 
 export default function curatorPlugin(engine) {
-  // 1. Register state integrations (stat handler, mutation hooks, migration)
   registerCuratorState(engine.state, engine.data.items, engine);
   layoutMuseum(engine);
 
@@ -427,7 +396,7 @@ export default function curatorPlugin(engine) {
     }
   });
 
-  // 2. Decorate every scene that has display cases with the curator-panel
+  // Decorate every scene that has display cases with the curator-panel
   // option button. What stands in each case is the panel's job to show — the
   // description doesn't table it, the way a chest doesn't table its contents.
   // Scenes flagged `showsReputation` also get the standing reputation line.
@@ -463,7 +432,6 @@ export default function curatorPlugin(engine) {
     new CuratorUI(engine).render();
   });
 
-  // 3. Register custom action handlers
   engine.registerAction('build_wing', (action, engine) => {
     const hall = findHall(engine);
     // No layout, no construction: a built wing's map geometry is derived from
@@ -496,7 +464,7 @@ export default function curatorPlugin(engine) {
     new CuratorUI(engine).render();
   });
 
-  // 4. Surface the reputation stat as a sheet row — rendered by the sheet
+  // Surface the reputation stat as a sheet row — rendered by the sheet
   // build itself (see engine.registerSheetRow), so no DOM injection here.
   engine.registerSheetRow({
     label: engine.t('plugin.curator.reputationLabel'),
@@ -528,7 +496,7 @@ export class CuratorUI {
     // the room (the panel opens on arrival and IS what the room looks like);
     // drilled into a case, it is the case, so the heading follows you in.
     const display = context
-      ? getDisplaysForScene(this.engine.state, sceneId).find(d => d.id === context)
+      ? findDisplay(this.engine.state, sceneId, context)
       : null;
     const { panel, container, skillsContainer } = resetOptionsPanel(display?.name ?? (scene.title || scene.name));
 
@@ -592,9 +560,7 @@ export class CuratorUI {
   // museum room ends with one, so building is always in the same place: a case
   // in a wing, a whole wing in the hall.
   _constructionSection() {
-    const section = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
-    section.appendChild(createElement('div', CSS.SECTION_HEADING, this.engine.t('plugin.curator.constructionHeading')));
-    return section;
+    return buildPanelSection(this.engine.t('plugin.curator.constructionHeading'));
   }
 
   // The hall: the way out of the museum, then a door into every wing in slot
@@ -603,8 +569,7 @@ export class CuratorUI {
   _renderHall(container, panel, skillsContainer, scene) {
     container.appendChild(this._exitButton(scene));
 
-    const wingsSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
-    wingsSection.appendChild(createElement('div', CSS.SECTION_HEADING, this.engine.t('plugin.curator.wingsHeading')));
+    const wingsSection = buildPanelSection(this.engine.t('plugin.curator.wingsHeading'));
 
     const wings = Object.entries(this.engine.data.scenes)
       .filter(([, s]) => Number.isInteger(s.museumSlot))
@@ -654,13 +619,11 @@ export class CuratorUI {
   }
 
   _renderDashboard(container, panel, skillsContainer, sceneId, scene) {
-    // 1. Out of the panel — and, in a room that is only its exhibits, out of
+    // Out of the panel — and, in a room that is only its exhibits, out of
     // the room itself.
     container.appendChild(this._exitButton(scene));
 
-    // 2. Exhibits Section
-    const exhibitsSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
-    exhibitsSection.appendChild(createElement('div', CSS.SECTION_HEADING, this.engine.t('plugin.curator.curatorHeadingExhibits')));
+    const exhibitsSection = buildPanelSection(this.engine.t('plugin.curator.curatorHeadingExhibits'));
 
     const displays = getDisplaysForScene(this.engine.state, sceneId);
     if (displays.length > 0) {
@@ -689,7 +652,7 @@ export class CuratorUI {
 
     panel.insertBefore(exhibitsSection, skillsContainer);
 
-    // 3. Construction — what the player can add to the room, last, under its
+    // Construction — what the player can add to the room, last, under its
     // own heading (the hall's wing-building sits in the same place).
     const installCost = this.engine.pluginConfig('curator').installCost ?? 50;
     const p = this.engine.state.getPlayer();
@@ -718,8 +681,7 @@ export class CuratorUI {
   }
 
   _renderInspectDisplay(container, panel, skillsContainer, sceneId, displayId) {
-    const displays = getDisplaysForScene(this.engine.state, sceneId);
-    const display = displays.find(d => d.id === displayId);
+    const display = findDisplay(this.engine.state, sceneId, displayId);
     if (!display || !display.item) {
       this.render('dashboard');
       return;
@@ -729,7 +691,7 @@ export class CuratorUI {
     const itemData = this.engine.data.items[itemId];
     const name = getItemLabel(this.engine.data.items, itemId);
 
-    // 1. The way out. The panel heading names the case right above this, so
+    // The way out. The panel heading names the case right above this, so
     // the button carries the verb alone; the log line spells the case out.
     const backBtn = buildOptionButton(this.engine.t('plugin.curator.curatorBack'));
     backBtn.onclick = () => {
@@ -738,25 +700,19 @@ export class CuratorUI {
     };
     container.appendChild(backBtn);
 
-    // 2. Display Details Section
     // No section heading: the panel's own heading is the case's name now, and
     // this section holds nothing but the relic standing in it.
-    const detailSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
+    const detailSection = buildPanelSection();
 
     // Item Info — the exhibited item as a standard card, built by the same
     // helpers the inventory uses (buildCard, itemCardStats), so a relic in its
     // case reads exactly as it does in the player's bag. And like there, the
     // card IS the control: clicking the relic takes it out of the case.
-    const t = this.engine.t.bind(this.engine);
-    const story = itemData?.story
-      ? { granted: this.engine.state.getStoryChapters(itemData.id).length, total: itemData.story.chapters.length }
-      : null;
     const itemCard = buildCard({
       tag: 'button',
       title: name,
       body: itemData?.description,
-      stats: itemData ? itemCardStats(t, itemData, this.engine.state.getPlayer().attributes,
-        { uses: this.engine.state.getItemUses(itemData.id), items: this.engine.data.items, story }) : undefined,
+      stats: itemData ? itemCardStatsFor(this.engine, itemData) : undefined,
     });
     itemCard.onclick = () => {
       takeItemFromDisplay(this.engine.state, sceneId, displayId);
@@ -769,7 +725,7 @@ export class CuratorUI {
     // (take it out, like every other exhibit), so reading is its own act
     // below it. Offered however thin the telling: a half-heard story reads as
     // the half-filled exhibit it is.
-    if (story) {
+    if (itemData?.story) {
       const readBtn = buildOptionButton(this.engine.t('plugin.curator.displayRead', { name }));
       readBtn.onclick = () => this.engine.readStory(itemId);
       detailSection.appendChild(readBtn);
@@ -779,14 +735,13 @@ export class CuratorUI {
   }
 
   _renderSelectArtifact(container, panel, skillsContainer, sceneId, displayId) {
-    const displays = getDisplaysForScene(this.engine.state, sceneId);
-    const display = displays.find(d => d.id === displayId);
+    const display = findDisplay(this.engine.state, sceneId, displayId);
     if (!display) {
       this.render('dashboard');
       return;
     }
 
-    // 1. The way out. Same words as the filled case's back button; the log
+    // The way out. Same words as the filled case's back button; the log
     // line is what distinguishes them (this one records the case left empty).
     const cancelBtn = buildOptionButton(this.engine.t('plugin.curator.curatorBack'));
     cancelBtn.onclick = () => {
@@ -796,11 +751,8 @@ export class CuratorUI {
     };
     container.appendChild(cancelBtn);
 
-    // 2. Select Artifact Section
-    const selectSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
-    selectSection.appendChild(createElement('div', CSS.SECTION_HEADING, this.engine.t('plugin.curator.curatorSelectArtifact')));
+    const selectSection = buildPanelSection(this.engine.t('plugin.curator.curatorSelectArtifact'));
 
-    // Get eligible player inventory items
     const player = this.engine.state.getPlayer();
     const isEquipped = (itemId) => Object.values(player.equipment).includes(itemId);
 

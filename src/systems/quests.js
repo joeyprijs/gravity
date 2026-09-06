@@ -38,14 +38,10 @@ export class QuestSystem {
     });
   }
 
-  /**
-   * Applies a questTrigger block to mission state.
-   *
-   * @param {{ mission: string, status?: ('active'|'complete'|'failed'), stage?: string }} triggerData
-   *   Either a status transition or a forward stage jump (not both).
-   * @returns {boolean} True if a mission transition occurred; false if skipped
-   *   (unknown mission, terminal status, or no state change needed).
-   */
+  // Applies a questTrigger block ({ mission, status? | stage? } — a status
+  // transition or a forward stage jump, not both). Returns true if a mission
+  // transition occurred; false if skipped (unknown mission, terminal status,
+  // or no state change needed).
   handleTrigger(triggerData) {
     if (!triggerData.mission) return false;
     const mId = triggerData.mission;
@@ -83,8 +79,7 @@ export class QuestSystem {
 
   // An explicit stage jump from a trigger. Forward-only: a trigger naming an
   // earlier (or the current) stage is a no-op, so re-running its pipeline
-  // never regresses the quest. The stage being left counts as completed —
-  // its rewards fire; stages skipped over grant nothing.
+  // never regresses the quest.
   _jumpToStage(mId, mData, targetId) {
     const stages = mData.stages ?? [];
     const targetIdx = stages.findIndex(s => s.id === targetId);
@@ -98,13 +93,9 @@ export class QuestSystem {
     return true;
   }
 
-  /**
-   * Re-evaluates advanceWhen for active staged missions and advances every
-   * stage whose condition holds — chaining, since each new stage may already
-   * be satisfied too. Called from the mutation hook and after activation.
-   *
-   * @param {string|null} [missionId=null] - Limit the check to one mission.
-   */
+  // Re-evaluates advanceWhen for active staged missions (or just missionId),
+  // chaining through satisfied stages. Called from the mutation hook and after
+  // activation.
   checkAutoAdvance(missionId = null) {
     if (this._checking) return;
     this._checking = true;
@@ -137,14 +128,9 @@ export class QuestSystem {
     this.engine.log(LOG.QUEST, this.engine.t('quest.stageAdvanced', { name: mData.name, description: toStage.description }), 'quest');
   }
 
-  /**
-   * Marks a mission complete, logs the result, and grants rewards: the
-   * current stage's (completing the mission finishes that stage too), then
-   * the mission's own.
-   *
-   * @param {string} mId - The mission id.
-   * @param {object} mData - The mission definition (name, stages, missionRewards).
-   */
+  // Marks a mission complete, logs the result, and grants rewards: the
+  // current stage's (completing the mission finishes that stage too), then
+  // the mission's own.
   completeMission(mId, mData) {
     const cur = (mData.stages ?? []).find(s => s.id === this.engine.state.getMissionStage(mId));
     this.engine.state.setMissionStatus(mId, MISSION_STATUS.COMPLETE);

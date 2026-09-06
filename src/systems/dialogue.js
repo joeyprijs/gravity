@@ -1,5 +1,5 @@
 import { createElement, buildSceneDescription, buildOptionButton, isSpecialItem, resetOptionsPanel } from '../core/utils.js';
-import { ACTIONS, CHECK_KEYS, CSS, FLAG_KEYS, LOG } from '../core/config.js';
+import { CHECK_KEYS, CSS, FLAG_KEYS, LOG } from '../core/config.js';
 import { evaluateCondition } from './condition.js';
 import {
   runCheckAttempt, checkPresentation, normalizeOutcomes,
@@ -10,7 +10,7 @@ import {
 // Actions that move the conversation to a new panel (node, store, or scene).
 // _runActions reports these as "navigated" so callers skip re-rendering the
 // current node's options on top of the new panel.
-const DIALOGUE_NAV_ACTIONS = new Set([ACTIONS.GO_TO_CONVERSATION, ACTIONS.TRADE, ACTIONS.LEAVE]);
+const DIALOGUE_NAV_ACTIONS = new Set(['goToConversation', 'trade', 'leave']);
 
 // DialogueSystem manages NPC conversation trees — branching nodes with
 // skill-checked responses — and the merchant store (buy/sell). All
@@ -51,11 +51,11 @@ export class DialogueSystem {
       fn(action, engine);
     };
 
-    this.engine.registerAction(ACTIONS.GO_TO_CONVERSATION, requireNPC(ACTIONS.GO_TO_CONVERSATION, (action) => {
+    this.engine.registerAction('goToConversation', requireNPC('goToConversation', (action) => {
       this.renderDialogue(action.node);
     }));
 
-    this.engine.registerAction(ACTIONS.TRADE, requireNPC(ACTIONS.TRADE, (action) => {
+    this.engine.registerAction('trade', requireNPC('trade', (action) => {
       const rawPct = typeof action.tradeDiscount === 'string'
         ? parseFloat(action.tradeDiscount)
         : (action.tradeDiscount ?? 0);
@@ -73,20 +73,15 @@ export class DialogueSystem {
       this.renderStore();
     }));
 
-    this.engine.registerAction(ACTIONS.LEAVE, (_action, engine) => {
+    this.engine.registerAction('leave', (_action, engine) => {
       engine.renderScene(this.engine.state.getCurrentSceneId());
     });
 
-    this.engine.registerAction(ACTIONS.QUEST_TRIGGER, (action, engine) => {
+    this.engine.registerAction('questTrigger', (action, engine) => {
       engine.handleQuestTrigger(action);
     });
   }
 
-  /**
-   * Initiates a conversation branch with a specific NPC.
-   *
-   * @param {string} npcId - The NPC database identifier to talk to.
-   */
   startDialogue(npcId) {
     this.activeDiscount = 0;
     const npc = this.engine.data.npcs[npcId];
@@ -133,17 +128,11 @@ export class DialogueSystem {
     return navigated;
   }
 
-  /**
-   * Renders the conversation interface for a specific dialogue node.
-   * Compiles player reply choices and checks dynamic skill check gates.
-   *
-   * @param {string} [nodeId="start"] - The node key inside the NPC's conversation tree.
-   * @param {string|null} [overrideText=null] - Text override (e.g. store farewell
-   *   lines). An override means the node is being re-shown, not entered, so its
-   *   action pipeline is NOT re-run (a greeting gift must not be granted again
-   *   every time the player backs out of the store).
-   * @param {boolean} [optionsOnly=false] - If true, skips appending narrative text blocks.
-   */
+  // Renders a conversation node: its text and the player's reply choices with
+  // their skill-check gates. overrideText (e.g. a store farewell line) means
+  // the node is being re-shown, not entered, so its action pipeline is NOT
+  // re-run (a greeting gift must not be granted again every time the player
+  // backs out of the store). optionsOnly skips the narrative text blocks.
   renderDialogue(nodeId = 'start', overrideText = null, optionsOnly = false) {
     const node = this.currentNPC.conversations[nodeId];
     if (!node) {
@@ -155,10 +144,7 @@ export class DialogueSystem {
       const displayString = overrideText || node.npcText;
 
       if (nodeId === 'start') {
-        this.engine.openScene(CSS.SCENE_DIALOGUE);
-        this.engine.currentSceneEl.appendChild(
-          buildSceneDescription(this.currentNPC.name, `[${this.currentNPC.name}] ${displayString}`)
-        );
+        this._openDialogueScene(displayString);
       } else {
         this.engine.log(this.currentNPC.name, displayString);
       }
@@ -203,10 +189,8 @@ export class DialogueSystem {
         this.engine.log(LOG.PLAYER, p.displayText, 'choice');
 
         // Dialogue is free by default; an explicit timeCost on a response
-        // advances the clock (browsing a store never costs time). Checked
-        // responses charge after the roll is narrated, so the passage of time
-        // reads as a consequence of the attempt; plain responses charge up
-        // front, before their pipeline can navigate away.
+        // advances the clock (browsing a store never costs time). Charging
+        // order follows SceneRenderer._chargeTime.
         if (needsCheck) {
           spendRetryCost(this.engine, p.gate);
           let navigated = false;
@@ -248,18 +232,17 @@ export class DialogueSystem {
     this.engine.scrollNarrativeToBottom();
   }
 
-  /**
-   * Renders a basic, parameterless fallback greeting screen for simple NPCs.
-   *
-   * @param {string|null} [overrideText=null] - Narrative text override.
-   */
-  renderDialogueFallback(overrideText = null) {
-    const displayString = overrideText || this.engine.t('dialogue.greeting', { name: this.currentNPC.name });
-
+  // A new dialogue block in the narrative, headed by the NPC's opening line.
+  _openDialogueScene(text) {
     this.engine.openScene(CSS.SCENE_DIALOGUE);
     this.engine.currentSceneEl.appendChild(
-      buildSceneDescription(this.currentNPC.name, `[${this.currentNPC.name}] ${displayString}`)
+      buildSceneDescription(this.currentNPC.name, `[${this.currentNPC.name}] ${text}`)
     );
+  }
+
+  // The greeting screen for an NPC with no conversation tree.
+  renderDialogueFallback(overrideText = null) {
+    this._openDialogueScene(overrideText || this.engine.t('dialogue.greeting', { name: this.currentNPC.name }));
 
     const { container } = resetOptionsPanel(
       this.engine.t('ui.locationDialogue', { name: this.currentNPC.name })
@@ -292,11 +275,8 @@ export class DialogueSystem {
     return flagVal !== false ? flagVal : npcAmount;
   }
 
-  /**
-   * Renders the interactive Merchant Shop UI, listing buy/sell items and dynamic prices.
-   *
-   * @param {boolean} [isUpdate=false] - If true, skips appending narrative text blocks.
-   */
+  // Renders the merchant store: buy/sell lists with their prices. isUpdate
+  // skips the narrative text blocks.
   renderStore(isUpdate = false) {
     if (!isUpdate) {
       // Pull saved discounts from previous conversation branches if active
@@ -320,7 +300,7 @@ export class DialogueSystem {
         buildSceneDescription(
           this.engine.t('dialogue.merchantWaresTitle', { name: this.currentNPC.name }),
           greeting,
-          this.engine.t.bind(this.engine)
+          this.engine.t
         )
       );
     }

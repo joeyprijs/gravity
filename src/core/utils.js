@@ -1,14 +1,8 @@
 import { CSS, EL, HAND_SLOT_KIND } from './config.js';
 import { iconHtml } from './icons.js';
 
-/**
- * Reads a value from a nested object using a dot-separated path.
- * e.g. getByPath(player, 'resources.hp.current') → player.resources.hp.current
- *
- * @param {object} obj - The object to read from.
- * @param {string} path - Dot-separated path (e.g. 'resources.hp.current').
- * @returns {*} The value at the path, or undefined if any segment is missing.
- */
+// Reads a value from a nested object using a dot-separated path, e.g.
+// getByPath(player, 'resources.hp.current'). Undefined if any segment is missing.
 export function getByPath(obj, path) {
   return path.split('.').reduce((cur, key) => cur?.[key], obj);
 }
@@ -17,15 +11,8 @@ export function getByPath(obj, path) {
 // so setByPath can never be used as a prototype-pollution sink.
 const UNSAFE_PATH_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
-/**
- * Sets a value on a nested object using a dot-separated path.
- * e.g. setByPath(player, 'resources.hp.max', 15)
- * Path segments touching the prototype chain are rejected.
- *
- * @param {object} obj - The target object.
- * @param {string} path - Dot-separated path (e.g. 'resources.hp.max').
- * @param {*} value - The value to assign at the path.
- */
+// Sets a value on a nested object using a dot-separated path, e.g.
+// setByPath(player, 'resources.hp.max', 15). Prototype-chain segments are rejected.
 export function setByPath(obj, path, value) {
   const parts = path.split('.');
   if (parts.some(p => UNSAFE_PATH_KEYS.has(p))) return;
@@ -34,20 +21,11 @@ export function setByPath(obj, path, value) {
   cur[parts[parts.length - 1]] = value;
 }
 
-/**
- * Creates a new DOM element.
- *
- * Content is set via textContent — game data (item names, descriptions,
- * locale strings) is always treated as plain text, never HTML. The only
- * sanctioned HTML channels are scene description bodies (see
- * buildSceneDescription) and engine-authored structural templates; dynamic
- * values embedded in those must go through escapeHtml().
- *
- * @param {string} tag - The HTML tag name.
- * @param {string|string[]} [className] - Optional CSS class names.
- * @param {string} [textContent] - Optional plain-text content.
- * @returns {HTMLElement} The constructed DOM element.
- */
+// Creates a DOM element. Content is set via textContent — game data (item
+// names, descriptions, locale strings) is always treated as plain text, never
+// HTML. The only sanctioned HTML channels are scene description bodies (see
+// buildSceneDescription) and engine-authored structural templates; dynamic
+// values embedded in those must go through escapeHtml().
 export function createElement(tag, className = '', textContent = '') {
   const el = document.createElement(tag);
   if (Array.isArray(className)) el.classList.add(...className.filter(Boolean));
@@ -56,13 +34,8 @@ export function createElement(tag, className = '', textContent = '') {
   return el;
 }
 
-/**
- * Escapes HTML special characters so a string can be safely embedded in an
- * HTML fragment. Use for any dynamic value (player input, save-file data)
- * that flows into innerHTML.
- * @param {string} str - The raw string.
- * @returns {string} The escaped string.
- */
+// Escapes HTML special characters. Use for any dynamic value (player input,
+// save-file data) that flows into innerHTML.
 export function escapeHtml(str) {
   return String(str)
     .replaceAll('&', '&amp;')
@@ -81,7 +54,7 @@ const sectionExpandState = new Map();
 // once per UI object and the game reloads on restart, so this never grows.
 const sectionGroups = new Set();
 
-/** Shuts every section in every panel. Called on tab switch. */
+// Shuts every section in every panel. Called on tab switch.
 export function collapseAllSections() {
   for (const group of sectionGroups) group.collapseAll();
 }
@@ -93,11 +66,6 @@ export function collapseAllSections() {
  * switch. Collapsing hides the body element in place — no re-render, so its
  * bindings and buttons survive. Used by the inventory panel and the sheet
  * tab, each with its own group key.
- *
- * @param {string} groupKey - Identifies this section group's in-memory state.
- * @returns {{isCollapsed: function(string): boolean,
- *   wire: function(HTMLElement, HTMLElement, string): void,
- *   collapseAll: function(): void}}
  */
 export function createSectionToggles(groupKey) {
   let expanded = sectionExpandState.get(groupKey);
@@ -145,13 +113,14 @@ export function createSectionToggles(groupKey) {
   return group;
 }
 
-/**
- * Clears all child elements from a parent DOM element.
- * @param {HTMLElement|string} elementOrId - The element or its ID.
- */
-export function clearElement(elementOrId) {
-  const el = typeof elementOrId === 'string' ? document.getElementById(elementOrId) : elementOrId;
-  if (el) el.innerHTML = '';
+// Clears all children of an element, given the element or its id.
+export function clearElement(el) {
+  el.innerHTML = '';
+}
+
+// A `{ current, max }` resource pool, as opposed to a flat number like gold.
+export function isResourcePool(value) {
+  return !!(value && typeof value === 'object' && 'current' in value);
 }
 
 // The one cursor-following hover tooltip, shared by every surface that names
@@ -161,11 +130,7 @@ export function clearElement(elementOrId) {
 // on first use; a single element suffices since only one thing is hovered.
 let cursorTooltipEl = null;
 
-/**
- * Shows the shared tooltip with the given label, beside the cursor.
- * @param {string} label - The text to show.
- * @param {MouseEvent} e - The mousemove event carrying the cursor position.
- */
+// Shows the shared tooltip with the given label, beside the cursor (e is the mousemove event).
 export function showCursorTooltip(label, e) {
   if (!cursorTooltipEl) {
     cursorTooltipEl = document.createElement('div');
@@ -182,14 +147,8 @@ export function hideCursorTooltip() {
   if (cursorTooltipEl) cursorTooltipEl.hidden = true;
 }
 
-/**
- * Returns the display label for an item: its name from the items data map
- * (falling back to the raw ID) plus an "(xN)" suffix when amount > 1.
- * @param {object} itemsData - The item database (engine.data.items).
- * @param {string} itemId - The item identifier.
- * @param {number} [amount=1] - Stack size.
- * @returns {string} e.g. "Healing Potion (x3)".
- */
+// The display label for an item: its name (falling back to the raw id) plus an
+// "(xN)" suffix when amount > 1, e.g. "Healing Potion (x3)".
 export function getItemLabel(itemsData, itemId, amount = 1) {
   const name = itemsData[itemId]?.name || itemId;
   return amount > 1 ? `${name} (x${amount})` : name;
@@ -200,8 +159,6 @@ export function getItemLabel(itemsData, itemId, amount = 1) {
  * part with by choice: not sellable, not displayable, not stowable in a chest.
  * Every surface that parts the player from an item filters on this. Scripted
  * effects (a quest turn-in, a scene that consumes it) still remove it normally.
- * @param {object|null} itemData - The item definition from data/items.
- * @returns {boolean}
  */
 export function isSpecialItem(itemData) {
   return itemData?.type === 'Special';
@@ -214,10 +171,6 @@ export function isSpecialItem(itemData) {
  *
  * The map draws buildings from this and the interactions panel sorts doors
  * apart from roads by it — both ask here so they can't disagree.
- *
- * @param {object|null} scene - The scene definition.
- * @param {Object<string, object>} regions - The manifest's regions map.
- * @returns {boolean}
  */
 export function isInteriorScene(scene, regions) {
   return !!(scene?.interior || regions?.[scene?.region]?.interior);
@@ -239,11 +192,8 @@ export const COMPASS_POINTS = Object.freeze(['N', 'E', 'S', 'W']);
  * Derived from map coordinates rather than authored in prose ("take the forge
  * lane east"), so the game's one piece of navigational meaning isn't trapped
  * in a string a translator has to get right. Rounded to a compass point on
- * purpose: a road bearing 340° reads as north to anyone looking at it.
- *
- * @param {object|null} from - Scene the player is standing in.
- * @param {object|null} to - Scene the road leads to.
- * @returns {string|null} A COMPASS_POINTS entry, or null without geometry for both.
+ * purpose: a road bearing 340° reads as north to anyone looking at it. Null
+ * unless both scenes have geometry.
  */
 export function compassPoint(from, to) {
   const a = from?.mapDefinitions;
@@ -266,11 +216,6 @@ export function compassPoint(from, to) {
 // item that goes into no slot at all (a potion, a key).
 const HAND_TYPES = new Set(['Weapon', 'Spell']);
 
-/**
- * The equipment slot kind an item asks for, or null when it wears nowhere.
- * @param {object|null} itemData - The item definition from data/items.
- * @returns {string|null}
- */
 export function itemSlotKind(itemData) {
   if (!itemData) return null;
   return itemData.slot ?? (HAND_TYPES.has(itemData.type) ? HAND_SLOT_KIND : null);
@@ -281,11 +226,6 @@ export function itemSlotKind(itemData) {
  * kind (itemStats.slotKinds.<kind>), falling back to the raw id. Slot ids are
  * semantic (`left_ring`), so the wording is the locale's to own — a game in
  * another language renames the slot without touching rules.json.
- *
- * @param {function} t - The engine's translate function.
- * @param {string} id - A slot id, or a slot kind when `kind` is true.
- * @param {boolean} [kind=false] - Look the name up as a kind, not an instance.
- * @returns {string}
  */
 export function slotLabel(t, id, kind = false) {
   const key = kind ? `itemStats.slotKinds.${id}` : `ui.equipmentSlots.${id}`;
@@ -298,10 +238,6 @@ export function slotLabel(t, id, kind = false) {
  * also the order they render in. Slots are game-defined
  * (rules.playerDefaults.equipmentSlots); only the `hand` kind is special to
  * the engine, because combat reads the player's attacks from it.
- *
- * @param {object|null} rules - The loaded rules object.
- * @param {string} kind - The slot kind (e.g. 'hand', 'ring').
- * @returns {string[]} Slot ids.
  */
 export function slotsOfKind(rules, kind) {
   return (rules?.playerDefaults?.equipmentSlots ?? [])
@@ -309,12 +245,8 @@ export function slotsOfKind(rules, kind) {
     .map(slot => slot.id);
 }
 
-/**
- * The slot ids a weapon or spell can occupy. Combat reads the player's
- * attacks from these, and an enemy's weapon out of the same kind.
- * @param {object|null} rules - The loaded rules object.
- * @returns {string[]} Slot ids, in declaration order.
- */
+// The slot ids a weapon or spell can occupy. Combat reads the player's
+// attacks from these, and an enemy's weapon out of the same kind.
 export function handSlots(rules) {
   return slotsOfKind(rules, HAND_SLOT_KIND);
 }
@@ -324,8 +256,6 @@ export function handSlots(rules) {
  * attributeBonuses map, plus the legacy armorClassBonus folded into 'ac'.
  * equipItem/unequipItem apply these on swap, so a relic can raise any
  * declared attribute the way armor has always raised AC.
- * @param {object|null} itemData - The item definition, or null for an empty slot.
- * @returns {Object<string, number>}
  */
 export function equipmentAttributeBonuses(itemData) {
   const map = { ...(itemData?.attributes?.attributeBonuses || {}) };
@@ -344,9 +274,6 @@ const HIDDEN_ITEM_ATTRS = new Set(['teleportScene', 'attackAttribute', 'actionPo
  * back to the capitalized id. Takes the translate function directly so
  * DOM-free helpers can use it; skillLabel (skill-checks.js) is the
  * engine-flavored wrapper.
- * @param {function} t - The engine's translate function.
- * @param {string} attrId - Attribute ID (e.g. "perception").
- * @returns {string}
  */
 export function attributeLabel(t, attrId) {
   const key = `actions.skillBadgeFree.${attrId}`;
@@ -361,16 +288,11 @@ export function attributeLabel(t, attrId) {
  * attribute keys fall back to "key: value". Shared by the combat attack
  * buttons and the inventory panel so an item reads the same in both.
  *
- * @param {function} t - The engine's translate function.
- * @param {object} itemData - The item definition from data/items.
- * @param {Object<string, number>} [attributes] - The wielder's attributes,
- *   used to show the governing attribute's current modifier.
- * @param {{current: number, max: number}|null} [uses] - The item's remaining
- *   rest-limited uses (state.getItemUses) — live state, so the caller looks
- *   it up. Null/omitted renders no uses line.
- * @param {Object<string, object>} [items] - The loaded item definitions, used
- *   to name the spells this item grants. Omitted renders no grants line.
- * @returns {string[]} Stat lines, possibly empty.
+ * `attributes` are the wielder's, to show the governing attribute's current
+ * modifier. `uses` is the item's remaining rest-limited uses
+ * (state.getItemUses) — live state, so the caller looks it up; null renders no
+ * uses line. `items` (the loaded definitions) names granted spells; omitted
+ * renders no grants line.
  */
 export function itemStatLines(t, itemData, attributes = {}, uses = null, items = null) {
   const lines = [];
@@ -445,22 +367,12 @@ export function itemStatLines(t, itemData, attributes = {}, uses = null, items =
  * as a card (inventory, the curator's exhibits) so the same item reads the
  * same in all of them.
  *
- * @param {function} t - The engine's translate function.
- * @param {object} itemData - The item definition from data/items.
- * @param {Object<string, number>} [attributes] - The wielder's attributes.
- * @param {object} [options]
- * @param {boolean} [options.slot=true] - Whether to lead with the slot row. The
- *   equipped list passes false: its cards already say "Equipped: Torso", and a
- *   card must not state the same fact twice.
- * @param {{current: number, max: number}|null} [options.uses=null] - Remaining
- *   rest-limited uses (see itemStatLines).
- * @param {Object<string, object>|null} [options.items=null] - The loaded item
- *   definitions, to name granted spells (see itemStatLines).
- * @param {{granted: number, total: number}|null} [options.story=null] - A
- *   story book's heard-chapter progress — the card's visible sign that
- *   listening filled more pages.
- * @returns {string[]|undefined} Stat lines, or undefined if the item has none
- *   (buildCard's `stats` takes undefined for "no stat block").
+ * Options: `slot: false` drops the leading slot row — the equipped list passes
+ * it because its cards already say "Equipped: Torso", and a card must not state
+ * the same fact twice. `uses` and `items` are as in itemStatLines. `story`
+ * ({granted, total}) is a story book's heard-chapter progress — the card's
+ * visible sign that listening filled more pages. Returns undefined when the
+ * item has no lines (buildCard's `stats` takes undefined for "no stat block").
  */
 export function itemCardStats(t, itemData, attributes = {}, { slot = true, uses = null, items = null, story = null } = {}) {
   const lines = itemStatLines(t, itemData, attributes, uses, items);
@@ -476,17 +388,32 @@ export function itemCardStats(t, itemData, attributes = {}, { slot = true, uses 
   return lines.length > 0 ? lines : undefined;
 }
 
+// itemCardStats bound to an engine: the player's attributes, the item's
+// remaining uses and story progress come from live state.
+export function itemCardStatsFor(engine, itemData, options = {}) {
+  const story = itemData.story
+    ? { granted: engine.state.getStoryChapters(itemData.id).length, total: itemData.story.chapters.length }
+    : null;
+  return itemCardStats(engine.t, itemData, engine.state.getPlayer().attributes,
+    { ...options, uses: engine.state.getItemUses(itemData.id), items: engine.data.items, story });
+}
+
 /**
  * Resets the scene options panel to an empty state: clears the option button
  * container, removes injected option sections, and clears + hides the headed
  * sections (conversations, actions, skills). The location reminder is
  * re-appended as the container's first child; pass reminderText to also update
  * its text.
- * @param {string|null} [reminderText=null] - New text for the location reminder.
- * @returns {{panel: HTMLElement, container: HTMLElement,
- *   talkContainer: HTMLElement, actionsContainer: HTMLElement,
- *   skillsContainer: HTMLElement, reminder: HTMLElement|null}}
  */
+// A panel section built at render time (chest contents, an enemy's attacks, a
+// museum's wings) with its heading; null skips the heading. The caller fills
+// it and inserts it before the skills container of resetOptionsPanel().
+export function buildPanelSection(headingText = null) {
+  const section = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
+  if (headingText) section.appendChild(createElement('div', CSS.SECTION_HEADING, headingText));
+  return section;
+}
+
 export function resetOptionsPanel(reminderText = null) {
   const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
   const container = document.getElementById(EL.SCENE_OPTIONS);
@@ -519,30 +446,20 @@ export function resetOptionsPanel(reminderText = null) {
  * matched (the engine treats a leading bracket as a speaker/log label); a
  * no-op when the text has no leading prefix. The brackets are marker syntax,
  * not display — the rendered label drops them (weight and color carry it).
- *
- * @param {string} html - Trusted HTML that may start with a "[label]" prefix.
- * @returns {string} The HTML with any leading prefix wrapped in a span.
  */
-export function wrapLogPrefix(html) {
+function wrapLogPrefix(html) {
   return String(html).replace(
     /^(\s*)\[([^\]]*)\]/,
     `$1<span class="${CSS.SCENE_LOG_PREFIX}">$2</span>`
   );
 }
 
-/**
- * Prefixes a description body with the translated "[Narrator]" label, wrapping
- * the body in a span that scopes ::first-letter styling (drop caps) to
- * narration. A body that already carries a leading "[label]" (NPC speech)
- * stays unwrapped on purpose. Shared by buildSceneDescription and the
- * in-place description refresh so the two can't drift.
- *
- * @param {string} body - Authored HTML body.
- * @param {((key: string) => string)|null} [t=null] - Locale lookup (engine.t);
- *   plain "Narrator" when omitted or untranslated.
- * @returns {string}
- */
-export function narratorLabelHtml(body, t = null) {
+// Prefixes a description body with the translated "[Narrator]" label (plain
+// "Narrator" when t is omitted or has no translation), wrapping the body in a
+// span that scopes ::first-letter styling (drop caps) to the narrator's text.
+// A body that already carries a leading "[label]" (NPC speech) stays unwrapped
+// on purpose.
+function narratorLabelHtml(body, t = null) {
   if (!body || /^\s*\[/.test(body)) return body;
   const translated = t ? t('log.Narrator') : null;
   const label = translated && translated !== 'log.Narrator' ? translated : 'Narrator';
@@ -556,11 +473,7 @@ export function narratorLabelHtml(body, t = null) {
  * title is set via textContent (plain text — NPC/scene names are not trusted HTML).
  * body is set via innerHTML and may contain authored HTML (<br>, <span>, etc.).
  * Omit body (or pass null) for scenes that have no description paragraph.
- *
- * @param {string} title - The scene/speaker title.
- * @param {string|null} [body=null] - Authored HTML body, or null for none.
- * @param {((key: string) => string)|null} [t=null] - Locale lookup (engine.t)
- *   used to translate the Narrator label; plain "Narrator" when omitted.
+ * t (engine.t) translates the Narrator label.
  */
 export function buildSceneDescription(title, body = null, t = null) {
   const div = createElement('div', CSS.SCENE_DESCRIPTION);
@@ -583,15 +496,8 @@ export function buildSceneDescription(title, body = null, t = null) {
  * are made of, shared so plugin rows injected into them (e.g. the curator's
  * reputation) can't drift from the sheet's markup. The label is escaped and
  * marked with its icon; valueHtml and trailingHtml are engine-authored markup
- * (data-stat-bind spans, the point-buy spend button).
- *
- * @param {object} row
- * @param {string} row.label - Display label (plain text).
- * @param {string} row.valueHtml - HTML for the value cell.
- * @param {string} [row.icon] - Icon name (see core/icons.js); omit for none.
- * @param {string} [row.extraClasses] - Extra classes on the row element.
- * @param {string} [row.trailingHtml] - Markup after the value cell.
- * @returns {string} HTML for one .attr-list__row.
+ * (data-stat-bind spans, the point-buy spend button). icon is a name from
+ * core/icons.js.
  */
 export function attrRowHtml({ label, valueHtml, icon = '', extraClasses = '', trailingHtml = '' }) {
   return `<div class="attr-list__row${extraClasses ? ` ${extraClasses}` : ''}">
@@ -624,11 +530,6 @@ export function buildOptionButton(text, reqText = null) {
  * marker is positioned against its card, every ancestor above the card is
  * `static`, and where `:has()` is unsupported the arrow would resolve against
  * the viewport and land in a page corner.
- *
- * @param {object} engine - For the locale table and the manifest's regions.
- * @param {object} scene - The scene the player is standing in.
- * @param {object|null} destination - The scene the option leads to.
- * @param {HTMLElement} button - The option button to mark and append to.
  */
 export function addDirectionMarker(engine, scene, destination, button) {
   const regions = engine.data.regions;
@@ -683,17 +584,9 @@ function buildStatLine(tag, line) {
  *
  * A card the player acts on is a <button class="card"> — the whole card is the
  * control (scene options, chest rows, inventory items). Cards with nothing to
- * click are <div>/<li> (quests, keepsakes).
- *
- * @param {object} spec
- * @param {string} [spec.tag='div'] - 'button' | 'div' | 'li'.
- * @param {string} [spec.title] - Title line.
- * @param {string|string[]} [spec.body] - Muted line(s); empties are skipped.
- * @param {string|string[]} [spec.stats] - Accent stat lines. Strings (array
- *   elements included) are split on \n so game packs with multi-line locale
- *   strings keep working.
- * @param {string[]} [spec.classes] - Extra classes on the card element.
- * @returns {HTMLElement}
+ * click are <div>/<li> (quests, keepsakes). tag is 'button' | 'div' | 'li';
+ * empty body lines are skipped; stats strings are split on \n so game packs
+ * with multi-line locale strings keep working.
  */
 export function buildCard({ tag = 'div', title, body, stats, classes = [] } = {}) {
   // Buttons may not contain block elements — inline children only.

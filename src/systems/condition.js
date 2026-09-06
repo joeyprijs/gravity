@@ -21,17 +21,10 @@
 import { MISSION_STATUS } from '../core/config.js';
 import { getDay, getSegment } from './time.js';
 
-/**
- * Compares a live numeric value against a condition operand: a bare number
- * (meaning at-least, the common authoring case) or an operator object —
- * at_least, more_than, at_most, less_than, is.
- *
- * @param {number} actual - The live value from state.
- * @param {number|object} operand - The comparison target.
- * @returns {boolean} True if the comparison holds.
- */
+// Compares a live numeric value against a condition operand: a bare number
+// (meaning at-least — the natural "do I qualify?" gate) or an operator object:
+// at_least, more_than, at_most, less_than, is.
 function compare(actual, operand) {
-  // A bare number defaults to at-least — the natural "do I qualify?" gate.
   if (typeof operand === 'number') return actual >= operand;
 
   if ('at_least'  in operand) return actual >= operand.at_least;
@@ -44,13 +37,8 @@ function compare(actual, operand) {
   return false;
 }
 
-/**
- * Recursively evaluates a condition tree against a StateManager.
- *
- * @param {object|null} condition - The condition node from game JSON.
- * @param {object} state - The StateManager to evaluate against.
- * @returns {boolean} True when the condition passes (absent conditions always do).
- */
+// Recursively evaluates a condition tree against a StateManager. An absent
+// condition always passes.
 export function evaluateCondition(condition, state) {
   if (!condition) return true;
 

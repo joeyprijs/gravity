@@ -6,21 +6,23 @@ import { parseDamage } from './dice.js';
 // The engine exposes thin delegates (engine.useItem / equipItem / unequipItem)
 // so UI code needs no knowledge of this module.
 
+// An authored amount is a flat number or dice notation ("1d8"). Rolls the
+// latter, and returns the amount with the "(1d8: 6)" suffix for the log line
+// (empty for a flat number).
+export function rollAmount(engine, value) {
+  if (typeof value !== 'string') return { amount: value, rollSuffix: '' };
+  const result = parseDamage(value);
+  return { amount: result.total, rollSuffix: engine.t('player.rollSuffix', { dice: value, roll: result.string }) };
+}
+
 // Consumable stat effect: applies one die-notation-or-number attribute to the
 // named stat/resource and logs the given locale key. Returns true if applied.
 function applyStatEffect(engine, itemData, value, stat, msgKey, extraParams = {}) {
   if (!value) return false;
-  let amount = value;
-  let rollSuffix = '';
-  if (typeof amount === 'string') {
-    const result = parseDamage(amount);
-    rollSuffix = engine.t('player.rollSuffix', { dice: amount, roll: result.string });
-    amount = result.total;
-  }
+  const { amount, rollSuffix } = rollAmount(engine, value);
   engine.state.modifyPlayerStat(stat, amount);
-  // The user's act, in their voice — the yield rides along in the parens
-  // (see STYLE.md, the narrative log's two voices). Signed here so a
-  // harmful consumable reads "(-2 HP)", not "(+-2 HP)".
+  // The user's act, in their voice, yield in the parens (STYLE.md). Signed so
+  // a harmful consumable reads "(-2 HP)", not "(+-2 HP)".
   const signed = amount >= 0 ? `+${amount}` : `${amount}`;
   engine.log(LOG.PLAYER, engine.t(msgKey, { name: itemData.name, amount: signed, rollSuffix, ...extraParams }), 'choice');
   return true;
@@ -35,15 +37,10 @@ const CONSUMABLE_EFFECTS = {
     applyStatEffect(engine, itemData, value, 'hp', 'player.usedItem'),
 };
 
-/**
- * True when an item declares something useItem can actually do — a consumable
- * effect or a teleport. The inventory reads it to decide whether an item's card
- * is a control: a Special item that declares no use (a plain story key) is a
- * card you can only read.
- *
- * @param {object|null} itemData - The item definition from data/items.
- * @returns {boolean}
- */
+// True when an item declares something useItem can actually do — a consumable
+// effect or a teleport. The inventory reads it to decide whether an item's card
+// is a control: a Special item that declares no use (a plain story key) is a
+// card you can only read.
 export function itemHasUse(itemData) {
   if (itemData?.story) return true;
   const attrs = itemData?.attributes;
@@ -51,21 +48,16 @@ export function itemHasUse(itemData) {
   return !!attrs.teleportScene || Object.keys(CONSUMABLE_EFFECTS).some(attr => attrs[attr]);
 }
 
-/**
- * Reading a story book: the [Player] act, then the narrator retells every
- * chapter the player has heard, in the story's AUTHORED order — the granted
- * list only answers "which", so a chapter heard out of sequence still lands
- * where the life put it. The book stores no text of its own: it is a view
- * over the granted state, always exactly as current as the listening. Books
- * never consume, so a long story can be reread forever.
- *
- * Exported because reading doesn't care where the book stands: useItem reads
- * it from the pack, and the curator's case inspection reads it on exhibit
- * (via the engine.readStory delegate) — same replay, no inventory involved.
- *
- * @param {object} engine - The RPGEngine instance.
- * @param {object} itemData - A story book's item definition (story required).
- */
+// Reading a story book: the [Player] act, then the narrator retells every
+// chapter the player has heard, in the story's AUTHORED order — the granted
+// list only answers "which", so a chapter heard out of sequence still lands
+// where the life put it. The book stores no text of its own: it is a view
+// over the granted state, always exactly as current as the listening. Books
+// never consume, so a long story can be reread forever.
+//
+// Exported because reading doesn't care where the book stands: useItem reads
+// it from the pack, and the curator's case inspection reads it on exhibit
+// (via the engine.readStory delegate) — same replay, no inventory involved.
 export function readStory(engine, itemData) {
   const openLine = engine.log(LOG.PLAYER, engine.t('player.readBook', { name: itemData.name }), 'choice');
   const granted = engine.state.getStoryChapters(itemData.id);
@@ -98,13 +90,8 @@ function teleport(engine, itemData) {
   return true;
 }
 
-/**
- * Uses an inventory item: applies its consumable effects (or teleport),
- * spends its AP cost, and refreshes the scene options when appropriate.
- *
- * @param {object} engine - The RPGEngine instance.
- * @param {string} itemId - The item to use.
- */
+// Uses an inventory item: applies its consumable effects (or teleport),
+// spends its AP cost, and refreshes the scene options when appropriate.
 export function useItem(engine, itemId) {
   if (engine.isGameOver) return;
   const itemData = engine.data.items[itemId];
@@ -145,21 +132,16 @@ export function useItem(engine, itemId) {
   }
 }
 
-/**
- * The slot an item goes into, among the declared slots of the kind it asks
- * for: an empty one first (in declaration order), otherwise the one holding
- * the same item type — a new weapon replaces the weapon, a new spell the
- * spell, a third ring the first ring — so the pick is always readable off the
- * equipped section. The first slot of the kind when the types don't decide.
- *
- * A kind with a single slot (head, body) reduces to that slot; a kind with
- * two (hand, ring) is what makes this more than a lookup.
- *
- * @param {object} engine - The RPGEngine instance.
- * @param {object} itemData - The item being equipped.
- * @returns {string|undefined} A slot id, or undefined when the item wears
- *   nowhere or names a kind this game declares no slot for.
- */
+// The slot an item goes into, among the declared slots of the kind it asks
+// for: an empty one first (in declaration order), otherwise the one holding
+// the same item type — a new weapon replaces the weapon, a new spell the
+// spell, a third ring the first ring — so the pick is always readable off the
+// equipped section. The first slot of the kind when the types don't decide.
+// Undefined when the item wears nowhere or names a kind this game declares no
+// slot for.
+//
+// A kind with a single slot (head, body) reduces to that slot; a kind with
+// two (hand, ring) is what makes this more than a lookup.
 function pickSlot(engine, itemData) {
   const kind = itemSlotKind(itemData);
   if (!kind) return undefined;
@@ -171,14 +153,9 @@ function pickSlot(engine, itemData) {
   return sameType ?? slots[0];
 }
 
-/**
- * Equips an item, swapping the worn attribute bonuses as one delta and
- * spending the item's AP cost. Which slot it lands in is the engine's call:
- * the item names a slot *kind* and pickSlot chooses the instance.
- *
- * @param {object} engine - The RPGEngine instance.
- * @param {string} itemId - The item to equip.
- */
+// Equips an item, swapping the worn attribute bonuses as one delta and
+// spending the item's AP cost. Which slot it lands in is the engine's call:
+// the item names a slot *kind* and pickSlot chooses the instance.
 export function equipItem(engine, itemId) {
   if (engine.isGameOver) return;
   const itemData = engine.data.items[itemId];
@@ -206,19 +183,13 @@ export function equipItem(engine, itemId) {
     deltas[key] = (newBonuses[key] ?? 0) - (oldBonuses[key] ?? 0);
   }
   engine.state.modifyPlayerStats(deltas);
-  // The user's act, in their voice — the engine-picked hand rides along in
-  // the parens (see STYLE.md, the narrative log's two voices).
-  engine.log(LOG.PLAYER, engine.t('player.equipped', { name: itemData.name, slot: slotLabel(engine.t.bind(engine), targetSlot) }), 'choice');
+  // The engine-picked slot rides along in the parens (STYLE.md).
+  engine.log(LOG.PLAYER, engine.t('player.equipped', { name: itemData.name, slot: slotLabel(engine.t, targetSlot) }), 'choice');
   engine._spendAP(apCost);
 }
 
-/**
- * Unequips a slot back into the inventory, removing the item's worn attribute
- * bonuses and spending rules.unequipApCost.
- *
- * @param {object} engine - The RPGEngine instance.
- * @param {string} slot - The equipment slot to clear.
- */
+// Unequips a slot back into the inventory, removing the item's worn attribute
+// bonuses and spending rules.unequipApCost.
 export function unequipItem(engine, slot) {
   if (engine.isGameOver) return;
   const itemId = engine.state.getPlayer().equipment[slot];
@@ -234,6 +205,6 @@ export function unequipItem(engine, slot) {
   engine.state.modifyPlayerStats(Object.fromEntries(
     Object.entries(bonuses).map(([key, bonus]) => [key, -bonus])
   ));
-  engine.log(LOG.PLAYER, engine.t('player.unequipped', { name: itemName, slot: slotLabel(engine.t.bind(engine), slot) }), 'choice');
+  engine.log(LOG.PLAYER, engine.t('player.unequipped', { name: itemName, slot: slotLabel(engine.t, slot) }), 'choice');
   engine._spendAP(unequipCost);
 }

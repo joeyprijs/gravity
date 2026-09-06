@@ -27,34 +27,6 @@ export const CHECK_KEYS = {
   dialogueResolved: (npcId)            => `dialogue_resolved_${npcId}`,
 };
 
-// Canonical names for all built-in scene option actions.
-// Used by actions.js at registration time and by _validateData() for dev warnings.
-export const ACTIONS = {
-  LOOT:            'loot',
-  COMBAT:          'combat',
-  DIALOGUE:        'dialogue',
-  RETURN:          'return',
-  FULL_REST:       'full_rest',
-  SHORT_REST:      'short_rest',
-  HEAL:            'heal',
-  NAVIGATE:        'navigate',
-  SET_FLAG:        'set_flag',
-  LOG:             'log',
-  MANAGE_CHEST:    'manage_chest',
-  GRANT_CHAPTER:   'grant_chapter',
-  ADVANCE_TIME:    'advance_time',
-  SET_TIMER:       'set_timer',
-  CANCEL_TIMER:    'cancel_timer',
-
-  // Dialogue actions — registered by DialogueSystem (see dialogue.js). They
-  // live in the same registry as the actions above; the camelCase names match
-  // the strings used in NPC conversation JSON.
-  GO_TO_CONVERSATION: 'goToConversation',
-  TRADE:              'trade',
-  LEAVE:              'leave',
-  QUEST_TRIGGER:      'questTrigger',
-};
-
 // CSS class names referenced from JavaScript. Centralized here so that renaming
 // a class only requires a change in this file, not a grep across all JS files.
 // Dynamic variant suffixes (e.g. scene__log--${variant}) are built by
@@ -171,7 +143,6 @@ export const EL = {
   // Audio controls (options tab)
   AUDIO_MUTE:              'audio-mute',
   AUDIO_AMBIENCE_VOL:      'audio-ambience-volume',
-  AUDIO_NARRATION_VOL:     'audio-narration-volume',
 
   // Character creation overlay
   CHAR_CREATION:           'char-creation',
