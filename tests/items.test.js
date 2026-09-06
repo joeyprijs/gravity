@@ -2,6 +2,7 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { equipItem, itemHasUse, unequipItem, useItem } from '../src/systems/items.js';
 import { gameState } from '../src/core/state.js';
+import { makeRules } from './helpers.js';
 
 const LEFT = 'left_hand';
 const RIGHT = 'right_hand';
@@ -35,22 +36,10 @@ const SLOTS = [
   { id: 'right_ring', kind: 'ring' },
 ];
 
-// Minimal rules — every item above in the pack, and the demo's slot shape.
-const TEST_RULES = {
-  playerDefaults: {
-    name: '',
-    level: 1,
-    xp: 0,
-    resources: { hp: { current: 10, max: 10 }, ap: { current: 3, max: 3 }, gold: 0 },
-    attributes: { ac: 10, initiative: 0 },
-    inventory: Object.keys(ITEMS).map(item => ({ item, amount: 1 })),
-    equipmentSlots: SLOTS,
-  },
-  customAttributes: [],
-  startingScene: null,
-  xpPerLevel: 100,
-  levelUpHpBonus: 5,
-};
+// Every item above in the pack, and the demo's slot shape.
+const TEST_RULES = makeRules({
+  playerDefaults: { inventory: Object.keys(ITEMS).map(item => ({ item, amount: 1 })), equipmentSlots: SLOTS },
+});
 
 // Minimal engine mock — equipItem/unequipItem touch nothing else.
 function makeMockEngine() {

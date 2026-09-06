@@ -2,26 +2,14 @@
 // browser globals so it can be unit-tested headlessly (engine.js passes in
 // navigator.languages).
 
-/**
- * Locale-aware list joining ("A, B, and C" in English, with each language's
- * own separators and conjunction) — list grammar never lives in code.
- *
- * @param {string|undefined} language - The active language code (engine.language).
- * @param {string[]} items - The list entries.
- * @returns {string}
- */
+// Locale-aware list joining ("A, B, and C" in English, with each language's
+// own separators and conjunction) — list grammar never lives in code.
 export function formatList(language, items) {
   return new Intl.ListFormat(language, { style: 'long', type: 'conjunction' }).format(items);
 }
 
-/**
- * Whether a count is grammatically singular in the given language —
- * message keys split into One-variants use this to pick the right one.
- *
- * @param {string|undefined} language - The active language code (engine.language).
- * @param {number} count
- * @returns {boolean}
- */
+// Whether a count is grammatically singular in the given language —
+// message keys split into One-variants use this to pick the right one.
 export function isOne(language, count) {
   return new Intl.PluralRules(language).select(count) === 'one';
 }
@@ -32,13 +20,9 @@ export function isOne(language, count) {
  * available codes, first as the exact tag (e.g. "pt-BR"), then by base code
  * (e.g. "pt").
  *
- * @param {string[]} [available] - Language codes the game has a locale file for
- *   (the manifest's `locales` keys).
- * @param {readonly string[]} [preferred] - User preference list, most preferred
- *   first (typically `navigator.languages`).
- * @param {string} [fallback='en'] - Language used when no preference matches.
- * @returns {string} The resolved language code: the first preference with an
- *   available match, else the fallback, else the first available language.
+ * `available` is the manifest's locale keys, `preferred` typically
+ * navigator.languages. Returns the first preference with a match, else the
+ * fallback, else the first available language.
  */
 export function resolveLanguage(available = [], preferred = [], fallback = 'en') {
   const norm = (tag) => String(tag).toLowerCase();

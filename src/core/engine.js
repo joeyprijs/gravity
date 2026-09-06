@@ -8,6 +8,7 @@ import { SceneRenderer } from '../systems/scene.js';
 import { AudioSystem } from '../systems/audio.js';
 import { DEFAULT_WORLD_MAP_SIZE, LOG, TIMER_SAFE_ACTIONS } from './config.js';
 import { resolveLanguage } from './i18n.js';
+import { getByPath } from './utils.js';
 import { normalizeCarriedItems, validateGameData } from './validate.js';
 import { registerBuiltinActions } from '../systems/actions.js';
 import * as items from '../systems/items.js';
@@ -33,6 +34,8 @@ const DEFAULT_LOCALE_PATH = 'data/locales.json';
 // other without importing each other directly (avoiding circular deps).
 export class RPGEngine {
   constructor() {
+    // Bound once so subsystems can hand t to helpers without re-binding.
+    this.t = this.t.bind(this);
     // The engine owns the state manager; subsystems reach it via
     // this.engine.state instead of importing the module singleton, so their
     // state dependency is visible and injectable.
@@ -58,8 +61,8 @@ export class RPGEngine {
     this.mode = 'scene';
 
     this._actionRegistry = new Map();
-    this._sceneDecorators = [];
-    this._sheetRows = [];
+    this.sceneDecorators = [];
+    this.sheetRows = [];
     this._validators = [];
     this._pluginConfigs = {};
     this._tabWidgets = new Map();
@@ -140,7 +143,6 @@ export class RPGEngine {
 
     this._validateData();
 
-    // Initialize state from rules, then register missions and flags on it.
     this.state.init(this.data.rules, this.data.items);
     this.state.registerMissions(this.data.missions);
     this.state.registerSceneFlags(this.data.flags);
@@ -247,10 +249,8 @@ export class RPGEngine {
         locale: this.data.locale, rules, flags,
       };
 
-      // Note: registerMissions and registerSceneFlags are called by init()
-      // after this.state.init(rules) — they must NOT be called here. Data
-      // validation also happens in init(), after plugins have registered
-      // their action types.
+      // Missions, flags and validation are registered in init(), after
+      // this.state.init(rules).
       return manifest;
     } catch (e) {
       console.error('Failed to load game data:', e);
@@ -263,15 +263,9 @@ export class RPGEngine {
    * Looks up a locale string by dot-separated key and substitutes {param}
    * placeholders. Falls back to the key itself if the string is not found,
    * so missing translations are visible but don't crash the game.
-   *
-   * @param {string} key - Dot-separated locale key (e.g. 'dialogue.buyButton').
-   * @param {Object<string, *>} [params] - Values for {param} placeholders.
-   * @returns {string} The translated string, or the key when missing.
    */
   t(key, params = {}) {
-    const parts = key.split('.');
-    let str = this.data.locale;
-    for (const p of parts) str = str?.[p];
+    const str = getByPath(this.data.locale, key);
     if (typeof str !== 'string') return key;
     return str.replace(/\{(\w+)\}/g, (_, k) => (k in params ? params[k] : `{${k}}`));
   }
@@ -292,7 +286,7 @@ export class RPGEngine {
     // A plugin that failed to import registered nothing — no actions, no
     // validators — so this report is blind to everything it owns. Say so
     // loudly here rather than only in the load-time console warning.
-    for (const url of this._failedPlugins ?? []) {
+    for (const url of this._failedPlugins) {
       add(`Plugin "${url}"`, 'failed to load — none of its actions, validators, or UI registered, and data it owns gets no checks; fix the manifest src or remove the entry');
     }
     if (!issues.length) return;
@@ -344,7 +338,7 @@ export class RPGEngine {
   // ── Mode machine ────────────────────────────────────────────────────────
   // Exactly one surface owns the options panel at a time (see this.mode).
 
-  /** @param {'scene'|'combat'|'dialogue'|'store'|'customUI'|'gameover'} mode */
+  // mode: 'scene' | 'combat' | 'dialogue' | 'store' | 'customUI' | 'gameover'.
   setMode(mode) { this.mode = mode; }
 
   get inCombat()   { return this.mode === 'combat'; }
@@ -363,8 +357,6 @@ export class RPGEngine {
    * mode transition (combat, dialogue, store, custom UI, game over). Callers
    * snapshot before running a pipeline and skip their re-render when it
    * fires: the new surface owns the options panel now.
-   *
-   * @returns {() => boolean}
    */
   snapshotNavigation() {
     const sceneId = this.state.getCurrentSceneId();
@@ -389,25 +381,16 @@ export class RPGEngine {
   // Amend-or-false: extends the last player choice line with the act's yield
   // (see NarrativeLog.amendLast). Callers log a standalone line on false.
   amendLog(suffix) { return this.narrative.amendLast(suffix); }
-  /**
-   * Runs an action pipeline through the registered action handlers.
-   * Shared by SceneRenderer, CombatSystem, DialogueSystem, and plugins.
-   *
-   * @param {Array<{type: string}>} actions - Action objects executed in order;
-   *   each carries its handler-specific params (e.g. { type: 'loot', item, amount }).
-   */
+  // Runs an action pipeline through the registered action handlers.
+  // Shared by SceneRenderer, CombatSystem, DialogueSystem, and plugins.
   runActions(actions) {
     for (const action of (actions || [])) {
       const handler = this.getActionHandler(action.type);
       if (!handler) {
         console.warn(`[Gravity] runActions: no handler for action type "${action.type}"`);
-        continue; // nothing ran, so there is no line to narrate
+        continue;
       }
       handler(action, this);
-      // Any action can carry a narration clip for the text it just wrote —
-      // a field beside the line, like a description variant's, rather than a
-      // separate audio action to keep in step with the pipeline.
-      if (action.narration) this.audio?.playNarration(action.narration);
     }
   }
 
@@ -419,7 +402,7 @@ export class RPGEngine {
    * Firing is synchronous and deterministic: no wall-clock is involved, so
    * saves replay identically.
    *
-   * @param {number} amount - Ticks to advance (non-positive is a no-op).
+   * Non-positive amounts are a no-op.
    */
   advanceTime(amount) {
     const ticksBefore = this.state.getTicks();
@@ -480,21 +463,13 @@ export class RPGEngine {
    * Subscribes a handler to an engine event. Current events:
    *   'scene:entered'  { sceneId, scene, isEntry, startsCombat } — every scene
    *   render except save restores; isEntry separates arrivals from re-renders
-   *
-   * @param {string} event - Event name.
-   * @param {(data: object) => void} handler
    */
   on(event, handler) {
     if (!this._events.has(event)) this._events.set(event, []);
     this._events.get(event).push(handler);
   }
 
-  /**
-   * Emits an engine event to all subscribed handlers.
-   *
-   * @param {string} event - Event name.
-   * @param {object} [data] - Payload passed to each handler.
-   */
+  // Emits an engine event to all subscribed handlers.
   emit(event, data) {
     const handlers = this._events.get(event);
     if (!handlers) return;
@@ -506,9 +481,8 @@ export class RPGEngine {
    * dialogue, and onVictory pipelines. Registering an existing name overwrites
    * it (with a console warning).
    *
-   * @param {string} name - The action type string used in game data JSON.
-   * @param {(action: object, engine: RPGEngine) => void} handlerFn - Owns only
-   *   its side effect; navigation is a separate 'navigate' action.
+   * A handler owns only its side effect; navigation is a separate 'navigate'
+   * action.
    */
   registerAction(name, handlerFn) {
     if (this._actionRegistry.has(name)) {
@@ -522,8 +496,6 @@ export class RPGEngine {
    * function receives (data, { add }); call add(group, message) for each issue
    * so a plugin can flag its own authoring mistakes (deprecated item shapes,
    * missing config, …) in the same report as the built-in validation.
-   *
-   * @param {(data: object, ctx: {add: (group: string, message: string) => void}) => void} fn
    */
   registerValidator(fn) {
     this._validators.push(fn);
@@ -534,37 +506,30 @@ export class RPGEngine {
    * (data/index.json). The sanctioned home for plugin tunables — the plugin's
    * counterpart to core rules, so plugin knobs don't squat in rules.json.
    *
-   * @param {string} id - The plugin id (e.g. 'curator').
-   * @returns {object} The plugin's config object ({} when none was declared).
+   * {} when none was declared.
    */
   pluginConfig(id) {
     return this._pluginConfigs[id] || {};
   }
 
-  /**
-   * @param {string} name - The action type string.
-   * @returns {((action: object, engine: RPGEngine) => void)|null}
-   */
   getActionHandler(name) {
-    return this._actionRegistry.get(name) || null;
+    return this._actionRegistry.get(name);
   }
 
   /**
    * Registers a scene decorator, invoked for every rendered scene. Plugins use
    * this to inject content into scenes they don't own.
    *
-   * @param {object} decorator
-   * @param {(scene: object, sceneId: string, engine: RPGEngine) => string} [decorator.description]
-   *   Returns an HTML string appended to the scene description.
-   * @param {(scene: object, optionsContainer: HTMLElement, engine: RPGEngine, sections: {conversations: HTMLElement, actions: HTMLElement}) => void} [decorator.options]
-   *   May append extra option buttons to the options container, or to one of the
-   *   panel's headed sections. A section left empty is hidden again afterwards.
+   * decorator.description(scene, sceneId, engine) returns an HTML string
+   * appended to the scene description. decorator.options(scene,
+   * optionsContainer, engine, sections) may append extra option buttons to the
+   * container or to one of the panel's headed sections ({ conversations,
+   * actions }); a section left empty is hidden again afterwards.
    */
   registerSceneDecorator(decorator) {
-    this._sceneDecorators.push(decorator);
+    this.sceneDecorators.push(decorator);
   }
 
-  get sceneDecorators() { return this._sceneDecorators; }
 
   /**
    * Registers a tab widget builder for rules.tabs[].widget. The UI build
@@ -572,20 +537,15 @@ export class RPGEngine {
    * can contribute a whole sidebar tab (register during plugin load — plugins
    * load before the UI builds).
    *
-   * @param {string} name - The widget name tabs reference.
-   * @param {(panel: HTMLElement, ui: object) => void} fn - Fills the tab's
-   *   panel element; receives the UIManager for shared helpers.
+   * fn(panel, ui) fills the tab's panel element; ui is the UIManager, for
+   * shared helpers.
    */
   registerTabWidget(name, fn) {
     this._tabWidgets.set(name, fn);
   }
 
-  /**
-   * @param {string} name - The widget name.
-   * @returns {((panel: HTMLElement, ui: object) => void)|null}
-   */
   getTabWidget(name) {
-    return this._tabWidgets.get(name) || null;
+    return this._tabWidgets.get(name);
   }
 
   /**
@@ -596,17 +556,13 @@ export class RPGEngine {
    * any rules.headerResources rows, filled by the same data-stat-bind loop as
    * every other row. No-op for games whose tabs omit the attributes widget.
    *
-   * @param {object} row
-   * @param {string} row.label - Display label (plain text).
-   * @param {string} row.bind - data-stat-bind path on the player (e.g.
-   *   'attributes.reputation').
-   * @param {string} [row.icon] - Icon name marking the row (see core/icons.js).
+   * row is { label, bind, icon? }: bind is the data-stat-bind path on the
+   * player (e.g. 'attributes.reputation'), icon a name from core/icons.js.
    */
   registerSheetRow(row) {
-    this._sheetRows.push(row);
+    this.sheetRows.push(row);
   }
 
-  get sheetRows() { return this._sheetRows; }
 }
 
 window.addEventListener('DOMContentLoaded', () => {

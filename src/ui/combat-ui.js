@@ -1,4 +1,4 @@
-import { createElement, buildSceneDescription, buildOptionButton, resetOptionsPanel, itemStatLines, handSlots } from '../core/utils.js';
+import { buildPanelSection, buildSceneDescription, buildOptionButton, resetOptionsPanel, itemStatLines, handSlots } from '../core/utils.js';
 import { EL, CSS } from '../core/config.js';
 
 // The enemies a capped multi-target attack (targets: N) catches around a
@@ -21,16 +21,11 @@ export class CombatRenderer {
     this.cs = combatSystem;
   }
 
-  /**
-   * The attacks the player can make: the Weapon/Spell items in their hand
-   * slots, or rules.fallbackWeapons.player (unarmed) when both are empty —
-   * followed by the spells their worn gear grants (attributes.grantsSpells).
-   * A granted spell takes no hand, so it is castable with both hands full,
-   * and it leaves the list the moment its item comes off.
-   *
-   * @returns {object[]} Item definitions: the held attacks in slot order,
-   *   then the granted spells in equipment order, each listed once.
-   */
+  // The attacks the player can make: the Weapon/Spell items in their hand
+  // slots, or rules.fallbackWeapons.player (unarmed) when both are empty —
+  // followed by the spells their worn gear grants (attributes.grantsSpells),
+  // each listed once. A granted spell takes no hand, so it is castable with
+  // both hands full, and it leaves the list the moment its item comes off.
   getAvailableAttacks() {
     const { equipment } = this.cs.engine.state.getPlayer();
     const items = this.cs.engine.data.items;
@@ -108,8 +103,7 @@ export class CombatRenderer {
     // An all-enemies attack takes no target, so it renders once, in its own
     // section above the enemy list.
     if (fieldWide.length) {
-      const section = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
-      section.appendChild(createElement('div', CSS.SECTION_HEADING, this.cs.engine.t('combat.allEnemiesHeading')));
+      const section = buildPanelSection(this.cs.engine.t('combat.allEnemiesHeading'));
       fieldWide.forEach(att => {
         section.appendChild(this._attackButton(att, () => this.cs.playerAttackMulti(att)));
       });
@@ -120,10 +114,8 @@ export class CombatRenderer {
     // each enemy. The click centers the blast there — splashTargets adds
     // the neighbours — so choosing whom to attack still matters.
     livingEnemies.forEach(target => {
-      const section = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
-      section.appendChild(createElement('div', CSS.SECTION_HEADING,
-        this.cs.engine.t('combat.enemyStats', { name: target.name, hp: target.attributes.healthPoints, ac: target.attributes.armorClass })
-      ));
+      const section = buildPanelSection(
+        this.cs.engine.t('combat.enemyStats', { name: target.name, hp: target.attributes.healthPoints, ac: target.attributes.armorClass }));
 
       perEnemy.forEach(att => {
         const cap = att.attributes?.targets;

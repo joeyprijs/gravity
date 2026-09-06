@@ -1,4 +1,4 @@
-import { createElement, buildCard, createSectionToggles, getItemLabel, itemCardStats, slotLabel } from '../core/utils.js';
+import { createElement, buildCard, createSectionToggles, getItemLabel, itemCardStatsFor, slotLabel } from '../core/utils.js';
 import { EL, CSS } from '../core/config.js';
 import { itemHasUse } from '../systems/items.js';
 
@@ -52,7 +52,7 @@ export class InventoryUI {
         if (!itemData) return;
         ul.appendChild(this._itemRow({
           title: itemData.name,
-          body: this.engine.t('ui.equippedTo', { slot: slotLabel(this.engine.t.bind(this.engine), slot) }),
+          body: this.engine.t('ui.equippedTo', { slot: slotLabel(this.engine.t, slot) }),
           // No slot row here — "Equipped: Torso" above it already said so, and
           // it names the slot the item is actually IN, which for a hand item
           // is the one the engine picked rather than the one it declares.
@@ -154,13 +154,7 @@ export class InventoryUI {
     return ul;
   }
 
-  // The card's stat lines (see itemCardStats), bound to the engine's
-  // translator and the player's current attributes.
   _itemStats(itemData, options) {
-    const story = itemData.story
-      ? { granted: this.engine.state.getStoryChapters(itemData.id).length, total: itemData.story.chapters.length }
-      : null;
-    return itemCardStats(this.engine.t.bind(this.engine), itemData, this.engine.state.getPlayer().attributes,
-      { ...options, uses: this.engine.state.getItemUses(itemData.id), items: this.engine.data.items, story });
+    return itemCardStatsFor(this.engine, itemData, options);
   }
 }

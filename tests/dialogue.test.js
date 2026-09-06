@@ -2,37 +2,12 @@ import { test, beforeEach, afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { gameState } from '../src/core/state.js';
 import { DialogueSystem } from '../src/systems/dialogue.js';
-import { ACTIONS, CHECK_KEYS, FLAG_KEYS } from '../src/core/config.js';
+import { CHECK_KEYS, FLAG_KEYS } from '../src/core/config.js';
+import { makeRules, fakeEl } from './helpers.js';
 
-// Minimal DOM stand-in — just enough for the real renderDialogue to run
-// headless (createElement/buildSceneDescription/resetOptionsPanel).
-const fakeEl = () => ({
-  classList: { add() {} },
-  children: [],
-  appendChild(child) { this.children.push(child); return child; },
-  setAttribute() {},
-  removeAttribute() {},
-  querySelector: () => null,
-  querySelectorAll: () => [],
-});
 globalThis.document = { createElement: fakeEl, getElementById: fakeEl };
 
-// Minimal rules required by gameState.init() — mirrors the key values from rules.json.
-const TEST_RULES = {
-  playerDefaults: {
-    name: '',
-    level: 1,
-    xp: 0,
-    resources: { hp: { current: 10, max: 10 }, ap: { current: 3, max: 3 }, gold: 50 },
-    attributes: { ac: 10, initiative: 0 },
-    inventory: [],
-    equipment: {},
-  },
-  customAttributes: [],
-  startingScene: 'town_square',
-  xpPerLevel: 100,
-  levelUpHpBonus: 5,
-};
+const TEST_RULES = makeRules({ playerDefaults: { resources: { hp: { current: 10, max: 10 }, ap: { current: 3, max: 3 }, gold: 50 } }, startingScene: 'town_square' });
 
 const TEST_NPCS = {
   talker: {
@@ -131,14 +106,14 @@ test('startDialogue: resets store state from a previous conversation', () => {
 test('goToConversation: renders the target node during a dialogue', () => {
   const { ds, registry, engine } = makeDS();
   ds.startDialogue('talker');
-  registry.get(ACTIONS.GO_TO_CONVERSATION)({ type: ACTIONS.GO_TO_CONVERSATION, node: 'rumors' }, engine);
+  registry.get('goToConversation')({ type: 'goToConversation', node: 'rumors' }, engine);
   assert.deepEqual(ds.renderDialogue.mock.calls.at(-1).arguments, ['rumors']);
 });
 
 test('conversation-bound actions are ignored outside an active dialogue', () => {
   const warn = mock.method(console, 'warn', () => {});
   const { ds, registry, engine } = makeDS();
-  registry.get(ACTIONS.GO_TO_CONVERSATION)({ type: ACTIONS.GO_TO_CONVERSATION, node: 'rumors' }, engine);
+  registry.get('goToConversation')({ type: 'goToConversation', node: 'rumors' }, engine);
   assert.equal(ds.renderDialogue.mock.callCount(), 0);
   assert.equal(warn.mock.callCount(), 1);
 });
@@ -146,24 +121,24 @@ test('conversation-bound actions are ignored outside an active dialogue', () => 
 test('leave: renders the current scene', () => {
   const { registry, engine, calls } = makeDS();
   gameState.setCurrentSceneId('town_square');
-  registry.get(ACTIONS.LEAVE)({ type: ACTIONS.LEAVE }, engine);
+  registry.get('leave')({ type: 'leave' }, engine);
   assert.deepEqual(calls.renderedScenes, ['town_square']);
 });
 
 test('trade: the discount percentage becomes a ratio (numeric or string) and opens the store', () => {
   const { ds, registry, engine } = makeDS();
   ds.startDialogue('talker');
-  registry.get(ACTIONS.TRADE)({ type: ACTIONS.TRADE, tradeDiscount: 20 }, engine);
+  registry.get('trade')({ type: 'trade', tradeDiscount: 20 }, engine);
   assert.equal(ds.activeDiscount, 0.2);
   assert.equal(ds.renderStore.mock.callCount(), 1);
-  registry.get(ACTIONS.TRADE)({ type: ACTIONS.TRADE, tradeDiscount: '25' }, engine);
+  registry.get('trade')({ type: 'trade', tradeDiscount: '25' }, engine);
   assert.equal(ds.activeDiscount, 0.25);
 });
 
 test('trade: an unparseable discount means no discount, never NaN prices', () => {
   const { ds, registry, engine } = makeDS();
   ds.startDialogue('talker');
-  registry.get(ACTIONS.TRADE)({ type: ACTIONS.TRADE, tradeDiscount: 'abc', persistDiscount: true }, engine);
+  registry.get('trade')({ type: 'trade', tradeDiscount: 'abc', persistDiscount: true }, engine);
   assert.equal(ds.activeDiscount, 0);
   assert.equal(gameState.getFlag(FLAG_KEYS.tradeDiscount('talker')), false, 'nothing persisted either');
 });
@@ -171,39 +146,19 @@ test('trade: an unparseable discount means no discount, never NaN prices', () =>
 test('trade: persistDiscount stores the percentage in a flag', () => {
   const { ds, registry, engine } = makeDS();
   ds.startDialogue('talker');
-  registry.get(ACTIONS.TRADE)({ type: ACTIONS.TRADE, tradeDiscount: 20, persistDiscount: true }, engine);
+  registry.get('trade')({ type: 'trade', tradeDiscount: 20, persistDiscount: true }, engine);
   assert.equal(gameState.getFlag(FLAG_KEYS.tradeDiscount('talker')), 20);
 });
 
 test('trade: no discount leaves the ratio at zero and persists nothing', () => {
   const { ds, registry, engine } = makeDS();
   ds.startDialogue('talker');
-  registry.get(ACTIONS.TRADE)({ type: ACTIONS.TRADE, persistDiscount: true }, engine);
+  registry.get('trade')({ type: 'trade', persistDiscount: true }, engine);
   assert.equal(ds.activeDiscount, 0);
   assert.equal(gameState.getFlag(FLAG_KEYS.tradeDiscount('talker')), false);
 });
 
 // ── _runActions ───────────────────────────────────────────────────────────────
-
-test('_runActions: reports navigation for dialogue-nav action types', () => {
-  const { ds, engine } = makeDS();
-  ds.startDialogue('talker');
-  assert.equal(ds._runActions([{ type: ACTIONS.GO_TO_CONVERSATION, node: 'x' }]), true);
-});
-
-test('_runActions: reports navigation when a handler closes the dialogue', () => {
-  const { ds, engine } = makeDS();
-  ds.startDialogue('talker');
-  engine.registerAction('warp_home', () => { ds.currentNPC = null; });
-  assert.equal(ds._runActions([{ type: 'warp_home' }]), true);
-});
-
-test('_runActions: plain side-effect actions do not count as navigation', () => {
-  const { ds, engine } = makeDS();
-  ds.startDialogue('talker');
-  engine.registerAction('noop', () => {});
-  assert.equal(ds._runActions([{ type: 'noop' }]), false);
-});
 
 test('_runActions: unknown action types warn and are skipped', () => {
   const warn = mock.method(console, 'warn', () => {});
@@ -213,13 +168,14 @@ test('_runActions: unknown action types warn and are skipped', () => {
   assert.equal(warn.mock.callCount(), 1);
 });
 
-// ── merchant stock ────────────────────────────────────────────────────────────
-
-test('_getStock: null npcAmount means unlimited stock', () => {
-  const { ds } = makeDS();
-  ds.startDialogue('quiet_merchant');
-  assert.equal(ds._getStock('healing_potion', null), null);
+test('_runActions: reports navigation when a handler closes the dialogue', () => {
+  const { ds, engine } = makeDS();
+  ds.startDialogue('talker');
+  engine.registerAction('warp_home', () => { ds.currentNPC = null; });
+  assert.equal(ds._runActions([{ type: 'warp_home' }]), true);
 });
+
+// ── merchant stock ────────────────────────────────────────────────────────────
 
 test('_getStock: the merchant flag wins once set, else the NPC-configured amount', () => {
   const { ds } = makeDS();

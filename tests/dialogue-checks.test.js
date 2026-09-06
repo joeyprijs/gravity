@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { gameState } from '../src/core/state.js';
 import { DialogueSystem } from '../src/systems/dialogue.js';
 import { CHECK_KEYS } from '../src/core/config.js';
+import { makeRules } from './helpers.js';
 
 // Characterization tests for the checked-response onclick flow (gate → spend →
 // roll → tier → record/exhaust → re-render). Deterministic without mocking
@@ -40,26 +41,12 @@ globalThis.document = {
   },
 };
 
-const TEST_RULES = {
+const TEST_RULES = makeRules({
   playerDefaults: {
-    name: '',
-    level: 1,
-    xp: 0,
-    resources: {
-      hp: { current: 10, max: 10 },
-      ap: { current: 3, max: 3 },
-      luckPoints: { current: 1, max: 3 },
-      gold: 50,
-    },
-    attributes: { ac: 10, initiative: 0 },
-    inventory: [],
-    equipment: {},
+    resources: { hp: { current: 10, max: 10 }, ap: { current: 3, max: 3 }, luckPoints: { current: 1, max: 3 }, gold: 50 },
   },
-  customAttributes: [],
   startingScene: 'town_square',
-  xpPerLevel: 100,
-  levelUpHpBonus: 5,
-};
+});
 
 // Builds an engine mock (real action registry) plus a DialogueSystem running
 // the REAL renderDialogue, an NPC whose start node has the given responses,

@@ -14,38 +14,29 @@
 // Like dice.js, this module is DOM- and engine-free so it runs directly in
 // node:test.
 
-/**
- * The tick-of-day for an absolute tick count (0 … ticksPerDay-1).
- * @param {number} ticks - Absolute ticks elapsed since the game started.
- * @param {object} timeRules - rules.time (needs ticksPerDay; startTick optional).
- * @returns {number|null} Null when timeRules can't derive days.
- */
+// The four clock helpers take the absolute tick count since the game started
+// and rules.time, and return null when the rules can't derive days (no
+// positive ticksPerDay). resolveTimeCost is the exception: it maps an action
+// to its tick cost and returns 0 when there is none.
+
+// The tick-of-day (0 … ticksPerDay-1).
 export function getTickOfDay(ticks, timeRules) {
   if (!timeRules?.ticksPerDay || timeRules.ticksPerDay <= 0) return null;
   const start = timeRules.startTick ?? 0;
   return (ticks + start) % timeRules.ticksPerDay;
 }
 
-/**
- * The 1-based day number for an absolute tick count.
- * @param {number} ticks - Absolute ticks elapsed since the game started.
- * @param {object} timeRules - rules.time.
- * @returns {number|null} Null when timeRules can't derive days.
- */
+// The 1-based day number.
 export function getDay(ticks, timeRules) {
   if (!timeRules?.ticksPerDay || timeRules.ticksPerDay <= 0) return null;
   const start = timeRules.startTick ?? 0;
   return Math.floor((ticks + start) / timeRules.ticksPerDay) + 1;
 }
 
-/**
- * The id of the day segment an absolute tick count falls into. A tick-of-day
- * before the earliest segment's `from` belongs to the latest segment (it
- * carries over midnight — e.g. "night" running from 22 through to 6).
- * @param {number} ticks - Absolute ticks elapsed since the game started.
- * @param {object} timeRules - rules.time (needs ticksPerDay and segments).
- * @returns {string|null} The segment id, or null when segments aren't configured.
- */
+// The id of the day segment the tick falls into, or null when segments aren't
+// configured. A tick-of-day before the earliest segment's `from` belongs to the
+// latest segment (it carries over midnight — e.g. "night" running from 22
+// through to 6).
 export function getSegment(ticks, timeRules) {
   const tickOfDay = getTickOfDay(ticks, timeRules);
   if (tickOfDay === null || !timeRules.segments?.length) return null;
@@ -57,15 +48,10 @@ export function getSegment(ticks, timeRules) {
   return current.id;
 }
 
-/**
- * How many ticks until the NEXT start of the given segment. Never returns 0:
- * asked during the segment itself (or exactly at its start), the answer is the
- * next day's occurrence — "sleep until morning" in the morning sleeps a full day.
- * @param {number} ticks - Absolute ticks elapsed since the game started.
- * @param {object} timeRules - rules.time (needs ticksPerDay and segments).
- * @param {string} segmentId - The segment id to advance to.
- * @returns {number|null} Ticks to advance, or null when it can't be derived.
- */
+// How many ticks until the NEXT start of the given segment (null for an
+// unknown segment). Never returns 0: asked during the segment itself (or
+// exactly at its start), the answer is the next day's occurrence — "sleep
+// until morning" in the morning sleeps a full day.
 export function ticksUntilSegment(ticks, timeRules, segmentId) {
   const tickOfDay = getTickOfDay(ticks, timeRules);
   if (tickOfDay === null) return null;
@@ -75,16 +61,11 @@ export function ticksUntilSegment(ticks, timeRules, segmentId) {
   return delta === 0 ? timeRules.ticksPerDay : delta;
 }
 
-/**
- * Resolves the time cost of a player action: an explicit `timeCost` on the
- * option/skill/response always wins; otherwise the kind's default from
- * rules.time.defaultCosts applies; otherwise the action is free. Without
- * rules.time the whole system stays dormant and only explicit costs charge.
- * @param {number|undefined} explicitCost - The authored timeCost field.
- * @param {string|null} kind - defaultCosts key ('navigate', 'skillAttempt', 'fullRest'), or null for none.
- * @param {object|null} rules - The full rules object (reads rules.time.defaultCosts).
- * @returns {number}
- */
+// Resolves the time cost of a player action: an explicit `timeCost` on the
+// option/skill/response always wins; otherwise the kind's default from
+// rules.time.defaultCosts ('navigate', 'skillAttempt', 'fullRest') applies;
+// otherwise the action is free. Without rules.time the whole system stays
+// dormant and only explicit costs charge.
 export function resolveTimeCost(explicitCost, kind, rules) {
   if (explicitCost !== undefined) return explicitCost;
   if (!kind) return 0;

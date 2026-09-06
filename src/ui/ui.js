@@ -8,8 +8,7 @@ import { ChestUI } from './chest-ui.js';
 import { QuestUI } from './quest-ui.js';
 import { InventoryUI } from './inventory-ui.js';
 
-// Group key for the sheet's in-memory section collapse state — a per-session
-// UI preference reset on reload, not saved (see createSectionToggles).
+// Group key for the sheet's section collapse state (see createSectionToggles).
 const SHEET_SECTION_GROUP = 'sheet';
 
 // How long the pointer must rest on a dotted item card before the dot counts
@@ -22,9 +21,8 @@ const NEW_DOT_DWELL_MS = 250;
 // conventions never fight over one key.
 const NAV_KEYS = { w: 'N', d: 'E', s: 'S', a: 'W' };
 
-// A data-stat-bind span for an innerHTML template — the stats update loop
-// (see update()) fills every bound span on each stats change. Shared by the
-// sheet's character section and the scene top bar.
+// A data-stat-bind span for an innerHTML template; update() fills every bound
+// span on each stats change.
 const bindSpan = (path) => `<span data-stat-bind="${path}"></span>`;
 
 export class UIManager {
@@ -184,7 +182,6 @@ export class UIManager {
       this.engine.log(LOG.SYSTEM, this.engine.t('system.saved'));
     });
 
-    // Load
     const fileInput = document.getElementById(EL.FILE_UPLOAD);
     document.getElementById(EL.BTN_LOAD)?.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', (e) => {
@@ -195,7 +192,6 @@ export class UIManager {
         try {
           let raw = ev.target.result;
           // Decode the base64+UTF-8 encoding written by this.engine.state.getSaveString().
-          // TextDecoder is the modern replacement for the deprecated escape() approach.
           try {
             const binary = atob(raw);
             const bytes = new Uint8Array(binary.length);
@@ -213,7 +209,6 @@ export class UIManager {
       e.target.value = '';
     });
 
-    // Restart
     document.getElementById(EL.BTN_RESTART)?.addEventListener('click', () => {
       this.engine.state.reset();
       window.location.reload();
@@ -226,9 +221,6 @@ export class UIManager {
     });
     document.getElementById(EL.AUDIO_AMBIENCE_VOL)?.addEventListener('input', (e) => {
       this.engine.audio.setVolume('ambience', e.target.value / 100);
-    });
-    document.getElementById(EL.AUDIO_NARRATION_VOL)?.addEventListener('input', (e) => {
-      this.engine.audio.setVolume('narration', e.target.value / 100);
     });
   }
 
@@ -251,7 +243,6 @@ export class UIManager {
     this._sheetTabId = rules.tabs.find(t => t.widget === 'attributes')?.id ?? null;
 
     rules.tabs.forEach(tab => {
-      // Nav button
       const btn = document.createElement('button');
       const classes = [CSS.BTN, CSS.TABS_BTN];
       if (tab.default) classes.push(CSS.TABS_BTN_ACTIVE);
@@ -267,7 +258,6 @@ export class UIManager {
         : escapeHtml(label);
       nav.appendChild(btn);
 
-      // Panel div
       const panel = document.createElement('div');
       panel.className = CSS.TABS_PANEL;
       panel.id = tab.id;
@@ -296,7 +286,6 @@ export class UIManager {
     });
     nav.addEventListener('mouseleave', () => hideCursorTooltip());
 
-    // Tab switching
     nav.querySelectorAll(`.${CSS.TABS_BTN}`).forEach(btn => {
       btn.addEventListener('click', (e) => {
         // currentTarget, not target: a click can land on the button's icon.
@@ -414,10 +403,6 @@ export class UIManager {
           <span>${escapeHtml(this.engine.t('ui.audioAmbience'))}</span>
           <input type="range" id="${EL.AUDIO_AMBIENCE_VOL}" min="0" max="100" value="${Math.round(audio.ambienceVolume * 100)}">
         </label>
-        <label class="audio-options__row">
-          <span>${escapeHtml(this.engine.t('ui.audioNarration'))}</span>
-          <input type="range" id="${EL.AUDIO_NARRATION_VOL}" min="0" max="100" value="${Math.round(audio.narrationVolume * 100)}">
-        </label>
       </div>
     </div>`;
   }
@@ -442,7 +427,7 @@ export class UIManager {
     // with nothing to spend, the values sit flush at the row's edge instead
     // of holding a gutter for buttons that aren't there.
     const slot = (inner = '') => canSpend ? `<span class="attr-list__slot" hidden>${inner}</span>` : '';
-    const spendBtnHtml = (target) => canSpend && creationIds.has(target)
+    const spendBtnHtml = (target, spendable = creationIds.has(target)) => canSpend && spendable
       ? `<button class="${CSS.BTN} attr-list__spend" data-spend-attr="${escapeHtml(target)}" title="${escapeHtml(this.engine.t('ui.spendStatPoint'))}" hidden>+</button>`
       : '';
     // The data-stat-bind spans ride the existing stats update loop.
@@ -464,9 +449,7 @@ export class UIManager {
       icon: attr.icon,
       label: skillLabel(this.engine, attr.id),
       valueHtml: bindSpan(`attributes.${escapeHtml(attr.id)}`),
-      trailingHtml: slot(canSpend
-        ? `<button class="${CSS.BTN} attr-list__spend" data-spend-attr="${escapeHtml(attr.id)}" title="${escapeHtml(this.engine.t('ui.spendStatPoint'))}" hidden>+</button>`
-        : ''),
+      trailingHtml: slot(spendBtnHtml(attr.id, true)),
     })).join('');
     const sectionHeading = (key, labelText) =>
       `<button class="${CSS.SECTION_HEADING} ${CSS.SECTION_TOGGLE}" data-section="${key}">
@@ -565,7 +548,6 @@ export class UIManager {
   // The rules.headerResources entries that render as a label plus a bound
   // current/max value — shared by the sheet's character section (icon plus
   // label) and the scene top bar (icon alone) so the two can't drift apart.
-  // @returns {Array<{icon: string, label: string, valueHtml: string}>}
   _headerResourceEntries() {
     const player = this.engine.state.getPlayer();
     return (this.engine.data.rules?.headerResources || [])
@@ -676,7 +658,7 @@ export class UIManager {
     if (charCreation) charCreation.hidden = true;
     document.getElementById('game-container').hidden = false;
 
-    clearElement(EL.SCENE_NARRATIVE);
+    clearElement(document.getElementById(EL.SCENE_NARRATIVE));
     this.engine.currentSceneEl = null;
     this.engine.resetScene();
     const lastDesc = this.engine.narrative.restore(this.engine.state.getLog());

@@ -1,5 +1,6 @@
-import { LOG, ACTIONS, GOLD_ITEM_ID } from '../core/config.js';
-import { parseDamage } from './dice.js';
+import { LOG, GOLD_ITEM_ID } from '../core/config.js';
+import { isResourcePool } from '../core/utils.js';
+import { rollAmount } from './items.js';
 import { ticksUntilSegment } from './time.js';
 
 // Built-in action handlers for the scene option action pipeline.
@@ -57,6 +58,16 @@ function handleReturn(_action, engine) {
   engine.renderScene(engine.state.getReturnSceneId() || fallback);
 }
 
+// The log tail shared by the restorative actions. A string override is
+// authored prose — the world's answer, narrated. The default is the act's
+// yield, amended onto the [Player] option line that ran this pipeline (see
+// STYLE.md, the narrative log's two voices).
+function logYield(engine, action, yieldLine, overrideVariant = 'system') {
+  if (action.log === false) return;
+  if (typeof action.log === 'string') engine.log(LOG.SYSTEM, engine.t(action.log), overrideVariant);
+  else if (!engine.amendLog(yieldLine)) engine.log(LOG.PLAYER, yieldLine, 'choice');
+}
+
 function handleFullRest(action, engine) {
   engine.state.modifyPlayerStat('hp', 'full');
   // A night's rest also refills the retry currency (rules.skillRetry.restRestore,
@@ -72,16 +83,7 @@ function handleFullRest(action, engine) {
   // Rest-limited item uses (attributes.uses) all come back with a night's
   // sleep, whichever rest they refresh on.
   engine.state.refreshItemUses('full_rest');
-  if (action.log !== false) {
-    // A string override is authored prose — the world's answer, narrated. The
-    // default is the act's yield, amended onto the [Player] option line that
-    // ran this pipeline (see STYLE.md, the narrative log's two voices).
-    if (typeof action.log === 'string') engine.log(LOG.SYSTEM, engine.t(action.log));
-    else {
-      const yieldLine = engine.t('actions.fullRest');
-      if (!engine.amendLog(yieldLine)) engine.log(LOG.PLAYER, yieldLine, 'choice');
-    }
-  }
+  logYield(engine, action, engine.t('actions.fullRest'));
 }
 
 // { type: "short_rest" } — one draw on the short-rest pool: heals
@@ -99,7 +101,7 @@ function handleShortRest(action, engine) {
     return;
   }
   const pool = engine.state.getPlayer().resources?.[config.resource];
-  if (!(pool && typeof pool === 'object' && 'current' in pool)) {
+  if (!isResourcePool(pool)) {
     console.warn(`[Gravity] short_rest: "${config.resource}" is not a declared { current, max } resource — skipped`);
     return;
   }
@@ -108,41 +110,21 @@ function handleShortRest(action, engine) {
     return;
   }
 
-  let amount = config.heal ?? 1;
-  let rollSuffix = '';
-  if (typeof amount === 'string') {
-    const result = parseDamage(amount);
-    rollSuffix = engine.t('player.rollSuffix', { dice: amount, roll: result.string });
-    amount = result.total;
-  }
+  const { amount, rollSuffix } = rollAmount(engine, config.heal ?? 1);
   engine.state.modifyPlayerStat('hp', amount);
   engine.state.modifyPlayerStat(config.resource, -1);
   // A breather also brings back the item uses that refresh on a short rest.
   engine.state.refreshItemUses('short_rest');
-
-  if (action.log !== false) {
-    // Same split as full_rest: authored prose narrates; the default yield
-    // amends the act's line, roll and all: "Short Rest (+6 HP, 1d8: 6)".
-    if (typeof action.log === 'string') engine.log(LOG.SYSTEM, engine.t(action.log));
-    else {
-      const yieldLine = engine.t('actions.heal', { amount: `+${amount}`, rollSuffix });
-      if (!engine.amendLog(yieldLine)) engine.log(LOG.PLAYER, yieldLine, 'choice');
-    }
-  }
+  // The yield carries the roll: "Short Rest (+6 HP, 1d8: 6)".
+  logYield(engine, action, engine.t('actions.heal', { amount: `+${amount}`, rollSuffix }));
 }
 
 function handleHeal(action, engine) {
   const amount = action.amount ?? engine.data.rules?.snackHealAmount ?? 2;
   engine.state.modifyPlayerStat('hp', amount);
-  if (action.log !== false) {
-    // Same split as full_rest: authored prose narrates, the default yield
-    // amends the act's line. Signed so a harmful heal reads "(-2 HP)".
-    if (typeof action.log === 'string') engine.log(LOG.SYSTEM, engine.t(action.log), 'loot');
-    else {
-      const yieldLine = engine.t('actions.heal', { amount: amount >= 0 ? `+${amount}` : `${amount}`, rollSuffix: '' });
-      if (!engine.amendLog(yieldLine)) engine.log(LOG.PLAYER, yieldLine, 'choice');
-    }
-  }
+  // Signed so a harmful heal reads "(-2 HP)".
+  const signed = amount >= 0 ? `+${amount}` : `${amount}`;
+  logYield(engine, action, engine.t('actions.heal', { amount: signed, rollSuffix: '' }), 'loot');
 }
 
 // ── Pipeline utility actions ──────────────────────────────────────────────
@@ -233,19 +215,19 @@ function handleCancelTimer(action, engine) {
 }
 
 export function registerBuiltinActions(engine) {
-  engine.registerAction(ACTIONS.LOOT,            handleLoot);
-  engine.registerAction(ACTIONS.COMBAT,          handleCombat);
-  engine.registerAction(ACTIONS.DIALOGUE,        handleDialogue);
-  engine.registerAction(ACTIONS.RETURN,          handleReturn);
-  engine.registerAction(ACTIONS.FULL_REST,       handleFullRest);
-  engine.registerAction(ACTIONS.SHORT_REST,      handleShortRest);
-  engine.registerAction(ACTIONS.HEAL,            handleHeal);
-  engine.registerAction(ACTIONS.NAVIGATE,        handleNavigate);
-  engine.registerAction(ACTIONS.SET_FLAG,        handleSetFlag);
-  engine.registerAction(ACTIONS.LOG,             handleLog);
-  engine.registerAction(ACTIONS.MANAGE_CHEST,    handleManageChest);
-  engine.registerAction(ACTIONS.GRANT_CHAPTER,   handleGrantChapter);
-  engine.registerAction(ACTIONS.ADVANCE_TIME,    handleAdvanceTime);
-  engine.registerAction(ACTIONS.SET_TIMER,       handleSetTimer);
-  engine.registerAction(ACTIONS.CANCEL_TIMER,    handleCancelTimer);
+  engine.registerAction('loot', handleLoot);
+  engine.registerAction('combat', handleCombat);
+  engine.registerAction('dialogue', handleDialogue);
+  engine.registerAction('return', handleReturn);
+  engine.registerAction('full_rest', handleFullRest);
+  engine.registerAction('short_rest', handleShortRest);
+  engine.registerAction('heal', handleHeal);
+  engine.registerAction('navigate', handleNavigate);
+  engine.registerAction('set_flag', handleSetFlag);
+  engine.registerAction('log', handleLog);
+  engine.registerAction('manage_chest', handleManageChest);
+  engine.registerAction('grant_chapter', handleGrantChapter);
+  engine.registerAction('advance_time', handleAdvanceTime);
+  engine.registerAction('set_timer', handleSetTimer);
+  engine.registerAction('cancel_timer', handleCancelTimer);
 }

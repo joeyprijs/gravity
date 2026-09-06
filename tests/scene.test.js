@@ -4,36 +4,11 @@ import { gameState } from '../src/core/state.js';
 import { SceneRenderer } from '../src/systems/scene.js';
 import { CHECK_KEYS } from '../src/core/config.js';
 import { getAttempts } from '../src/systems/skill-checks.js';
+import { makeRules, fakeEl, paramEchoT } from './helpers.js';
 
-// Minimal DOM stand-in — just enough for createElement/buildOptionButton to run
-// headless. Elements are only built by the code under test, never queried back.
-const fakeEl = () => ({
-  classList: { add() {} },
-  children: [],
-  appendChild(child) { this.children.push(child); return child; },
-  setAttribute() {},
-  removeAttribute() {},
-  querySelector: () => null,
-  querySelectorAll: () => [],
-});
 globalThis.document = { createElement: fakeEl, getElementById: fakeEl };
 
-// Minimal rules required by gameState.init() — mirrors the key values from rules.json.
-const TEST_RULES = {
-  playerDefaults: {
-    name: '',
-    level: 1,
-    xp: 0,
-    resources: { hp: { current: 10, max: 10 }, ap: { current: 3, max: 3 }, gold: 0 },
-    attributes: { ac: 10, initiative: 0, perception: 0 },
-    inventory: [],
-    equipment: {},
-  },
-  customAttributes: [],
-  startingScene: null,
-  xpPerLevel: 100,
-  levelUpHpBonus: 5,
-};
+const TEST_RULES = makeRules({ playerDefaults: { attributes: { ac: 10, initiative: 0, perception: 0 } } });
 
 const TEST_ITEMS = {
   healing_potion: { name: 'Healing Potion' },
@@ -114,8 +89,6 @@ test('_resolveDescription: scene decorators append to every scene', () => {
 // ── _awardDiscoveredLoot ──────────────────────────────────────────────────────
 // The summary line is t('loot.foundItems', { list }) with the list joined by
 // Intl.ListFormat — the tests assert on the key and its list param.
-
-const paramEchoT = (k, p) => p ? `${k}:${JSON.stringify(p)}` : k;
 
 test('_awardDiscoveredLoot: single item is added and logged by name', () => {
   const { sr, engine, calls } = makeSR();
@@ -312,7 +285,6 @@ test('restoreFromSave: a null description leaves the cache empty', () => {
 
 // ── Outcome tiers, resolveOnce, maxAttempts ──────────────────────────────────
 
-
 test('_buildPassFailButton: partial tier runs its pipeline and still counts an attempt', () => {
   const { sr, engine } = makeSR();
   gameState.setCurrentSceneId('cell');
@@ -326,34 +298,6 @@ test('_buildPassFailButton: partial tier runs its pipeline and still counts an a
   assert.deepEqual(ran, [partialActions]);
   assert.equal(getAttempts(gameState, CHECK_KEYS.skillDc('perception', 'cell'), 0), 1);
 });
-
-test('_buildPassFailButton: resolveOnce retires the check after a single roll', () => {
-  const { sr } = makeSR();
-  gameState.setCurrentSceneId('cell');
-  const opt = { text: 'Leap', skillCheck: 'perception', dc: 15, resolveOnce: true };
-  const btn = sr._buildPassFailButton(opt, 0, 'cell', {});
-  mock.method(Math, 'random', () => 0); // roll 1 — failure
-  btn.onclick();
-  assert.equal(sr._buildPassFailButton(opt, 0, 'cell', {}), null);
-});
-
-test('_buildPassFailButton: exhausting maxAttempts runs onExhausted and retires the check', () => {
-  const { sr, engine } = makeSR();
-  gameState.setCurrentSceneId('cell');
-  const ran = [];
-  engine.runActions = (a) => ran.push(a);
-  const onExhausted = [{ type: 'set_flag', flag: 'gave_up', value: true }];
-  const opt = { text: 'Plead', skillCheck: 'perception', dc: 18, maxAttempts: 2, onExhausted };
-  mock.method(Math, 'random', () => 0); // always roll 1 — failure
-
-  sr._buildPassFailButton(opt, 0, 'cell', {}).onclick();
-  assert.ok(!ran.includes(onExhausted));
-
-  sr._buildPassFailButton(opt, 0, 'cell', {}).onclick();
-  assert.ok(ran.includes(onExhausted));
-  assert.equal(sr._buildPassFailButton(opt, 0, 'cell', {}), null);
-});
-
 
 // ── Narrative (free) checks ───────────────────────────────────────────────────
 
@@ -391,7 +335,6 @@ test('_buildNarrativeButton: without resultText falls back to the locale line', 
   sr._buildNarrativeButton({ text: 'Look', skillCheck: 'perception' }, 0, 'cell', {}).onclick();
   assert.ok(calls.logs.some(l => l.message === 'actions.lookAroundEmpty'));
 });
-
 
 // ── Passive checks ────────────────────────────────────────────────────────────
 

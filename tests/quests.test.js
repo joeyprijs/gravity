@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { gameState } from '../src/core/state.js';
 import { QuestSystem } from '../src/systems/quests.js';
 import { MISSION_STATUS } from '../src/core/config.js';
+import { makeRules } from './helpers.js';
 
 // Staged-quest invariants: one-way advancement, observed advanceWhen
 // conditions (including the met-the-quest-giver-late instant chain), terminal
@@ -10,20 +11,7 @@ import { MISSION_STATUS } from '../src/core/config.js';
 
 // xpPerLevel is set high so reward XP stays additive — no level-up math in
 // the assertions.
-const TEST_RULES = {
-  playerDefaults: {
-    name: '',
-    level: 1,
-    xp: 0,
-    resources: { hp: { current: 10, max: 10 }, ap: { current: 3, max: 3 }, gold: 0 },
-    attributes: { ac: 10 },
-    inventory: [],
-    equipment: {},
-  },
-  customAttributes: [],
-  xpPerLevel: 10000,
-  levelUpHpBonus: 0,
-};
+const TEST_RULES = makeRules({ playerDefaults: { attributes: { ac: 10 } }, xpPerLevel: 10000, levelUpHpBonus: 0 });
 
 // A Bron-shaped mission: collect two of an item, then report back.
 const makeShardMission = () => ({

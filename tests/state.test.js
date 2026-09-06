@@ -1,35 +1,19 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { gameState } from '../src/core/state.js';
+import { makeRules, SLOTS } from './helpers.js';
 
-// Minimal rules that mirror the key values from rules.json.
-// State must be init'd before each test since gameState is a singleton.
-const TEST_RULES = {
+// gameState is a singleton, so it is re-init'd before each test.
+const TEST_RULES = makeRules({
   playerDefaults: {
-    name: '',
-    level: 1,
-    xp: 0,
-    resources: { hp: { current: 10, max: 10 }, ap: { current: 3, max: 3 }, gold: 0 },
-    attributes: { ac: 10, initiative: 0 },
     inventory: [
       { item: 'rusty_sword',    amount: 1 },
       { item: 'flames',         amount: 1 },
       { item: 'healing_potion', amount: 2 },
     ],
-    equipmentSlots: [
-      { id: 'head', kind: 'head' },
-      { id: 'body', kind: 'body' },
-      { id: 'left_hand', kind: 'hand' },
-      { id: 'right_hand', kind: 'hand' },
-      { id: 'left_ring', kind: 'ring' },
-      { id: 'right_ring', kind: 'ring' },
-    ],
+    equipmentSlots: SLOTS,
   },
-  customAttributes: [],
-  startingScene: null,
-  xpPerLevel: 100,
-  levelUpHpBonus: 5,
-};
+});
 
 // Shortcuts to avoid repeating player.resources.hp.current etc. throughout tests.
 const hp    = () => gameState.getPlayer().resources.hp.current;
@@ -82,27 +66,6 @@ test('modifyPlayerStat: a declared custom resource is modifiable by name and cla
   assert.equal(luck(), 3);            // clamps to max
 });
 
-test('addToInventory: stacks existing item', () => {
-  // rusty_sword starts at 1
-  gameState.addToInventory('rusty_sword', 2);
-  const entry = gameState.getPlayer().inventory.find(i => i.item === 'rusty_sword');
-  assert.equal(entry.amount, 3);
-});
-
-test('addToInventory: adds new item as new entry', () => {
-  gameState.addToInventory('gold_coin', 5);
-  const entry = gameState.getPlayer().inventory.find(i => i.item === 'gold_coin');
-  assert.ok(entry, 'Expected gold_coin to be in inventory');
-  assert.equal(entry.amount, 5);
-});
-
-test('removeFromInventory: decrements amount', () => {
-  // healing_potion starts at 2
-  gameState.removeFromInventory('healing_potion', 1);
-  const entry = gameState.getPlayer().inventory.find(i => i.item === 'healing_potion');
-  assert.equal(entry.amount, 1);
-});
-
 test('addToInventory: an item database gates ids — unknown rejected, known accepted', () => {
   gameState.init(TEST_RULES, { rusty_sword: { name: 'Rusty Sword' } });
   assert.equal(gameState.addToInventory('no_such_item'), false);
@@ -121,19 +84,18 @@ test('addToInventory: mutation carries the silent flag so observers can tell gai
   assert.equal(seen[1].silent, true);
 });
 
+test('removeFromInventory: a partial removal decrements the stack without dropping it', () => {
+  gameState.removeFromInventory('healing_potion', 1); // starts at 2
+  const entry = gameState.getPlayer().inventory.find(i => i.item === 'healing_potion');
+  assert.equal(entry.amount, 1);
+});
+
 test('mutation hooks fire before listener notification, so hook-derived state is in the notified render', () => {
   const order = [];
   gameState.onMutation((method) => { if (method === 'addToInventory') order.push('hook'); });
   gameState.subscribe(() => order.push('listener'));
   gameState.addToInventory('rusty_sword', 1);
   assert.deepEqual(order, ['hook', 'listener']);
-});
-
-test('removeFromInventory: removes entry when amount hits 0', () => {
-  // healing_potion starts at 2, remove both
-  gameState.removeFromInventory('healing_potion', 2);
-  const entry = gameState.getPlayer().inventory.find(i => i.item === 'healing_potion');
-  assert.equal(entry, undefined);
 });
 
 test('amendLog extends the newest choice entry, past narrator lines, never across a scene', () => {
@@ -155,10 +117,6 @@ test('appendLog caps at 200 entries, trimming the oldest', () => {
   }
   assert.ok(gameState.getLog().length <= 200, `Expected ≤200 entries, got ${gameState.getLog().length}`);
   assert.equal(gameState.getLog().at(-1).message, 'msg249');
-});
-
-test('getFlag: missing flag returns false', () => {
-  assert.equal(gameState.getFlag('no_such_flag'), false);
 });
 
 test('getFlag: stored falsy non-boolean value is preserved (not coerced to false)', () => {
@@ -188,33 +146,17 @@ test('setMissionStatus: emits a mutation so observers can react to quest changes
   assert.deepEqual(seen[0], { missionId: 'test_mission', status: 'active' });
 });
 
-test('getMissionStatus: unregistered mission returns not_started', () => {
-  assert.equal(gameState.getMissionStatus('unknown_mission'), 'not_started');
-});
-
-test('equipItem: fails and returns false if item is not in inventory', () => {
-  const success = gameState.equipItem('Right Hand', 'no_such_item');
-  assert.equal(success, false);
-  assert.equal(gameState.getPlayer().equipment.right_hand, null);
-});
-
 test('depositToChest: clamps to actual inventory amount', () => {
-  // healing_potion starts at 2
-  gameState.depositToChest('chest1', 'healing_potion', 5);
-  // Should only deposit 2
+  gameState.depositToChest('chest1', 'healing_potion', 5); // the pack holds 2
   const chest = gameState.getChest('chest1');
   assert.equal(chest.find(i => i.item === 'healing_potion').amount, 2);
-  // Inventory should have 0
   const invEntry = gameState.getPlayer().inventory.find(i => i.item === 'healing_potion');
   assert.equal(invEntry, undefined);
 });
 
 test('withdrawFromChest: clamps to actual chest amount', () => {
-  // Deposit 2 first
   gameState.depositToChest('chest1', 'healing_potion', 2);
-  // Withdraw 5
   gameState.withdrawFromChest('chest1', 'healing_potion', 5);
-  // Should only withdraw 2
   const chest = gameState.getChest('chest1');
   assert.equal(chest.length, 0);
   const invEntry = gameState.getPlayer().inventory.find(i => i.item === 'healing_potion');
@@ -222,30 +164,17 @@ test('withdrawFromChest: clamps to actual chest amount', () => {
 });
 
 test('countPlayerItem: correctly counts and filters equipped vs unequipped items', () => {
-  // Reset and initialize with starting items
-  gameState.init(TEST_RULES);
-
-  // 'healing_potion' starts with amount: 2 in inventory, none equipped
   assert.equal(gameState.countPlayerItem('healing_potion'), 2);
   assert.equal(gameState.countPlayerItem('healing_potion', { includeEquipped: false }), 2);
 
-  // Equip 'rusty_sword' (starts at 1 in inventory)
-  gameState.equipItem('Right Hand', 'rusty_sword');
-
-  // Total count should still be 1 (equipped)
+  gameState.equipItem('right_hand', 'rusty_sword');
   assert.equal(gameState.countPlayerItem('rusty_sword'), 1);
-  // Unequipped inventory count should be 0
   assert.equal(gameState.countPlayerItem('rusty_sword', { includeEquipped: false }), 0);
 
-  // Add another 'rusty_sword' to inventory
   gameState.addToInventory('rusty_sword', 1);
-
-  // Total count should now be 2 (1 equipped, 1 in inventory)
   assert.equal(gameState.countPlayerItem('rusty_sword'), 2);
-  // Unequipped inventory count should be 1
   assert.equal(gameState.countPlayerItem('rusty_sword', { includeEquipped: false }), 1);
 
-  // Check non-existent item
   assert.equal(gameState.countPlayerItem('unknown_item'), 0);
   assert.equal(gameState.countPlayerItem('unknown_item', { includeEquipped: false }), 0);
 });

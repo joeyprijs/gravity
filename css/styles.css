@@ -655,7 +655,10 @@ button.section-toggle--collapsed .section-toggle__label::before {
   font-weight: 700;
 }
 
-.attr-list__identity-level {
+/* The label voice: one microtype for every heading that names rather than
+   says (sheet level, full-map title, character-creation labels). */
+.attr-list__identity-level,
+.fullmap-overlay__title {
   color: var(--text-secondary);
   font-size: var(--font-sm);
   font-weight: 600;
@@ -702,13 +705,8 @@ button.section-toggle--collapsed .section-toggle__label::before {
  SIDEBAR: OPTIONS TAB
  ========================================================================== */
 
-/* Save/load/restart, stacked full width. */
-.options-actions {
-  display: flex;
-  flex-direction: column;
-  gap: calc(var(--spacing) * 1);
-}
-
+/* Save/load/restart and the audio controls, stacked full width. */
+.options-actions,
 .audio-options {
   display: flex;
   flex-direction: column;
@@ -1281,15 +1279,6 @@ button.section-toggle--collapsed .section-toggle__label::before {
   flex-shrink: 0;
 }
 
-/* The header names the view, it isn't content — so it takes the label voice. */
-.fullmap-overlay__title {
-  color: var(--text-secondary);
-  font-size: var(--font-sm);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
 .fullmap-overlay__inner {
   flex: 1;
   overflow: auto;
@@ -1327,14 +1316,6 @@ button.section-toggle--collapsed .section-toggle__label::before {
   width: 36px;
   height: 36px;
   flex-shrink: 0;
-}
-
-/* ==========================================================================
- OVERLAY: MUSEUM
- ========================================================================== */
-
-.museum-item-list {
-  color: var(--gold-color);
 }
 
 /* ==========================================================================

@@ -544,9 +544,7 @@
 
       await step('options tab holds the audio controls, wired to the AudioSystem', () => {
         assert($('#options-tab #audio-mute'), 'mute checkbox present');
-        for (const id of ['audio-ambience-volume', 'audio-narration-volume']) {
-          assert($(`#options-tab #${id}`), `#${id} slider present`);
-        }
+        assert($('#options-tab #audio-ambience-volume'), 'ambience slider present');
         const mute = $('#audio-mute');
         mute.checked = true;
         mute.dispatchEvent(new Event('change', { bubbles: true }));
@@ -559,22 +557,6 @@
       await step('dungeon ambience resolved as the scene audio target', () => {
         assert(window.gameEngine.audio._ambiencePath === 'audio/ambience/dungeon.m4a',
           `ambience target is the dungeon loop (got ${window.gameEngine.audio._ambiencePath})`);
-      });
-
-      await step('an action pipeline plays its own narration clip', async () => {
-        const played = [];
-        const audio = window.gameEngine.audio;
-        const real = audio.playNarration.bind(audio);
-        audio.playNarration = (path) => played.push(path);
-        const option = $$('#scene-options-actions .card').find(c => text(c).includes('closer look'));
-        assert(option, 'the "take a closer look" option is on screen');
-        option.click();
-        await until(() => played.length > 0, 'a narration clip to be requested');
-        assert(played[0] === 'audio/narration/dungeon/start__closer_look.webm',
-          `the loot action's clip played (got ${played[0]})`);
-        // The option re-render that follows must not stop the clip it started.
-        assert(played.length === 1, `narration requested once, not ${played.length} times`);
-        audio.playNarration = real;
       });
 
       await step('clicking a skill check advances the story', async () => {

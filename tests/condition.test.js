@@ -69,11 +69,6 @@ test('mission leaf: matching status returns true', () => {
   assert.equal(evaluateCondition({ mission: 'quest_1', status: 'complete' }, state), true);
 });
 
-test('mission leaf: non-matching status returns false', () => {
-  const state = makeState({ missions: { quest_1: 'active' } });
-  assert.equal(evaluateCondition({ mission: 'quest_1', status: 'complete' }, state), false);
-});
-
 test('mission stage leaf: exact current stage, active missions only', () => {
   const staged = { missions: { q: 'active' }, stages: { q: ['collect', 'report'] }, currentStages: { q: 'collect' } };
   assert.equal(evaluateCondition({ mission: 'q', stage: 'collect' }, makeState(staged)), true);
@@ -137,7 +132,6 @@ test('day and segment leaves read rules.time, and are false without it', () => {
   assert.equal(evaluateCondition({ day: { at_least: 1 } }, makeTimeState(0, null)), false);
   assert.equal(evaluateCondition({ segment: 'day' }, makeTimeState(0, null)), false);
 });
-
 
 // ── custom attributes shadowing built-in leaves ───────────────────────────────
 

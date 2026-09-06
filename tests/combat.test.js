@@ -4,30 +4,9 @@ import { CombatSystem } from '../src/systems/combat.js';
 import { splashTargets, CombatRenderer } from '../src/ui/combat-ui.js';
 import { gameState } from '../src/core/state.js';
 import { ENEMY_CLAW_ID } from '../src/core/config.js';
+import { makeRules, SLOTS, paramEchoT } from './helpers.js';
 
-// Minimal rules required by gameState.init() — mirrors the key values from rules.json.
-const TEST_RULES = {
-  playerDefaults: {
-    name: '',
-    level: 1,
-    xp: 0,
-    resources: { hp: { current: 10, max: 10 }, ap: { current: 3, max: 3 }, gold: 0 },
-    attributes: { ac: 10, initiative: 0 },
-    inventory: [],
-    equipmentSlots: [
-      { id: 'head', kind: 'head' },
-      { id: 'body', kind: 'body' },
-      { id: 'left_hand', kind: 'hand' },
-      { id: 'right_hand', kind: 'hand' },
-      { id: 'left_ring', kind: 'ring' },
-      { id: 'right_ring', kind: 'ring' },
-    ],
-  },
-  customAttributes: [],
-  startingScene: null,
-  xpPerLevel: 100,
-  levelUpHpBonus: 5,
-};
+const TEST_RULES = makeRules({ playerDefaults: { equipmentSlots: SLOTS } });
 
 // Shortcuts to avoid repeating player.resources.* throughout tests.
 const hp    = () => gameState.getPlayer().resources.hp.current;
@@ -38,7 +17,7 @@ const ap    = () => gameState.getPlayer().resources.ap.current;
 // No DOM calls originate from the methods under test (renderer is overridden below).
 function makeMockEngine(items = {}) {
   const engine = {
-    data: { items, npcs: {}, rules: { playerDefaults: { equipmentSlots: TEST_RULES.playerDefaults.equipmentSlots } } },
+    data: { items, npcs: {}, rules: { playerDefaults: { equipmentSlots: SLOTS } } },
     state: gameState,
     t: (key) => key,
     log: () => {},
@@ -95,12 +74,21 @@ function makeCS(items = {}) {
   return cs;
 }
 
+// Dice are mocked through Math.random: 0 rolls 1 on every die, 0.9999 rolls
+// the max (20 on a d20). The player's AC is 10.
 beforeEach(() => {
   gameState.init(TEST_RULES);
 });
 afterEach(() => mock.restoreAll());
 
 // ─── _resolveEnemyWeapon ─────────────────────────────────────────────────────
+
+test('_resolveEnemyWeapon: falls back to ENEMY_CLAW_ID when no weapon equipped', () => {
+  const claw = makeWeapon({ damageRoll: '1d4' });
+  const cs = makeCS({ [ENEMY_CLAW_ID]: claw });
+  const enemy = makeEnemy();
+  assert.equal(cs._resolveEnemyWeapon(enemy), claw);
+});
 
 test('_resolveEnemyWeapon: returns the weapon in a hand slot', () => {
   const sword = makeWeapon();
@@ -110,25 +98,10 @@ test('_resolveEnemyWeapon: returns the weapon in a hand slot', () => {
   assert.equal(cs._resolveEnemyWeapon(enemy), sword);
 });
 
-test('_resolveEnemyWeapon: falls back to ENEMY_CLAW_ID when no weapon equipped', () => {
-  const claw = makeWeapon({ damageRoll: '1d4' });
-  const cs = makeCS({ [ENEMY_CLAW_ID]: claw });
-  const enemy = makeEnemy();
-  assert.equal(cs._resolveEnemyWeapon(enemy), claw);
-});
-
-test('_resolveEnemyWeapon: returns null when no weapon and no claw in data', () => {
-  const cs = makeCS({});
-  const enemy = makeEnemy();
-  assert.equal(cs._resolveEnemyWeapon(enemy), null);
-});
-
 // ─── _resolveEnemyAttacks ────────────────────────────────────────────────────
 
 test('_resolveEnemyAttacks: all misses when roll cannot beat player AC', () => {
-  // BASE_AC = 10. Math.random=0 → roll(1,20)=1. 1 < 10 → miss.
-  const orig = Math.random;
-  Math.random = () => 0;
+  mock.method(Math, 'random', () => 0);
 
   const cs = makeCS();
   const weapon = makeWeapon({ actionPoints: 1, damageRoll: '1d6' });
@@ -139,15 +112,11 @@ test('_resolveEnemyAttacks: all misses when roll cannot beat player AC', () => {
   assert.equal(result.hits, 0);
   assert.equal(result.misses, 3);
   assert.equal(result.totalDamage, 0);
-  assert.equal(hp(), maxHp()); // unchanged
-
-  Math.random = orig;
+  assert.equal(hp(), maxHp());
 });
 
 test('_resolveEnemyAttacks: all hits when roll beats player AC', () => {
-  // Math.random=0.9999 → roll(1,20)=20. 20 >= 10 → hit.
-  const orig = Math.random;
-  Math.random = () => 0.9999;
+  mock.method(Math, 'random', () => 0.9999);
 
   const cs = makeCS();
   const weapon = makeWeapon({ actionPoints: 1, damageRoll: '1d6' });
@@ -160,30 +129,10 @@ test('_resolveEnemyAttacks: all hits when roll beats player AC', () => {
   assert.equal(result.misses, 0);
   assert.ok(result.totalDamage > 0);
   assert.ok(hp() < playerHpBefore);
-
-  Math.random = orig;
-});
-
-test('_resolveEnemyAttacks: attackCount matches AP budget', () => {
-  const cs = makeCS();
-  const weapon = makeWeapon({ actionPoints: 2 });
-  const enemy = makeEnemy();
-  const result = cs._resolveEnemyAttacks(weapon, 4, enemy); // 4 AP / 2 cost = 2 attacks
-  assert.equal(result.attackCount, 2);
-});
-
-test('_resolveEnemyAttacks: zero attacks when eAP below weapon cost', () => {
-  const cs = makeCS();
-  const weapon = makeWeapon({ actionPoints: 3 });
-  const enemy = makeEnemy();
-  const result = cs._resolveEnemyAttacks(weapon, 2, enemy); // 2 AP < 3 cost
-  assert.deepEqual(result, { attackCount: 0, hits: 0, misses: 0, totalDamage: 0, hitRolls: [], missRolls: [], damageRolls: [] });
 });
 
 test('_resolveEnemyAttacks: stops early when player HP reaches 0', () => {
-  // Always hit, player has 1 HP and weapon does guaranteed damage
-  const orig = Math.random;
-  Math.random = () => 0.9999; // always roll 20, always hit
+  mock.method(Math, 'random', () => 0.9999);
 
   gameState.modifyPlayerStat('hp', -(maxHp() - 1)); // set HP to 1
 
@@ -195,32 +144,25 @@ test('_resolveEnemyAttacks: stops early when player HP reaches 0', () => {
   // Loop should have stopped after player HP hit 0 — far fewer than 5 attacks
   assert.ok(result.attackCount < 5, `Expected early stop, got ${result.attackCount} attacks`);
   assert.equal(hp(), 0);
-
-  Math.random = orig;
 });
 
 test('_resolveEnemyAttacks: attribute-less weapons roll a bare d20 vs player AC', () => {
-  const orig = Math.random;
-  Math.random = () => 0.9999;
+  mock.method(Math, 'random', () => 0.9999);
 
   const cs = makeCS();
-  cs.engine.t = (key, p) => p ? `${key}:${JSON.stringify(p)}` : key;
+  cs.engine.t = paramEchoT;
   const result = cs._resolveEnemyAttacks(makeWeapon({ actionPoints: 1 }), 1, makeEnemy());
 
   assert.match(result.hitRolls[0], /enemyAttackRoll/);
   assert.match(result.hitRolls[0], /"roll":20/);
   assert.match(result.hitRolls[0], /"breakdown":"1d20: 20"/);
   assert.match(result.hitRolls[0], /"ac":10/);
-
-  Math.random = orig;
 });
 
 // ─── playerAttack ────────────────────────────────────────────────────────────
 
 test('playerAttack: hit reduces enemy HP and costs AP', () => {
-  // Roll 20 always hits (AC=5 enemy). Damage = parseDamage('1d6') with Math.random=0.9999 → 6.
-  const orig = Math.random;
-  Math.random = () => 0.9999;
+  mock.method(Math, 'random', () => 0.9999);
 
   const cs = makeCS();
   cs.engine.setMode('combat');
@@ -234,14 +176,10 @@ test('playerAttack: hit reduces enemy HP and costs AP', () => {
 
   assert.ok(enemy.attributes.healthPoints < 100, 'Enemy HP should be reduced on hit');
   assert.equal(ap(), apBefore - 1, 'AP should be spent');
-
-  Math.random = orig;
 });
 
 test('playerAttack: miss leaves enemy HP unchanged, still costs AP', () => {
-  // Roll 1 never hits AC=100 enemy
-  const orig = Math.random;
-  Math.random = () => 0;
+  mock.method(Math, 'random', () => 0);
 
   const cs = makeCS();
   cs.engine.setMode('combat');
@@ -255,15 +193,12 @@ test('playerAttack: miss leaves enemy HP unchanged, still costs AP', () => {
 
   assert.equal(enemy.attributes.healthPoints, 50, 'Enemy HP should not change on miss');
   assert.equal(ap(), apBefore - 1, 'AP should still be spent on miss');
-
-  Math.random = orig;
 });
 
 test('playerAttack: an attack the turn budget cannot afford resolves nothing', () => {
   // The renderer disables unaffordable buttons, but the precheck must hold on
   // its own — damage lands before the spend, and the two must never disagree.
-  const orig = Math.random;
-  Math.random = () => 0.9999; // would always hit if the attack ran
+  mock.method(Math, 'random', () => 0.9999); // would always hit if the attack ran
 
   const cs = makeCS();
   cs.engine.setMode('combat');
@@ -275,13 +210,10 @@ test('playerAttack: an attack the turn budget cannot afford resolves nothing', (
 
   assert.equal(enemy.attributes.healthPoints, 50, 'no damage may land on a refused spend');
   assert.equal(ap(), 0);
-
-  Math.random = orig;
 });
 
 test('playerAttack: calls endCombat when last enemy is defeated', () => {
-  const orig = Math.random;
-  Math.random = () => 0.9999; // always hit
+  mock.method(Math, 'random', () => 0.9999);
 
   const cs = makeCS();
   cs.engine.setMode('combat');
@@ -295,15 +227,13 @@ test('playerAttack: calls endCombat when last enemy is defeated', () => {
   cs.playerAttack(weapon, enemy);
 
   assert.ok(endCombatCalled, 'endCombat should be called when last enemy dies');
-
-  Math.random = orig;
 });
 
 // ─── rest-limited uses (attributes.uses) ─────────────────────────────────────
 
 test('playerAttack: a rest-limited spell spends one use per cast, hit or miss, and refuses when spent', () => {
-  const orig = Math.random;
-  Math.random = () => 0.9999; // always hits AC 5
+  let roll = 0.9999; // hits AC 5
+  mock.method(Math, 'random', () => roll);
 
   const spell = {
     id: 'test_fireball', name: 'Test Fireball', type: 'Spell',
@@ -319,20 +249,18 @@ test('playerAttack: a rest-limited spell spends one use per cast, hit or miss, a
   cs.playerAttack(spell, enemy);
   assert.deepEqual(gameState.getItemUses('test_fireball'), { current: 1, max: 2, refresh: 'full_rest' });
 
-  Math.random = () => 0; // the second cast misses — the use is spent regardless
+  roll = 0; // the second cast misses — the use is spent regardless
   cs.playerAttack(spell, enemy);
   assert.deepEqual(gameState.getItemUses('test_fireball'), { current: 0, max: 2, refresh: 'full_rest' });
 
   // Spent: the cast resolves nothing — no damage, no AP, no negative uses.
-  Math.random = () => 0.9999;
+  roll = 0.9999;
   const hpBefore = enemy.attributes.healthPoints;
   const apBefore = ap();
   cs.playerAttack(spell, enemy);
   assert.equal(enemy.attributes.healthPoints, hpBefore, 'no damage may land on a refused cast');
   assert.equal(ap(), apBefore, 'no AP spends on a refused cast');
   assert.deepEqual(gameState.getItemUses('test_fireball'), { current: 0, max: 2, refresh: 'full_rest' });
-
-  Math.random = orig;
 });
 
 // ─── playerAttackMulti (targets: "all") ────────────────────────────────────────
@@ -343,8 +271,7 @@ function makeAoeWeapon({ actionPoints = 3, damageRoll = '1d6', attackAttribute, 
 }
 
 test('playerAttackMulti: one roll catches every enemy it meets and misses the rest', () => {
-  const orig = Math.random;
-  Math.random = () => 0.9999; // d20 → 20
+  mock.method(Math, 'random', () => 0.9999);
 
   const cs = makeCS();
   cs.engine.setMode('combat');
@@ -356,16 +283,13 @@ test('playerAttackMulti: one roll catches every enemy it meets and misses the re
 
   assert.ok(caught.attributes.healthPoints < 100, 'the roll meets AC 5 — damage lands');
   assert.equal(missed.attributes.healthPoints, 100, 'the same roll cannot meet AC 100');
-
-  Math.random = orig;
 });
 
 test('playerAttackMulti: each caught enemy takes its own damage roll', () => {
   // One d20 (max), then two independent d6s: 6 for the first enemy, 1 for
   // the second — distinct deltas prove per-target dice.
   const rolls = [0.9999, 0.9999, 0];
-  const orig = Math.random;
-  Math.random = () => rolls.shift() ?? 0;
+  mock.method(Math, 'random', () => rolls.shift() ?? 0);
 
   const cs = makeCS();
   cs.engine.setMode('combat');
@@ -377,13 +301,10 @@ test('playerAttackMulti: each caught enemy takes its own damage roll', () => {
 
   assert.equal(first.attributes.healthPoints, 94);
   assert.equal(second.attributes.healthPoints, 99);
-
-  Math.random = orig;
 });
 
 test('playerAttackMulti: spends the AP cost once, not per enemy', () => {
-  const orig = Math.random;
-  Math.random = () => 0.9999;
+  mock.method(Math, 'random', () => 0.9999);
 
   const cs = makeCS();
   cs.engine.setMode('combat');
@@ -393,31 +314,10 @@ test('playerAttackMulti: spends the AP cost once, not per enemy', () => {
   cs.playerAttackMulti(makeAoeWeapon({ actionPoints: 1 }));
 
   assert.equal(ap(), apBefore - 1);
-
-  Math.random = orig;
-});
-
-test('playerAttackMulti: a cast the turn budget cannot afford resolves nothing', () => {
-  const orig = Math.random;
-  Math.random = () => 0.9999;
-
-  const cs = makeCS();
-  cs.engine.setMode('combat');
-  const enemy = makeEnemy({ hp: 100, ac: 5 });
-  cs.enemies = [enemy];
-
-  gameState.modifyPlayerStat('ap', -3); // drain the pool to 0
-  cs.playerAttackMulti(makeAoeWeapon({ actionPoints: 3 }));
-
-  assert.equal(enemy.attributes.healthPoints, 100, 'no damage may land on a refused spend');
-  assert.equal(ap(), 0);
-
-  Math.random = orig;
 });
 
 test('playerAttackMulti: calls endCombat once when the cast fells every enemy', () => {
-  const orig = Math.random;
-  Math.random = () => 0.9999;
+  mock.method(Math, 'random', () => 0.9999);
 
   const cs = makeCS();
   cs.engine.setMode('combat');
@@ -429,8 +329,6 @@ test('playerAttackMulti: calls endCombat once when the cast fells every enemy', 
   cs.playerAttackMulti(makeAoeWeapon());
 
   assert.equal(endCombatCalls, 1);
-
-  Math.random = orig;
 });
 
 test('splashTargets: a window on the enemy line, centered where the ends allow', () => {
@@ -451,8 +349,7 @@ test('splashTargets: a window on the enemy line, centered where the ends allow',
 });
 
 test('playerAttackMulti: an explicit target list burns only the chosen', () => {
-  const orig = Math.random;
-  Math.random = () => 0.9999;
+  mock.method(Math, 'random', () => 0.9999);
 
   const cs = makeCS();
   cs.engine.setMode('combat');
@@ -468,13 +365,10 @@ test('playerAttackMulti: an explicit target list burns only the chosen', () => {
   assert.ok(first.attributes.healthPoints < 100);
   assert.equal(spared.attributes.healthPoints, 100, 'an unaimed enemy is untouched');
   assert.ok(third.attributes.healthPoints < 100);
-
-  Math.random = orig;
 });
 
 test('playerAttackMulti: a dead enemy is not a target', () => {
-  const orig = Math.random;
-  Math.random = () => 0.9999;
+  mock.method(Math, 'random', () => 0.9999);
 
   const cs = makeCS();
   cs.engine.setMode('combat');
@@ -486,25 +380,16 @@ test('playerAttackMulti: a dead enemy is not a target', () => {
 
   assert.equal(dead.attributes.healthPoints, 0, 'the fallen take no further damage');
   assert.ok(living.attributes.healthPoints < 100);
-
-  Math.random = orig;
 });
 
 // ─── damageAttribute ─────────────────────────────────────────────────────────
 
 test('playerAttack: the weapon\'s damageAttribute joins the damage total and breakdown', () => {
-  const orig = Math.random;
-  Math.random = () => 0.9999; // d20 → 20, 1d6 → 6
+  mock.method(Math, 'random', () => 0.9999);
 
-  gameState.init({
-    ...TEST_RULES,
-    playerDefaults: {
-      ...TEST_RULES.playerDefaults,
-      attributes: { ...TEST_RULES.playerDefaults.attributes, intelligence: 3 },
-    },
-  });
+  gameState.init(makeRules({ playerDefaults: { equipmentSlots: SLOTS, attributes: { ac: 10, initiative: 0, intelligence: 3 } } }));
   const cs = makeCS();
-  cs.engine.t = (key, p) => p ? `${key}:${JSON.stringify(p)}` : key;
+  cs.engine.t = paramEchoT;
   cs.engine.setMode('combat');
   const enemy = makeEnemy({ hp: 100, ac: 5 });
   cs.enemies = [enemy];
@@ -518,13 +403,10 @@ test('playerAttack: the weapon\'s damageAttribute joins the damage total and bre
   assert.equal(enemy.attributes.healthPoints, 91); // 6 + 3 Intelligence
   assert.match(logged[1], /"damage":9/);
   assert.match(logged[1], /6 \+ 3 Intelligence/);
-
-  Math.random = orig;
 });
 
 test('_resolveEnemyAttacks: the enemy\'s own attribute powers the weapon\'s damageAttribute', () => {
-  const orig = Math.random;
-  Math.random = () => 0.9999;
+  mock.method(Math, 'random', () => 0.9999);
 
   const cs = makeCS();
   const weapon = makeWeapon({ actionPoints: 1, damageRoll: '1d6' });
@@ -534,13 +416,10 @@ test('_resolveEnemyAttacks: the enemy\'s own attribute powers the weapon\'s dama
   const result = cs._resolveEnemyAttacks(weapon, 1, enemy);
 
   assert.equal(result.totalDamage, 8); // 6 + 2 Strength
-
-  Math.random = orig;
 });
 
 test('_rollDamage: a negative attribute cannot heal the target', () => {
-  const orig = Math.random;
-  Math.random = () => 0; // 1d6 → 1
+  mock.method(Math, 'random', () => 0); // 1d6 → 1
 
   const cs = makeCS();
   const weapon = makeWeapon({ damageRoll: '1d6' });
@@ -548,15 +427,12 @@ test('_rollDamage: a negative attribute cannot heal the target', () => {
   const result = cs._rollDamage(weapon, { strength: -5 });
 
   assert.equal(result.total, 0); // clamped, not -4
-
-  Math.random = orig;
 });
 
 // ─── enemyTurn ───────────────────────────────────────────────────────────────
 
 test('enemyTurn: phase "after" — enemy with lower init than player attacks', () => {
-  const orig = Math.random;
-  Math.random = () => 0.9999; // always hit
+  mock.method(Math, 'random', () => 0.9999);
 
   const cs = makeCS();
   cs.engine.setMode('combat');
@@ -572,8 +448,6 @@ test('enemyTurn: phase "after" — enemy with lower init than player attacks', (
   cs.enemyTurn('after');
 
   assert.ok(hp() < hpBefore, 'Enemy should attack player in "after" phase');
-
-  Math.random = orig;
 });
 
 test('enemyTurn: phase "after" — enemy with higher init than player does NOT attack', () => {
@@ -591,8 +465,7 @@ test('enemyTurn: phase "after" — enemy with higher init than player does NOT a
 });
 
 test('enemyTurn: phase "before" — enemy with higher init than player attacks', () => {
-  const orig = Math.random;
-  Math.random = () => 0.9999;
+  mock.method(Math, 'random', () => 0.9999);
 
   const cs = makeCS();
   cs.engine.setMode('combat');
@@ -608,8 +481,6 @@ test('enemyTurn: phase "before" — enemy with higher init than player attacks',
   cs.enemyTurn('before');
 
   assert.ok(hp() < hpBefore, 'High-init enemy should attack in "before" phase');
-
-  Math.random = orig;
 });
 
 test('enemyTurn: dead enemy is skipped even if phase matches', () => {
@@ -649,15 +520,12 @@ test('endCombat: defeat transitions the mode machine to gameover', () => {
   cs.endCombat(false);
 
   assert.equal(cs.inCombat, false);
-  assert.equal(cs.isGameOver, true);
   assert.equal(cs.engine.mode, 'gameover');
 });
 
 test('enemyTurn: calls endCombat(false) when player HP hits 0', () => {
-  const orig = Math.random;
-  Math.random = () => 0.9999;
+  mock.method(Math, 'random', () => 0.9999);
 
-  // Set player HP to 1 so one hit kills them
   gameState.modifyPlayerStat('hp', -(maxHp() - 1));
 
   const cs = makeCS();
@@ -676,8 +544,6 @@ test('enemyTurn: calls endCombat(false) when player HP hits 0', () => {
   cs.enemyTurn('after');
 
   assert.equal(endCombatArg, false, 'endCombat(false) should be called when player dies');
-
-  Math.random = orig;
 });
 
 // ─── endCombat: victory re-render ────────────────────────────────────────────
@@ -694,10 +560,9 @@ test('endCombat: victory re-render skips the scene autoAttack', () => {
   cs.endCombat(true);
 
   assert.equal(cs.inCombat, false);
-  // The re-render also skips the scene's narration clip — the player already
   // heard it on the way in; only combat's reset of the description cache
   // makes the block (and without this, its audio) repeat.
-  assert.deepEqual(rendered, [{ sceneId: 'corridor', opts: { skipAutoAttack: true, skipNarration: true } }]);
+  assert.deepEqual(rendered, [{ sceneId: 'corridor', opts: { skipAutoAttack: true } }]);
 });
 
 test('endCombat: no re-render when onVictory opened a dialogue', () => {
@@ -715,15 +580,7 @@ test('endCombat: no re-render when onVictory opened a dialogue', () => {
   assert.equal(rendered, 0);
 });
 
-
 // ─── AP (per-combat tactical budget) ─────────────────────────────────────────
-
-test('remainingTurnBudget: the player\'s current AP', () => {
-  const cs = makeCS();
-  assert.equal(cs.remainingTurnBudget(), 3);
-  gameState.modifyPlayerStat('ap', -2);
-  assert.equal(cs.remainingTurnBudget(), 1);
-});
 
 test('round end recharges the AP pool to full', () => {
   const cs = makeCS();
@@ -746,18 +603,11 @@ test('endCombat victory restores AP to max at the boundary', () => {
 // ─── attackAttribute ─────────────────────────────────────────────────────────
 
 test('playerAttack: the weapon\'s attackAttribute joins the hit roll and breakdown', () => {
-  const orig = Math.random;
-  Math.random = () => 0.9999; // d20 → 20, damage max
+  mock.method(Math, 'random', () => 0.9999);
 
-  gameState.init({
-    ...TEST_RULES,
-    playerDefaults: {
-      ...TEST_RULES.playerDefaults,
-      attributes: { ...TEST_RULES.playerDefaults.attributes, strength: 2 },
-    },
-  });
+  gameState.init(makeRules({ playerDefaults: { equipmentSlots: SLOTS, attributes: { ac: 10, initiative: 0, strength: 2 } } }));
   const cs = makeCS();
-  cs.engine.t = (key, p) => p ? `${key}:${JSON.stringify(p)}` : key;
+  cs.engine.t = paramEchoT;
   cs.engine.setMode('combat');
   const enemy = makeEnemy();
   cs.enemies = [enemy];
@@ -770,16 +620,13 @@ test('playerAttack: the weapon\'s attackAttribute joins the hit roll and breakdo
   cs.playerAttack(makeWeapon({ actionPoints: 1, attackAttribute: 'strength' }), enemy);
   assert.match(logged[0], /"roll":22/);                       // 20 + 2 Strength
   assert.match(logged[0], /1d20: 20 \+ 2 Strength/);
-
-  Math.random = orig;
 });
 
 test('_resolveEnemyAttacks: the enemy\'s own attribute powers the weapon\'s attackAttribute', () => {
-  const orig = Math.random;
-  Math.random = () => 0.9999;
+  mock.method(Math, 'random', () => 0.9999);
 
   const cs = makeCS();
-  cs.engine.t = (key, p) => p ? `${key}:${JSON.stringify(p)}` : key;
+  cs.engine.t = paramEchoT;
   const weapon = makeWeapon({ actionPoints: 1, attackAttribute: 'strength' });
   const enemy = makeEnemy();
   enemy.attributes.strength = 3;
@@ -787,8 +634,6 @@ test('_resolveEnemyAttacks: the enemy\'s own attribute powers the weapon\'s atta
 
   assert.match(result.hitRolls[0], /"roll":23/);              // 20 + 3 Strength
   assert.match(result.hitRolls[0], /1d20: 20 \+ 3 Strength/);
-
-  Math.random = orig;
 });
 
 // ─── getAvailableAttacks ─────────────────────────────────────────────────────

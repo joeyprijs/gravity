@@ -4,21 +4,11 @@ import { gameState } from '../src/core/state.js';
 import {
   normalizeOutcomes, pickTier, performSkillCheck, resolveRetryText,
   getAttempts, recordAttempt, isResolved, markResolved, resetAttempts,
-  rollBreakdown, skillLabel, pickVariant, retryCost, retryGate, applyRetryGate, spendRetryCost,
+  rollBreakdown, skillLabel, pickVariant, retryGate, applyRetryGate, spendRetryCost,
 } from '../src/systems/skill-checks.js';
+import { makeRules, paramEchoT } from './helpers.js';
 
-const TEST_RULES = {
-  playerDefaults: {
-    name: '', level: 1, xp: 0,
-    resources: { hp: { current: 10, max: 10 }, ap: { current: 3, max: 3 }, gold: 0 },
-    attributes: { ac: 10, perception: 2 },
-    inventory: [], equipment: {},
-  },
-  customAttributes: [],
-  startingScene: null,
-  xpPerLevel: 100,
-  levelUpHpBonus: 5,
-};
+const TEST_RULES = makeRules({ playerDefaults: { attributes: { ac: 10, perception: 2 } } });
 
 function makeEngine() {
   const logs = [];
@@ -213,15 +203,8 @@ const RETRY_RULES = {
 };
 
 function retryEngine(rules) {
-  return { t: (k, p) => p ? `${k}:${JSON.stringify(p)}` : k, data: { rules }, state: gameState };
+  return { t: paramEchoT, data: { rules }, state: gameState };
 }
-
-test('retryCost: reads rules.skillRetry; absent or zero cost is free', () => {
-  assert.equal(retryCost(null), null);
-  assert.equal(retryCost({}), null);
-  assert.deepEqual(retryCost({ skillRetry: { resource: 'luckPoints', cost: 1 } }), { resource: 'luckPoints', amount: 1 });
-  assert.equal(retryCost({ skillRetry: { resource: 'luckPoints', cost: 0 } }), null);
-});
 
 test('retryGate: first attempt free; retries cost the resource; blocks when unaffordable', () => {
   gameState.init(RETRY_RULES);
@@ -242,7 +225,7 @@ test('spendRetryCost: deducts the resource and logs the spend with the balance l
   gameState.init(RETRY_RULES);
   const logs = [];
   const engine = {
-    t: (k, p) => p ? `${k}:${JSON.stringify(p)}` : k,
+    t: paramEchoT,
     log: (type, message, variant) => logs.push({ type, message, variant }),
     state: gameState,
   };

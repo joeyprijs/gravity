@@ -46,10 +46,8 @@ export class MapManager {
     this._minimapCacheKey = null;
   }
 
-  /**
-   * Wires the open/close triggers for the full-screen map overlay (minimap
-   * click, close button, ESC, backdrop click).
-   */
+  // Wires the open/close triggers for the full-screen map overlay (minimap
+  // click, close button, ESC, backdrop click).
   setup() {
     const minimapEl = document.getElementById(EL.MINIMAP);
     minimapEl.addEventListener('click', () => this.openFullMap());
@@ -73,10 +71,8 @@ export class MapManager {
     });
   }
 
-  /**
-   * Renders the local region minimap inside the player HUD panel.
-   * Dynamically filters, projects, and scales absolute positions to fit within HUD bounds.
-   */
+  // Renders the region minimap in the HUD panel: filters, projects and scales
+  // absolute positions to fit the HUD bounds.
   renderMinimap() {
     const minimapEl = document.getElementById(EL.MINIMAP);
     const canvasEl = document.getElementById(EL.MINIMAP_CANVAS);
@@ -136,13 +132,11 @@ export class MapManager {
     this._minimapCacheKey = currentSceneId;
   }
 
-  /**
-   * Lights the minimap box a considered move would lead to — the room itself,
-   * or, for an interior destination the current view doesn't draw, the
-   * building it is inside. Only what is already on the map can light up: an
-   * unvisited place has no box, and the peek must not reveal one. Pass null
-   * to clear. The mark otherwise clears with the canvas on the next move.
-   */
+  // Lights the minimap box a considered move would lead to — the room itself,
+  // or, for an interior destination the current view doesn't draw, the
+  // building it is inside. Only what is already on the map can light up: an
+  // unvisited place has no box, and the peek must not reveal one. Pass null
+  // to clear. The mark otherwise clears with the canvas on the next move.
   setPeek(sceneId) {
     const canvas = document.getElementById(EL.MINIMAP_CANVAS);
     if (!canvas) return;
@@ -158,10 +152,8 @@ export class MapManager {
     target?.classList.add(CSS.MAP_NODE_PEEK);
   }
 
-  /**
-   * Opens the full-screen world map overlay, rendering all visited map nodes.
-   * Automatically centers the viewport scroll bars on the player's active position.
-   */
+  // Opens the full-screen world map overlay with every visited node, scrolled
+  // to centre on the player's position.
   openFullMap() {
     const overlay = document.getElementById(EL.FULLMAP_OVERLAY);
     const canvasEl = document.getElementById(EL.FULLMAP_CANVAS);
@@ -193,7 +185,6 @@ export class MapManager {
     }
   }
 
-  /** Hides the full-screen world map overlay. */
   closeFullMap() {
     document.getElementById(EL.FULLMAP_OVERLAY).hidden = true;
   }
@@ -208,10 +199,8 @@ export class MapManager {
     else hideCursorTooltip();
   }
 
-  /**
-   * Forces a full minimap redraw on the next renderMinimap call — for changes
-   * that alter the map without moving the player (see the cache-key note above).
-   */
+  // Forces a full minimap redraw on the next renderMinimap call — for changes
+  // that alter the map without moving the player (see the cache-key note above).
   invalidateMinimap() {
     this._minimapCacheKey = null;
   }
