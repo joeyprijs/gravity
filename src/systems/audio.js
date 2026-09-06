@@ -1,11 +1,7 @@
-// AudioSystem — the engine's two-channel audio layer.
-//
-//   ambience:  a looping background bed resolved per scene. A scene's own
-//              `ambience` overrides its region's; an explicit null silences
-//              the scene. Re-syncing to the same path is a no-op, so walking
-//              between rooms of one region never restarts the loop.
-//   narration: one-shot description read-alouds, one at a time; starting a
-//              new clip (or entering a scene without one) stops the previous.
+// AudioSystem — the engine's ambience layer: a looping background bed
+// resolved per scene. A scene's own `ambience` overrides its region's; an
+// explicit null silences the scene. Re-syncing to the same path is a no-op, so
+// walking between rooms of one region never restarts the loop.
 //
 // Everything is opt-in via game data — a game that authors no audio fields
 // never fetches or decodes a single byte of audio. Browsers block audio until
@@ -16,30 +12,15 @@
 // callback-form decodeAudioData, no connect() chaining.
 
 const SETTINGS_KEY = 'gravity.audio';
-// Tuned by ear against the shipped clips, not derived from anything: the beds
-// are quiet recordings and the narration takes are hot, so the mixer evens them
-// out. Normalizing the source levels would let both sit near 1 — until then
-// these are the numbers that sound right. 1 is the ceiling: the file's own
-// level, unaltered.
-const DEFAULT_SETTINGS = { muted: false, ambienceVolume: 1, narrationVolume: 0.25 };
+// 1 is the ceiling: the file's own level, unaltered.
+const DEFAULT_SETTINGS = { muted: false, ambienceVolume: 1 };
 
 // Seconds an ambience loop takes to fade in/out when the location changes.
 export const AMBIENCE_FADE = 1.5;
 
-// Seconds after a bed starts before narration may speak over it. Defaults to
-// the fade length — the narrator waits for the room to settle — but it is its
-// own knob on purpose: giving the narrator a longer beat should not slow the
-// crossfade, and quickening the crossfade should not cut the beat short.
-export const NARRATION_DELAY = AMBIENCE_FADE;
-
-/**
- * Resolves the ambience loop path for a scene: the scene's own `ambience`
- * field wins (null meaning "explicitly silent"), else the region's, else null.
- *
- * @param {object} scene - A loaded scene definition.
- * @param {Object<string, object>} regions - The manifest's regions map.
- * @returns {string|null} Path to the loop file, or null for silence.
- */
+// Resolves the ambience loop path for a scene against the manifest's regions
+// map: the scene's own `ambience` field wins (null meaning "explicitly
+// silent"), else the region's, else null.
 export function resolveAmbience(scene, regions) {
   if ('ambience' in scene) return scene.ambience ?? null;
   return regions?.[scene.region]?.ambience ?? null;
@@ -53,7 +34,7 @@ export class AudioSystem {
     // Created at unlock; null means "not unlocked yet" everywhere below.
     this._ctx = null;
     this._masterGain = null;
-    this._channelGain = { ambience: null, narration: null };
+    this._channelGain = { ambience: null };
 
     // path → Promise<AudioBuffer|null>. Failed loads cache null so a missing
     // file warns once instead of re-fetching on every scene entry.
@@ -63,21 +44,11 @@ export class AudioSystem {
     this._ambiencePath = null;
     this._ambienceNodes = null; // { source, gain, path }
 
-    // Monotonic token invalidates in-flight narration loads when a newer
-    // playNarration call supersedes them.
-    this._narrationToken = 0;
-    this._narrationSource = null;
-    this._pendingNarration = null;
-
     this._bindUnlock();
   }
 
-  /**
-   * Syncs the ambience channel to a scene. Called on every scene render and
-   * on save restore; a no-op when the resolved loop is already the target.
-   *
-   * @param {object} scene - The scene being rendered.
-   */
+  // Syncs the ambience channel to a scene. Called on every scene render and
+  // on save restore; a no-op when the resolved loop is already the target.
   syncAmbience(scene) {
     const path = resolveAmbience(scene, this.engine.data.regions);
     if (path === this._ambiencePath) return;
@@ -87,77 +58,14 @@ export class AudioSystem {
     if (path) this._startAmbience(path);
   }
 
-  /**
-   * Plays a narration clip, replacing any current one. Null stops narration —
-   * entering a scene without a clip shouldn't keep narrating the previous one.
-   *
-   * The clip begins once the location's ambience has finished fading in, so
-   * arriving somewhere new settles before the narrator starts. A bed that was
-   * already running (another room of the same region) faded in long ago, so
-   * its narration starts at once.
-   *
-   * @param {string|null} path - Path to the clip, or null to just stop.
-   */
-  playNarration(path) {
-    const token = ++this._narrationToken;
-    this._stopNarration();
-    this._pendingNarration = null;
-    if (!path) return;
-    if (!this._ctx) {
-      this._pendingNarration = path;
-      return;
-    }
-    Promise.all([this._getBuffer(path), this._narrationStartTime()]).then(([buffer, startAt]) => {
-      if (!buffer || token !== this._narrationToken) return;
-      const source = this._ctx.createBufferSource();
-      source.buffer = buffer;
-      source.connect(this._channelGain.narration);
-      source.onended = () => {
-        source.disconnect();
-        if (this._narrationSource === source) this._narrationSource = null;
-      };
-      source.start(Math.max(this._ctx.currentTime, startAt));
-      this._narrationSource = source;
-    });
-  }
-
-  /**
-   * The audio-clock time narration may begin: when the ambience bed has faded
-   * all the way in. A time already past means "right now".
-   *
-   * Waits on the bed's *buffer*, not just its fade: a multi-megabyte loop can
-   * still be decoding when a short clip is ready, and starting the narrator
-   * into silence is the thing this avoids. Silence by design (no bed, or a bed
-   * that failed to load) waits for nothing.
-   *
-   * @returns {Promise<number>} A time on the AudioContext clock.
-   */
-  _narrationStartTime() {
-    if (!this._ambiencePath) return Promise.resolve(this._ctx.currentTime);
-    return this._getBuffer(this._ambiencePath).then(buffer => {
-      if (!buffer) return this._ctx.currentTime;
-      return (this._ambienceNodes?.startedAt ?? this._ctx.currentTime) + NARRATION_DELAY;
-    });
-  }
-
-  /**
-   * Mutes or unmutes both channels. Persisted as a device preference
-   * (localStorage), not game state.
-   *
-   * @param {boolean} muted
-   */
+  // Persisted as a device preference (localStorage), not game state.
   setMuted(muted) {
     this.settings.muted = muted;
     this._saveSettings();
     this._applySettings();
   }
 
-  /**
-   * Sets a channel's volume. Persisted like setMuted.
-   *
-   * @param {'ambience'|'narration'} channel
-   * @param {number} value - 0..1
-   */
+  // Sets a channel's volume (0..1). Persisted like setMuted.
   setVolume(channel, value) {
     this.settings[`${channel}Volume`] = value;
     this._saveSettings();
@@ -195,14 +103,12 @@ export class AudioSystem {
     this._applySettings();
 
     if (this._ambiencePath) this._startAmbience(this._ambiencePath);
-    if (this._pendingNarration) this.playNarration(this._pendingNarration);
   }
 
   _applySettings() {
     if (!this._ctx) return; // re-applied at unlock
     this._masterGain.gain.value = this.settings.muted ? 0 : 1;
     this._channelGain.ambience.gain.value = this.settings.ambienceVolume;
-    this._channelGain.narration.gain.value = this.settings.narrationVolume;
   }
 
   // ── Playback internals ────────────────────────────────────────────────────
@@ -221,9 +127,7 @@ export class AudioSystem {
       source.connect(gain);
       gain.connect(this._channelGain.ambience);
       source.start();
-      // startedAt is what narration measures its wait from (see
-      // _narrationStartTime) — the fade completes AMBIENCE_FADE later.
-      this._ambienceNodes = { source, gain, path, startedAt: now };
+      this._ambienceNodes = { source, gain, path };
     });
   }
 
@@ -239,17 +143,6 @@ export class AudioSystem {
       nodes.gain.disconnect();
     };
     nodes.source.stop(now + AMBIENCE_FADE + 0.05);
-  }
-
-  _stopNarration() {
-    const source = this._narrationSource;
-    if (!source) return;
-    this._narrationSource = null;
-    // A clip waiting on the ambience fade is scheduled but not yet started,
-    // and stop() before start() throws without cancelling it — dropping the
-    // node out of the graph is what actually silences that case.
-    source.disconnect();
-    try { source.stop(); } catch { /* scheduled but never started, or already ended */ }
   }
 
   _getBuffer(path) {

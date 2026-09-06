@@ -96,10 +96,6 @@
           "text": {
             "type": "string"
           },
-          "narration": {
-            "type": "string",
-            "description": "Path to a narration clip played when this variant resolves on scene entry. Overrides the scene-level narration."
-          },
           "condition": {
             "$ref": "#/definitions/condition"
           }
@@ -116,10 +112,6 @@
         "null"
       ],
       "description": "Path to a looping ambience file for this scene. Overrides the region's ambience from data/index.json; null silences the scene explicitly."
-    },
-    "narration": {
-      "type": "string",
-      "description": "Path to a narration clip played once per scene entry. A resolved description variant's narration takes precedence."
     },
     "autoAttack": {
       "type": "object",
@@ -653,10 +645,6 @@
             "$ref": "#/definitions/action"
           },
           "description": "set_timer: the (quiet-only) pipeline run when the timer fires."
-        },
-        "narration": {
-          "type": "string",
-          "description": "Path to a narration clip played when this action runs — the read-aloud of its log text."
         },
         "log": {
           "type": [

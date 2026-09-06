@@ -52,7 +52,7 @@ A browser-native, zero-dependency, data-driven text RPG engine. Define your enti
 *   **Branching Dialogue & Merchants** — Conversation trees with skill-checked responses, item and quest rewards, and stateful merchant stock with per-NPC pricing.
 *   **Staged Quests** — Multi-step missions whose objectives are observed conditions: collect-N stages auto-advance the moment they're satisfied (even retroactively), stages pay their own rewards, progress is forward-only, and failure is a first-class terminal state.
 *   **A World Clock (opt-in)** — Player actions advance a deterministic tick counter; days and named segments derive from rules, timers fire quiet action pipelines, and conditions can read `time` / `day` / `segment`. No wall clock, fully save-safe.
-*   **Two-Channel Audio (opt-in)** — Looping ambience resolved per region (overridable per scene) plus one-shot narration clips for scene descriptions and action outcomes, with per-channel volume in the Options tab. A game that authors no audio never touches the Web Audio API. Full guide: [`docs/AUDIO.md`](docs/AUDIO.md).
+*   **Ambience Audio (opt-in)** — Looping ambience resolved per region (overridable per scene), with mute and volume in the Options tab. A game that authors no audio never touches the Web Audio API. Full guide: [`docs/AUDIO.md`](docs/AUDIO.md).
 *   **Interactive World Map** — A full-screen scrollable coordinate map, plus a sidebar minimap that frames where you *are*: outdoors, a player-centered viewport onto one continuous world, where every building is a single square and a place appears as soon as it's in sight; inside a building, that building's own rooms as you walk them.
 *   **Localisation** — Every player-facing string resolves through locale files; the engine matches the browser's language, and list/plural grammar goes through `Intl`, never through code.
 *   **Load-Time Validation** — The engine validates all game data on boot and prints authoring mistakes (dangling IDs, missing locale keys, unreachable UI) to the console, grouped per entity.
@@ -878,7 +878,7 @@ gravity/
 │   │   ├── actions.js       # Built-in action pipeline handlers
 │   │   ├── quests.js        # Mission lifecycle
 │   │   ├── narrative.js     # The chronological story log
-│   │   └── audio.js         # Ambience loops & narration clips (Web Audio)
+│   │   └── audio.js         # Ambience loops (Web Audio)
 │   ├── ui/                  # UIManager (tab widgets, sheet, top bar, save/load) + panels
 │   ├── world/map.js         # Minimap + full-screen world map
 │   ├── screens/char-creation.js
@@ -886,7 +886,7 @@ gravity/
 ├── scripts/generate-manifest.js  # Regenerates data/index.json from the data tree
 ├── tests/                   # Node unit tests (npm test) + smoke.html (browser UI test)
 ├── schemas/                 # JSON Schemas for items, scenes, and NPCs
-├── audio/                   # Ambience & narration clips (layout: docs/AUDIO.md)
+├── audio/                   # Ambience loops (layout: docs/AUDIO.md)
 └── data/                    # The shipped demo game: scenes, items, NPCs, rules, locales
 ```
 
