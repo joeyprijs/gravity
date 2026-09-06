@@ -168,6 +168,13 @@ test('_runActions: unknown action types warn and are skipped', () => {
   assert.equal(warn.mock.callCount(), 1);
 });
 
+test('_runActions: reports navigation when a handler closes the dialogue', () => {
+  const { ds, engine } = makeDS();
+  ds.startDialogue('talker');
+  engine.registerAction('warp_home', () => { ds.currentNPC = null; });
+  assert.equal(ds._runActions([{ type: 'warp_home' }]), true);
+});
+
 // ── merchant stock ────────────────────────────────────────────────────────────
 
 test('_getStock: the merchant flag wins once set, else the NPC-configured amount', () => {

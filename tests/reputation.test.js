@@ -52,6 +52,12 @@ test('first-time acquisition: awards reputation to player and museum', () => {
   assert.deepEqual(gameState.pluginState('curator').obtainedItems, ['relic_crown']);
 });
 
+test('non-reputation items: do not award reputation upon acquisition', () => {
+  gameState.addToInventory('rusty_sword', 1);
+  assert.equal(gameState.getPlayer().attributes.reputation, 0);
+  assert.equal(getMuseumReputation(gameState), 0);
+});
+
 test('subsequent acquisitions: does not award duplicate reputation', () => {
   gameState.addToInventory('relic_crown', 1);
   assert.equal(gameState.getPlayer().attributes.reputation, 25);

@@ -277,6 +277,12 @@ test('restoreFromSave: syncs the description cache and re-renders options', () =
   assert.equal(sr.renderOptions.mock.callCount(), 1);
 });
 
+test('restoreFromSave: a null description leaves the cache empty', () => {
+  const { sr } = makeSR({ scenes: { cell: {} } });
+  sr.restoreFromSave('cell', null);
+  assert.equal(sr.lastRenderedSceneId, null);
+});
+
 // ── Outcome tiers, resolveOnce, maxAttempts ──────────────────────────────────
 
 test('_buildPassFailButton: partial tier runs its pipeline and still counts an attempt', () => {

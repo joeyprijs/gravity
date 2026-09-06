@@ -84,6 +84,12 @@ test('addToInventory: mutation carries the silent flag so observers can tell gai
   assert.equal(seen[1].silent, true);
 });
 
+test('removeFromInventory: a partial removal decrements the stack without dropping it', () => {
+  gameState.removeFromInventory('healing_potion', 1); // starts at 2
+  const entry = gameState.getPlayer().inventory.find(i => i.item === 'healing_potion');
+  assert.equal(entry.amount, 1);
+});
+
 test('mutation hooks fire before listener notification, so hook-derived state is in the notified render', () => {
   const order = [];
   gameState.onMutation((method) => { if (method === 'addToInventory') order.push('hook'); });

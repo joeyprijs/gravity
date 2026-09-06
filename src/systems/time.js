@@ -14,9 +14,10 @@
 // Like dice.js, this module is DOM- and engine-free so it runs directly in
 // node:test.
 
-// Every function below takes the absolute tick count since the game started
-// and rules.time, and returns null when the rules can't derive days (no
-// positive ticksPerDay).
+// The four clock helpers take the absolute tick count since the game started
+// and rules.time, and return null when the rules can't derive days (no
+// positive ticksPerDay). resolveTimeCost is the exception: it maps an action
+// to its tick cost and returns 0 when there is none.
 
 // The tick-of-day (0 … ticksPerDay-1).
 export function getTickOfDay(ticks, timeRules) {

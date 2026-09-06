@@ -113,7 +113,7 @@ export function createSectionToggles(groupKey) {
   return group;
 }
 
-// Clears all children of an element, given the element or its id.
+// Clears all children of an element.
 export function clearElement(el) {
   el.innerHTML = '';
 }

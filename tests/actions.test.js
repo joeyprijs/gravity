@@ -255,6 +255,17 @@ test('advance_time: "until" derives the distance to the segment and wins over "a
   assert.equal(warn.mock.callCount(), 1);
 });
 
+test('set_timer arms relative to the live clock, re-arming an id replaces it, cancel_timer disarms', () => {
+  const { run } = makeEngine();
+  gameState.advanceTime(3); // arm from tick 3, not 0, so afterTicks is proven relative
+  run({ type: 'set_timer', id: 'alarm', afterTicks: 5, actions: [] });
+  run({ type: 'set_timer', id: 'alarm', afterTicks: 2, actions: [] });
+  run({ type: 'set_timer', id: 'other', afterTicks: 2, actions: [] });
+  run({ type: 'cancel_timer', id: 'other' });
+  const due = gameState.advanceTime(2);
+  assert.deepEqual(due.map(t => t.id), ['alarm'], 'only the re-armed deadline came due');
+});
+
 // ── grant_chapter ─────────────────────────────────────────────────────────────
 
 test('grant_chapter: the first chapter writes the book into the pack, later ones only fill it', () => {

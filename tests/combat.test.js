@@ -90,6 +90,14 @@ test('_resolveEnemyWeapon: falls back to ENEMY_CLAW_ID when no weapon equipped',
   assert.equal(cs._resolveEnemyWeapon(enemy), claw);
 });
 
+test('_resolveEnemyWeapon: returns the weapon in a hand slot', () => {
+  const sword = makeWeapon();
+  const cs = makeCS({ sword });
+  const enemy = makeEnemy();
+  enemy.equipment = { right_hand: 'sword' };
+  assert.equal(cs._resolveEnemyWeapon(enemy), sword);
+});
+
 // ─── _resolveEnemyAttacks ────────────────────────────────────────────────────
 
 test('_resolveEnemyAttacks: all misses when roll cannot beat player AC', () => {
@@ -397,6 +405,19 @@ test('playerAttack: the weapon\'s damageAttribute joins the damage total and bre
   assert.match(logged[1], /6 \+ 3 Intelligence/);
 });
 
+test('_resolveEnemyAttacks: the enemy\'s own attribute powers the weapon\'s damageAttribute', () => {
+  mock.method(Math, 'random', () => 0.9999);
+
+  const cs = makeCS();
+  const weapon = makeWeapon({ actionPoints: 1, damageRoll: '1d6' });
+  weapon.attributes.damageAttribute = 'strength';
+  const enemy = makeEnemy();
+  enemy.attributes.strength = 2;
+  const result = cs._resolveEnemyAttacks(weapon, 1, enemy);
+
+  assert.equal(result.totalDamage, 8); // 6 + 2 Strength
+});
+
 test('_rollDamage: a negative attribute cannot heal the target', () => {
   mock.method(Math, 'random', () => 0); // 1d6 → 1
 
@@ -599,6 +620,20 @@ test('playerAttack: the weapon\'s attackAttribute joins the hit roll and breakdo
   cs.playerAttack(makeWeapon({ actionPoints: 1, attackAttribute: 'strength' }), enemy);
   assert.match(logged[0], /"roll":22/);                       // 20 + 2 Strength
   assert.match(logged[0], /1d20: 20 \+ 2 Strength/);
+});
+
+test('_resolveEnemyAttacks: the enemy\'s own attribute powers the weapon\'s attackAttribute', () => {
+  mock.method(Math, 'random', () => 0.9999);
+
+  const cs = makeCS();
+  cs.engine.t = paramEchoT;
+  const weapon = makeWeapon({ actionPoints: 1, attackAttribute: 'strength' });
+  const enemy = makeEnemy();
+  enemy.attributes.strength = 3;
+  const result = cs._resolveEnemyAttacks(weapon, 1, enemy);
+
+  assert.match(result.hitRolls[0], /"roll":23/);              // 20 + 3 Strength
+  assert.match(result.hitRolls[0], /1d20: 20 \+ 3 Strength/);
 });
 
 // ─── getAvailableAttacks ─────────────────────────────────────────────────────
