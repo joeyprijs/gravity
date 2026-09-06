@@ -2,6 +2,7 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { getDay, getTickOfDay, getSegment, ticksUntilSegment, resolveTimeCost } from '../src/systems/time.js';
 import { gameState } from '../src/core/state.js';
+import { makeRules } from './helpers.js';
 
 // Mirrors the demo's rules.time: a 24-tick day starting at tick-of-day 8.
 const TIME_RULES = {
@@ -15,18 +16,7 @@ const TIME_RULES = {
   ],
 };
 
-const TEST_RULES = {
-  playerDefaults: {
-    name: '', level: 1, xp: 0,
-    resources: { hp: { current: 10, max: 10 }, ap: { current: 3, max: 3 }, gold: 0 },
-    attributes: { ac: 10 },
-    inventory: [], equipment: {},
-  },
-  customAttributes: [],
-  startingScene: null,
-  xpPerLevel: 100,
-  levelUpHpBonus: 5,
-};
+const TEST_RULES = makeRules({ playerDefaults: { attributes: { ac: 10 } } });
 
 // ── Pure derivation helpers ───────────────────────────────────────────────────
 

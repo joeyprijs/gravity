@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { itemCardStats, itemStatLines, equipmentAttributeBonuses, compassPoint, COMPASS_POINTS } from '../src/core/utils.js';
+import { paramEchoT } from './helpers.js';
 
 // t() echoes "key:params" so assertions can check both key and values.
-const t = (key, p) => p ? `${key}:${JSON.stringify(p)}` : key;
+const t = paramEchoT;
 
 // ── itemStatLines ─────────────────────────────────────────────────────────────
 

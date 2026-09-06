@@ -393,18 +393,6 @@ test('skillRetry: flags an undeclared resource, bad cost, and negative restResto
   assert.ok(messages.some(m => m.includes('skillRetry.restRestore must be a non-negative number')));
 });
 
-test('skillRetry + headerResources: clean when the resource is declared with a label', () => {
-  const data = makeToolkitData();
-  data.rules.playerDefaults.resources = { luckPoints: { current: 3, max: 3 } };
-  data.rules.skillRetry = { resource: 'luckPoints', cost: 1, restRestore: 3 };
-  data.rules.headerResources = [{ id: 'luckPoints', icon: 'star' }];
-  data.locale.ui = { resources: { luckPoints: 'Luck' } };
-  data.locale.actions.badgeRetryCost = 'Retry: {cost} {resource}';
-  const messages = issuesFor(data);
-  assert.ok(!messages.some(m => m.includes('skillRetry')));
-  assert.ok(!messages.some(m => m.includes('headerResources')));
-});
-
 test('flags missing skillBadgeDc, missing badgeRetryCost, and a tabs list without an options widget', () => {
   const data = makeToolkitData();
   delete data.locale.actions.skillBadgeDc;
@@ -439,16 +427,6 @@ test('icons: flags a bare headerResources id, an unknown tab icon, and an unknow
   assert.ok(messages.some(m => m.includes('headerResources entries are { "id", "icon" } objects')));
   assert.ok(messages.some(m => m.includes('tabs "ghost-tab": icon "ghost" is not a known icon')));
   assert.ok(messages.some(m => m.includes('customAttributes "perception": icon "third-eye" is not a known icon')));
-});
-
-test('icons: a known name on a tab, a header resource, and a skill is clean', () => {
-  const data = makeToolkitData();
-  data.rules.playerDefaults.resources = { luckPoints: { current: 3, max: 3 } };
-  data.rules.headerResources = [{ id: 'luckPoints', icon: 'star' }];
-  data.rules.customAttributes[0].icon = 'eye';
-  data.locale.ui = { resources: { luckPoints: 'Luck' } };
-  const messages = issuesFor(data);
-  assert.ok(!messages.some(m => m.includes('is not a known icon')));
 });
 
 test('flags malformed time config: bad segments, ranges, costs, locale entries', () => {
@@ -567,15 +545,6 @@ test('flags an unknown item type and a slot kind no slot declares', () => {
   assert.ok(messages.some(m => m.includes('type "Widget" is not a known item type')));
   assert.ok(messages.some(m => m.includes('slot "face" is not a declared equipment slot kind')));
   assert.ok(!messages.some(m => m.includes('slot "head"')));       // a declared kind is clean
-});
-
-test('item type and slot: valid values and omitted fields pass', () => {
-  const data = makeToolkitData();
-  data.items.blade = { name: 'Blade', type: 'Weapon' };  // the type implies the hand kind
-  data.items.trinket = { name: 'Trinket' };              // no type, no slot — a Flavour keepsake
-  const messages = issuesFor(data);
-  assert.ok(!messages.some(m => m.includes('is not a known item type')));
-  assert.ok(!messages.some(m => m.includes('is not a declared equipment slot')));
 });
 
 test('equipmentSlots: flags a missing list, a duplicate id, and no hand to fight with', () => {

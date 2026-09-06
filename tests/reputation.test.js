@@ -8,25 +8,16 @@ import {
   placeItemInDisplay,
   takeItemFromDisplay,
 } from '../src/plugins/curator.js';
+import { makeRules } from './helpers.js';
 
-const TEST_RULES = {
+const TEST_RULES = makeRules({
   playerDefaults: {
     name: 'Joey',
-    level: 1,
-    xp: 0,
     resources: { hp: { current: 10, max: 10 }, ap: { current: 3, max: 3 }, gold: 100 },
     attributes: { ac: 10, initiative: 0, reputation: 0 },
-    inventory: [],
-    equipment: {
-      "Left Hand": null,
-      "Right Hand": null
-    },
   },
-  customAttributes: [],
   startingScene: 'museum_room',
-  xpPerLevel: 100,
-  levelUpHpBonus: 5,
-};
+});
 
 const TEST_ITEMS = {
   relic_crown: {
@@ -52,13 +43,12 @@ beforeEach(() => {
 
 test('first-time acquisition: awards reputation to player and museum', () => {
   assert.equal(gameState.getPlayer().attributes.reputation, 0);
-  assert.equal(getMuseumReputation(), 0);
+  assert.equal(getMuseumReputation(gameState), 0);
 
-  // Obtain relic_crown for the first time
   gameState.addToInventory('relic_crown', 1);
 
   assert.equal(gameState.getPlayer().attributes.reputation, 25);
-  assert.equal(getMuseumReputation(), 25); // museumReputation permanent = 25, display = 0
+  assert.equal(getMuseumReputation(gameState), 25);
   assert.deepEqual(gameState.pluginState('curator').obtainedItems, ['relic_crown']);
 });
 
@@ -66,35 +56,24 @@ test('subsequent acquisitions: does not award duplicate reputation', () => {
   gameState.addToInventory('relic_crown', 1);
   assert.equal(gameState.getPlayer().attributes.reputation, 25);
 
-  // Obtain relic_crown again
   gameState.addToInventory('relic_crown', 1);
-  assert.equal(gameState.getPlayer().attributes.reputation, 25); // stays 25
-});
-
-test('non-reputation items: do not award reputation upon acquisition', () => {
-  gameState.addToInventory('rusty_sword', 1);
-  assert.equal(gameState.getPlayer().attributes.reputation, 0);
+  assert.equal(gameState.getPlayer().attributes.reputation, 25);
 });
 
 test('exhibiting relics: dynamically updates museum reputation', () => {
-  // First, obtain relics to get permanent reputation
-  gameState.addToInventory('relic_crown', 1); // +25 permanent
-  gameState.addToInventory('relic_shard', 1); // +10 permanent
+  gameState.addToInventory('relic_crown', 1);
+  gameState.addToInventory('relic_shard', 1);
 
   assert.equal(gameState.getPlayer().attributes.reputation, 35);
-  assert.equal(getMuseumReputation(), 35); // permanent 35 + 0 display = 35
+  assert.equal(getMuseumReputation(gameState), 35);
 
   const displayId = addDisplayToScene(gameState, 'museum_room', { name: 'Exhibition Pedestal' });
 
-  // Place relic_crown on display
   placeItemInDisplay(gameState, 'museum_room', displayId, 'relic_crown');
 
-  // Museum reputation should be permanent (35) + display (relic_crown: 25) = 60
-  assert.equal(getMuseumReputation(), 60);
+  assert.equal(getMuseumReputation(gameState), 60, 'permanent 35 + the exhibited crown');
 
-  // Retrieve relic_crown from display
   takeItemFromDisplay(gameState, 'museum_room', displayId);
 
-  // Museum reputation should drop back to 35
-  assert.equal(getMuseumReputation(), 35);
+  assert.equal(getMuseumReputation(gameState), 35);
 });

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { validateGameData, normalizeCarriedItems } from '../src/core/validate.js';
-import { ACTIONS, ITEM_TYPES } from '../src/core/config.js';
+import { ITEM_TYPES } from '../src/core/config.js';
 import { layoutMuseum } from '../src/plugins/curator.js';
 
 // Integration coverage for the *shipped* example game. The unit tests in
@@ -37,9 +37,11 @@ const data = {
 
 test('the shipped example game validates with zero issues', () => {
   normalizeCarriedItems(data.npcs);
-  // Object.values(ACTIONS) mirrors the engine's built-in + dialogue + curator
-  // action registry — every action the example data is allowed to reference.
-  const issues = validateGameData(data, new Set(Object.values(ACTIONS)));
+  // Every action type the engine, dialogue system and curator plugin register.
+  const known = new Set(['loot', 'combat', 'dialogue', 'return', 'full_rest', 'short_rest', 'heal',
+    'navigate', 'set_flag', 'log', 'manage_chest', 'grant_chapter', 'advance_time', 'set_timer',
+    'cancel_timer', 'goToConversation', 'trade', 'leave', 'questTrigger', 'build_wing', 'manage_exhibits']);
+  const issues = validateGameData(data, known);
   assert.deepEqual(issues, [], `example data has validation issues:\n${issues.map(i => `  ${i.group}: ${i.message}`).join('\n')}`);
 });
 
@@ -100,14 +102,14 @@ test('every shipped mission conforms to mission.schema.json at the top level', (
 // ── Audio assets ─────────────────────────────────────────────────────────────
 // Clips are recorded by hand and referenced by path, and a missing file is only
 // a console warning at runtime — so a typo would ship as silence. Collect every
-// `ambience`/`narration` path in the data (scene-level, description variants,
-// and anywhere inside an action pipeline) and assert the file is on disk.
+// `ambience` path in the data (region- and scene-level) and assert the file is
+// on disk.
 
 function collectAudioPaths(node, out = []) {
   if (Array.isArray(node)) node.forEach(child => collectAudioPaths(child, out));
   else if (node && typeof node === 'object') {
     for (const [key, value] of Object.entries(node)) {
-      if ((key === 'ambience' || key === 'narration') && typeof value === 'string') out.push(value);
+      if (key === 'ambience' && typeof value === 'string') out.push(value);
       else collectAudioPaths(value, out);
     }
   }

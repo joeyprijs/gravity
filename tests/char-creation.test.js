@@ -2,6 +2,7 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { gameState } from '../src/core/state.js';
+import { makeRules } from './helpers.js';
 
 // The creation screen itself is DOM-bound and belongs to the smoke test.
 // What lives here is the layer beneath it: the rules.charCreation contract
@@ -12,21 +13,7 @@ const CHAR_CREATION = rules.charCreation;
 
 function getPath(obj, path) { return path.split('.').reduce((v, k) => v?.[k], obj); }
 
-const TEST_RULES = {
-  playerDefaults: {
-    name: '',
-    level: 1,
-    xp: 0,
-    resources: { hp: { current: 10, max: 10 }, ap: { current: 3, max: 3 }, gold: 0 },
-    attributes: { ac: 10, initiative: 0, strength: 0 },
-    inventory: [],
-    equipment: {},
-  },
-  customAttributes: [],
-  startingScene: null,
-  xpPerLevel: 100,
-  levelUpHpBonus: 5,
-};
+const TEST_RULES = makeRules({ playerDefaults: { attributes: { ac: 10, initiative: 0, strength: 0 } } });
 
 beforeEach(() => gameState.init(TEST_RULES));
 

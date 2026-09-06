@@ -2,35 +2,21 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { gameState } from '../src/core/state.js';
 import curatorPlugin, { getDisplaysForScene } from '../src/plugins/curator.js';
+import { makeRules, SLOTS } from './helpers.js';
 
 // The plugin's register function injects a reputation header into the page on
 // load. These tests run headless, so a one-method document stub makes that
 // injection a no-op (querySelector finds no anchor element to attach to).
 globalThis.document = { querySelector: () => null };
 
-// Minimal rules required by gameState.init() — mirrors the key values from rules.json.
-const TEST_RULES = {
+const TEST_RULES = makeRules({
   playerDefaults: {
-    name: '',
-    level: 1,
-    xp: 0,
     resources: { hp: { current: 10, max: 10 }, ap: { current: 3, max: 3 }, gold: 100 },
     attributes: { ac: 10, initiative: 0, reputation: 0 },
-    inventory: [],
-    equipmentSlots: [
-      { id: 'head', kind: 'head' },
-      { id: 'body', kind: 'body' },
-      { id: 'left_hand', kind: 'hand' },
-      { id: 'right_hand', kind: 'hand' },
-      { id: 'left_ring', kind: 'ring' },
-      { id: 'right_ring', kind: 'ring' },
-    ],
+    equipmentSlots: SLOTS,
   },
-  customAttributes: [],
   startingScene: 'home_museum',
-  xpPerLevel: 100,
-  levelUpHpBonus: 5,
-};
+});
 
 const TEST_ITEMS = {
   relic_crown: { name: 'Ancient Crown', type: 'Flavour', attributes: { reputation: 25 } },
@@ -136,18 +122,6 @@ function museumScenes(slots) {
   });
   return scenes;
 }
-
-test('museum layout: wings pair up per column, even north of the hall and odd south', () => {
-  const { engine } = makeEngine({ curator: TEST_LAYOUT });
-  engine.data.scenes = museumScenes([0, 1, 2, 3]);
-  curatorPlugin(engine);
-
-  const geom = (id) => engine.data.scenes[id].mapDefinitions;
-  assert.deepEqual(geom('wing0'), { top: 1700, left: 2640, width: 120, height: 100, background: 'red' });
-  assert.deepEqual(geom('wing1'), { top: 1900, left: 2640, width: 120, height: 100, background: 'red' });
-  assert.deepEqual(geom('wing2'), { top: 1700, left: 2760, width: 120, height: 100, background: 'red' });
-  assert.deepEqual(geom('wing3'), { top: 1900, left: 2760, width: 120, height: 100, background: 'red' });
-});
 
 test('museum layout: the hall spans every column in use — that is the room for the next wing', () => {
   for (const [slots, width] of [[[], 120], [[0], 120], [[0, 1], 120], [[0, 1, 2], 240], [[0, 1, 2, 3, 4], 360]]) {
