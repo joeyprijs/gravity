@@ -127,11 +127,9 @@ export const EL = {
   SCENE_NARRATIVE:         'scene-narrative',
   SCENE_OPTIONS_PANEL:     'scene-options-panel',
   SCENE_OPTIONS:           'scene-options',
-  SCENE_OPTIONS_ENTRANCES: 'scene-options-entrances',
   SCENE_OPTIONS_TALK:      'scene-options-conversations',
   SCENE_OPTIONS_ACTIONS:   'scene-options-actions',
   SCENE_OPTIONS_SKILLS:    'scene-options-skills',
-  SCENE_OPTIONS_EXITS:     'scene-options-exits',
   SCENE_LOCATION_REMINDER: 'scene-location-reminder',
 
   // Toolbar buttons & file input

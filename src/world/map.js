@@ -30,7 +30,8 @@ function sceneNavigationTargets(scene) {
 // The two answer different questions from one body of knowledge
 // (_outdoorKnowledge), so they can never disagree about what exists; what
 // differs is projection and detail. The minimap is "where am I" — inside a
-// building, that building's rooms; outdoors, a viewport centered on the player.
+// building, that building's rooms and the ground its doors open onto;
+// outdoors, a viewport centered on the player.
 // The full map is "where is everything" — the same places at their authored
 // coordinates, collapsing only the buildings never entered.
 export class MapManager {
@@ -207,21 +208,31 @@ export class MapManager {
 
   // What the minimap draws, as { def, label, background, isCurrent } boxes.
   //
-  // Inside a building, only that building's visited rooms: what a player wants
+  // Inside a building, that building's visited rooms: what a player wants
   // from the map in Frey's Store is the store, and a house reveals itself room
-  // by room as you walk it. Outdoors is the open world instead — one continuous
-  // map of everywhere the player knows about, no matter which region it belongs
-  // to, with each building on it drawn as the single square it occupies.
+  // by room as you walk it. With them, the outdoor places its doors open onto —
+  // the path outside the front door — so a way out has somewhere to point to.
+  // Only doors already seen through count (_outdoorKnowledge), and the ground
+  // is drawn first so the rooms paint over it where they touch. Outdoors is the
+  // open world instead — one continuous map of everywhere the player knows
+  // about, no matter which region it belongs to, with each building on it drawn
+  // as the single square it occupies.
   _minimapPlacements(currentSceneId) {
-    const inside = this._interiorKeyOf(currentSceneId);
-    if (inside) {
-      return this._visitedMapScenes()
-        .filter(({ id }) => this._interiorKeyOf(id) === inside)
-        .map(({ id, scene }) => this._roomPlacement(id, scene, currentSceneId));
-    }
-
     const scenes = this.engine.data.scenes;
     const known = this._outdoorKnowledge();
+    const inside = this._interiorKeyOf(currentSceneId);
+    if (inside) {
+      const rooms = this._visitedMapScenes()
+        .filter(({ id }) => this._interiorKeyOf(id) === inside);
+      const outside = new Set(rooms
+        .flatMap(({ scene }) => sceneNavigationTargets(scene))
+        .filter(id => known.rooms.has(id) && scenes[id]?.mapDefinitions));
+      return [
+        ...[...outside].map(id => this._roomPlacement(id, scenes[id], currentSceneId)),
+        ...rooms.map(({ id, scene }) => this._roomPlacement(id, scene, currentSceneId))
+      ];
+    }
+
     const rooms = [...known.rooms]
       .filter(id => scenes[id]?.mapDefinitions)
       .map(id => this._roomPlacement(id, scenes[id], currentSceneId));
@@ -298,25 +309,27 @@ export class MapManager {
 
   // Everywhere outdoors the player knows of: what they have walked, plus one
   // step of sight from it — the roads leading off the places they have stood,
-  // and the buildings whose doors they have stood at. Nothing is ever entered
-  // off a map it wasn't already on.
+  // the buildings whose doors they have stood at, and the ground outside a
+  // door they have stood inside of. Nothing is ever entered off a map it
+  // wasn't already on.
   //
   // Sight stops at that one step: you can see the lane leaving the square, not
-  // what stands along it. Indoors has no equivalent — a building's rooms are
-  // revealed by walking them, which is what makes exploring one feel like
-  // exploring.
+  // what stands along it. Indoors the same step reaches out but not in — a
+  // building's rooms are revealed by walking them, which is what makes
+  // exploring one feel like exploring.
   _outdoorKnowledge() {
     const scenes = this.engine.data.scenes;
     const rooms = new Set();
     const buildings = new Set();
 
     for (const id of this.engine.state.getVisitedScenes()) {
-      if (!scenes[id] || this._interiorKeyOf(id)) continue;
-      rooms.add(id);
+      if (!scenes[id]) continue;
+      const indoors = this._interiorKeyOf(id);
+      if (!indoors) rooms.add(id);
       for (const dest of sceneNavigationTargets(scenes[id])) {
         const key = this._interiorKeyOf(dest);
-        if (key) buildings.add(key);
-        else if (scenes[dest]) rooms.add(dest);
+        if (!key && scenes[dest]) rooms.add(dest);
+        else if (key && !indoors) buildings.add(key);
       }
     }
 

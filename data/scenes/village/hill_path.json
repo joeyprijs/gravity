@@ -29,21 +29,20 @@
   ],
   "options": [
     {
+      "text": "Go into your house",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "home_hallway"
+        }
+      ]
+    },
+    {
       "text": "Walk down to the crossroads",
       "actions": [
         {
           "type": "navigate",
           "destination": "village_crossroads"
-        }
-      ]
-    },
-    {
-      "text": "Go into your house",
-      "isBack": true,
-      "actions": [
-        {
-          "type": "navigate",
-          "destination": "home_hallway"
         }
       ]
     }

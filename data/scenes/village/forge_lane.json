@@ -46,11 +46,11 @@
       ]
     },
     {
-      "text": "Go into the Marrow cottage",
+      "text": "Follow the lane on to the East Row",
       "actions": [
         {
           "type": "navigate",
-          "destination": "village_marrow_cottage"
+          "destination": "village_east_row"
         }
       ]
     },
@@ -64,11 +64,11 @@
       ]
     },
     {
-      "text": "Follow the lane on to the East Row",
+      "text": "Go into the Marrow cottage",
       "actions": [
         {
           "type": "navigate",
-          "destination": "village_east_row"
+          "destination": "village_marrow_cottage"
         }
       ]
     },

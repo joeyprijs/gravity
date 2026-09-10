@@ -92,10 +92,10 @@ Then repoint:
 - `_visitedMapScenes` full scan (`map.js:430`) → `_allEntries`
 - `_interiorKeyOf` (`map.js:381`) → `_entry`
 
-**`src/systems/scene.js:241-251`:** `navTargets` reads destination scene
-bodies only to ask `isInteriorScene(dest)`. Answer it from the index entry
-(`interior` + `region`) with the same resident fallback, so Entrances/Exits
-classification survives a non-resident destination in Phase 3.
+**`src/systems/scene.js:209-213`:** `destinationOf` reads destination scene
+bodies only to find the destination for the direction arrow. Resolve it from
+the index entry with the same resident fallback, so the arrow survives a
+non-resident destination in Phase 3.
 
 **`src/core/validate.js:231`:** resolve `navigate` destinations against
 `ctx.scenes` ∪ the index, so a partial world stops producing false
