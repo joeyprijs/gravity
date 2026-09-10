@@ -141,7 +141,6 @@ export const EL = {
   // Audio controls (options tab)
   AUDIO_MUTE:              'audio-mute',
   AUDIO_AMBIENCE_VOL:      'audio-ambience-volume',
-  CONTROLS_WASD:           'controls-wasd',
 
   // Character creation overlay
   CHAR_CREATION:           'char-creation',
