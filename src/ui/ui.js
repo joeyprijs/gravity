@@ -15,15 +15,6 @@ const SHEET_SECTION_GROUP = 'sheet';
 // as seen (see setup) — long enough that a sweep or a scroll past it doesn't.
 const NEW_DOT_DWELL_MS = 250;
 
-// WASD, each mapped to the compass point it walks (see setup). Letters are
-// matched lowercased, so Shift+W still walks north. The arrow keys are
-// deliberately absent: they move the selection cursor instead, so the two
-// conventions never fight over one key. WASD is opt-in — a checkbox in the
-// options tab — remembered under WASD_KEY as a device preference like the
-// audio settings, not game state, so it rides no save.
-const NAV_KEYS = { w: 'N', d: 'E', s: 'S', a: 'W' };
-const WASD_KEY = 'gravity.wasd';
-
 // A data-stat-bind span for an innerHTML template; update() fills every bound
 // span on each stats change.
 const bindSpan = (path) => `<span data-stat-bind="${path}"></span>`;
@@ -41,10 +32,6 @@ export class UIManager {
     this._newItems = new Set();
     this._newQuests = new Set();
 
-    // Whether WASD walks (see NAV_KEYS). Off until the player turns it on.
-    this._wasd = false;
-    try { this._wasd = localStorage.getItem(WASD_KEY) === '1'; } catch { /* unavailable storage — off */ }
-
     // The built-in tab widgets. Registered on the engine so plugins share the
     // same mechanism for contributing whole sidebar tabs (rules.tabs[].widget).
     engine.registerTabWidget('map', (panel, ui) => ui._buildMapWidget(panel));
@@ -58,22 +45,16 @@ export class UIManager {
     this._setupTabNotifier();
     this.map.setup();
 
-    // Keyboard play, split over two conventions so they never share a key:
-    // WASD are verbs — press east, walk east — but only once the player has
-    // switched them on in the options tab; the arrow keys are a menu
-    // cursor, stepping focus through every option in the panel, confirmed
-    // with Enter (the browser's own button activation). Both press the same
-    // buttons the mouse would, so every gate (conditions, item requirements,
-    // disabled) stays where it already is, and both go inert wherever those
-    // buttons aren't on screen: combat, dialogue, chests. WASD keys off the
-    // data-point markers addDirectionMarker leaves behind, which is what
-    // makes the curator's panels answer to it too.
+    // Keyboard play: the arrow keys are a menu cursor, stepping focus through
+    // every option in the panel, confirmed with Enter (the browser's own
+    // button activation). The cursor lands on the same buttons the mouse
+    // would press, so every gate (conditions, item requirements, disabled)
+    // stays where it already is, and it goes inert wherever those buttons
+    // aren't on screen: combat, dialogue, chests.
     document.addEventListener('keydown', (e) => {
       if (e.altKey || e.ctrlKey || e.metaKey) return;
-      // Typing in a field is not playing — but a checkbox takes no text, and
-      // the WASD switch itself holds focus right after it is ticked.
       const t = e.target;
-      if (t.isContentEditable || (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName ?? '') && t.type !== 'checkbox')) return;
+      if (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName ?? '')) return;
       if (!document.getElementById(EL.FULLMAP_OVERLAY).hidden) return;
       const key = e.key.toLowerCase();
 
@@ -88,34 +69,15 @@ export class UIManager {
         // Unfocused, down enters at the top and up at the bottom; both wrap.
         const next = key === 'arrowdown' ? at + 1 : (at < 0 ? -1 : at - 1);
         options[(next + options.length) % options.length].focus();
-        return;
       }
-
-      if (e.repeat || !this._wasd) return;
-      const point = NAV_KEYS[key];
-      if (!point) return;
-      const matches = [...document.querySelectorAll(
-        `#${EL.SCENE_OPTIONS_PANEL} .${CSS.CARD_DIRECTED}:not(:disabled)`
-      )].filter(b => b.querySelector(`.${CSS.OPTION_DIRECTION}[data-point="${point}"]`));
-      if (!matches.length) return;
-      e.preventDefault();
-      if (matches.length === 1) {
-        matches[0].click();
-        return;
-      }
-      // Two arrows can agree — two rooms down the same side of a house both
-      // point west. Silently favouring the first would strand the other
-      // beyond the keyboard's reach, so the key steps focus through them
-      // instead (wrapping), and Enter presses the focused one, natively.
-      matches[(matches.indexOf(document.activeElement) + 1) % matches.length].focus();
     });
 
     // The peek: resting on an option that leads somewhere lights that place
-    // on the minimap — the pointer by hover, and the arrow cursor, the WASD
-    // cycle and Tab by focus. Whichever input moved last owns the light, and
-    // the other is the fallback when it leaves, so mouse and keyboard trade
-    // it without stranding it: a hand parked on the panel (where it lands
-    // after every click) must not pin the light while the cursor steps past.
+    // on the minimap — the pointer by hover, and the arrow cursor and Tab by
+    // focus. Whichever input moved last owns the light, and the other is the
+    // fallback when it leaves, so mouse and keyboard trade it without
+    // stranding it: a hand parked on the panel (where it lands after every
+    // click) must not pin the light while the cursor steps past.
     // The recompute waits a microtask because a walk rebuilds the panel, and
     // Chrome fires focusout for the removed cursor button mid-rebuild — read
     // then, the old hovered neighbour is still in the DOM and would plant the
@@ -242,12 +204,6 @@ export class UIManager {
     document.getElementById(EL.BTN_RESTART)?.addEventListener('click', () => {
       this.engine.state.reset();
       window.location.reload();
-    });
-
-    // The WASD switch (options tab) — a device preference, kept here.
-    document.getElementById(EL.CONTROLS_WASD)?.addEventListener('change', (e) => {
-      this._wasd = e.target.checked;
-      try { localStorage.setItem(WASD_KEY, this._wasd ? '1' : '0'); } catch { /* storage blocked — the choice lasts the session */ }
     });
 
     // Audio controls (options tab) — write straight through to the
@@ -426,15 +382,6 @@ export class UIManager {
         <button class="${CSS.BTN}" id="${EL.BTN_SAVE}">${escapeHtml(this.engine.t('ui.btnSave'))}</button>
         <button class="${CSS.BTN}" id="${EL.BTN_LOAD}">${escapeHtml(this.engine.t('ui.btnLoad'))}</button>
         <button class="${CSS.BTN}" id="${EL.BTN_RESTART}">${escapeHtml(this.engine.t('ui.btnRestart'))}</button>
-      </div>
-    </div>
-    <div class="${CSS.PANEL_SECTION}">
-      <div class="${CSS.SECTION_HEADING}">${escapeHtml(this.engine.t('ui.controlsHeading'))}</div>
-      <div class="settings-options">
-        <label class="settings-options__row">
-          <span>${escapeHtml(this.engine.t('ui.controlsWasd'))}</span>
-          <input type="checkbox" id="${EL.CONTROLS_WASD}"${this._wasd ? ' checked' : ''}>
-        </label>
       </div>
     </div>
     <div class="${CSS.PANEL_SECTION}">
