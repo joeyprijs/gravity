@@ -28,15 +28,6 @@
   ],
   "options": [
     {
-      "text": "Go into the herbalist's cottage",
-      "actions": [
-        {
-          "type": "navigate",
-          "destination": "village_alder_cottage"
-        }
-      ]
-    },
-    {
       "text": "Go into the Bramble house",
       "actions": [
         {
@@ -46,11 +37,11 @@
       ]
     },
     {
-      "text": "Go into the mill and bakehouse",
+      "text": "Go into the herbalist's cottage",
       "actions": [
         {
           "type": "navigate",
-          "destination": "village_mill"
+          "destination": "village_alder_cottage"
         }
       ]
     },
@@ -60,6 +51,15 @@
         {
           "type": "navigate",
           "destination": "village_square"
+        }
+      ]
+    },
+    {
+      "text": "Go into the mill and bakehouse",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_mill"
         }
       ]
     },

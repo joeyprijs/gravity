@@ -37,11 +37,11 @@
       ]
     },
     {
-      "text": "Go into the Rush cottage",
+      "text": "Walk back up the mill road",
       "actions": [
         {
           "type": "navigate",
-          "destination": "village_rush_cottage"
+          "destination": "village_mill_road"
         }
       ]
     },
@@ -84,11 +84,11 @@
       ]
     },
     {
-      "text": "Walk back up the mill road",
+      "text": "Go into the Rush cottage",
       "actions": [
         {
           "type": "navigate",
-          "destination": "village_mill_road"
+          "destination": "village_rush_cottage"
         }
       ]
     }

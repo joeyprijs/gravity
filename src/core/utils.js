@@ -417,17 +417,15 @@ export function buildPanelSection(headingText = null) {
 export function resetOptionsPanel(reminderText = null) {
   const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
   const container = document.getElementById(EL.SCENE_OPTIONS);
-  const entrancesContainer = document.getElementById(EL.SCENE_OPTIONS_ENTRANCES);
   const talkContainer = document.getElementById(EL.SCENE_OPTIONS_TALK);
   const actionsContainer = document.getElementById(EL.SCENE_OPTIONS_ACTIONS);
   const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
-  const exitsContainer = document.getElementById(EL.SCENE_OPTIONS_EXITS);
   const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
 
   clearElement(container);
   // Every headed section starts empty and hidden: its heading is only earned
   // once something lands in it (see renderOptions).
-  [entrancesContainer, talkContainer, actionsContainer, skillsContainer, exitsContainer].forEach(section => {
+  [talkContainer, actionsContainer, skillsContainer].forEach(section => {
     clearElement(section);
     section.setAttribute('hidden', '');
   });
@@ -437,7 +435,7 @@ export function resetOptionsPanel(reminderText = null) {
     if (reminderText !== null) reminder.innerText = reminderText;
     container.appendChild(reminder);
   }
-  return { panel, container, entrancesContainer, talkContainer, actionsContainer, skillsContainer, exitsContainer, reminder };
+  return { panel, container, talkContainer, actionsContainer, skillsContainer, reminder };
 }
 
 /**
@@ -518,13 +516,13 @@ export function buildOptionButton(text, reqText = null) {
 }
 
 /**
- * Adds the direction arrow to a navigation option button — only for moves
- * within one continuous space. A road between outdoor places or a door between
- * two rooms has a direction; crossing a building's threshold does not (the
- * same line Entrances and Exits are drawn on). The rule lives here because the
- * scene renderer and the curator's panels both build navigation buttons and
- * must agree on it. Geometry on both sides is required; a scene without
- * mapDefinitions is nowhere in particular.
+ * Adds the direction arrow to a navigation option button. Every move across
+ * the space the minimap draws has one: a road between outdoor places, a door
+ * between two rooms, and a building's threshold either way — the building is
+ * a square on the outdoor map, the ground outside its door is on the indoor
+ * one. The rule lives here because the scene renderer and the curator's
+ * panels both build navigation buttons and must agree on it. Geometry on both
+ * sides is required; a scene without mapDefinitions is nowhere in particular.
  *
  * Marks the button with a class instead of letting CSS ask via `:has()`: the
  * marker is positioned against its card, every ancestor above the card is
@@ -532,9 +530,7 @@ export function buildOptionButton(text, reqText = null) {
  * the viewport and land in a page corner.
  */
 export function addDirectionMarker(engine, scene, destination, button) {
-  const regions = engine.data.regions;
   if (!destination) return;
-  if (isInteriorScene(scene, regions) !== isInteriorScene(destination, regions)) return;
 
   const point = compassPoint(scene, destination);
   if (!point) return;

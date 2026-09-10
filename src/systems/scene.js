@@ -1,4 +1,4 @@
-import { clearElement, createElement, buildSceneDescription, buildOptionButton, addDirectionMarker, getItemLabel, isInteriorScene, isResourcePool, resetOptionsPanel } from '../core/utils.js';
+import { clearElement, createElement, buildSceneDescription, buildOptionButton, addDirectionMarker, getItemLabel, isResourcePool, resetOptionsPanel } from '../core/utils.js';
 import { CHECK_KEYS, CSS, FLAG_KEYS, GOLD_ITEM_ID, LOG, MAX_D20_ROLL } from '../core/config.js';
 import { evaluateCondition } from './condition.js';
 import { formatList } from '../core/i18n.js';
@@ -177,11 +177,9 @@ export class SceneRenderer {
   }
 
   renderOptions(scene) {
-    const { container: optionsContainer, entrancesContainer, talkContainer, actionsContainer, skillsContainer, exitsContainer } = resetOptionsPanel(scene.title || scene.name);
+    const { container: optionsContainer, talkContainer, actionsContainer, skillsContainer } = resetOptionsPanel(scene.title || scene.name);
 
     const navOpts = [];
-    const enterOpts = [];
-    const exitOpts = [];
     const backOpts = [];
     const talkOpts = [];
     const actionOpts = [];
@@ -201,45 +199,25 @@ export class SceneRenderer {
     // everything left is an act performed here and lands under Actions.
     const startsAction = (opt, type) => opt.actions?.some(a => a.type === type) ?? false;
 
-    // Threshold crossings are listed apart from walking on: outdoors that means
-    // doors into buildings (Entrances), inside it means ways back out (Exits —
-    // a navigate to somewhere outside this building, or a return). Moves that
-    // stay on the same side of the threshold get neither split: a road between
-    // two outdoor places, or a door between two rooms of one house.
-    const regions = this.engine.data.regions;
-    const outdoors = !isInteriorScene(scene, regions);
-    // Destinations that actually resolve. An unknown one is a typo, and reading
-    // it as "not a building" would make the two halves below disagree: outdoors
-    // it falls through to the roads, but inside it would satisfy "navigates to
-    // somewhere that isn't this building" and file a broken door under Exits.
-    // Dropping it leaves the option in the neutral list, where validate.js is
-    // the one that names the typo.
-    const navTargets = (opt) => (opt.actions || [])
-      .filter(a => a.type === 'navigate')
-      .map(a => this.engine.data.scenes[a.destination])
-      .filter(Boolean);
-
-    const entersBuilding = (opt) => outdoors
-      && navTargets(opt).some(dest => isInteriorScene(dest, regions));
-    const leavesBuilding = (opt) => !outdoors && (
-      navTargets(opt).some(dest => !isInteriorScene(dest, regions))
-      || (opt.actions || []).some(a => a.type === 'return')
-    );
-
+    // A door into a building is a move like any other: the building is a
+    // square on the outdoor minimap, and the ground outside it is on the indoor
+    // one, so crossing a threshold either way is a step across the drawn space.
+    // (Entrances and Exits sections once set those moves apart.)
+    //
     // Where an option leads, unfiltered — whether the move *has* a direction
     // is addDirectionMarker's question. Road prose no longer names its
-    // direction; the marker does, in every language.
-    const destinationOf = (opt) => navTargets(opt)[0] ?? null;
+    // direction; the marker does, in every language. An unknown destination is
+    // a typo, and validate.js is the one that names it.
+    const destinationOf = (opt) => (opt.actions || [])
+      .filter(a => a.type === 'navigate')
+      .map(a => this.engine.data.scenes[a.destination])
+      .find(Boolean) ?? null;
 
     (scene.options || []).forEach(opt => {
       const cond = opt.condition ?? null;
       if (!evaluateCondition(cond, this.engine.state)) return;
 
-      if (entersBuilding(opt)) {
-        enterOpts.push(opt);
-      } else if (leavesBuilding(opt)) {
-        exitOpts.push(opt);
-      } else if (isBackOption(opt)) {
+      if (isBackOption(opt)) {
         backOpts.push(opt);
       } else if (startsAction(opt, 'navigate')) {
         navOpts.push(opt);
@@ -290,20 +268,10 @@ export class SceneRenderer {
       container.setAttribute('hidden', '');
     };
 
-    openSection(entrancesContainer, 'ui.entrancesHeading');
     openSection(talkContainer, 'ui.conversationsHeading');
     openSection(actionsContainer, 'ui.actionsHeading');
-    // Exits sit at the foot of the panel, where the way out has always sat — the
-    // two threshold sections never appear together, so they don't have to agree
-    // on a position.
-    openSection(exitsContainer, 'ui.exitsHeading');
 
     navOpts.forEach(opt => renderOptionBtn(opt));
-    // A door the author also marked as the way back still sits last among the
-    // doors, the way a back option sits last among the roads.
-    const backLast = (a, b) => Number(isBackOption(a)) - Number(isBackOption(b));
-    [...enterOpts].sort(backLast).forEach(opt => renderOptionBtn(opt, entrancesContainer));
-    [...exitOpts].sort(backLast).forEach(opt => renderOptionBtn(opt, exitsContainer));
     talkOpts.forEach(opt => renderOptionBtn(opt, talkContainer));
     // Acts render in authored order — where a rest sits is the scene author's
     // call, like whether the scene offers one at all. A rest's card says what
@@ -357,10 +325,8 @@ export class SceneRenderer {
     }
 
     backOpts.forEach(opt => renderOptionBtn(opt));
-    sweepSection(entrancesContainer);
     sweepSection(talkContainer);
     sweepSection(actionsContainer);
-    sweepSection(exitsContainer);
   }
 
   // What a short rest does, as card stat lines — shown on any scene act whose

@@ -38,20 +38,20 @@
       ]
     },
     {
-      "text": "Go into the Brindled Goose",
-      "actions": [
-        {
-          "type": "navigate",
-          "destination": "village_tavern"
-        }
-      ]
-    },
-    {
       "text": "Walk back up the north road",
       "actions": [
         {
           "type": "navigate",
           "destination": "village_north_road"
+        }
+      ]
+    },
+    {
+      "text": "Go into the Brindled Goose",
+      "actions": [
+        {
+          "type": "navigate",
+          "destination": "village_tavern"
         }
       ]
     },

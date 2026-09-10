@@ -1007,63 +1007,47 @@
         assert(gone('scene-options-conversations'), 'nobody to talk to here, and no gap where they would be');
       });
 
-      await step('threshold moves are listed apart: entrances outdoors, exits inside', async () => {
-        // A road to somewhere else and a door into a building are different kinds
-        // of move, so out in the open they are listed apart. Inside a building
-        // every door leads to another room of the same place, so the split would
-        // say nothing and isn't made. Decided by what the pipeline navigates to —
-        // never by the wording of the label.
+      await step('a threshold is a move like any other: doors sit among the roads, in and out', async () => {
+        // A building is a square on the outdoor minimap and the ground outside
+        // its door is on the indoor one, so crossing its threshold either way is
+        // a step across the drawn space, listed with the roads and room doors in
+        // authored order. (Entrances and Exits sections once set them apart.)
         const engine = window.gameEngine;
         const sectionOf = (id) => {
           const el = $(`#${id}`);
           return el.hidden ? null : $$(`#${id} button.card`).map(b => text(b));
         };
+        assert(!$('#scene-options-entrances') && !$('#scene-options-exits'),
+          'no section exists to set a threshold apart');
 
         engine.renderScene('village_forge_lane');
         await until(() => text($('#scene-location-reminder')).includes('Forge Lane'), 'the forge lane');
-        const exits = sectionOf('scene-options');
-        const doors = sectionOf('scene-options-entrances');
-        assert(text($('#scene-options-entrances .section-heading')) === 'Entrances', 'the doors earn a heading');
-        assert(doors.some(t => t.includes('Go into the smithy')) && doors.length === 4,
-          `every door on the lane is under it (got ${doors.join(' | ')})`);
-        assert(exits.some(t => t.includes('East Row')), 'the road on stays in the unheaded list');
-        assert(!exits.some(t => t.includes('Go into the smithy')), 'and no door is left among the roads');
+        const lane = sectionOf('scene-options');
+        assert(lane.some(t => t.includes('Go into the smithy')) && lane.some(t => t.includes('East Row')),
+          `the doors on the lane sit among its roads (got ${lane.join(' | ')})`);
 
-        // A door the author also marked as the way back is still a door.
+        // The way home is a door in the sweep like any road: north of the path,
+        // so it leads, and no isBack pulls it out of compass order.
         engine.renderScene('village_hill_path');
         await until(() => text($('#scene-location-reminder')).includes('Hill Path'), 'the hill path');
-        assert(sectionOf('scene-options-entrances').some(t => t.includes('Go into your house')),
-          'the way home is a door, not a road');
+        const path = sectionOf('scene-options');
+        assert(path[0].includes('Go into your house') && path[1].includes('crossroads'),
+          `the way home leads the sweep (got ${path.join(' | ')})`);
 
-        // Inside, the mirror: the ways out are the ones set apart, and they sit at
-        // the foot of the panel where the way out has always sat. The house is
-        // entered and left through its hallway, so that is where the door is.
         engine.renderScene('home_hallway');
         await until(() => text($('#scene-location-reminder')).includes('Hallway'), 'the hallway');
-        assert(!sectionOf('scene-options-entrances'), 'inside a building there are no entrances');
-        assert(text($('#scene-options-exits .section-heading')) === 'Exits', 'the ways out earn a heading');
-        assert(sectionOf('scene-options-exits').some(t => t.includes('Step outside to the hill path')),
-          `the door out is set apart (got ${sectionOf('scene-options-exits').join(' | ')})`);
-        assert(sectionOf('scene-options').some(t => t.includes('living room')),
-          'while the room it opens onto stays in the unheaded list');
+        const hall = sectionOf('scene-options');
+        assert(hall.some(t => t.includes('Step outside to the hill path')) && hall.some(t => t.includes('living room')),
+          `the door out sits among the doors within (got ${hall.join(' | ')})`);
 
-        // A teleport leaves the building whatever else it does, so it is an exit
-        // from a room that has no door to the outside at all.
+        // A teleport out is a return, and a return sinks to the foot of the
+        // list the way a back option always has.
         engine.state.addToInventory('home_rune', 1);   // so the teleport out shows
         engine.renderScene('home_living_room');
         await until(() => text($('#scene-location-reminder')).includes('Living Room'), 'the living room');
-        const ways = sectionOf('scene-options-exits');
-        assert(ways.join() === 'Return via Teleport', `only the teleport (got ${ways.join(' | ')})`);
-        assert(sectionOf('scene-options').some(t => t.includes('Enter Kitchen')),
-          'while its own rooms stay in the unheaded list');
-        assert(!sectionOf('scene-options').some(t => t.includes('Step outside')), 'with no way out left among them');
-
-        // A door between two rooms of the same building is neither.
-        engine.renderScene('dungeon_hallway');
-        await until(() => text($('#scene-location-reminder')).includes('Stone Hallway'), 'the hallway');
-        assert(!sectionOf('scene-options-exits'), 'a room-to-room door is no exit');
-        assert(sectionOf('scene-options').some(t => t.includes('Return to the Corridor')),
-          'it stays where it was');
+        const ways = sectionOf('scene-options');
+        assert(ways[ways.length - 1] === 'Return via Teleport' && ways.some(t => t.includes('Enter Kitchen')),
+          `the teleport sits last among its own rooms (got ${ways.join(' | ')})`);
       });
 
       await step('a move within one space shows its direction; a threshold has none', async () => {
@@ -1080,9 +1064,12 @@
         });
 
         // Authored in compass order, and each arrow agrees with its place in it.
+        // Doors take their place in the sweep alongside the roads: the store is
+        // north-west of the square and the inn north-east, so they bracket the
+        // north road and the inn rounds to east.
         assert(marks('scene-options').join(' ') ===
-          'Walk back up the north road|N Take the forge lane|E Take Sowers Lane|S Take the mill road|W',
-          `roads read round the compass (got ${marks('scene-options').join(' ')})`);
+          "Go into Frey's store|N Walk back up the north road|N Go into the Brindled Goose|E Take the forge lane|E Take Sowers Lane|S Take the mill road|W",
+          `roads and doors read round the compass (got ${marks('scene-options').join(' ')})`);
 
         // One glyph turned to face the road, so a direction never needs its own art.
         const east = $$('#scene-options button.card').find(b => text(b).includes('forge lane'));
@@ -1107,10 +1094,6 @@
         const drop = Math.abs((iconBox.top + iconBox.height / 2) - (cardBox.top + cardBox.height / 2));
         assert(drop < 1, `the arrow sits on the card's centre line (off by ${drop.toFixed(1)}px)`);
 
-        // A door is a threshold, not a direction — "go in", never "go east".
-        assert(marks('scene-options-entrances').every(m => m.endsWith('|-')),
-          `no entrance claims a direction (got ${marks('scene-options-entrances').join(' ')})`);
-
         // Four points, never eight: the hill path runs north-east out of the
         // crossroads and is shown as north, because a diagonal arrow is the one
         // the eye has to stop and work out.
@@ -1130,19 +1113,21 @@
         assert(hall['Go through to the living room'] === 'N' && hall['Enter Museum Lobby'] === 'E',
           `a door across the house has a direction (got ${marks('scene-options').join(' ')})`);
 
-        // But the way out of the building still does not: that is a threshold,
-        // the same as a door into one, and "out" is not a compass point.
-        assert(marks('scene-options-exits').every(m => m.endsWith('|-')),
-          `no exit claims a direction (got ${marks('scene-options-exits').join(' ')})`);
+        // And so does the way out: the path outside the door is on the map, so
+        // stepping onto it is a move across it — south, off the front of the hall.
+        assert(hall['Step outside to the hill path'] === 'S',
+          `the door out points where the path lies (got ${marks('scene-options').join(' ')})`);
 
         // A house's doors are authored round the compass too, so the arrows read
         // as a sweep here exactly as they do on a road. Two rooms down the same
         // side point the same way — honest rather than useful, and they sit
-        // together, ordered by where they actually are within that side.
+        // together, ordered by where they actually are within that side. The
+        // teleport home (the rune is in the bag) is a return: no direction, and
+        // it sinks below the sweep like any back option.
         engine.renderScene('home_living_room');
         await until(() => text($('#scene-location-reminder')).includes('Living Room'), 'the living room');
         assert(marks('scene-options').join(' ') ===
-          "Enter Bedroom|E Enter Hallway|S Enter Parents' Room|W Enter Kitchen|W",
+          "Enter Bedroom|E Enter Hallway|S Enter Parents' Room|W Enter Kitchen|W Return via Teleport|-",
           `the house reads round the compass (got ${marks('scene-options').join(' ')})`);
       });
 
@@ -1166,15 +1151,18 @@
         if (wasd.checked) wasd.click();
         engine.renderScene('village_square');
         await until(() => place().includes('Village Square'), 'the square');
-        key('d');
+        key('s');
         await new Promise(r => setTimeout(r, 50));
-        assert(place().includes('Village Square'), `with the switch off, d walks nobody (got ${place()})`);
+        assert(place().includes('Village Square'), `with the switch off, s walks nobody (got ${place()})`);
         wasd.click();
         assert(wasd.checked && localStorage.getItem('gravity.wasd') === '1', 'the switch turns WASD on and remembers it');
         // Struck on the freshly ticked switch itself (a click leaves focus
         // there): a checkbox takes no text, so the typing guard lets it walk.
-        key('d', wasd);
-        await until(() => place().includes('Forge Lane'), 'd walked the east road');
+        // South, because it is the square's one single-arrow way: the inn's
+        // door shares east with the forge lane, and a shared arrow cycles
+        // focus instead of walking (tested below, in the house).
+        key('s', wasd);
+        await until(() => place().includes('Sowers Lane'), 's walked the south road');
 
         engine.renderScene('village_square');
         await until(() => place().includes('Village Square'), 'the square again');
@@ -1188,9 +1176,9 @@
         await until(() => place().includes('Village Square'), 'the square once more');
         document.activeElement.blur();
         key('ArrowDown');
-        assert(focused() === 'Walk back up the north road', `down enters at the top (got ${focused()})`);
+        assert(focused() === "Go into Frey's store", `down enters at the top (got ${focused()})`);
         key('ArrowDown');
-        assert(focused() === 'Take the forge lane', `and steps on (got ${focused()})`);
+        assert(focused() === 'Walk back up the north road', `and steps on (got ${focused()})`);
         key('ArrowUp');
         key('ArrowUp');
         assert(focused() === 'Read the notices nailed to the rowan',
@@ -1401,18 +1389,22 @@
         // A building groups by its interior region, so a second room joins the
         // same map instead of becoming a building of its own — and indoors still
         // reveals room by room, so the shop alone shows until the back is walked.
+        // With it, the ground outside its door: the square the shop opens onto,
+        // drawn first so the room paints over it, and nothing further out.
         const shop = draw('village_store');
-        assert(shop.join() === 'The Shop Floor', `inside the shop, the shop (got ${shop.join(', ')})`);
+        assert(shop.join() === 'Village Square,The Shop Floor',
+          `inside the shop, the shop and the square outside its door (got ${shop.join(', ')})`);
         const stock = draw('village_store_back');
         assert(stock.includes('The Shop Floor') && stock.includes('The Stockroom'),
           `both rooms are the same building's map (got ${stock.join(', ')})`);
-        assert(!stock.includes('Village Square'), 'with the village still outside it');
+        assert(stock.includes('Village Square') && !stock.includes('North Road'),
+          `the square at the door stays, the road beyond it does not (got ${stock.join(', ')})`);
 
         const house = draw('home_living_room');
         assert(house.includes('Living Room') && house.includes('Kitchen'),
           `inside the house, its own rooms (got ${house.join(', ')})`);
-        assert(!house.includes('Village Square') && !house.includes('Hill Path'),
-          'and nothing outside it');
+        assert(house.includes('Hill Path') && !house.includes('Village Square'),
+          `and the path at its door, nothing further (got ${house.join(', ')})`);
 
         // The full map must know the same places, or the two views disagree about
         // what exists. It differs only in detail: rooms for a building walked, a
@@ -1442,10 +1434,10 @@
           `the shop is named by its outline alone (got ${drawn.join(', ')})`);
         assert(named('The Shop Floor').length === 1 && !named('The Shop Floor')[0].outline,
           'and the room inside it carries its own map tag');
-        // Sowers Lane is in sight from the square but has not been walked, so the
-        // yard whose gate stands on it is still two steps away.
-        assert(drawn.includes('Sowers Lane'), 'a lane in sight is on the map');
-        assert(!drawn.includes("Stave's Yard"), 'but not what stands along it');
+        // Shepherd's Hill is in sight from the crossroads but has not been walked,
+        // so the cot whose door stands on it is still two steps away.
+        assert(drawn.includes("Shepherd's Hill"), 'a lane in sight is on the map');
+        assert(!drawn.includes("The Shepherd's Cot"), 'but not what stands along it');
       });
 
       await step('a chosen solo fight introduces its enemy', async () => {

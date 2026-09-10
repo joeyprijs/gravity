@@ -28,11 +28,11 @@
   ],
   "options": [
     {
-      "text": "Go to the Orrel farmhouse",
+      "text": "Walk back up Sowers Lane",
       "actions": [
         {
           "type": "navigate",
-          "destination": "village_orrel_farmhouse"
+          "destination": "village_sowers_lane"
         }
       ]
     },
@@ -120,11 +120,11 @@
       ]
     },
     {
-      "text": "Walk back up Sowers Lane",
+      "text": "Go to the Orrel farmhouse",
       "actions": [
         {
           "type": "navigate",
-          "destination": "village_sowers_lane"
+          "destination": "village_orrel_farmhouse"
         }
       ]
     }

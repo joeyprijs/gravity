@@ -28,11 +28,11 @@
   ],
   "options": [
     {
-      "text": "Go into Stave's yard",
+      "text": "Go back to the square",
       "actions": [
         {
           "type": "navigate",
-          "destination": "village_stave_yard"
+          "destination": "village_square"
         }
       ]
     },
@@ -46,11 +46,11 @@
       ]
     },
     {
-      "text": "Go back to the square",
+      "text": "Go on to the fields",
       "actions": [
         {
           "type": "navigate",
-          "destination": "village_square"
+          "destination": "village_south_fields"
         }
       ]
     },
@@ -79,11 +79,11 @@
       ]
     },
     {
-      "text": "Go on to the fields",
+      "text": "Go into Stave's yard",
       "actions": [
         {
           "type": "navigate",
-          "destination": "village_south_fields"
+          "destination": "village_stave_yard"
         }
       ]
     }
