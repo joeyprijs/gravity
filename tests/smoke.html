@@ -1064,11 +1064,13 @@
         });
 
         // Authored in compass order, and each arrow agrees with its place in it.
-        // Doors take their place in the sweep alongside the roads: the store is
-        // north-west of the square and the inn north-east, so they bracket the
-        // north road and the inn rounds to east.
+        // Doors take their place in the sweep alongside the roads: the store and
+        // the inn both sit along the square's top edge, one at each corner, so
+        // they bracket the north road and all three read north — the inn too,
+        // though the line between its centre and the square's runs past the
+        // diagonal (the arrow reads boxes edge to edge, not centre to centre).
         assert(marks('scene-options').join(' ') ===
-          "Go into Frey's store|N Walk back up the north road|N Go into the Brindled Goose|E Take the forge lane|E Take Sowers Lane|S Take the mill road|W",
+          "Go into Frey's store|N Walk back up the north road|N Go into the Brindled Goose|N Take the forge lane|E Take Sowers Lane|S Take the mill road|W",
           `roads and doors read round the compass (got ${marks('scene-options').join(' ')})`);
 
         // One glyph turned to face the road, so a direction never needs its own art.

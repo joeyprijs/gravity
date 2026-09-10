@@ -89,10 +89,11 @@ test('itemCardStats: { slot: false } drops the slot row for the equipped list', 
 
 // ── compassPoint ──────────────────────────────────────────────────────────────
 // The direction an option's arrow points, and the order roads are authored in,
-// both come out of this. Its rounding has been wrong twice on the way in — once
-// ordering by raw bearing, which files a road at 340° after south, and once at
-// eight points, which asks the eye to decode a diagonal — so the boundaries are
-// worth holding still.
+// both come out of this. It has been wrong three times on the way in — once
+// ordering by raw bearing, which files a road at 340° after south, once at
+// eight points, which asks the eye to decode a diagonal, and once reading
+// centre to centre, which put an inn on the top edge of a wide square to its
+// east — so the boundaries are worth holding still.
 
 const at = (left, top) => ({ mapDefinitions: { left, top, width: 10, height: 10 } });
 const here = at(100, 100);
@@ -115,6 +116,22 @@ test('compassPoint: rounds to the nearest cardinal, and wraps at due north', () 
   // Just past the 45° boundary is unambiguously the next one round.
   assert.equal(compassPoint(here, at(200, 90)), 'E');
   assert.equal(compassPoint(here, at(200, 110)), 'E');
+});
+
+test('compassPoint: a box is read by where it sits against yours, not by its centre', () => {
+  // The demo's own case: the inn hugs the top right corner of the square, a
+  // box wide enough that the centre-to-centre line runs 47°. It is above the
+  // square, so the arrow says so — and the way back says south.
+  const square = { mapDefinitions: { left: 2320, top: 2270, width: 440, height: 180 } };
+  const inn = { mapDefinitions: { left: 2605, top: 2190, width: 155, height: 80 } };
+  assert.equal(compassPoint(square, inn), 'N');
+  assert.equal(compassPoint(inn, square), 'S');
+  // Overlapping top to bottom is east or west however far up the box sits.
+  assert.equal(compassPoint(here, at(300, 92)), 'E');
+  assert.equal(compassPoint(here, at(-100, 108)), 'W');
+  // Off in a corner, apart on both axes, the wider gap decides.
+  assert.equal(compassPoint(here, at(200, 60)), 'E');    // 90 across, 30 up
+  assert.equal(compassPoint(here, at(140, 0)), 'N');     // 30 across, 90 up
 });
 
 test('compassPoint: nowhere in particular is null, never a direction', () => {

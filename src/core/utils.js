@@ -191,20 +191,35 @@ export const COMPASS_POINTS = Object.freeze(['N', 'E', 'S', 'W']);
  *
  * Derived from map coordinates rather than authored in prose ("take the forge
  * lane east"), so the game's one piece of navigational meaning isn't trapped
- * in a string a translator has to get right. Rounded to a compass point on
- * purpose: a road bearing 340° reads as north to anyone looking at it. Null
- * unless both scenes have geometry.
+ * in a string a translator has to get right. Null unless both scenes have
+ * geometry.
+ *
+ * Read edge to edge, not centre to centre, because the map is boxes and the
+ * eye reads a box by where it sits against yours: an inn hugging the top
+ * right corner of a wide square is *above* it, though the line between the
+ * two centres runs 47° — a shade past the diagonal, and east by the centre
+ * rule. So a box that overlaps this one side to side is north or south, one
+ * that overlaps it top to bottom is east or west, and only a box off in a
+ * corner, apart on both axes, is placed by the larger of its two gaps. A dead
+ * tie there, or two boxes that intersect, falls back to the bearing between
+ * centres, rounded to a compass point on purpose: a road bearing 340° reads as
+ * north to anyone looking at it.
  */
 export function compassPoint(from, to) {
   const a = from?.mapDefinitions;
   const b = to?.mapDefinitions;
   if (!a || !b) return null;
 
+  // Screen coordinates put north at the *top*, so north is a negative dy.
   const dx = (b.left + b.width / 2) - (a.left + a.width / 2);
   const dy = (b.top + b.height / 2) - (a.top + a.height / 2);
-  if (!dx && !dy) return null;
+  // Per axis, how far apart the two boxes are; negative where they overlap.
+  const gapX = Math.max(b.left - (a.left + a.width), a.left - (b.left + b.width));
+  const gapY = Math.max(b.top - (a.top + a.height), a.top - (b.top + b.height));
+  if (gapX > gapY && dx) return dx > 0 ? 'E' : 'W';
+  if (gapY > gapX && dy) return dy > 0 ? 'S' : 'N';
 
-  // Screen coordinates put north at the *top*, so north is a negative dy.
+  if (!dx && !dy) return null;
   const degrees = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
   const step = 360 / COMPASS_POINTS.length;
   return COMPASS_POINTS[Math.round(degrees / step) % COMPASS_POINTS.length];
