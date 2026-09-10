@@ -1011,7 +1011,7 @@
         // A building is a square on the outdoor minimap and the ground outside
         // its door is on the indoor one, so crossing its threshold either way is
         // a step across the drawn space, listed with the roads and room doors in
-        // authored order. (Entrances and Exits sections once set them apart.)
+        // authored order.
         const engine = window.gameEngine;
         const sectionOf = (id) => {
           const el = $(`#${id}`);
@@ -1050,7 +1050,7 @@
           `the teleport sits last among its own rooms (got ${ways.join(' | ')})`);
       });
 
-      await step('a move within one space shows its direction; a threshold has none', async () => {
+      await step('every move across the drawn space shows its direction, doors included', async () => {
         // The prose stopped saying "east" — the arrow carries it now, so it has
         // to be there, has to face the right way, and has to name itself for a
         // screen reader, or dropping the word took the direction away.

@@ -51,7 +51,6 @@
     },
     {
       "text": "Step back out to the square",
-      "isBack": true,
       "actions": [
         {
           "type": "navigate",

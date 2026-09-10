@@ -2,10 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MapManager } from '../src/world/map.js';
 
-// Map knowledge from `known` regions: places the player knows without walking
-// them. The reveal is derived from static data, so these guard the invariant
-// at the two seams every map view reads through — _outdoorKnowledge and
-// _visitedMapScenes.
+// Map knowledge that is derived from static data rather than walked: `known`
+// regions, and the one step of sight out through a walked room's door. These
+// guard the invariant at the seams every map view reads through —
+// _outdoorKnowledge, _visitedMapScenes and _minimapPlacements.
 
 const DEF = { top: 0, left: 0, width: 10, height: 10 };
 

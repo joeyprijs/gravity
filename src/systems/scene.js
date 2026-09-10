@@ -202,10 +202,9 @@ export class SceneRenderer {
     // A door into a building is a move like any other: the building is a
     // square on the outdoor minimap, and the ground outside it is on the indoor
     // one, so crossing a threshold either way is a step across the drawn space.
-    // (Entrances and Exits sections once set those moves apart.)
     //
     // Where an option leads, unfiltered — whether the move *has* a direction
-    // is addDirectionMarker's question. Road prose no longer names its
+    // is addDirectionMarker's question. Road prose does not name its
     // direction; the marker does, in every language. An unknown destination is
     // a typo, and validate.js is the one that names it.
     const destinationOf = (opt) => (opt.actions || [])

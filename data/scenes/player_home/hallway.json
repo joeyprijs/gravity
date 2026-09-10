@@ -41,7 +41,6 @@
     },
     {
       "text": "Step outside to the hill path",
-      "isBack": true,
       "actions": [
         {
           "type": "navigate",
