@@ -1171,9 +1171,11 @@ button.section-toggle--collapsed .section-toggle__label::before {
 
 /* Where the focused option would take you (see setPeek in map.js). An
    outline, not a border like --current: it adds nothing to the box's size,
-   and the two can sit on one node without fighting. */
+   and the two can sit on one node without fighting. Gold, not the accent:
+   --current states where you are, the peek asks where you might go, and
+   side by side the two must not read as one mark. */
 .map-node--peek {
-  outline: 2px solid var(--accent-color);
+  outline: 2px solid var(--gold-color);
   outline-offset: 1px;
   z-index: 1;
 }
