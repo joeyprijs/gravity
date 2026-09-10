@@ -399,7 +399,11 @@ button.card:disabled {
 
 /* Which way a move goes, on the card's trailing edge. Absolutely positioned so
    the text's left edge stays flush with every other option in the panel — the
-   directional ones gain a column without the list going ragged. One glyph drawn
+   directional ones gain a column without the list going ragged. Pinned to the
+   title line, not centred on the card: a locked door carries a second line
+   ("Requires: Cellar Key"), and centred, the arrow floated in the gap between
+   the two. Every card's title sits at the same height, so a list of one-line
+   moves and two-line doors keeps every arrow on the same row. One glyph drawn
    pointing north, turned a quarter-turn per cardinal point (--turn is its index
    in COMPASS_POINTS).
 
@@ -416,8 +420,8 @@ button.card:disabled {
 .option-direction {
   position: absolute;
   right: calc(var(--spacing) * 2);
-  top: 0;
-  bottom: 0;
+  top: calc(var(--spacing) * 1.5);   /* the card's top padding: the title line */
+  height: 22px;                       /* the card's line-height */
   /* `.card > * + *` spaces a card's stacked lines. This one is not in that
      stack — it is pinned to the edge — so it opts out, or it hangs 8px low. */
   margin: 0;
