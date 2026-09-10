@@ -102,20 +102,40 @@ export class UIManager {
 
     // The peek: resting on an option that leads somewhere lights that place
     // on the minimap — the pointer by hover, and the arrow cursor, the WASD
-    // cycle and Tab by focus. Every enter and leave recomputes the light
-    // whole, so mouse and keyboard trade it without stranding it; while both
-    // rest on options, the pointer wins (a moving hand over a standing
-    // cursor). Any click still clears it outright (Safari gives buttons no
-    // focus on click, so the leave events alone would miss the mouse), and
-    // the canvas itself clears with the next move.
+    // cycle and Tab by focus. Whichever input moved last owns the light, and
+    // the other is the fallback when it leaves, so mouse and keyboard trade
+    // it without stranding it: a hand parked on the panel (where it lands
+    // after every click) must not pin the light while the cursor steps past.
+    // The recompute waits a microtask because a walk rebuilds the panel, and
+    // Chrome fires focusout for the removed cursor button mid-rebuild — read
+    // then, the old hovered neighbour is still in the DOM and would plant the
+    // last scene's peek on the fresh minimap. Any click still clears it
+    // outright (Safari gives buttons no focus on click, so the leave events
+    // alone would miss the mouse), and the canvas itself clears with the
+    // next move.
     const optionsPanel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
-    const repeek = () => {
-      const hovered = optionsPanel.querySelector('button:hover');
+    let hovered = null;
+    let pointerLast = false;
+    const repeek = () => queueMicrotask(() => {
+      if (!hovered?.isConnected) hovered = null;
       const focused = optionsPanel.contains(document.activeElement) ? document.activeElement : null;
-      this.map.setPeek((hovered ?? focused)?.dataset.destination ?? null);
-    };
-    ['focusin', 'focusout', 'mouseover', 'mouseout']
-      .forEach(type => optionsPanel.addEventListener(type, repeek));
+      const lead = pointerLast ? hovered : focused;
+      this.map.setPeek((lead ?? hovered ?? focused)?.dataset.destination ?? null);
+    });
+    optionsPanel.addEventListener('mouseover', (e) => {
+      hovered = e.target.closest('button');
+      pointerLast = true;
+      repeek();
+    });
+    optionsPanel.addEventListener('mouseout', (e) => {
+      hovered = optionsPanel.contains(e.relatedTarget) ? e.relatedTarget.closest('button') : null;
+      pointerLast = true;
+      repeek();
+    });
+    ['focusin', 'focusout'].forEach(type => optionsPanel.addEventListener(type, () => {
+      pointerLast = false;
+      repeek();
+    }));
     optionsPanel.addEventListener('click', () => this.map.setPeek(null), true);
 
     // One delegated listener covers every inventory item card, present and
