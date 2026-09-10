@@ -18,8 +18,11 @@ const NEW_DOT_DWELL_MS = 250;
 // WASD, each mapped to the compass point it walks (see setup). Letters are
 // matched lowercased, so Shift+W still walks north. The arrow keys are
 // deliberately absent: they move the selection cursor instead, so the two
-// conventions never fight over one key.
+// conventions never fight over one key. WASD is opt-in — a checkbox in the
+// options tab — remembered under WASD_KEY as a device preference like the
+// audio settings, not game state, so it rides no save.
 const NAV_KEYS = { w: 'N', d: 'E', s: 'S', a: 'W' };
+const WASD_KEY = 'gravity.wasd';
 
 // A data-stat-bind span for an innerHTML template; update() fills every bound
 // span on each stats change.
@@ -38,6 +41,10 @@ export class UIManager {
     this._newItems = new Set();
     this._newQuests = new Set();
 
+    // Whether WASD walks (see NAV_KEYS). Off until the player turns it on.
+    this._wasd = false;
+    try { this._wasd = localStorage.getItem(WASD_KEY) === '1'; } catch { /* unavailable storage — off */ }
+
     // The built-in tab widgets. Registered on the engine so plugins share the
     // same mechanism for contributing whole sidebar tabs (rules.tabs[].widget).
     engine.registerTabWidget('map', (panel, ui) => ui._buildMapWidget(panel));
@@ -52,7 +59,8 @@ export class UIManager {
     this.map.setup();
 
     // Keyboard play, split over two conventions so they never share a key:
-    // WASD are verbs — press east, walk east — and the arrow keys are a menu
+    // WASD are verbs — press east, walk east — but only once the player has
+    // switched them on in the options tab; the arrow keys are a menu
     // cursor, stepping focus through every option in the panel, confirmed
     // with Enter (the browser's own button activation). Both press the same
     // buttons the mouse would, so every gate (conditions, item requirements,
@@ -62,8 +70,10 @@ export class UIManager {
     // makes the curator's panels answer to it too.
     document.addEventListener('keydown', (e) => {
       if (e.altKey || e.ctrlKey || e.metaKey) return;
+      // Typing in a field is not playing — but a checkbox takes no text, and
+      // the WASD switch itself holds focus right after it is ticked.
       const t = e.target;
-      if (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName ?? '')) return;
+      if (t.isContentEditable || (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName ?? '') && t.type !== 'checkbox')) return;
       if (!document.getElementById(EL.FULLMAP_OVERLAY).hidden) return;
       const key = e.key.toLowerCase();
 
@@ -81,7 +91,7 @@ export class UIManager {
         return;
       }
 
-      if (e.repeat) return;
+      if (e.repeat || !this._wasd) return;
       const point = NAV_KEYS[key];
       if (!point) return;
       const matches = [...document.querySelectorAll(
@@ -232,6 +242,12 @@ export class UIManager {
     document.getElementById(EL.BTN_RESTART)?.addEventListener('click', () => {
       this.engine.state.reset();
       window.location.reload();
+    });
+
+    // The WASD switch (options tab) — a device preference, kept here.
+    document.getElementById(EL.CONTROLS_WASD)?.addEventListener('change', (e) => {
+      this._wasd = e.target.checked;
+      try { localStorage.setItem(WASD_KEY, this._wasd ? '1' : '0'); } catch { /* storage blocked — the choice lasts the session */ }
     });
 
     // Audio controls (options tab) — write straight through to the
@@ -413,13 +429,22 @@ export class UIManager {
       </div>
     </div>
     <div class="${CSS.PANEL_SECTION}">
+      <div class="${CSS.SECTION_HEADING}">${escapeHtml(this.engine.t('ui.controlsHeading'))}</div>
+      <div class="settings-options">
+        <label class="settings-options__row">
+          <span>${escapeHtml(this.engine.t('ui.controlsWasd'))}</span>
+          <input type="checkbox" id="${EL.CONTROLS_WASD}"${this._wasd ? ' checked' : ''}>
+        </label>
+      </div>
+    </div>
+    <div class="${CSS.PANEL_SECTION}">
       <div class="${CSS.SECTION_HEADING}">${escapeHtml(this.engine.t('ui.audioHeading'))}</div>
-      <div class="audio-options">
-        <label class="audio-options__row">
+      <div class="settings-options">
+        <label class="settings-options__row">
           <span>${escapeHtml(this.engine.t('ui.audioMute'))}</span>
           <input type="checkbox" id="${EL.AUDIO_MUTE}"${audio.muted ? ' checked' : ''}>
         </label>
-        <label class="audio-options__row">
+        <label class="settings-options__row">
           <span>${escapeHtml(this.engine.t('ui.audioAmbience'))}</span>
           <input type="range" id="${EL.AUDIO_AMBIENCE_VOL}" min="0" max="100" value="${Math.round(audio.ambienceVolume * 100)}">
         </label>

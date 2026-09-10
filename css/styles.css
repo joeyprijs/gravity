@@ -707,20 +707,20 @@ button.section-toggle--collapsed .section-toggle__label::before {
 
 /* Save/load/restart and the audio controls, stacked full width. */
 .options-actions,
-.audio-options {
+.settings-options {
   display: flex;
   flex-direction: column;
   gap: calc(var(--spacing) * 1);
 }
 
-.audio-options__row {
+.settings-options__row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: calc(var(--spacing) * 1);
 }
 
-.audio-options__row input[type="range"] {
+.settings-options__row input[type="range"] {
   flex: 1;
   max-width: 55%;
 }

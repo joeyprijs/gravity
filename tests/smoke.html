@@ -1158,9 +1158,22 @@
         const place = () => text($('#scene-location-reminder'));
         const focused = () => text(document.activeElement.querySelector('.card__title'));
 
+        // WASD is a switch in the options tab, off by default: with it off a
+        // letter walks nobody. A previous run may have left it on in
+        // localStorage, so start from off either way.
+        const wasd = $('#options-tab #controls-wasd');
+        assert(wasd, 'the WASD switch sits in the options tab');
+        if (wasd.checked) wasd.click();
         engine.renderScene('village_square');
         await until(() => place().includes('Village Square'), 'the square');
         key('d');
+        await new Promise(r => setTimeout(r, 50));
+        assert(place().includes('Village Square'), `with the switch off, d walks nobody (got ${place()})`);
+        wasd.click();
+        assert(wasd.checked && localStorage.getItem('gravity.wasd') === '1', 'the switch turns WASD on and remembers it');
+        // Struck on the freshly ticked switch itself (a click leaves focus
+        // there): a checkbox takes no text, so the typing guard lets it walk.
+        key('d', wasd);
         await until(() => place().includes('Forge Lane'), 'd walked the east road');
 
         engine.renderScene('village_square');

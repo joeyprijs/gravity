@@ -99,6 +99,8 @@
     "audioHeading": "Audio",
     "audioMute": "Mute all audio",
     "audioAmbience": "Ambience",
+    "controlsHeading": "Controls",
+    "controlsWasd": "Move with WASD",
     "sheetCharacterTitle": "Character",
     "statLevel": "Level",
     "statHp": "HP",
