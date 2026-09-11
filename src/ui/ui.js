@@ -415,19 +415,25 @@ export class UIManager {
     const bar = createElement('div', 'scene__topbar');
 
     const stats = createElement('div', 'scene__topbar-stats');
-    // Too narrow for labels: the icon stands in, the label is the title and
-    // screen-reader text.
+    // Too narrow for labels: the icon stands in, the label is screen-reader
+    // text and the cursor tooltip the tab icons and minimap boxes use.
     const stat = (icon, label, valueHtml) => {
       const item = createElement('span', 'scene__topbar-stat');
-      item.title = label;
+      item.dataset.label = label;
       item.innerHTML = `${iconHtml(icon)}<span class="visually-hidden">${escapeHtml(label)}: </span>`
         + `<span class="scene__topbar-stat-value">${valueHtml}</span>`;
       return item;
     };
+    stats.addEventListener('mousemove', (e) => {
+      const label = e.target.closest('.scene__topbar-stat')?.dataset.label;
+      if (label) showCursorTooltip(label, e);
+      else hideCursorTooltip();
+    });
+    stats.addEventListener('mouseleave', () => hideCursorTooltip());
     stats.append(
-      stat('heart', this.engine.t('ui.statHp'), `${bindSpan('resources.hp.current')}/${bindSpan('resources.hp.max')}`),
-      stat('shield', this.engine.t('ui.statAc'), bindSpan('attributes.ac')),
-      stat('sword', this.engine.t('ui.statAp'), `${bindSpan('resources.ap.current')}/${bindSpan('resources.ap.max')}`),
+      stat('heart', this.engine.t('ui.sheetHp'), `${bindSpan('resources.hp.current')}/${bindSpan('resources.hp.max')}`),
+      stat('shield', this.engine.t('ui.sheetAc'), bindSpan('attributes.ac')),
+      stat('sword', this.engine.t('ui.sheetAp'), `${bindSpan('resources.ap.current')}/${bindSpan('resources.ap.max')}`),
       ...this._headerResourceEntries().map(({ icon, label, valueHtml }) => stat(icon, label, valueHtml)),
       stat('coin', this.engine.t('ui.statGold'), bindSpan('resources.gold')),
     );
