@@ -1,4 +1,4 @@
-import { clearElement, createElement, buildSceneDescription, buildOptionButton, addDirectionMarker, getItemLabel, isResourcePool, resetOptionsPanel } from '../core/utils.js';
+import { createElement, buildSceneDescription, buildOptionButton, addDirectionMarker, getItemLabel, isResourcePool, resetOptionsPanel } from '../core/utils.js';
 import { CHECK_KEYS, CSS, FLAG_KEYS, GOLD_ITEM_ID, LOG, MAX_D20_ROLL } from '../core/config.js';
 import { evaluateCondition } from './condition.js';
 import { formatList } from '../core/i18n.js';
@@ -92,7 +92,12 @@ export class SceneRenderer {
     const startsCombat = !skipAutoAttack && this._autoAttackDue(scene);
     this.engine.emit('scene:entered', { sceneId, scene, isEntry, startsCombat });
 
-    if (startsCombat && this._maybeStartAutoAttack(scene)) return;
+    if (startsCombat) {
+      // The scene description rendered a moment ago is this encounter's
+      // framing, so the fight doesn't re-describe the enemy on top of it.
+      this.engine.combatSystem.startCombat(scene.autoAttack.enemies, scene.autoAttack, { fromSceneEntry: true });
+      return;
+    }
 
     this.engine.scrollNarrativeToBottom();
   }
@@ -157,23 +162,10 @@ export class SceneRenderer {
     });
   }
 
-  // Whether the scene's autoAttack encounter would start right now — the
-  // predicate half of _maybeStartAutoAttack, checked before scene:entered is
-  // emitted so listeners know a fight is coming.
+  // Whether the scene's autoAttack encounter starts on this render — decided
+  // before scene:entered is emitted so listeners know a fight is coming.
   _autoAttackDue(scene) {
-    if (!scene.autoAttack) return false;
-    const cond = scene.autoAttack.condition ?? null;
-    return !cond || evaluateCondition(cond, this.engine.state);
-  }
-
-  // Starts the scene's autoAttack encounter when its condition allows.
-  // Returns true when combat was started (the caller stops rendering).
-  _maybeStartAutoAttack(scene) {
-    if (!this._autoAttackDue(scene)) return false;
-    // The scene description rendered a moment ago is this encounter's framing,
-    // so the fight doesn't re-describe the enemy on top of it.
-    this.engine.combatSystem.startCombat(scene.autoAttack.enemies, scene.autoAttack, { fromSceneEntry: true });
-    return true;
+    return !!scene.autoAttack && evaluateCondition(scene.autoAttack.condition, this.engine.state);
   }
 
   renderOptions(scene) {
@@ -203,18 +195,15 @@ export class SceneRenderer {
     // square on the outdoor minimap, and the ground outside it is on the indoor
     // one, so crossing a threshold either way is a step across the drawn space.
     //
-    // Where an option leads, unfiltered — whether the move *has* a direction
-    // is addDirectionMarker's question. Road prose does not name its
+    // Where an option leads, as a scene id — whether the move *has* a
+    // direction is addDirectionMarker's question. Road prose does not name its
     // direction; the marker does, in every language. An unknown destination is
     // a typo, and validate.js is the one that names it.
     const destinationOf = (opt) => (opt.actions || [])
-      .filter(a => a.type === 'navigate')
-      .map(a => this.engine.data.scenes[a.destination])
-      .find(Boolean) ?? null;
+      .find(a => a.type === 'navigate' && this.engine.data.scenes[a.destination])?.destination;
 
     (scene.options || []).forEach(opt => {
-      const cond = opt.condition ?? null;
-      if (!evaluateCondition(cond, this.engine.state)) return;
+      if (!evaluateCondition(opt.condition, this.engine.state)) return;
 
       if (isBackOption(opt)) {
         backOpts.push(opt);
@@ -240,13 +229,14 @@ export class SceneRenderer {
 
       const stats = [...(extraStats ?? []), ...(reqText ? [reqText] : [])];
       const btn = buildOptionButton(opt.text, stats.length ? stats : null);
-      addDirectionMarker(this.engine, scene, destinationOf(opt), btn);
 
       // Where the option leads rides on the button, so focusing it can light
       // the destination on the minimap (the peek listeners in ui.js).
-      const destId = (opt.actions || [])
-        .find(a => a.type === 'navigate' && this.engine.data.scenes[a.destination])?.destination;
-      if (destId) btn.dataset.destination = destId;
+      const destId = destinationOf(opt);
+      if (destId) {
+        addDirectionMarker(this.engine, scene, this.engine.data.scenes[destId], btn);
+        btn.dataset.destination = destId;
+      }
 
       if (disabled) btn.disabled = true;
       btn.onclick = () => this.handleOption(opt);
@@ -263,7 +253,7 @@ export class SceneRenderer {
     };
     const sweepSection = (container) => {
       if (container.querySelector('button')) return;
-      clearElement(container);
+      container.replaceChildren();
       container.setAttribute('hidden', '');
     };
 
@@ -293,8 +283,7 @@ export class SceneRenderer {
 
     (scene.skills || []).forEach((opt, i) => {
       if (!opt.skillCheck) return;
-      const cond = opt.condition ?? null;
-      if (!evaluateCondition(cond, this.engine.state)) return;
+      if (!evaluateCondition(opt.condition, this.engine.state)) return;
 
       const items = opt.items || [];
       let btn;
@@ -484,9 +473,6 @@ export class SceneRenderer {
     const mod = this.engine.state.getPlayer().attributes[opt.skillCheck] ?? 0;
     const baseRoll = roll(1, MAX_D20_ROLL);
     const hitRoll = baseRoll + mod;
-
-    // The DC the roll is narrated against: the easiest still-hidden item's —
-    // the same number the button's badge advertised for this attempt.
     const lowestDc = this._lowestHiddenDc(items, state);
 
     const newlyFound = [];
@@ -643,16 +629,16 @@ export class SceneRenderer {
     return btn;
   }
 
-  // Returns the description string to display for a scene.
-  // Handles two cases:
-  //   1. Plain string description — returned as-is.
-  //   2. Conditional array — first matching condition wins; the entry with
-  //      no condition acts as the fallback.
+  // The description string to display for a scene: a plain string as-is, or
+  // the matching entry of a conditional array — first matching condition
+  // wins; the entry with no condition is the fallback.
   _resolveDescription(scene) {
     let desc = scene.description;
 
     if (Array.isArray(scene.description)) {
-      desc = this._resolveDescriptionVariant(scene)?.text || '';
+      const variant = scene.description.find(d => d.condition && evaluateCondition(d.condition, this.engine.state))
+        ?? scene.description.find(d => !d.condition);
+      desc = variant?.text || '';
     }
 
     // Plugin-registered decorators may append dynamic HTML to any scene's
@@ -663,16 +649,5 @@ export class SceneRenderer {
     }
 
     return desc;
-  }
-
-  // The matching entry of a conditional description array — first matching
-  // condition wins; the entry with no condition is the fallback. Null for
-  // plain-string descriptions.
-  _resolveDescriptionVariant(scene) {
-    if (!Array.isArray(scene.description)) return null;
-    for (const d of scene.description) {
-      if (d.condition && evaluateCondition(d.condition, this.engine.state)) return d;
-    }
-    return scene.description.find(d => !d.condition) ?? null;
   }
 }

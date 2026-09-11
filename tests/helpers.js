@@ -42,6 +42,7 @@ export const fakeEl = () => ({
   classList: { add() {} },
   children: [],
   appendChild(child) { this.children.push(child); return child; },
+  replaceChildren() { this.children = []; },
   setAttribute() {},
   removeAttribute() {},
   querySelector: () => null,

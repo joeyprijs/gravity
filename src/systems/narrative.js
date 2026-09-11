@@ -15,6 +15,8 @@ export class NarrativeLog {
     this.el = document.getElementById(EL.SCENE_NARRATIVE);
     this.currentSceneEl = null;
     this._lastLogType = null;
+    // The newest [Player] choice line in the current block, for amendLast.
+    this._lastChoice = null;
     this._scrollRaf = undefined;
 
     // Flush scene--new from log entries before each interactive card

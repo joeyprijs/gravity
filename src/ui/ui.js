@@ -1,4 +1,4 @@
-import { attrRowHtml, clearElement, collapseAllSections, createElement, createSectionToggles, escapeHtml, getByPath, hideCursorTooltip, showCursorTooltip } from '../core/utils.js';
+import { attrRowHtml, collapseAllSections, createElement, createSectionToggles, escapeHtml, getByPath, hideCursorTooltip, isResourcePool, showCursorTooltip } from '../core/utils.js';
 import { EL, CSS, LOG } from '../core/config.js';
 import { iconHtml } from '../core/icons.js';
 import { getDay, getSegment } from '../systems/time.js';
@@ -114,7 +114,8 @@ export class UIManager {
     // future — no per-render rebinding. Cards call engine game-logic
     // methods; the UI layer owns no game logic here — which slot a piece of
     // gear equips into is the engine's call, not the card's.
-    document.getElementById(EL.PLAYER_PANEL).addEventListener('click', (e) => {
+    const panel = document.getElementById(EL.PLAYER_PANEL);
+    panel.addEventListener('click', (e) => {
       const card = e.target.closest(`.${CSS.BTN_ITEM}`);
       if (!card || card.disabled) return;
       const { action, item: itemId, slot } = card.dataset;
@@ -132,7 +133,6 @@ export class UIManager {
     // mouseover/mouseout (not enter/leave) bubble, so one listener each covers
     // every dotted card in the panel.
     let dwell = null;   // { card, timer } — the card being looked at, if any
-    const panel = document.getElementById(EL.PLAYER_PANEL);
     panel.addEventListener('mouseover', (e) => {
       const card = e.target.closest(`.${CSS.CARD_NEW}`);
       if (!card) return;
@@ -231,14 +231,14 @@ export class UIManager {
     playerPanel.querySelectorAll(`.${CSS.TABS_PANEL}`).forEach(p => p.remove());
 
     // The sheet lives in the 'attributes' widget tab — remember its id so the
-    // notifier can dot it when a level-up point becomes spendable.
-    this._sheetTabId = rules.tabs.find(t => t.widget === 'attributes')?.id ?? null;
+    // notifier can dot it when a level-up point becomes spendable. The map
+    // tab's id is what the tab switch below redraws the minimap for.
+    const tabIdOf = (widget) => rules.tabs.find(t => t.widget === widget)?.id ?? null;
+    this._sheetTabId = tabIdOf('attributes');
+    const mapTabId = tabIdOf('map');
 
     rules.tabs.forEach(tab => {
-      const btn = document.createElement('button');
-      const classes = [CSS.BTN, CSS.TABS_BTN];
-      if (tab.default) classes.push(CSS.TABS_BTN_ACTIVE);
-      btn.className = classes.join(' ');
+      const btn = createElement('button', [CSS.BTN, CSS.TABS_BTN, tab.default && CSS.TABS_BTN_ACTIVE]);
       btn.dataset.tab = tab.id;
       // The icon stands in for the label, same deal as the top bar's stats —
       // the label survives as screen-reader-only text, which the hover
@@ -250,8 +250,7 @@ export class UIManager {
         : escapeHtml(label);
       nav.appendChild(btn);
 
-      const panel = document.createElement('div');
-      panel.className = CSS.TABS_PANEL;
+      const panel = createElement('div', CSS.TABS_PANEL);
       panel.id = tab.id;
       if (!tab.default) panel.hidden = true;
 
@@ -307,7 +306,7 @@ export class UIManager {
         const player = this.engine.state.getPlayer();
         if (opened === EL.TAB_INVENTORY) this.inventoryUI.renderInventory(player, this._newItems);
         else if (opened === EL.TAB_QUESTS) this.questUI.render(this._newQuests);
-        if (opened === 'map-tab') {
+        if (opened === mapTabId) {
           this.map.invalidateMinimap();
           this.map.renderMinimap();
         }
@@ -370,7 +369,7 @@ export class UIManager {
 
   // Map widget: the minimap structure MapManager.setup() wires up.
   _buildMapWidget(panel) {
-    panel.innerHTML = `<div class="${CSS.PANEL_SECTION}"><div class="minimap" id="minimap" hidden><div class="minimap__canvas" id="minimap-canvas"></div></div></div>`;
+    panel.innerHTML = `<div class="${CSS.PANEL_SECTION}"><div class="minimap" id="${EL.MINIMAP}" hidden><div class="${CSS.MINIMAP_CANVAS}" id="${EL.MINIMAP_CANVAS}"></div></div></div>`;
   }
 
   // Options widget: the save/load/restart buttons. The click handlers bind in
@@ -543,7 +542,7 @@ export class UIManager {
   _headerResourceEntries() {
     const player = this.engine.state.getPlayer();
     return (this.engine.data.rules?.headerResources || [])
-      .filter(({ id }) => { const r = player.resources?.[id]; return r && typeof r === 'object' && 'current' in r; })
+      .filter(({ id }) => isResourcePool(player.resources?.[id]))
       .map(({ id, icon }) => ({
         icon,
         label: this.engine.t(`ui.resources.${id}`),
@@ -646,11 +645,10 @@ export class UIManager {
 
     // Ensure the game UI is visible (handles the case where this is called
     // from the char creation screen before the main game has been shown).
-    const charCreation = document.getElementById(EL.CHAR_CREATION);
-    if (charCreation) charCreation.hidden = true;
-    document.getElementById('game-container').hidden = false;
+    document.getElementById(EL.CHAR_CREATION).hidden = true;
+    document.getElementById(EL.GAME_CONTAINER).hidden = false;
 
-    clearElement(document.getElementById(EL.SCENE_NARRATIVE));
+    document.getElementById(EL.SCENE_NARRATIVE).replaceChildren();
     this.engine.currentSceneEl = null;
     this.engine.resetScene();
     const lastDesc = this.engine.narrative.restore(this.engine.state.getLog());

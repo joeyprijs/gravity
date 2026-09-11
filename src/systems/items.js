@@ -1,5 +1,5 @@
 import { LOG } from '../core/config.js';
-import { equipmentAttributeBonuses, itemSlotKind, slotsOfKind, slotLabel } from '../core/utils.js';
+import { equipmentAttributeBonuses, formatSigned, itemSlotKind, slotsOfKind, slotLabel } from '../core/utils.js';
 import { parseDamage } from './dice.js';
 
 // Item lifecycle logic: using consumables, equipping and unequipping gear.
@@ -17,14 +17,13 @@ export function rollAmount(engine, value) {
 
 // Consumable stat effect: applies one die-notation-or-number attribute to the
 // named stat/resource and logs the given locale key. Returns true if applied.
-function applyStatEffect(engine, itemData, value, stat, msgKey, extraParams = {}) {
+function applyStatEffect(engine, itemData, value, stat, msgKey) {
   if (!value) return false;
   const { amount, rollSuffix } = rollAmount(engine, value);
   engine.state.modifyPlayerStat(stat, amount);
   // The user's act, in their voice, yield in the parens (STYLE.md). Signed so
   // a harmful consumable reads "(-2 HP)", not "(+-2 HP)".
-  const signed = amount >= 0 ? `+${amount}` : `${amount}`;
-  engine.log(LOG.PLAYER, engine.t(msgKey, { name: itemData.name, amount: signed, rollSuffix, ...extraParams }), 'choice');
+  engine.log(LOG.PLAYER, engine.t(msgKey, { name: itemData.name, amount: formatSigned(amount), rollSuffix }), 'choice');
   return true;
 }
 

@@ -37,7 +37,7 @@ export class CharCreationScreen {
   }
 
   _render() {
-    this.overlay.innerHTML = '';
+    this.overlay.replaceChildren();
 
     const panel = createElement('div', [CSS.CC_PANEL, CSS.PANEL]);
     panel.append(
@@ -137,15 +137,11 @@ export class CharCreationScreen {
     return actions;
   }
 
-  _setStatValueText(el, stat) {
-    // stat.id is a dotted path (e.g. 'resources.hp.max') — use getByPath to resolve
+  _updateStatRow(stat, valueEl, decrementBtn, incrementBtn) {
+    // stat.id is a dotted path (e.g. 'resources.hp.max') into playerDefaults.
     const base = getByPath(this.rules.playerDefaults, stat.id) ?? 0;
     const bonus = this.spent[stat.id] * stat.bonusPerPoint;
-    el.textContent = bonus > 0 ? `${base} + ${bonus}` : `${base}`;
-  }
-
-  _updateStatRow(stat, valueEl, decrementBtn, incrementBtn) {
-    this._setStatValueText(valueEl, stat);
+    valueEl.textContent = bonus > 0 ? `${base} + ${bonus}` : `${base}`;
     decrementBtn.disabled = this.spent[stat.id] <= 0;
     incrementBtn.disabled = this.pointsRemaining <= 0;
   }

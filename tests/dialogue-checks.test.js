@@ -24,12 +24,11 @@ function makeFakeEl(tag = 'div') {
     set children(v) { children = v; },
     appendChild(c) { children.push(c); return c; },
     append() {},
+    replaceChildren() { children = []; },
     setAttribute() {},
     removeAttribute() {},
     querySelector: () => null,
     querySelectorAll: () => [],
-    set innerHTML(_v) { children = []; },
-    get innerHTML() { return ''; },
   };
 }
 

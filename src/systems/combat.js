@@ -20,9 +20,9 @@ export class CombatSystem {
     this.renderer = new CombatRenderer(this);
   }
 
-  // Whether a combat encounter is active / ended in defeat — facades over the
-  // engine's mode machine, which is the single source of truth.
-  get inCombat()   { return this.engine.inCombat; }
+  // Whether an encounter is active — a facade over the engine's mode machine,
+  // which is the single source of truth.
+  get inCombat() { return this.engine.inCombat; }
 
   // Called by engine._spendAP after every combat AP spend. Hands the turn to
   // the enemies once the player's AP is exhausted; otherwise refreshes the

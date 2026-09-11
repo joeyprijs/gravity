@@ -113,14 +113,15 @@ export function createSectionToggles(groupKey) {
   return group;
 }
 
-// Clears all children of an element.
-export function clearElement(el) {
-  el.innerHTML = '';
-}
-
 // A `{ current, max }` resource pool, as opposed to a flat number like gold.
 export function isResourcePool(value) {
   return !!(value && typeof value === 'object' && 'current' in value);
+}
+
+// A number with its sign spelled out ("+2", "-1", "+0") — how modifiers,
+// bonuses, and yields read on badges and log lines.
+export function formatSigned(n) {
+  return n >= 0 ? `+${n}` : `${n}`;
 }
 
 // The one cursor-following hover tooltip, shared by every surface that names
@@ -321,7 +322,7 @@ export function itemStatLines(t, itemData, attributes = {}, uses = null, items =
     const mod = attributes[attackAttr] ?? 0;
     lines.push(t('itemStats.hit', {
       attribute: attributeLabel(t, attackAttr),
-      value: mod >= 0 ? `+${mod}` : `${mod}`,
+      value: formatSigned(mod),
     }));
   }
   if (itemData.attributes) {
@@ -331,8 +332,7 @@ export function itemStatLines(t, itemData, attributes = {}, uses = null, items =
       // attributeBonuses renders one line per worn bonus ("Bonus: +1 Perception").
       if (k === 'attributeBonuses' && v && typeof v === 'object') {
         for (const [attr, amt] of Object.entries(v)) {
-          const value = amt >= 0 ? `+${amt}` : `${amt}`;
-          lines.push(t('itemStats.attributeBonus', { attribute: attributeLabel(t, attr), value }));
+          lines.push(t('itemStats.attributeBonus', { attribute: attributeLabel(t, attr), value: formatSigned(amt) }));
         }
         continue;
       }
@@ -413,13 +413,6 @@ export function itemCardStatsFor(engine, itemData, options = {}) {
     { ...options, uses: engine.state.getItemUses(itemData.id), items: engine.data.items, story });
 }
 
-/**
- * Resets the scene options panel to an empty state: clears the option button
- * container, removes injected option sections, and clears + hides the headed
- * sections (conversations, actions, skills). The location reminder is
- * re-appended as the container's first child; pass reminderText to also update
- * its text.
- */
 // A panel section built at render time (chest contents, an enemy's attacks, a
 // museum's wings) with its heading; null skips the heading. The caller fills
 // it and inserts it before the skills container of resetOptionsPanel().
@@ -429,6 +422,13 @@ export function buildPanelSection(headingText = null) {
   return section;
 }
 
+/**
+ * Resets the scene options panel to an empty state: clears the option button
+ * container, removes injected option sections, and clears + hides the headed
+ * sections (conversations, actions, skills). The location reminder is
+ * re-appended as the container's first child; pass reminderText to also update
+ * its text.
+ */
 export function resetOptionsPanel(reminderText = null) {
   const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
   const container = document.getElementById(EL.SCENE_OPTIONS);
@@ -437,17 +437,17 @@ export function resetOptionsPanel(reminderText = null) {
   const skillsContainer = document.getElementById(EL.SCENE_OPTIONS_SKILLS);
   const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
 
-  clearElement(container);
+  container.replaceChildren();
   // Every headed section starts empty and hidden: its heading is only earned
   // once something lands in it (see renderOptions).
   [talkContainer, actionsContainer, skillsContainer].forEach(section => {
-    clearElement(section);
+    section.replaceChildren();
     section.setAttribute('hidden', '');
   });
   panel.querySelectorAll(`.${CSS.PANEL_SECTION_DYNAMIC}`).forEach(el => el.remove());
 
   if (reminder) {
-    if (reminderText !== null) reminder.innerText = reminderText;
+    if (reminderText !== null) reminder.textContent = reminderText;
     container.appendChild(reminder);
   }
   return { panel, container, talkContainer, actionsContainer, skillsContainer, reminder };

@@ -54,7 +54,6 @@ function findDisplay(state, sceneId, displayId) {
   return getDisplaysForScene(state, sceneId).find(d => d.id === displayId);
 }
 
-
 // Installs a new case in a scene and returns its id (generated when the
 // config carries none).
 export function addDisplayToScene(state, sceneId, config) {
@@ -454,12 +453,13 @@ export default function curatorPlugin(engine) {
 
     // The hall just got wider and the wing is on the map — but neither the
     // player nor the clock moved, so nothing would redraw the map on its own.
-    engine.ui?.map?.invalidateMinimap?.();
-    engine.ui?.map?.renderMinimap?.();
+    // (Optional: the state-level tests run the action on an engine with no UI.)
+    engine.ui?.map.invalidateMinimap();
+    engine.ui?.map.renderMinimap();
     engine.log(LOG.SYSTEM, engine.t('plugin.curator.wingBuiltLog', { cost, name }));
   });
 
-  engine.registerAction('manage_exhibits', (action, engine) => {
+  engine.registerAction('manage_exhibits', (_action, engine) => {
     engine.setCustomUIOpen(true);
     new CuratorUI(engine).render();
   });
@@ -556,13 +556,6 @@ export class CuratorUI {
     return backBtn;
   }
 
-  // A panel section headed "Construction" — what the player can add here. Every
-  // museum room ends with one, so building is always in the same place: a case
-  // in a wing, a whole wing in the hall.
-  _constructionSection() {
-    return buildPanelSection(this.engine.t('plugin.curator.constructionHeading'));
-  }
-
   // The hall: the way out of the museum, then a door into every wing in slot
   // order (so they read the way the map does), then construction. Same shape as
   // a wing's panel — exit, what's here, what you can add.
@@ -594,9 +587,12 @@ export class CuratorUI {
     // condition): a built wing's geometry is derived from museumLayout.
     if (!this.engine.pluginConfig('curator').museumLayout) return;
 
+    // Construction — what the player can add here — ends every museum room's
+    // panel, so building is always in the same place: a wing in the hall, a
+    // case in a wing.
     const cost = this.engine.pluginConfig('curator').wingCost ?? DEFAULT_WING_COST;
     const affordable = this.engine.state.getPlayer().resources.gold >= cost;
-    const section = this._constructionSection();
+    const section = buildPanelSection(this.engine.t('plugin.curator.constructionHeading'));
     const buildBtn = buildOptionButton(
       this.engine.t('plugin.curator.wingBuild', { cost }),
       affordable ? null : this.engine.t('ui.notEnoughGold')
@@ -658,7 +654,7 @@ export class CuratorUI {
     const p = this.engine.state.getPlayer();
     const canInstall = p.resources.gold >= installCost;
 
-    const installSection = this._constructionSection();
+    const installSection = buildPanelSection(this.engine.t('plugin.curator.constructionHeading'));
     const installBtn = buildOptionButton(
       this.engine.t('plugin.curator.curatorInstall', { cost: installCost }),
       canInstall ? null : this.engine.t('ui.notEnoughGold')

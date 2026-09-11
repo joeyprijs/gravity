@@ -55,7 +55,7 @@ export class CombatRenderer {
     const desc = buildSceneDescription(
       this.cs.engine.t('combat.gameOverTitle'),
       this.cs.engine.t('combat.gameOverBody'),
-      this.cs.engine.t.bind(this.cs.engine)
+      this.cs.engine.t
     );
     desc.querySelector('h2').classList.add(CSS.SCENE_TITLE_GAME_OVER);
     this.cs.engine.currentSceneEl.appendChild(desc);
@@ -134,7 +134,7 @@ export class CombatRenderer {
     const uses = this.cs.engine.state.getItemUses(att.id);
     const btn = buildOptionButton(
       this.cs.engine.t('combat.attackTarget', { name: att.name }),
-      itemStatLines(this.cs.engine.t.bind(this.cs.engine), att, this.cs.engine.state.getPlayer().attributes, uses,
+      itemStatLines(this.cs.engine.t, att, this.cs.engine.state.getPlayer().attributes, uses,
         this.cs.engine.data.items));
     if (this.cs.remainingTurnBudget() < (att.attributes?.actionPoints ?? 0)
         || (uses && uses.current < 1)) {

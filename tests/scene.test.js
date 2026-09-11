@@ -216,12 +216,12 @@ test('_resetSkillAttempts: checks never attempted are left alone', () => {
   assert.equal(gameState.getCheckState(key), undefined, 'no entry is ever created by a reset');
 });
 
-// ── _maybeStartAutoAttack ─────────────────────────────────────────────────────
+// ── autoAttack ────────────────────────────────────────────────────────────────
 
-test('_maybeStartAutoAttack: unmet condition blocks the encounter', () => {
-  const { sr, calls } = makeSR();
-  const scene = { autoAttack: { enemies: ['goblin_grunt'], condition: { flag: 'ambush', value: true } } };
-  assert.equal(sr._maybeStartAutoAttack(scene), false);
+test('render: an autoAttack with an unmet condition does not start the encounter', () => {
+  const scene = { description: 'Quiet.', autoAttack: { enemies: ['goblin_grunt'], condition: { flag: 'ambush', value: true } } };
+  const { sr, calls } = makeSR({ scenes: { corridor: scene } });
+  sr.render('corridor');
   assert.equal(calls.combat.length, 0);
 });
 

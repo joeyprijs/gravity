@@ -142,7 +142,8 @@ export const EL = {
   AUDIO_MUTE:              'audio-mute',
   AUDIO_AMBIENCE_VOL:      'audio-ambience-volume',
 
-  // Character creation overlay
+  // The game shell and the character creation overlay that precedes it
+  GAME_CONTAINER:          'game-container',
   CHAR_CREATION:           'char-creation',
 
   // Sidebar tabs

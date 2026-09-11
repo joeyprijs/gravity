@@ -1,4 +1,4 @@
-import { createElement, buildSceneDescription, buildOptionButton, isSpecialItem, resetOptionsPanel } from '../core/utils.js';
+import { buildPanelSection, buildSceneDescription, buildOptionButton, createElement, isSpecialItem, resetOptionsPanel } from '../core/utils.js';
 import { CHECK_KEYS, CSS, FLAG_KEYS, LOG } from '../core/config.js';
 import { evaluateCondition } from './condition.js';
 import {
@@ -165,7 +165,7 @@ export class DialogueSystem {
     const skillResponses = [];
 
     (node.responses || []).forEach((res, i) => {
-      if (!evaluateCondition(res.condition ?? null, this.engine.state)) return;
+      if (!evaluateCondition(res.condition, this.engine.state)) return;
 
       const needsCheck = !!res.skillCheck && res.dc > 0;
       const resKey = `${res.skillCheck}_${nodeId}_${i}`;
@@ -345,8 +345,7 @@ export class DialogueSystem {
 
     if (!buyItems.length) return;
 
-    const buySection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
-    buySection.appendChild(createElement('div', CSS.SECTION_HEADING, this.engine.t('dialogue.buyGroup')));
+    const buySection = buildPanelSection(this.engine.t('dialogue.buyGroup'));
 
     buyItems.forEach(({ id: itemId, item, stock, npcAmount }) => {
       const displayName = stock !== null ? `${item.name} (x${stock})` : item.name;
@@ -390,8 +389,7 @@ export class DialogueSystem {
 
     if (!sellItems.length) return;
 
-    const sellSection = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
-    sellSection.appendChild(createElement('div', CSS.SECTION_HEADING, this.engine.t('dialogue.sellGroup')));
+    const sellSection = buildPanelSection(this.engine.t('dialogue.sellGroup'));
 
     sellItems.forEach(invItem => {
       const item = this.engine.data.items[invItem.item];

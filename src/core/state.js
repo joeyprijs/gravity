@@ -1,5 +1,5 @@
 import { MISSION_STATUS } from './config.js';
-import { equipmentAttributeBonuses, getByPath, setByPath } from './utils.js';
+import { equipmentAttributeBonuses, getByPath, isResourcePool, setByPath } from './utils.js';
 
 const MAX_LOG_ENTRIES = 200;
 
@@ -174,6 +174,9 @@ class StateManager {
     this._rules = null;
     this._items = {};
     this._missions = {};
+    // The flags data/flags declares, kept so reset() and loadFromObject() can
+    // re-apply the defaults a fresh or older state is missing.
+    this._sceneFlags = {};
     this._pluginMigrations = {};
     this._mutationHooks = [];
     this._statHandlers = {};
@@ -342,7 +345,7 @@ class StateManager {
     // (registerSceneFlags ran at boot against the pre-load state; this is its
     // counterpart for the state that replaces it.)
     if (!parsedData.flags) parsedData.flags = {};
-    for (const [flag, value] of Object.entries(this.sceneFlags ?? {})) {
+    for (const [flag, value] of Object.entries(this._sceneFlags)) {
       if (!(flag in parsedData.flags)) parsedData.flags[flag] = value;
     }
 
@@ -403,9 +406,8 @@ class StateManager {
 
   // Called once on startup with the flags declared in data/flags.json.
   // Only sets flags that don't yet exist in state so loaded saves are preserved.
-  // Also keeps a copy in this.sceneFlags so reset() can re-apply them.
   registerSceneFlags(flagsMap) {
-    this.sceneFlags = { ...flagsMap };
+    this._sceneFlags = { ...flagsMap };
     Object.entries(flagsMap).forEach(([flag, value]) => {
       if (!(flag in this.state.flags)) this.state.flags[flag] = value;
     });
@@ -416,7 +418,7 @@ class StateManager {
   reset() {
     this.state = makeDefaultState(this._rules);
     this._stampPluginVersions();
-    if (this.sceneFlags) Object.assign(this.state.flags, this.sceneFlags);
+    Object.assign(this.state.flags, this._sceneFlags);
     this._emitMutation('reset');
     this.notifyListeners();
   }
@@ -505,7 +507,7 @@ class StateManager {
     const p = this.state.player;
     if (amount === 'full') {
       const res = p.resources?.[stat];
-      if (!(res && typeof res === 'object' && 'current' in res)) return;
+      if (!isResourcePool(res)) return;
       amount = res.max - res.current;
     }
 
@@ -605,7 +607,7 @@ class StateManager {
     // their own resources (e.g. a "luckPoints" retry currency) without
     // engine changes.
     const res = resources?.[stat];
-    if (res && typeof res === 'object' && 'current' in res) {
+    if (isResourcePool(res)) {
       res.current = Math.max(0, Math.min(res.current + amount, res.max));
     } else if (attributes && stat in attributes) {
       attributes[stat] += amount;

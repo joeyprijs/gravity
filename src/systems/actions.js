@@ -1,5 +1,5 @@
 import { LOG, GOLD_ITEM_ID } from '../core/config.js';
-import { isResourcePool } from '../core/utils.js';
+import { formatSigned, isResourcePool } from '../core/utils.js';
 import { rollAmount } from './items.js';
 import { ticksUntilSegment } from './time.js';
 
@@ -20,22 +20,18 @@ import { ticksUntilSegment } from './time.js';
 // over (an NPC gift or reward). It only selects the log message's locale key.
 function handleLoot(action, engine) {
   const amount = action.amount ?? 1;
-  if (action.item === GOLD_ITEM_ID) {
-    engine.state.modifyPlayerStat('gold', amount);
-    if (action.log !== false) {
-      const key = action.received ? 'loot.receivedGold' : 'loot.foundGold';
-      const msg = typeof action.log === 'string' ? engine.t(action.log) : engine.t(key, { amount });
-      engine.log(LOG.SYSTEM, msg, 'loot');
-    }
-  } else {
-    engine.state.addToInventory(action.item, amount);
-    if (action.log !== false) {
-      const key = action.received ? 'loot.receivedItem' : 'loot.foundItem';
-      const msg = typeof action.log === 'string'
-        ? engine.t(action.log)
-        : engine.t(key, { name: engine.data.items[action.item]?.name || action.item });
-      engine.log(LOG.SYSTEM, msg, 'loot');
-    }
+  const isGold = action.item === GOLD_ITEM_ID;
+  if (isGold) engine.state.modifyPlayerStat('gold', amount);
+  else engine.state.addToInventory(action.item, amount);
+
+  if (action.log !== false) {
+    const key = isGold
+      ? (action.received ? 'loot.receivedGold' : 'loot.foundGold')
+      : (action.received ? 'loot.receivedItem' : 'loot.foundItem');
+    const msg = typeof action.log === 'string'
+      ? engine.t(action.log)
+      : engine.t(key, { amount, name: engine.data.items[action.item]?.name || action.item });
+    engine.log(LOG.SYSTEM, msg, 'loot');
   }
   if (action.xpReward) {
     engine.state.addXP(action.xpReward);
@@ -123,8 +119,7 @@ function handleHeal(action, engine) {
   const amount = action.amount ?? engine.data.rules?.snackHealAmount ?? 2;
   engine.state.modifyPlayerStat('hp', amount);
   // Signed so a harmful heal reads "(-2 HP)".
-  const signed = amount >= 0 ? `+${amount}` : `${amount}`;
-  logYield(engine, action, engine.t('actions.heal', { amount: signed, rollSuffix: '' }), 'loot');
+  logYield(engine, action, engine.t('actions.heal', { amount: formatSigned(amount), rollSuffix: '' }), 'loot');
 }
 
 // ── Pipeline utility actions ──────────────────────────────────────────────

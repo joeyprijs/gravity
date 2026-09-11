@@ -1,5 +1,5 @@
 import { MAX_D20_ROLL, LOG } from '../core/config.js';
-import { attributeLabel } from '../core/utils.js';
+import { attributeLabel, formatSigned } from '../core/utils.js';
 import { roll } from './dice.js';
 
 // Default tier margins. A roll beating the DC by criticalMargin or more lands
@@ -16,11 +16,6 @@ const TIER_LOG_KEYS = {
   failure:  'actions.skillFail',
 };
 
-// Formats a modifier for display on badges and log lines ("+2", "-1", "+0").
-function formatMod(mod) {
-  return mod >= 0 ? `+${mod}` : `${mod}`;
-}
-
 // Formats a displayed d20 roll naming the modifier's source (skill or weapon
 // name), so the math is legible in the log: "1d20: 17 + 1 Perception". A zero
 // modifier renders as just "1d20: 17". Callers append "= {total}" where the sum
@@ -34,7 +29,7 @@ export function rollBreakdown(base, mod, label) {
 // back to the capitalized id when the locale has no entry. The engine-flavored
 // wrapper over utils.attributeLabel.
 export function skillLabel(engine, skillId) {
-  return attributeLabel((key) => engine.t(key), skillId);
+  return attributeLabel(engine.t, skillId);
 }
 
 // Resolves authored text that may be a single string (shown every time) or an
@@ -196,7 +191,7 @@ export function checkPresentation(engine, check, attempts, dc = check.dc) {
 export function skillBadge(engine, skillId, dc) {
   const mod = engine.state.getPlayer().attributes[skillId] ?? 0;
   return [
-    engine.t(`actions.skillBadge.${skillId}`, { dc, mod: formatMod(mod) }),
+    engine.t(`actions.skillBadge.${skillId}`, { dc, mod: formatSigned(mod) }),
     engine.t('actions.skillBadgeDc', { dc }),
   ];
 }

@@ -14,7 +14,7 @@ export class QuestUI {
   render(newQuests = null) {
     const panel = document.getElementById(EL.TAB_QUESTS);
     if (!panel) return;
-    panel.innerHTML = '';
+    panel.replaceChildren();
 
     // A started/completed quest wears a dot until the player rests the pointer
     // on its card (see UIManager.setup) or leaves the tab. The card names its

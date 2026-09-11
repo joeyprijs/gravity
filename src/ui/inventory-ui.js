@@ -26,15 +26,16 @@ export class InventoryUI {
 
   renderInventory(player, newItems = null) {
     const panel = document.getElementById(EL.TAB_INVENTORY);
-    panel.innerHTML = '';
+    panel.replaceChildren();
 
+    // Untyped items fall back to 'Flavour' everywhere the type is compared
+    // (sorting, the new-set, grouping, the heading count) — one fallback,
+    // applied consistently, or the section key/count/dot checks diverge.
+    const typeOf = (itemId) => this.engine.data.items[itemId]?.type || 'Flavour';
     const equippedEntries = Object.entries(player.equipment).filter(([, id]) => id);
     const typeOrder = this.engine.data.rules?.itemTypeOrder || {};
-    const sortedInv = [...player.inventory].sort((a, b) => {
-      const typeA = this.engine.data.items[a.item]?.type || 'Flavour';
-      const typeB = this.engine.data.items[b.item]?.type || 'Flavour';
-      return (typeOrder[typeA] ?? 99) - (typeOrder[typeB] ?? 99);
-    });
+    const sortedInv = [...player.inventory].sort((a, b) =>
+      (typeOrder[typeOf(a.item)] ?? 99) - (typeOrder[typeOf(b.item)] ?? 99));
 
     if (equippedEntries.length === 0 && sortedInv.length === 0) {
       const section = createElement('div', CSS.PANEL_SECTION);
@@ -56,7 +57,7 @@ export class InventoryUI {
           // No slot row here — "Equipped: Torso" above it already said so, and
           // it names the slot the item is actually IN, which for a hand item
           // is the one the engine picked rather than the one it declares.
-          stats: this._itemStats(itemData, { slot: false }),
+          stats: itemCardStatsFor(this.engine, itemData, { slot: false }),
         }, { action: 'unequip', slot }));
       });
     }
@@ -65,7 +66,7 @@ export class InventoryUI {
     // the dot so a collapsed section still flags what's inside.
     const newTypes = new Set();
     if (newItems) sortedInv.forEach(entry => {
-      if (newItems.has(entry.item)) newTypes.add(this.engine.data.items[entry.item]?.type || 'Flavour');
+      if (newItems.has(entry.item)) newTypes.add(typeOf(entry.item));
     });
 
     // Unequipped items, grouped by type
@@ -75,16 +76,12 @@ export class InventoryUI {
       const itemData = this.engine.data.items[invItem.item];
       if (!itemData) return;
 
-      // Untyped items fall back to 'Flavour' everywhere the type is compared
-      // (sorting, the new-set above, this grouping) — one fallback, applied
-      // consistently, or the section key/count/dot checks diverge.
-      const type = itemData.type || 'Flavour';
+      const type = typeOf(invItem.item);
       if (type !== currentType) {
         currentType = type;
         // The heading count is total units, so potion stacks count in full.
         const count = sortedInv.reduce((sum, entry) =>
-          (this.engine.data.items[entry.item]?.type || 'Flavour') === type
-            ? sum + (entry.amount ?? 1) : sum, 0);
+          typeOf(entry.item) === type ? sum + (entry.amount ?? 1) : sum, 0);
         currentUl = this._buildSection(panel, `type:${type}`, this.engine.t(`itemTypes.${type}`), count,
           newTypes.has(type) && this._toggles.isCollapsed(`type:${type}`));
       }
@@ -101,7 +98,7 @@ export class InventoryUI {
         // The slot used to sit here as a body line; it's a stat row now, so it
         // lines up with the rest of the item's facts (see itemCardStats).
         body: itemData.description,
-        stats: this._itemStats(itemData),
+        stats: itemCardStatsFor(this.engine, itemData),
         // A freshly-gained item wears a dot until the player rests the pointer
         // on its card (see UIManager.setup) or leaves the tab.
         classes: newItems?.has(invItem.item) ? [CSS.CARD_NEW] : [],
@@ -152,9 +149,5 @@ export class InventoryUI {
     section.appendChild(ul);
     panel.appendChild(section);
     return ul;
-  }
-
-  _itemStats(itemData, options) {
-    return itemCardStatsFor(this.engine, itemData, options);
   }
 }

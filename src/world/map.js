@@ -1,4 +1,4 @@
-import { clearElement, hideCursorTooltip, isInteriorScene, showCursorTooltip } from '../core/utils.js';
+import { createElement, hideCursorTooltip, isInteriorScene, showCursorTooltip } from '../core/utils.js';
 import { MINIMAP_SIZE, MAP_PADDING, MAP_NODE_DEFAULT_BG, CSS, EL } from '../core/config.js';
 
 // Every scene a scene can send the player to: the destinations of the navigate
@@ -111,9 +111,8 @@ export class MapManager {
     // Safari layout bug prevention: Rebuilding the canvas wrapper and swapping it
     // into the DOM via replaceWith() forces the browser engine to completely flush
     // its compositor layers cache, preventing rendering glitches during fast moves.
-    const fresh = document.createElement('div');
+    const fresh = createElement('div', CSS.MINIMAP_CANVAS);
     fresh.id = EL.MINIMAP_CANVAS;
-    fresh.className = CSS.MINIMAP_CANVAS;
 
     for (const { id, key, def, label, background, isCurrent } of placements) {
       const node = this._buildMapNode(label, isCurrent);
@@ -467,16 +466,12 @@ export class MapManager {
   // Builds one labeled map-node element. The caller positions and sizes it —
   // the minimap scales coordinates, the full map uses them as authored.
   _buildMapNode(labelText, isCurrentScene, isBuilding = false) {
-    const node = document.createElement('div');
-    node.className = CSS.MAP_NODE;
-    if (isCurrentScene) node.classList.add(CSS.MAP_NODE_CURRENT);
-    if (isBuilding) node.classList.add(CSS.MAP_NODE_BUILDING);
-
-    const label = document.createElement('span');
-    label.className = CSS.MAP_NODE_LABEL;
-    label.textContent = labelText;
-    node.appendChild(label);
-
+    const node = createElement('div', [
+      CSS.MAP_NODE,
+      isCurrentScene && CSS.MAP_NODE_CURRENT,
+      isBuilding && CSS.MAP_NODE_BUILDING,
+    ]);
+    node.appendChild(createElement('span', CSS.MAP_NODE_LABEL, labelText));
     return node;
   }
 
@@ -497,7 +492,7 @@ export class MapManager {
   // Fills the full-map canvas: one node per placement at its authored
   // coordinates, unscaled.
   _renderSceneNodes(canvasEl, placements) {
-    clearElement(canvasEl);
+    canvasEl.replaceChildren();
     for (const { def, label, background, isCurrent, isBuilding } of placements) {
       const node = this._buildMapNode(label, isCurrent, isBuilding);
       Object.assign(node.style, {

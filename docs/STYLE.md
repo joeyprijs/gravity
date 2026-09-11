@@ -81,8 +81,8 @@ Combat is the one exception, and deliberate: attacks are logged under their acto
 ### Structure
 
 - **Module and class headers** are `//` blocks: what the module owns, in two to six lines.
-- **Exported functions and public methods** get JSDoc: a first line saying what it does, then `@param {type} name - Description.` (with the dash) and `@returns` where the shape isn't obvious. Skip JSDoc where a signature is self-evident (trivial getters, delegates).
-- **Private (`_`) methods and inline notes** use `//` blocks — substantive, but no JSDoc scaffolding and no `@private` tag.
+- **Exported functions and public methods** get a prose block (`//` lines, or a `/** */` block for the longer ones) saying what the function does and the contracts the signature can't show — null returns, units, ordering. No `@param`/`@returns`/`@private` tags: a signature documents its own parameters, and a tag that repeats it is padding. Skip the block where a signature is self-evident (trivial getters, delegates).
+- **Private (`_`) methods and inline notes** use `//` blocks — substantive, but no JSDoc scaffolding.
 - Long files group related members under `// ── Section ──…` dividers.
 
 ---

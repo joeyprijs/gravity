@@ -6,7 +6,7 @@ import { NarrativeLog } from '../systems/narrative.js';
 import { UIManager } from '../ui/ui.js';
 import { SceneRenderer } from '../systems/scene.js';
 import { AudioSystem } from '../systems/audio.js';
-import { DEFAULT_WORLD_MAP_SIZE, LOG, TIMER_SAFE_ACTIONS } from './config.js';
+import { DEFAULT_WORLD_MAP_SIZE, EL, LOG, TIMER_SAFE_ACTIONS } from './config.js';
 import { resolveLanguage } from './i18n.js';
 import { getByPath } from './utils.js';
 import { normalizeCarriedItems, validateGameData } from './validate.js';
@@ -67,8 +67,12 @@ export class RPGEngine {
     this._pluginConfigs = {};
     this._tabWidgets = new Map();
     this._events = new Map();
+    // Plugins that failed to import — surfaced in the boot validation report
+    // (see _validateData): a dead plugin registered no actions or validators,
+    // so its authoring surface would otherwise misvalidate silently.
+    this._failedPlugins = [];
 
-    this.narrative = new NarrativeLog(this.t.bind(this), this.state);
+    this.narrative = new NarrativeLog(this.t, this.state);
     this.combatSystem = new CombatSystem(this);
     this.dialogueSystem = new DialogueSystem(this);
     this.questSystem = new QuestSystem(this);
@@ -82,10 +86,6 @@ export class RPGEngine {
   async init() {
     registerBuiltinActions(this);
     const manifest = await this.loadData();
-    // Plugins that failed to import — surfaced in the boot validation report
-    // (see _validateData): a dead plugin registered no actions or validators,
-    // so its authoring surface would otherwise misvalidate silently.
-    this._failedPlugins = [];
 
     // Load plugins before initialising state so they can register migrations.
     if (manifest?.plugins?.length) {
@@ -154,15 +154,15 @@ export class RPGEngine {
 
     if (!this.state.getPlayer().name) {
       // New game — show character creation before revealing the main UI.
-      new CharCreationScreen(() => this._startGame(), this.t.bind(this), this.data.tables.names?.entries || [], this.data.rules, this.state);
+      new CharCreationScreen(() => this._startGame(), this.t, this.data.tables.names?.entries || [], this.data.rules, this.state);
     } else {
       this._startGame();
     }
   }
 
   _startGame() {
-    document.getElementById('game-container').hidden = false;
-    document.getElementById('char-creation').hidden = true;
+    document.getElementById(EL.GAME_CONTAINER).hidden = false;
+    document.getElementById(EL.CHAR_CREATION).hidden = true;
     this.ui.update();
     this.renderScene(this.state.getCurrentSceneId());
   }
@@ -374,9 +374,9 @@ export class RPGEngine {
 
   openScene(modifier) { return this.narrative.openScene(modifier); }
   log(type, message, variant, persist) {
-    const localeKey = 'log.' + type;
-    const label = this.t(localeKey) !== localeKey ? this.t(localeKey) : type;
-    return this.narrative.log(label, message, variant, persist);
+    const localeKey = `log.${type}`;
+    const label = this.t(localeKey);
+    return this.narrative.log(label !== localeKey ? label : type, message, variant, persist);
   }
   // Amend-or-false: extends the last player choice line with the act's yield
   // (see NarrativeLog.amendLast). Callers log a standalone line on false.
@@ -530,7 +530,6 @@ export class RPGEngine {
     this.sceneDecorators.push(decorator);
   }
 
-
   /**
    * Registers a tab widget builder for rules.tabs[].widget. The UI build
    * consults this registry for every tab that declares a widget, so a plugin
@@ -562,7 +561,6 @@ export class RPGEngine {
   registerSheetRow(row) {
     this.sheetRows.push(row);
   }
-
 }
 
 window.addEventListener('DOMContentLoaded', () => {
