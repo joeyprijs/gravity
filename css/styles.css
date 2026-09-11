@@ -1168,7 +1168,9 @@ button.section-toggle--collapsed .section-toggle__label::before {
   transition: box-shadow 0.3s;
 }
 
-.map-node--current {
+/* Full map only: the minimap says "you are here" with the dot below, and a
+   lit border beside it would be a second mark for one fact. */
+.fullmap__canvas .map-node--current {
   border-color: var(--accent-color);
 }
 
