@@ -592,6 +592,9 @@ button.section-toggle--collapsed .section-toggle__label::before {
   flex: 0 0 60%;
   display: flex;
   align-items: center;
+  /* The spend button's height, so a row without one stands as tall as a
+     row with one, and the rows keep the options' card rhythm. */
+  min-height: calc(var(--spacing) * 4);
   color: var(--text-secondary);
 }
 
@@ -622,8 +625,8 @@ button.section-toggle--collapsed .section-toggle__label::before {
    row's edge instead of holding a gutter for buttons that aren't there.
    Sized to the button it reserves room for. */
 .attr-list__slot {
-  flex: 0 0 calc(var(--spacing) * 3);
-  margin-left: calc(var(--spacing) * 1.5);
+  flex: 0 0 calc(var(--spacing) * 4);
+  margin-left: calc(var(--spacing) * 2);
 }
 
 /* Restated over the flex-item context so [hidden] actually collapses the
@@ -679,15 +682,14 @@ button.section-toggle--collapsed .section-toggle__label::before {
   margin-bottom: calc(var(--spacing) * 3);
 }
 
-/* A small square filling its row's trailing slot; the .button flex centering
-   keeps the + glyph centered. Standard button styling at mark size: it wears
-   the same fill, hairline and hover as every other button, just small enough
-   to match the row's text line so the grid keeps its rhythm. */
+/* A square filling its row's trailing slot; the .button flex centering keeps
+   the + glyph centered. Standard button styling at the creation steppers'
+   size — the same job, so the same control — and it fits the row's card
+   height with the row's own padding around it. */
 .attr-list__spend {
-  width: calc(var(--spacing) * 3);
-  height: calc(var(--spacing) * 3);
+  width: calc(var(--spacing) * 4);
+  height: calc(var(--spacing) * 4);
   padding: 0;
-  font-size: var(--font-sm);
 }
 
 /* .button sets display:flex, which outranks the UA stylesheet's [hidden]
