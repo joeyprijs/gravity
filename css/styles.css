@@ -1170,7 +1170,32 @@ button.section-toggle--collapsed .section-toggle__label::before {
 
 .map-node--current {
   border-color: var(--accent-color);
+}
 
+/* "You are here": a fixed-size dot in the centre of the current minimap box.
+   A point, not a heavier border — on the big yard square a border sits far
+   from where the eye looks, and a dot stays the same size on every box. The
+   dark ring keeps it legible on light fills. Minimap only: the full map
+   shows labels where the dot would sit. */
+.minimap .map-node--current::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-color);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+
+/* One soft pulse on arrival, then rest. The canvas is rebuilt only when the
+   scene changes (renderMinimap's cache key), so the animation runs exactly
+   once per move. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes map-here-pulse {
+    0%   { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 0 0 0 rgba(var(--accent-color-rgb), 0.7); }
+    100% { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 0 0 10px rgba(var(--accent-color-rgb), 0); }
+  }
+  .minimap .map-node--current::after { animation: map-here-pulse 0.9s ease-out; }
 }
 
 /* Where the focused option would take you (see setPeek in map.js). An
