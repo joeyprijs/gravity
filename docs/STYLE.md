@@ -12,7 +12,7 @@ The test for every rule here: it must describe what the codebase actually does. 
 
 - Vanilla JavaScript, native ES Modules. No build step, no transpiler, no dependencies — `npm install` must remain unnecessary forever. **[CI]** (the suite runs dependency-free)
 - Target modern evergreen browsers and Node ≥ 18. Use the platform (`Intl`, `structuredClone`, `crypto`, optional chaining) before writing a helper.
-- Pure modules (`dice.js`, `time.js`, `condition.js`, `i18n.js`, `validate.js`) must stay DOM- and engine-free so they run directly under `node:test`. If a change would make one touch `document` or the engine, the change belongs elsewhere.
+- Pure modules (`dice.js`, `time.js`, `condition.js`, `i18n.js`, `validate.js`, `save.js`) must stay DOM- and engine-free so they run directly under `node:test`. If a change would make one touch `document` or the engine, the change belongs elsewhere.
 
 ### Formatting
 

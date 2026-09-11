@@ -860,7 +860,8 @@ gravity/
 ├── src/
 │   ├── core/
 │   │   ├── engine.js        # Orchestrator: boot, mode machine, registries, delegate API
-│   │   ├── state.js         # StateManager (engine-owned): reactive state, saves, migrations
+│   │   ├── state.js         # StateManager (engine-owned): reactive state
+│   │   ├── save.js          # The save format: encoding, migrations, load-time adoption (pure)
 │   │   ├── config.js        # CSS/element registries, action names, flag/check key builders
 │   │   ├── i18n.js          # Language resolution + Intl list/plural formatting (pure)
 │   │   ├── validate.js      # Load-time game-data validation (pure)

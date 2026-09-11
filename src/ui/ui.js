@@ -1,6 +1,7 @@
 import { attrRowHtml, collapseAllSections, createElement, createSectionToggles, escapeHtml, getByPath, hideCursorTooltip, isResourcePool, showCursorTooltip } from '../core/utils.js';
 import { EL, CSS, LOG } from '../core/config.js';
 import { iconHtml } from '../core/icons.js';
+import { decodeSave } from '../core/save.js';
 import { getDay, getSegment } from '../systems/time.js';
 import { skillLabel } from '../systems/skill-checks.js';
 import { MapManager } from '../world/map.js';
@@ -182,16 +183,7 @@ export class UIManager {
       const reader = new FileReader();
       reader.onload = (ev) => {
         try {
-          let raw = ev.target.result;
-          // Decode the base64+UTF-8 encoding written by this.engine.state.getSaveString().
-          try {
-            const binary = atob(raw);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-            raw = new TextDecoder().decode(bytes);
-          } catch (_) {}
-          const data = JSON.parse(raw);
-          this._applyLoadedSave(data);
+          this._applyLoadedSave(decodeSave(ev.target.result));
         } catch (err) {
           console.error(err);
           this.engine.log(LOG.SYSTEM, this.engine.t('system.loadFailed'));

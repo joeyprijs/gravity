@@ -25,7 +25,8 @@ This document explains how the engine boots, how the modules fit together, and �
 
 ```
 engine.js (orchestrator, mode machine, delegate API, event bus, registries)
-├── core/state.js      StateManager (owned as engine.state), listeners, save/load + migrations
+├── core/state.js      StateManager (owned as engine.state), listeners, mutations
+├── core/save.js       the save format: encoding, migrations, load-time adoption (pure)
 ├── core/config.js     CSS/EL registries, FLAG_KEYS, constants
 ├── core/validate.js   load-time game-data validation
 ├── core/i18n.js       language resolution, list/plural formatting (pure)
