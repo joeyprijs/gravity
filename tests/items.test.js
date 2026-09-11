@@ -156,7 +156,7 @@ test('equipItem/unequipItem: the worn armor bonus goes on and comes back off', (
   assert.equal(gameState.getPlayer().attributes.ac, before);
 });
 
-// ── itemHasUse ────────────────────────────────────────────────────────────────
+// itemHasUse
 
 test('itemHasUse: true for anything useItem can act on, false for inert gear', () => {
   assert.ok(itemHasUse({ attributes: { healingAmount: 4 } }), 'a consumable effect');
@@ -168,7 +168,7 @@ test('itemHasUse: true for anything useItem can act on, false for inert gear', (
   assert.ok(!itemHasUse(null));
 });
 
-// ── story books ───────────────────────────────────────────────────────────────
+// Story books
 
 test('useItem: a story book replays heard chapters in authored order and is never consumed', () => {
   const logs = [];

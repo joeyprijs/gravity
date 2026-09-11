@@ -59,7 +59,7 @@ function makeDS(engineOpts) {
 beforeEach(() => gameState.init(TEST_RULES));
 afterEach(() => mock.restoreAll());
 
-// ── startDialogue ─────────────────────────────────────────────────────────────
+// startDialogue
 
 test('startDialogue: unknown NPC warns and leaves no active dialogue', () => {
   const warn = mock.method(console, 'warn', () => {});
@@ -101,7 +101,7 @@ test('startDialogue: resets store state from a previous conversation', () => {
   assert.equal(ds.activeDiscount, 0);
 });
 
-// ── registered dialogue actions ───────────────────────────────────────────────
+// Registered dialogue actions
 
 test('goToConversation: renders the target node during a dialogue', () => {
   const { ds, registry, engine } = makeDS();
@@ -158,7 +158,7 @@ test('trade: no discount leaves the ratio at zero and persists nothing', () => {
   assert.equal(gameState.getFlag(FLAG_KEYS.tradeDiscount('talker')), false);
 });
 
-// ── _runActions ───────────────────────────────────────────────────────────────
+// _runActions
 
 test('_runActions: unknown action types warn and are skipped', () => {
   const warn = mock.method(console, 'warn', () => {});
@@ -175,7 +175,7 @@ test('_runActions: reports navigation when a handler closes the dialogue', () =>
   assert.equal(ds._runActions([{ type: 'warp_home' }]), true);
 });
 
-// ── merchant stock ────────────────────────────────────────────────────────────
+// Merchant stock
 
 test('_getStock: the merchant flag wins once set, else the NPC-configured amount', () => {
   const { ds } = makeDS();
@@ -192,7 +192,7 @@ test('_getStock: a sold-out stock of 0 is preserved, not reset', () => {
   assert.equal(ds._getStock('healing_potion', 3), 0);
 });
 
-// ── renderDialogue: overrideText (store exit) ─────────────────────────────────
+// renderDialogue: overrideText (store exit)
 
 test('renderDialogue: overrideText re-shows the node without re-running its actions', () => {
   const npcs = {

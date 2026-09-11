@@ -72,7 +72,7 @@ export class AudioSystem {
     this._applySettings();
   }
 
-  // ── Unlock & node graph ───────────────────────────────────────────────────
+  // Unlock & node graph
 
   _bindUnlock() {
     if (typeof window === 'undefined') return;
@@ -111,7 +111,7 @@ export class AudioSystem {
     this._channelGain.ambience.gain.value = this.settings.ambienceVolume;
   }
 
-  // ── Playback internals ────────────────────────────────────────────────────
+  // Playback internals
 
   _startAmbience(path) {
     this._getBuffer(path).then(buffer => {
@@ -171,7 +171,7 @@ export class AudioSystem {
     return this._buffers.get(path);
   }
 
-  // ── Settings persistence ──────────────────────────────────────────────────
+  // Settings persistence
 
   _loadSettings() {
     try {

@@ -17,7 +17,7 @@ const TEST_RULES = makeRules({ playerDefaults: { attributes: { ac: 10, initiativ
 
 beforeEach(() => gameState.init(TEST_RULES));
 
-// ── The shipped charCreation config ─────────────────────────────────────────
+// The shipped charCreation config
 
 test('every charCreation stat has the fields the screen reads, and its id resolves on the initialized player', () => {
   assert.ok(CHAR_CREATION.stats.length > 0, 'there are stats to buy');
@@ -40,7 +40,7 @@ test('every charCreation stat has the fields the screen reads, and its id resolv
   }
 });
 
-// ── applyCharCreation ───────────────────────────────────────────────────────
+// applyCharCreation
 
 test('applyCharCreation: sets the chosen name', () => {
   gameState.applyCharCreation('Wobbe', []);

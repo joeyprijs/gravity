@@ -97,7 +97,7 @@ test('mission stageReached leaf: at-or-past by stage order, surviving mission en
 // (Equipped items counting toward possession is countPlayerItem's contract,
 // owned by state.test.js — the leaf only compares the total it returns.)
 
-// ── time / day / segment leaves ───────────────────────────────────────────────
+// Time / day / segment leaves
 
 const TIME_RULES = {
   ticksPerDay: 24,
@@ -133,7 +133,7 @@ test('day and segment leaves read rules.time, and are false without it', () => {
   assert.equal(evaluateCondition({ segment: 'day' }, makeTimeState(0, null)), false);
 });
 
-// ── custom attributes shadowing built-in leaves ───────────────────────────────
+// Custom attributes shadowing built-in leaves
 
 test('a custom attribute named like a time leaf keeps its attribute semantics', () => {
   // Pre-existing games may define an attribute named "time"; its conditions

@@ -305,7 +305,7 @@ test("modifyPlayerStat: the 'full' sentinel resolves before handler dispatch", (
   assert.deepEqual(received, [3]);
 });
 
-// ── Level-up stat points (rules.levelUp.statPoints) ───────────────────────────
+// Level-up stat points (rules.levelUp.statPoints)
 
 test('addXP banks stat points per level when rules.levelUp.statPoints is set', () => {
   gameState.init({
@@ -411,7 +411,8 @@ test('spendStatPoint: charCreation.stats targets apply bonusPerPoint with creati
   assert.equal(p.statPoints, 0);
 });
 
-// ── registerMigration guards ──────────────────────────────────────────────────
+// registerMigration guards
+
 // Registered at the END of this file on purpose: a registered plugin migration
 // persists on the singleton and would run (and stamp its version) for every
 // loadFromObject test that runs after it.
@@ -501,7 +502,7 @@ test('loadFromObject: seeds declared scene flags the save predates, never overwr
   assert.equal(gameState.getFlag('door_open'), true, 'saved values are preserved');
 });
 
-// ── Story chapters ────────────────────────────────────────────────────────────
+// Story chapters
 
 test('grantStoryChapter: grants once, refuses a re-grant, and keeps grant order', () => {
   assert.equal(gameState.grantStoryChapter('gertas_lamb', 'the_mill'), true);

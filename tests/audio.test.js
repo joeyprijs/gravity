@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { AudioSystem, resolveAmbience } from '../src/systems/audio.js';
 
-// ── resolveAmbience: scene override → region fallback → silence ────────────
+// resolveAmbience: scene override → region fallback → silence
 
 const REGIONS = {
   dungeon: { name: 'The Dungeon', ambience: 'audio/dungeon.wav' },
@@ -27,7 +27,7 @@ test('resolveAmbience is silent when neither scene nor region declares audio', (
   assert.equal(resolveAmbience({ region: 'nowhere' }, REGIONS), null);
 });
 
-// ── AudioSystem: headless (pre-unlock / no Web Audio) behavior ─────────────
+// AudioSystem: headless (pre-unlock / no Web Audio) behavior
 
 const makeAudio = () => new AudioSystem({ data: { regions: REGIONS } });
 

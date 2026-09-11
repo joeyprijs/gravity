@@ -18,7 +18,7 @@ function makeEngine() {
 beforeEach(() => gameState.init(TEST_RULES));
 afterEach(() => mock.restoreAll());
 
-// ── normalizeOutcomes ─────────────────────────────────────────────────────────
+// normalizeOutcomes
 
 test('normalizeOutcomes: legacy actions/onFailure become the success/failure tiers', () => {
   const success = [{ type: 'navigate' }];
@@ -71,7 +71,7 @@ test('normalizeOutcomes: outcomes tiers without actions fall back to legacy pipe
   assert.deepEqual(tiers.failure.actions, [{ type: 'f' }]);
 });
 
-// ── pickTier ──────────────────────────────────────────────────────────────────
+// pickTier
 
 test('pickTier: plain checks split on margin 0', () => {
   const tiers = normalizeOutcomes({});
@@ -90,7 +90,7 @@ test('pickTier: authored critical and partial claim their margins', () => {
   assert.equal(pickTier(-4, tiers), 'failure');
 });
 
-// ── performSkillCheck ─────────────────────────────────────────────────────────
+// performSkillCheck
 
 test('performSkillCheck: rolls d20 + modifier against the DC and logs the tier', () => {
   const { engine, logs } = makeEngine();
@@ -132,7 +132,7 @@ test('performSkillCheck: unknown skill rolls with modifier 0', () => {
   assert.equal(result.rolled, 11);
 });
 
-// ── Attempt / resolution bookkeeping ─────────────────────────────────────────
+// Attempt / resolution bookkeeping
 
 test('attempts: recordAttempt counts per entry; resetAttempts clears counters only', () => {
   assert.equal(getAttempts(gameState, 'map', 0), 0);
@@ -159,7 +159,7 @@ test('resetAttempts: non-object flag values are left alone', () => {
   assert.equal(gameState.getCheckState('bool_flag'), true);
 });
 
-// ── Small helpers ─────────────────────────────────────────────────────────────
+// Small helpers
 
 test('resolveRetryText: walks the variants per attempt and clamps to the last', () => {
   const opt = { text: 'Try', retryText: ['Again', 'Once more'] };
@@ -191,7 +191,7 @@ test('performSkillCheck: failure narration walks per attempt', () => {
   assert.equal(logs.at(-1).message, 'miss B');
 });
 
-// ── Retry currency (rules.skillRetry) ─────────────────────────────────────────
+// Retry currency (rules.skillRetry)
 
 const RETRY_RULES = {
   ...TEST_RULES,
@@ -283,7 +283,7 @@ test('performSkillCheck: passes breakdown parameters to translation engine', () 
   assert.equal(params.breakdown, '1d20: 11 + 2 Perception');
 });
 
-// ── rollBreakdown ─────────────────────────────────────────────────────────────
+// rollBreakdown
 
 test('rollBreakdown: names the modifier, skips zero, handles negatives', () => {
   assert.equal(rollBreakdown(12, 2, 'Strength'), '1d20: 12 + 2 Strength');

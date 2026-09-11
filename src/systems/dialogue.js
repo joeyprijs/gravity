@@ -156,7 +156,8 @@ export class DialogueSystem {
       this.engine.t('ui.locationDialogue', { name: this.currentNPC.name })
     );
 
-    // ── Conversational Skill Checks ─────────────────────────────────────────
+    // Conversational Skill Checks
+
     // Attempt counts live in a per-conversation flag map (reset by
     // startDialogue); permanent resolution markers live in a separate flag
     // that survives across conversations and saves.

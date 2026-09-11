@@ -45,7 +45,8 @@ test('the shipped example game validates with zero issues', () => {
   assert.deepEqual(issues, [], `example data has validation issues:\n${issues.map(i => `  ${i.group}: ${i.message}`).join('\n')}`);
 });
 
-// ── Top-level JSON Schema conformance ────────────────────────────────────────
+// Top-level JSON Schema conformance
+
 // A focused, dependency-free check that the shipped data does not drift from
 // the published schemas at the top level: no unexpected keys (additionalProperties:
 // false) and all required keys present (including anyOf-of-required). This is
@@ -99,7 +100,8 @@ test('every shipped mission conforms to mission.schema.json at the top level', (
   }
 });
 
-// ── Audio assets ─────────────────────────────────────────────────────────────
+// Audio assets
+
 // Clips are recorded by hand and referenced by path, and a missing file is only
 // a console warning at runtime — so a typo would ship as silence. Collect every
 // `ambience` path in the data (region- and scene-level) and assert the file is
@@ -130,7 +132,8 @@ test('every audio path referenced by the shipped data exists on disk', (t) => {
   }
 });
 
-// ── Museum map layout ────────────────────────────────────────────────────────
+// Museum map layout
+
 // The curator derives museum geometry from each wing's slot; the coordinates in
 // the scene files are the fallback for running without the plugin. Two sources,
 // so they must agree — otherwise the map jumps the moment the plugin loads, and

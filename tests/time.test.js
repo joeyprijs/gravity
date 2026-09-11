@@ -18,7 +18,7 @@ const TIME_RULES = {
 
 const TEST_RULES = makeRules({ playerDefaults: { attributes: { ac: 10 } } });
 
-// ── Pure derivation helpers ───────────────────────────────────────────────────
+// Pure derivation helpers
 
 test('getTickOfDay: offsets by startTick and wraps at ticksPerDay', () => {
   assert.equal(getTickOfDay(0, TIME_RULES), 8);
@@ -76,7 +76,7 @@ test('resolveTimeCost: explicit cost wins (including 0), then kind default, then
   assert.equal(resolveTimeCost(undefined, 'navigate', null), 0);
 });
 
-// ── StateManager clock & timers ───────────────────────────────────────────────
+// StateManager clock & timers
 
 beforeEach(() => gameState.init(TEST_RULES));
 

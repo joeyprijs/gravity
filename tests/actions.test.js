@@ -51,7 +51,7 @@ function makeEngine({ rules = TEST_RULES, items = TEST_ITEMS } = {}) {
 beforeEach(() => gameState.init(TEST_RULES));
 afterEach(() => mock.restoreAll());
 
-// ── loot ──────────────────────────────────────────────────────────────────────
+// loot
 
 test('loot: gold goes to the gold resource, not the inventory', () => {
   const { run, calls } = makeEngine();
@@ -85,7 +85,7 @@ test('loot: xpReward awards XP and logs it', () => {
   assert.equal(calls.logs.at(-1).message, 'loot.xpGained');
 });
 
-// ── combat ────────────────────────────────────────────────────────────────────
+// combat
 
 test('combat: starts combat with the listed enemies and passes the action through', () => {
   const { run, calls } = makeEngine();
@@ -95,7 +95,7 @@ test('combat: starts combat with the listed enemies and passes the action throug
   assert.equal(calls.combat[0].action, action);
 });
 
-// ── return ────────────────────────────────────────────────────────────────────
+// return
 
 test('return: renders the stored return scene', () => {
   const { run, calls } = makeEngine();
@@ -104,7 +104,7 @@ test('return: renders the stored return scene', () => {
   assert.deepEqual(calls.renderedScenes, ['dungeon_start']);
 });
 
-// ── full_rest / heal ──────────────────────────────────────────────────────────
+// full_rest / heal
 
 test('full_rest: restores hp to full and leaves AP alone (combat-only)', () => {
   const { run } = makeEngine();
@@ -135,7 +135,7 @@ test('a negative heal amends with a signed yield: "(-2 HP)", never "(+-2 HP)"', 
   assert.deepEqual(calls.amends, ['actions.heal:-2', 'actions.heal:+2']);
 });
 
-// ── short_rest ────────────────────────────────────────────────────────────────
+// short_rest
 
 // Rules with the short-rest pool declared: 2 uses, flat 4 HP per draw (a
 // number, so the roll suffix stays empty and assertions stay deterministic).
@@ -239,7 +239,7 @@ test('heal: defaults to 2 when rules define no snackHealAmount', () => {
   assert.equal(hp(), 4);
 });
 
-// ── time actions ──────────────────────────────────────────────────────────────
+// Time actions
 
 test('advance_time: "until" derives the distance to the segment and wins over "amount"; unknown segments advance nothing', () => {
   const warn = mock.method(console, 'warn', () => {});
@@ -266,7 +266,7 @@ test('set_timer arms relative to the live clock, re-arming an id replaces it, ca
   assert.deepEqual(due.map(t => t.id), ['alarm'], 'only the re-armed deadline came due');
 });
 
-// ── grant_chapter ─────────────────────────────────────────────────────────────
+// grant_chapter
 
 test('grant_chapter: the first chapter writes the book into the pack, later ones only fill it', () => {
   const { run, calls } = makeEngine();

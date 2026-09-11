@@ -6,7 +6,7 @@ import { paramEchoT } from './helpers.js';
 // t() echoes "key:params" so assertions can check both key and values.
 const t = paramEchoT;
 
-// ── itemStatLines ─────────────────────────────────────────────────────────────
+// itemStatLines
 
 test('itemStatLines: AP, hit attribute with wielder modifier, then attributes in order', () => {
   const item = { attributes: { actionPoints: 1, damageRoll: '1d6', attackAttribute: 'strength' } };
@@ -48,7 +48,7 @@ test('itemStatLines: authoring-data attributes (teleportScene) never render', ()
   assert.deepEqual(itemStatLines(t, { attributes: { teleportScene: 'home_living_room' } }), []);
 });
 
-// ── equipmentAttributeBonuses ─────────────────────────────────────────────────
+// equipmentAttributeBonuses
 
 test('equipmentAttributeBonuses: merges attributeBonuses with legacy armorClassBonus', () => {
   assert.deepEqual(equipmentAttributeBonuses(null), {});
@@ -59,7 +59,7 @@ test('equipmentAttributeBonuses: merges attributeBonuses with legacy armorClassB
   );
 });
 
-// ── itemCardStats ─────────────────────────────────────────────────────────────
+// itemCardStats
 
 test('itemCardStats: the slot leads and worth trails, around the shared stat lines', () => {
   const lines = itemCardStats(t, {
@@ -87,7 +87,8 @@ test('itemCardStats: { slot: false } drops the slot row for the equipped list', 
   assert.match(lines[0], /itemStats\.attributeBonus/, 'the rest is unchanged');
 });
 
-// ── compassPoint ──────────────────────────────────────────────────────────────
+// compassPoint
+
 // The direction an option's arrow points, and the order roads are authored in,
 // both come out of this. It has been wrong three times on the way in — once
 // ordering by raw bearing, which files a road at 340° after south, once at

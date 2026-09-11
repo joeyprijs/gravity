@@ -19,11 +19,7 @@ The test for every rule here: it must describe what the codebase actually does. 
 - 2-space indentation, semicolons always.
 - Double quotes for `import` specifiers; single quotes for all other strings; template literals for interpolation.
 - No trailing whitespace.
-- Section dividers inside a file are box-drawing rules padded toward column 78:
-
-  ```js
-  // ── World clock & timers ──────────────────────────────────────────────────
-  ```
+- A section heading inside a file is a plain one-line comment naming the group (`// World clock & timers`), set off by a blank line above. No rules of dashes or box-drawing characters.
 
 ### Naming
 
@@ -83,7 +79,7 @@ Combat is the one exception, and deliberate: attacks are logged under their acto
 - **Module and class headers** are `//` blocks: what the module owns, in two to six lines.
 - **Exported functions and public methods** get a prose block (`//` lines, or a `/** */` block for the longer ones) saying what the function does and the contracts the signature can't show — null returns, units, ordering. No `@param`/`@returns`/`@private` tags: a signature documents its own parameters, and a tag that repeats it is padding. Skip the block where a signature is self-evident (trivial getters, delegates).
 - **Private (`_`) methods and inline notes** use `//` blocks — substantive, but no JSDoc scaffolding.
-- Long files group related members under `// ── Section ──…` dividers.
+- Long files group related members under plain `// Section` headings.
 
 ---
 

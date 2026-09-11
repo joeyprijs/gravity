@@ -179,7 +179,7 @@ test('flags a missing or non-positive xpPerLevel', () => {
   assert.ok(issues.some(i => /xpPerLevel must be a positive number/.test(i.message)));
 });
 
-// ── Engagement-toolkit validations (outcomes, time, timers, passive) ──────────
+// Engagement-toolkit validations (outcomes, time, timers, passive)
 
 const TOOLKIT_ACTIONS = new Set([...KNOWN_ACTIONS, 'advance_time', 'set_timer', 'cancel_timer', 'log']);
 
@@ -623,7 +623,7 @@ test('conditions: unknown stage references and stage+status combos are flagged',
   assert.ok(issues.some(i => i.message.includes('both "stage" and "status"')));
 });
 
-// ── story books ───────────────────────────────────────────────────────────────
+// Story books
 
 test('story books: bad chapter shapes and a mismatched type are flagged', () => {
   const data = makeCleanData();

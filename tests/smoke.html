@@ -56,7 +56,7 @@
     // skeleton.
     window.GRAVITY_MANUAL_BOOT = true;
 
-    // ── Harness ────────────────────────────────────────────────────────────
+    // Harness
     const results = [];
     const errors = [];
     window.addEventListener('error', (e) => errors.push(e.message));
@@ -109,7 +109,8 @@
       }
     }
 
-    // ── Boot the real game ─────────────────────────────────────────────────
+    // Boot the real game
+
     // Section collapse state is in-memory only, but builds that predate that
     // persisted it under these keys — clear leftovers so the 'never persisted'
     // step below proves the current code writes nothing, not that the profile
@@ -132,7 +133,7 @@
     // guards against double-boot for exactly this case).
     window.gameEngine = new RPGEngine();
 
-    // ── Game helpers ───────────────────────────────────────────────────────
+    // Game helpers
 
     // Opens a fight the player is guaranteed to act first in, and resolves
     // once its combat block is on screen.
@@ -156,7 +157,7 @@
       return window.gameEngine.combatSystem;
     }
 
-    // ── The suite ──────────────────────────────────────────────────────────
+    // The suite
     queueMicrotask(async () => {
       await step('engine boots to character creation', async () => {
         await until(() => window.gameEngine, 'engine construction');

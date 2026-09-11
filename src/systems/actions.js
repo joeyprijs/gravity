@@ -122,7 +122,7 @@ function handleHeal(action, engine) {
   logYield(engine, action, engine.t('actions.heal', { amount: formatSigned(amount), rollSuffix: '' }), 'loot');
 }
 
-// ── Pipeline utility actions ──────────────────────────────────────────────
+// Pipeline utility actions
 
 function handleNavigate(action, engine) {
   engine.renderScene(action.destination);
@@ -174,7 +174,7 @@ function handleGrantChapter(action, engine) {
   }
 }
 
-// ── Time actions ──────────────────────────────────────────────────────────
+// Time actions
 
 // { type: "advance_time", amount: 8 } — advance the clock by a fixed amount.
 // { type: "advance_time", until: "morning" } — sleep to the next segment start

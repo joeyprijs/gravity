@@ -7,7 +7,7 @@ afterEach(() => mock.restoreAll());
 // Pins Math.random to its floor so every die shows its min face.
 const minRolls = () => mock.method(Math, 'random', () => 0);
 
-// ── parseDamage ───────────────────────────────────────────────────────────────
+// parseDamage
 
 test('parseDamage: dice notation with modifiers, and the modifier in the roll string', () => {
   minRolls();
@@ -43,7 +43,7 @@ test('parseDamage: malformed range falls back to a flat 1 instead of NaN', () =>
   }
 });
 
-// ── rollTable ─────────────────────────────────────────────────────────────────
+// rollTable
 
 test('rollTable: missing or empty tables return null', () => {
   assert.equal(rollTable(undefined), null);

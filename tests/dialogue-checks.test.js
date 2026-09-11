@@ -95,7 +95,7 @@ beforeEach(() => {
   gameState.init(TEST_RULES);
 });
 
-// ── failure path ──────────────────────────────────────────────────────────────
+// Failure path
 
 test('failed check: records an attempt, runs failure actions, re-renders options-only', () => {
   const { ds, calls, rerenders } = makeHarness([{
@@ -132,7 +132,7 @@ test('maxAttempts exhaustion: retires the response for the conversation and runs
   assert.equal(checkButtons().length, 1, 'patience resets on re-talk');
 });
 
-// ── success path ──────────────────────────────────────────────────────────────
+// Success path
 
 test('success: runs the success pipeline and re-renders when nothing navigated', () => {
   const { ds, calls, rerenders } = makeHarness([{
@@ -176,7 +176,7 @@ test('success via a navigating action skips the options-only re-render', () => {
   assert.equal(rerenders.length, before, 'no options-only re-render after navigation');
 });
 
-// ── gates ─────────────────────────────────────────────────────────────────────
+// Gates
 
 test('retry gate: first attempt free, retry spends the configured resource', () => {
   const rules = { ...TEST_RULES, skillRetry: { resource: 'luckPoints', cost: 1 } };

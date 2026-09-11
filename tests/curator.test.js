@@ -108,7 +108,8 @@ test('scene:entered opens the panel on arrival only, and only where there is cur
   assert.deepEqual(calls.customUI, [], 'a fight already running comes first');
 });
 
-// ── Museum map layout ────────────────────────────────────────────────────────
+// Museum map layout
+
 // Geometry derived from each wing's slot, so a museum that grows never needs
 // hand-placed coordinates. See layoutMuseum for the slot → position rules.
 
@@ -143,7 +144,8 @@ test('museum layout: without the manifest config, authored geometry is left alon
   assert.deepEqual(engine.data.scenes.hall.mapDefinitions, { top: 0, left: 0, width: 1, height: 1 });
 });
 
-// ── Building wings ───────────────────────────────────────────────────────────
+// Building wings
+
 // A built wing lives in the save as { id, name, slot }; its scene is synthesized
 // from that on boot and on load, so nothing about it is stored twice.
 

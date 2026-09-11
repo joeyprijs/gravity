@@ -81,7 +81,7 @@ beforeEach(() => {
 });
 afterEach(() => mock.restoreAll());
 
-// ─── _resolveEnemyWeapon ─────────────────────────────────────────────────────
+// _resolveEnemyWeapon
 
 test('_resolveEnemyWeapon: falls back to ENEMY_CLAW_ID when no weapon equipped', () => {
   const claw = makeWeapon({ damageRoll: '1d4' });
@@ -98,7 +98,7 @@ test('_resolveEnemyWeapon: returns the weapon in a hand slot', () => {
   assert.equal(cs._resolveEnemyWeapon(enemy), sword);
 });
 
-// ─── _resolveEnemyAttacks ────────────────────────────────────────────────────
+// _resolveEnemyAttacks
 
 test('_resolveEnemyAttacks: all misses when roll cannot beat player AC', () => {
   mock.method(Math, 'random', () => 0);
@@ -159,7 +159,7 @@ test('_resolveEnemyAttacks: attribute-less weapons roll a bare d20 vs player AC'
   assert.match(result.hitRolls[0], /"ac":10/);
 });
 
-// ─── playerAttack ────────────────────────────────────────────────────────────
+// playerAttack
 
 test('playerAttack: hit reduces enemy HP and costs AP', () => {
   mock.method(Math, 'random', () => 0.9999);
@@ -229,7 +229,7 @@ test('playerAttack: calls endCombat when last enemy is defeated', () => {
   assert.ok(endCombatCalled, 'endCombat should be called when last enemy dies');
 });
 
-// ─── rest-limited uses (attributes.uses) ─────────────────────────────────────
+// Rest-limited uses (attributes.uses)
 
 test('playerAttack: a rest-limited spell spends one use per cast, hit or miss, and refuses when spent', () => {
   let roll = 0.9999; // hits AC 5
@@ -263,7 +263,7 @@ test('playerAttack: a rest-limited spell spends one use per cast, hit or miss, a
   assert.deepEqual(gameState.getItemUses('test_fireball'), { current: 0, max: 2, refresh: 'full_rest' });
 });
 
-// ─── playerAttackMulti (targets: "all") ────────────────────────────────────────
+// playerAttackMulti (targets: "all")
 
 // Minimal AoE weapon fixture — one cast strikes every living enemy.
 function makeAoeWeapon({ actionPoints = 3, damageRoll = '1d6', attackAttribute, damageAttribute } = {}) {
@@ -382,7 +382,7 @@ test('playerAttackMulti: a dead enemy is not a target', () => {
   assert.ok(living.attributes.healthPoints < 100);
 });
 
-// ─── damageAttribute ─────────────────────────────────────────────────────────
+// damageAttribute
 
 test('playerAttack: the weapon\'s damageAttribute joins the damage total and breakdown', () => {
   mock.method(Math, 'random', () => 0.9999);
@@ -429,7 +429,7 @@ test('_rollDamage: a negative attribute cannot heal the target', () => {
   assert.equal(result.total, 0); // clamped, not -4
 });
 
-// ─── enemyTurn ───────────────────────────────────────────────────────────────
+// enemyTurn
 
 test('enemyTurn: phase "after" — enemy with lower init than player attacks', () => {
   mock.method(Math, 'random', () => 0.9999);
@@ -497,7 +497,7 @@ test('enemyTurn: dead enemy is skipped even if phase matches', () => {
   assert.equal(hp(), hpBefore, 'Dead enemy should not attack');
 });
 
-// ─── endCombat ───────────────────────────────────────────────────────────────
+// endCombat
 
 test('endCombat: runs onVictory action pipeline on victory', () => {
   const cs = makeCS();
@@ -546,7 +546,7 @@ test('enemyTurn: calls endCombat(false) when player HP hits 0', () => {
   assert.equal(endCombatArg, false, 'endCombat(false) should be called when player dies');
 });
 
-// ─── endCombat: victory re-render ────────────────────────────────────────────
+// endCombat: victory re-render
 
 test('endCombat: victory re-render skips the scene autoAttack', () => {
   const cs = makeCS();
@@ -580,7 +580,7 @@ test('endCombat: no re-render when onVictory opened a dialogue', () => {
   assert.equal(rendered, 0);
 });
 
-// ─── AP (per-combat tactical budget) ─────────────────────────────────────────
+// AP (per-combat tactical budget)
 
 test('round end recharges the AP pool to full', () => {
   const cs = makeCS();
@@ -600,7 +600,7 @@ test('endCombat victory restores AP to max at the boundary', () => {
   assert.equal(ap(), 3);
 });
 
-// ─── attackAttribute ─────────────────────────────────────────────────────────
+// attackAttribute
 
 test('playerAttack: the weapon\'s attackAttribute joins the hit roll and breakdown', () => {
   mock.method(Math, 'random', () => 0.9999);
@@ -636,7 +636,7 @@ test('_resolveEnemyAttacks: the enemy\'s own attribute powers the weapon\'s atta
   assert.match(result.hitRolls[0], /1d20: 20 \+ 3 Strength/);
 });
 
-// ─── getAvailableAttacks ─────────────────────────────────────────────────────
+// getAvailableAttacks
 
 // The attack list is a pure read of equipment + item data, so the renderer
 // runs here with no DOM behind it.

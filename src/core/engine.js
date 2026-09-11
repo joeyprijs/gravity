@@ -305,7 +305,8 @@ export class RPGEngine {
     }
   }
 
-  // ── Item action methods ─────────────────────────────────────────────────
+  // Item action methods
+
   // Thin delegates into systems/items.js — the UI buttons call these; the
   // AP-cost checks and effect handling live in that module.
 
@@ -335,7 +336,8 @@ export class RPGEngine {
     return true;
   }
 
-  // ── Mode machine ────────────────────────────────────────────────────────
+  // Mode machine
+
   // Exactly one surface owns the options panel at a time (see this.mode).
 
   // mode: 'scene' | 'combat' | 'dialogue' | 'store' | 'customUI' | 'gameover'.
@@ -364,7 +366,8 @@ export class RPGEngine {
     return () => this.state.getCurrentSceneId() !== sceneId || this.mode !== mode;
   }
 
-  // ── Delegate API ────────────────────────────────────────────────────────
+  // Delegate API
+
   // Subsystems (combat, dialogue, quests) call these on `this.engine`.
   // They forward to the appropriate module so subsystems need no knowledge
   // of the internal structure.
@@ -454,7 +457,8 @@ export class RPGEngine {
   scrollNarrativeToBottom() { return this.narrative.scrollToBottom(); }
   scrollNarrativeToEntry(entryEl) { return this.narrative.scrollToEntry(entryEl); }
 
-  // ── Event system ────────────────────────────────────────────────────────
+  // Event system
+
   // Minimal pub/sub. Subsystems subscribe in their constructors; emitters need
   // no knowledge of who is listening. Use for cross-system notifications where
   // a direct call would create unwanted coupling.

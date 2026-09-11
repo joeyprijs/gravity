@@ -182,7 +182,8 @@ class StateManager {
     this._statHandlers = {};
   }
 
-  // ── Plugin lifecycle hooks ──────────────────────────────────────────────
+  // Plugin lifecycle hooks
+
   // The formal alternative to wrapping StateManager methods on the live
   // singleton: plugins observe mutations and intercept custom stats through
   // these registrations instead.
@@ -432,7 +433,8 @@ class StateManager {
     this._emitMutation('setFlag', { flag: flagName, value });
   }
 
-  // ── Check bookkeeping ─────────────────────────────────────────────────────
+  // Check bookkeeping
+
   // The engine-private skill-check state maps (attempt counts, resolution
   // markers, discovery progress), keyed by the CHECK_KEYS builders. Like
   // setFlag, writes deliberately do not notify: check state only surfaces
@@ -445,7 +447,8 @@ class StateManager {
   // The loaded rules object (null before init).
   getRules() { return this._rules; }
 
-  // ── World clock & timers ──────────────────────────────────────────────────
+  // World clock & timers
+
   // The clock is a single monotonic tick counter; days and segments are
   // derived presentation (see systems/time.js). Time only moves through
   // advanceTime — never from wall-clock — so saves replay deterministically.
@@ -854,7 +857,8 @@ class StateManager {
     return stages.findIndex(s => s.id === stageId);
   }
 
-  // ── Story chapters ────────────────────────────────────────────────────────
+  // Story chapters
+
   // The chapters the player has heard of each story book (state.stories,
   // keyed by the book's item id). Granted state written at listen time, never
   // derived — the book item's authored chapter list owns text and order; this

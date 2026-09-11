@@ -57,7 +57,7 @@ function makeSR(engineOpts) {
 beforeEach(() => gameState.init(TEST_RULES));
 afterEach(() => mock.restoreAll());
 
-// ── _resolveDescription ───────────────────────────────────────────────────────
+// _resolveDescription
 
 test('_resolveDescription: conditional array falls back to the unconditioned entry', () => {
   const { sr } = makeSR();
@@ -86,7 +86,8 @@ test('_resolveDescription: scene decorators append to every scene', () => {
   assert.equal(sr._resolveDescription({ description: 'Bare walls.' }), 'Bare walls.<aside>cell</aside>');
 });
 
-// ── _awardDiscoveredLoot ──────────────────────────────────────────────────────
+// _awardDiscoveredLoot
+
 // The summary line is t('loot.foundItems', { list }) with the list joined by
 // Intl.ListFormat — the tests assert on the key and its list param.
 
@@ -128,7 +129,7 @@ test('_awardDiscoveredLoot: nothing found logs nothing', () => {
   assert.equal(calls.logs.length, 0);
 });
 
-// ── _resolveDiscovery ─────────────────────────────────────────────────────────
+// _resolveDiscovery
 
 test('_resolveDiscovery: hits mark items found, misses stay at their base DC', () => {
   const { sr } = makeSR();
@@ -205,7 +206,7 @@ test('_resolveDiscovery: log key reflects found / found-more / fail', () => {
   assert.equal(calls.logs.at(-1).message, 'actions.lookAroundFail');
 });
 
-// ── render preludes ───────────────────────────────────────────────────────────
+// Render preludes
 
 // What a reset keeps vs drops is resetAttempts' contract, owned by
 // skill-checks.test.js — here only the scene-side guard is worth a test.
@@ -216,7 +217,7 @@ test('_resetSkillAttempts: checks never attempted are left alone', () => {
   assert.equal(gameState.getCheckState(key), undefined, 'no entry is ever created by a reset');
 });
 
-// ── autoAttack ────────────────────────────────────────────────────────────────
+// autoAttack
 
 test('render: an autoAttack with an unmet condition does not start the encounter', () => {
   const scene = { description: 'Quiet.', autoAttack: { enemies: ['goblin_grunt'], condition: { flag: 'ambush', value: true } } };
@@ -234,7 +235,7 @@ test('render: skipAutoAttack suppresses the scene autoAttack (post-victory re-re
   assert.equal(calls.combat.length, 1);
 });
 
-// ── render guards / handleOption / restoreFromSave ────────────────────────────
+// Render guards / handleOption / restoreFromSave
 
 test('render: refuses to render during combat', () => {
   const { sr, engine } = makeSR();
@@ -283,7 +284,7 @@ test('restoreFromSave: a null description leaves the cache empty', () => {
   assert.equal(sr.lastRenderedSceneId, null);
 });
 
-// ── Outcome tiers, resolveOnce, maxAttempts ──────────────────────────────────
+// Outcome tiers, resolveOnce, maxAttempts
 
 test('_buildPassFailButton: partial tier runs its pipeline and still counts an attempt', () => {
   const { sr, engine } = makeSR();
@@ -299,7 +300,7 @@ test('_buildPassFailButton: partial tier runs its pipeline and still counts an a
   assert.equal(getAttempts(gameState, CHECK_KEYS.skillDc('perception', 'cell'), 0), 1);
 });
 
-// ── Narrative (free) checks ───────────────────────────────────────────────────
+// Narrative (free) checks
 
 test('_buildNarrativeButton: logs resultText, runs actions, and retires after one use', () => {
   const { sr, engine, calls } = makeSR();
@@ -336,7 +337,7 @@ test('_buildNarrativeButton: without resultText falls back to the locale line', 
   assert.ok(calls.logs.some(l => l.message === 'actions.lookAroundEmpty'));
 });
 
-// ── Passive checks ────────────────────────────────────────────────────────────
+// Passive checks
 
 test('_rollPassiveChecks: writes the flag once, returns success texts, never re-rolls', () => {
   const { sr } = makeSR();
@@ -360,7 +361,7 @@ test('_rollPassiveChecks: failure writes false and stays silent', () => {
   assert.equal(gameState.getFlag('noticed'), false);
 });
 
-// ── Time costs ────────────────────────────────────────────────────────────────
+// Time costs
 
 test('handleOption: navigate options charge the default travel cost before the pipeline', () => {
   const { sr, engine } = makeSR({ scenes: { cell: {} } });
@@ -417,7 +418,7 @@ test('a pass/fail attempt narrates the roll before time is charged', () => {
   assert.ok(messages.indexOf('actions.skillFail') < timeAt);
 });
 
-// ── Shared-skill flag map: discovery must not clobber sibling check state ────
+// Shared-skill flag map: discovery must not clobber sibling check state
 
 test('discovery state is namespaced: a search never revives a resolved sibling check', () => {
   // Regression: a scene with "Look Around" (discovery) and a resolveOnce
@@ -454,7 +455,7 @@ test('discovery adopts legacy top-level state from older saves', () => {
   assert.equal(sr._buildItemDiscoveryButton(opt, 0, 'cell', {}), null);
 });
 
-// ── scene:entered — the event plugins build on ───────────────────────────────
+// scene:entered — the event plugins build on
 
 test('scene:entered fires on every render except restores, with isEntry telling arrivals apart', () => {
   const scene = { description: 'Bare walls.', autoAttack: { enemies: ['goblin_grunt'] } };
@@ -469,7 +470,7 @@ test('scene:entered fires on every render except restores, with isEntry telling 
   assert.equal(calls.emitted[1].data.startsCombat, false, 'skipAutoAttack reaches the payload');
 });
 
-// ── Game over: the scene must not clobber the recovery panel ─────────────────
+// Game over: the scene must not clobber the recovery panel
 
 test('_didNavigate treats game over as navigation, so options are not re-rendered over it', () => {
   // Regression: dying to fast enemies inside the option pipeline that started
