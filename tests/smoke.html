@@ -1610,6 +1610,91 @@
         assert(engine.state.countPlayerItem('gertas_story') === 1, 'and comes back to the pack');
       });
 
+      await step('the Hearthstone teleports home and remembers the way back', async () => {
+        // A reusable item with a teleportScene: the use is the player's line,
+        // the return option walks them back to where they rubbed it.
+        const engine = window.gameEngine;
+        const cards = () => $$('#scene-options-panel button.card');
+        const logTexts = () => $$('#scene-narrative .scene__log').map(el => { const c = el.cloneNode(true); c.querySelector('.scene__log-prefix')?.remove(); return text(c); });
+
+        engine.renderScene('dungeon_start');
+        await until(() => engine.state.getCurrentSceneId() === 'dungeon_start', 'the cellar');
+        if (!engine.state.countPlayerItem('home_rune')) engine.state.addToInventory('home_rune', 1);
+        const stones = engine.state.countPlayerItem('home_rune');
+        engine.useItem('home_rune');
+        await until(() => cards().some(c => text(c) === 'Return via Teleport'), 'the living room');
+        assert(logTexts().includes('Use the Hearthstone'), 'the use is logged as the act');
+        assert(engine.state.countPlayerItem('home_rune') === stones, 'a teleport never consumes the stone');
+        assert(engine.state.getReturnSceneId() === 'dungeon_start', 'the way back is remembered');
+
+        cards().find(c => text(c) === 'Return via Teleport').click();
+        await until(() => engine.state.getCurrentSceneId() === 'dungeon_start', 'back in the cellar');
+      });
+
+      await step('drinking a potion from the pack is the act with its yield', async () => {
+        // A consume card: one click spends the stack and heals, and the log
+        // line is the act with the roll in its parens.
+        const engine = window.gameEngine;
+        const player = engine.state.getPlayer();
+        const lastLogText = () => { const el = $$('#scene-narrative .scene__log').at(-1).cloneNode(true); el.querySelector('.scene__log-prefix')?.remove(); return text(el); };
+        const potion = () => $$('#inventory-tab button.card[data-action="consume"]').find(c => text(c).includes('Healing Potion'));
+
+        engine.state.addToInventory('healing_potion', 1);
+        engine.state.modifyPlayerStat('hp', -(player.resources.hp.max - 1));
+        const stack = engine.state.countPlayerItem('healing_potion');
+        assert(potion(), 'the potion renders as a consume card');
+        potion().click();
+        assert(engine.state.countPlayerItem('healing_potion') === stack - 1, 'one potion is spent');
+        assert(player.resources.hp.current > 1, `and HP came back (at ${player.resources.hp.current})`);
+        assert(/^Use the Healing Potion \(\+\d+ HP, 1d8\+2: \d+\+2\)$/.test(lastLogText()),
+          `the act carries its yield and roll (got "${lastLogText()}")`);
+      });
+
+      await step('the clock narrates a change of segment and the break of a day', async () => {
+        // advance_time until a segment reads as the world's line, and the
+        // top bar agrees with it. A whole day later, the day-break line.
+        const engine = window.gameEngine;
+        const t = engine.t;
+        const lastLogText = () => { const el = $$('#scene-narrative .scene__log').at(-1).cloneNode(true); el.querySelector('.scene__log-prefix')?.remove(); return text(el); };
+        const night = t('time.segments.night');
+
+        engine.runActions([{ type: 'advance_time', until: 'morning' }]);
+        engine.runActions([{ type: 'advance_time', until: 'night' }]);
+        assert(lastLogText() === t('time.segmentChanges', { segment: night }),
+          `the segment change is narrated (got "${lastLogText()}")`);
+        assert(text($('.scene__topbar-time')).endsWith(night), `the top bar shows the segment (got "${text($('.scene__topbar-time'))}")`);
+
+        engine.runActions([{ type: 'advance_time', amount: engine.data.rules.time.ticksPerDay }]);
+        const day = /Day (\d+)/.exec(text($('.scene__topbar-time')))?.[1];
+        assert(day && lastLogText() === t('time.dayBreaks', { day, segment: night }),
+          `the new day is narrated with its segment (got "${lastLogText()}")`);
+      });
+
+      await step('defeat replaces the options with the recovery panel', async () => {
+        // A lost fight ends in Game Over: the notice heads the log, the panel
+        // holds the two recovery controls and nothing else, and the dead
+        // character can neither act nor drink.
+        const engine = window.gameEngine;
+        const cards = () => $$('#scene-options-panel button.card').map(text);
+        const cs = await startFight(['goblin_grunt']);
+        cs.endCombat(false);
+
+        assert(engine.isGameOver, 'the mode is game over');
+        assert(text($$('.scene__title--game-over').at(-1)) === 'Game Over', 'the notice heads the log');
+        assert(cards().length === 2 && cards().includes('Load Last Save') && cards().includes('Restart Game'),
+          `the recovery controls, and nothing else (got ${cards().join(' | ')})`);
+        assert($$('.btn--item').length && $$('.btn--item').every(b => b.disabled), 'the item cards go dark');
+        const stack = engine.state.countPlayerItem('healing_potion');
+        engine.state.addToInventory('healing_potion', 1);
+        engine.useItem('healing_potion');
+        assert(engine.state.countPlayerItem('healing_potion') === stack + 1, 'a dead character drinks nothing');
+
+        // Back to the living game for the steps that follow, the way a load does.
+        engine.setMode('scene');
+        engine.renderScene(engine.state.getCurrentSceneId());
+        await until(() => !engine.isGameOver && !cards().includes('Load Last Save'), 'the scene back');
+      });
+
       await step('buying and selling are narrated, the trade buttons are the choice', async () => {
         // Money changing hands is a consequence, not a choice — same voice as
         // lifting a relic out of a case. The merchant lives deep in the dungeon,
