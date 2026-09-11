@@ -1210,15 +1210,21 @@ button.section-toggle--collapsed .section-toggle__label::before {
   height: 8px;
 }
 
-/* Where the focused option would take you (see setPeek in map.js). An
-   outline, not a border like --current: it adds nothing to the box's size,
-   and the two can sit on one node without fighting. Gold, not the accent:
-   --current states where you are, the peek asks where you might go, and
-   side by side the two must not read as one mark. */
+/* Where the focused option would take you (see setPeek in map.js): the box
+   lights up from within — an accent wash and an accent hairline, nothing
+   drawn outside the box and nothing lifted above the door marks on its
+   walls. The accent is free here: the minimap says "you are here" with a
+   dot, so a lit box and the dot never read as one mark. The wash is a
+   pseudo-element because the box's fill is set inline. */
 .map-node--peek {
-  outline: 2px solid var(--gold-color);
-  outline-offset: 1px;
-  z-index: 1;
+  border-color: var(--accent-color);
+}
+
+.map-node--peek::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(var(--accent-color-rgb), 0.22);
 }
 
 .map-node__label {
