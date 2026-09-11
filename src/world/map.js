@@ -1,4 +1,4 @@
-import { createElement, hideCursorTooltip, isInteriorScene, showCursorTooltip } from '../core/utils.js';
+import { createElement, hideCursorTooltip, isInteriorScene, sharedEdgeMidpoint, showCursorTooltip } from '../core/utils.js';
 import { MINIMAP_SIZE, MAP_PADDING, MAP_NODE_DEFAULT_BG, CSS, EL } from '../core/config.js';
 
 // The map's notion of a door: the navigate destinations of a scene's options,
@@ -91,6 +91,14 @@ export class MapManager {
       node.style.height = (def.height * view.scale) + 'px';
       node.style.background = background || MAP_NODE_DEFAULT_BG;
       fresh.appendChild(node);
+    }
+
+    // After the boxes, so a door paints over the two walls it sits on.
+    for (const { x, y, vertical } of this._minimapDoors(placements)) {
+      const mark = createElement('div', [CSS.MAP_DOOR, vertical && CSS.MAP_DOOR_VERTICAL]);
+      mark.style.left = ((x - view.left) * view.scale) + 'px';
+      mark.style.top  = ((y - view.top)  * view.scale) + 'px';
+      fresh.appendChild(mark);
     }
 
     canvasEl.replaceWith(fresh);
@@ -189,6 +197,34 @@ export class MapManager {
     // Buildings first: a building's square is a bounding box, and the ground
     // the player stands on must never end up underneath it.
     return [...buildings, ...rooms];
+  }
+
+  // The doorways among the minimap's boxes: a navigate between two drawn boxes
+  // that meet edge to edge, where at least one side is a building. A road
+  // meeting a road is an open edge, not a door. Outdoors a room's navigate
+  // folds onto its building's square, so the door lands on the outer wall.
+  // One mark per pair, however many options cross it either way. Only boxes
+  // already drawn can carry a door, so an unwalked room's door stays unseen.
+  _minimapDoors(placements) {
+    const { scenes, regions } = this.engine.data;
+    const boxOf = (sceneId) => placements.find(p => p.id === sceneId)
+      || placements.find(p => p.key && p.key === this._interiorKeyOf(sceneId));
+
+    const doors = new Map();
+    for (const [id, scene] of Object.entries(scenes)) {
+      const from = boxOf(id);
+      if (!from) continue;
+      for (const dest of sceneNavigationTargets(scene)) {
+        const to = boxOf(dest);
+        if (!to || to === from) continue;
+        if (!isInteriorScene(scene, regions) && !isInteriorScene(scenes[dest], regions)) continue;
+        const pair = [from.id || from.key, to.id || to.key].sort().join('|');
+        if (doors.has(pair)) continue;
+        const door = sharedEdgeMidpoint(from.def, to.def);
+        if (door) doors.set(pair, door);
+      }
+    }
+    return [...doors.values()];
   }
 
   // The full map's boxes: everywhere known, in as much detail as it is known.

@@ -1198,6 +1198,24 @@ button.section-toggle--collapsed .section-toggle__label::before {
   .minimap .map-node--current::after { animation: map-here-pulse 0.9s ease-out; }
 }
 
+/* A doorway: a short light bar along the wall two boxes share, the same fixed
+   size as the here-dot so it stays legible on any box. Marks only passages
+   into or inside a building (see _minimapDoors); roads meeting stay open
+   edges. No pointer events: the box beneath keeps its hover name. */
+.map-door {
+  position: absolute;
+  width: 8px;
+  height: 3px;
+  transform: translate(-50%, -50%);
+  background: var(--map-building-outline);
+  pointer-events: none;
+}
+
+.map-door--vertical {
+  width: 3px;
+  height: 8px;
+}
+
 /* Where the focused option would take you (see setPeek in map.js). An
    outline, not a border like --current: it adds nothing to the box's size,
    and the two can sit on one node without fighting. Gold, not the accent:
@@ -1581,7 +1599,6 @@ button.section-toggle--collapsed .section-toggle__label::before {
   justify-content: space-between;
   gap: var(--spacing);
   margin-top: var(--spacing);
-  font-size: 0.85rem;
   font-weight: 400;
 }
 

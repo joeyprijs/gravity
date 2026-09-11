@@ -178,6 +178,26 @@ export function compassPoint(from, to) {
   return COMPASS_POINTS[Math.round(degrees / step) % COMPASS_POINTS.length];
 }
 
+// Where a doorway between two boxes sits: the midpoint of the wall they share,
+// with which way that wall runs. Null unless they meet edge to edge with some
+// overlap — boxes meeting at a corner share no wall to put a door in.
+export function sharedEdgeMidpoint(a, b) {
+  const overlapX = Math.min(a.left + a.width, b.left + b.width) - Math.max(a.left, b.left);
+  const overlapY = Math.min(a.top + a.height, b.top + b.height) - Math.max(a.top, b.top);
+
+  if (overlapX > 0) {
+    const x = Math.max(a.left, b.left) + overlapX / 2;
+    if (a.top + a.height === b.top) return { x, y: b.top, vertical: false };
+    if (b.top + b.height === a.top) return { x, y: a.top, vertical: false };
+  }
+  if (overlapY > 0) {
+    const y = Math.max(a.top, b.top) + overlapY / 2;
+    if (a.left + a.width === b.left) return { x: b.left, y, vertical: true };
+    if (b.left + b.width === a.left) return { x: a.left, y, vertical: true };
+  }
+  return null;
+}
+
 // A Weapon or Spell defaults to a hand, so swords never repeat "slot": "hand".
 const HAND_TYPES = new Set(['Weapon', 'Spell']);
 

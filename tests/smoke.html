@@ -582,6 +582,19 @@
         assert(!$('#scene-location-reminder .curator-scene-rep'), 'no reputation line outside the museum');
       });
 
+      await step('the minimap marks the doorways between the rooms walked', async () => {
+        // Your house is a known region, so all eight rooms are drawn. Seven
+        // passages join them, and standing in the hallway reveals the hill
+        // path outside the front door: eight marks. The other walls rooms
+        // share (parents' room to hallway, bedroom to armor wing) get none.
+        window.gameEngine.renderScene('home_hallway');
+        await until(() => $$('#minimap-canvas .map-door').length > 0, 'door marks on the minimap');
+        const doors = $$('#minimap-canvas .map-door');
+        assert(doors.length === 8, `eight doorways drawn (got ${doors.length})`);
+        assert(doors.some(d => d.classList.contains('map-door--vertical')), 'the hallway-to-lobby door runs down a side wall');
+        assert(doors.every(d => d.style.left && d.style.top), 'every mark is placed through the minimap view');
+      });
+
       await step('walking into a wing opens the curator panel, titled with the room', async () => {
         // Curating is what the room is for, so no button press stands between
         // the player and the panel — and the panel names the room, not itself.

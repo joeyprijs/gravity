@@ -77,6 +77,8 @@ export const CSS = {
   MAP_NODE_PEEK:          'map-node--peek',
   MAP_NODE_BUILDING:      'map-node--building',
   MAP_NODE_LABEL:         'map-node__label',
+  MAP_DOOR:               'map-door',
+  MAP_DOOR_VERTICAL:      'map-door--vertical',
   MINIMAP_CANVAS:         'minimap__canvas',
   FULLMAP_INNER:          'fullmap-overlay__inner',
 
