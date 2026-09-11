@@ -37,14 +37,8 @@
   /* Buttons */
   /* Flat fills, no gradients or glows: a control is a box with a hairline,
      its hover state a flat accent tint and an accent border. The affordance
-     is the box itself, not the lighting. The corner radius scales with the
-     thing it rounds (≈ height/12, capped for surfaces): the same pixel
-     radius curves a 24px mark twice as hard as a 48px button, so each size
-     class gets its own token to keep the curvature even. */
-  --surface-radius: 8px;      /* panel class: the floating page surfaces */
-  --control-radius: 4px;      /* 48px class: buttons, cards, inputs */
-  --control-radius-sm: 3px;   /* 32px class: the creation steppers */
-  --control-radius-xs: 2px;   /* 24px class: the sheet's spend marks */
+     is the box itself, not the lighting. Corners are square throughout:
+     only dots stay round. */
   --btn-bg: rgba(255, 255, 255, 0.03);
   --btn-hover-bg: rgba(var(--accent-color-rgb), 0.08);
   --btn-hover-shadow: none;
@@ -72,6 +66,10 @@
   /* Typography */
   --font-xs: 10px;
   --font-sm: 12px;
+  /* Uppercase labels (headings, speaker prefixes, the clock): a step above
+     --font-sm, since capitals set at the small size sit light next to body
+     text and read as an afterthought. */
+  --font-caps: 13px;
   --font-md: 14px;
   --font-lg: 16px;
   --font-xl: 18px;
@@ -306,7 +304,6 @@ body {
   cursor: pointer;
   transition: all 0.3s ease;
   padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 1.75);
-  border-radius: var(--control-radius);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -351,7 +348,6 @@ body {
   /* Vertical padding in step with .button so a single-line card and a
      single-line button stand the same 48px. */
   padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2);
-  border-radius: var(--control-radius);
   transition: all 0.3s ease;
 }
 
@@ -514,7 +510,7 @@ button.section-toggle {
      says "control" now, so the accent color doesn't have to. */
   color: var(--text-secondary);
   font: inherit;
-  font-size: var(--font-sm);
+  font-size: var(--font-caps);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -662,7 +658,7 @@ button.section-toggle--collapsed .section-toggle__label::before {
 .attr-list__identity-level,
 .fullmap-overlay__title {
   color: var(--text-secondary);
-  font-size: var(--font-sm);
+  font-size: var(--font-caps);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -676,7 +672,7 @@ button.section-toggle--collapsed .section-toggle__label::before {
    below it. */
 .attr-list__points {
   color: var(--accent-color);
-  font-size: var(--font-sm);
+  font-size: var(--font-caps);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -692,7 +688,6 @@ button.section-toggle--collapsed .section-toggle__label::before {
   height: calc(var(--spacing) * 3);
   padding: 0;
   font-size: var(--font-sm);
-  border-radius: var(--control-radius-xs);
 }
 
 /* .button sets display:flex, which outranks the UA stylesheet's [hidden]
@@ -905,7 +900,7 @@ button.section-toggle--collapsed .section-toggle__label::before {
 .scene__topbar-time {
   white-space: nowrap;
   color: var(--text-secondary);
-  font-size: var(--font-sm);
+  font-size: var(--font-caps);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -977,7 +972,6 @@ button.section-toggle--collapsed .section-toggle__label::before {
   top: 2px;
   bottom: 2px;
   width: 2px;
-  border-radius: 2px;
   background: color-mix(in srgb, var(--accent-color) 55%, transparent);
 }
 
@@ -1051,7 +1045,7 @@ button.section-toggle--collapsed .section-toggle__label::before {
    body keeps its size, leading and measure untouched. */
 .scene__log-prefix {
   display: block;
-  font-size: var(--font-sm);
+  font-size: var(--font-caps);
   font-weight: 600;
   font-family: var(--font-ui);
   text-transform: uppercase;
@@ -1109,7 +1103,7 @@ button.section-toggle--collapsed .section-toggle__label::before {
 .section-heading {
   margin-bottom: calc(var(--spacing) * 2);
   color: var(--text-secondary);
-  font-size: var(--font-sm);
+  font-size: var(--font-caps);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -1250,7 +1244,6 @@ button.section-toggle--collapsed .section-toggle__label::before {
   pointer-events: none;
   padding: 2px 8px;
   border: 1px solid var(--panel-border);
-  border-radius: 2px;
   background: rgba(0, 0, 0, 0.85);
   color: var(--map-node-text);
   font-size: 0.8rem;
@@ -1281,7 +1274,6 @@ button.section-toggle--collapsed .section-toggle__label::before {
   max-width: none;
   margin-bottom: 6px;
   padding: 1px 6px;
-  border-radius: 2px;
   background: rgba(0, 0, 0, 0.6);
   font-size: 0.8rem;
   letter-spacing: 0.06em;
@@ -1315,7 +1307,6 @@ button.section-toggle--collapsed .section-toggle__label::before {
   height: 90vh;
   background: var(--overlay-bg);
   border: 1px solid var(--panel-border);
-  border-radius: var(--surface-radius);
   overflow: hidden;
 }
 
@@ -1414,7 +1405,7 @@ button.section-toggle--collapsed .section-toggle__label::before {
 
 .char-creation__label {
   color: var(--text-secondary);
-  font-size: var(--font-sm);
+  font-size: var(--font-caps);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -1429,7 +1420,6 @@ button.section-toggle--collapsed .section-toggle__label::before {
   appearance: none;
   background: var(--list-item-bg);
   border: 1px solid var(--panel-border);
-  border-radius: var(--control-radius);
   color: var(--text-primary);
   padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2);
   font-family: inherit;
@@ -1484,7 +1474,6 @@ button.section-toggle--collapsed .section-toggle__label::before {
 .char-creation__stat-btn {
   width: 32px;
   height: 32px;
-  border-radius: var(--control-radius-sm);
 }
 
 .char-creation__stat-value {
