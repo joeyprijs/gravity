@@ -883,7 +883,7 @@ gravity/
 │   ├── ui/                  # UIManager (tab widgets, sheet, top bar, save/load) + panels
 │   ├── world/map.js         # Minimap + full-screen world map
 │   ├── screens/char-creation.js
-│   └── plugins/curator.js   # Reference plugin (museum curation & reputation)
+│   └── plugins/curator.js   # Reference plugin (museum curation & reputation); its state and panel in plugins/curator/
 ├── scripts/generate-manifest.js  # Regenerates data/index.json from the data tree
 ├── tests/                   # Node unit tests (npm test) + smoke.html (browser UI test)
 ├── schemas/                 # JSON Schemas for items, scenes, and NPCs
