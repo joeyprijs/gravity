@@ -1,5 +1,6 @@
 import { buildCard, buildPanelSection, createElement, buildOptionButton, getItemLabel, isSpecialItem, itemCardStatsFor, resetOptionsPanel } from '../core/utils.js';
 import { CSS, LOG } from '../core/config.js';
+import { translateOr } from '../core/i18n.js';
 
 // ChestUI renders the deposit/withdraw panel for a chest (opened by the
 // manage_chest action): the chest's contents and the player's inventory as
@@ -16,16 +17,12 @@ export class ChestUI {
 
   // Tries ui.{chestId}{key} first, falls back to ui.chest{key}.
   tChest(key, params) {
-    const specific = `ui.${this.chestId}${key}`;
-    const resolved = this.engine.t(specific, params);
-    return resolved === specific ? this.engine.t(`ui.chest${key}`, params) : resolved;
+    return translateOr(this.engine.t, `ui.${this.chestId}${key}`, this.engine.t(`ui.chest${key}`, params), params);
   }
 
   // Same fallback pattern for actions.* log strings.
   tAction(key, params) {
-    const specific = `actions.${this.chestId}${key}`;
-    const resolved = this.engine.t(specific, params);
-    return resolved === specific ? this.engine.t(`actions.chest${key}`, params) : resolved;
+    return translateOr(this.engine.t, `actions.${this.chestId}${key}`, this.engine.t(`actions.chest${key}`, params), params);
   }
 
   // One stack as a clickable card: its label, and the item's own stat lines.

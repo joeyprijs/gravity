@@ -1,7 +1,7 @@
 import { createElement, buildSceneDescription, buildOptionButton, addDirectionMarker, getItemLabel, isResourcePool, resetOptionsPanel } from '../core/utils.js';
 import { CHECK_KEYS, CSS, FLAG_KEYS, GOLD_ITEM_ID, LOG, MAX_D20_ROLL } from '../core/config.js';
 import { evaluateCondition } from './condition.js';
-import { formatList } from '../core/i18n.js';
+import { formatList, translateOr } from '../core/i18n.js';
 import { roll, rollTable } from './dice.js';
 import { resolveTimeCost } from './time.js';
 import {
@@ -338,10 +338,7 @@ export class SceneRenderer {
   // same rules handleFullRest reads, so the lines can't drift from the act.
   _fullRestStats() {
     const t = this.engine.t;
-    const resourceLabel = (id) => {
-      const key = `ui.resources.${id}`;
-      return t(key) !== key ? t(key) : id;
-    };
+    const resourceLabel = (id) => translateOr(t, `ui.resources.${id}`, id);
     const lines = [t('ui.restHealing', { value: t('ui.restFull') })];
     const retry = this.engine.data.rules?.skillRetry;
     if (retry?.resource && retry.restRestore > 0) {
@@ -566,10 +563,7 @@ export class SceneRenderer {
     const uses = state === true ? 1 : (state?.[`uses_${i}`] || 0);
     if (uses > 0 && !opt.repeatable) return null;
 
-    const badgeKey = `actions.skillBadgeFree.${opt.skillCheck}`;
-    const badge = this.engine.t(badgeKey) !== badgeKey
-      ? this.engine.t(badgeKey)
-      : this.engine.t('actions.lookAroundBadge');
+    const badge = translateOr(this.engine.t, `actions.skillBadgeFree.${opt.skillCheck}`, this.engine.t('actions.lookAroundBadge'));
 
     // Narrative beats are free story moments — no AP, no roll.
     const btn = buildOptionButton(opt.text, badge);

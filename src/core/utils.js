@@ -1,5 +1,6 @@
 import { CSS, EL, HAND_SLOT_KIND } from './config.js';
 import { iconHtml } from './icons.js';
+import { translateOr } from './i18n.js';
 
 // Reads a value from a nested object using a dot-separated path, e.g.
 // getByPath(player, 'resources.hp.current'). Undefined if any segment is missing.
@@ -244,9 +245,7 @@ export function itemSlotKind(itemData) {
  * another language renames the slot without touching rules.json.
  */
 export function slotLabel(t, id, kind = false) {
-  const key = kind ? `itemStats.slotKinds.${id}` : `ui.equipmentSlots.${id}`;
-  const name = t(key);
-  return name !== key ? name : id;
+  return translateOr(t, kind ? `itemStats.slotKinds.${id}` : `ui.equipmentSlots.${id}`, id);
 }
 
 /**
@@ -292,9 +291,7 @@ const HIDDEN_ITEM_ATTRS = new Set(['teleportScene', 'attackAttribute', 'actionPo
  * engine-flavored wrapper.
  */
 export function attributeLabel(t, attrId) {
-  const key = `actions.skillBadgeFree.${attrId}`;
-  const name = t(key);
-  return name !== key ? name : attrId.charAt(0).toUpperCase() + attrId.slice(1);
+  return translateOr(t, `actions.skillBadgeFree.${attrId}`, attrId.charAt(0).toUpperCase() + attrId.slice(1));
 }
 
 /**
@@ -360,9 +357,7 @@ export function itemStatLines(t, itemData, attributes = {}, uses = null, items =
         lines.push(v === 'all' ? t('itemStats.targetsAll') : t('itemStats.targets', { value: v }));
         continue;
       }
-      const key = `itemStats.${k}`;
-      const line = t(key, { value: v });
-      lines.push(line !== key ? line : `${k}: ${v}`);
+      lines.push(translateOr(t, `itemStats.${k}`, `${k}: ${v}`, { value: v }));
     }
   }
   // The remaining rest-limited uses trail the item's fixed facts — live
@@ -474,8 +469,7 @@ function wrapLogPrefix(html) {
 // on purpose.
 function narratorLabelHtml(body, t = null) {
   if (!body || /^\s*\[/.test(body)) return body;
-  const translated = t ? t('log.Narrator') : null;
-  const label = translated && translated !== 'log.Narrator' ? translated : 'Narrator';
+  const label = t ? translateOr(t, 'log.Narrator', 'Narrator') : 'Narrator';
   return `[${label}] <span class="${CSS.SCENE_BODY_TEXT}">${body}</span>`;
 }
 

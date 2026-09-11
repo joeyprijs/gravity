@@ -7,7 +7,7 @@ import { UIManager } from '../ui/ui.js';
 import { SceneRenderer } from '../systems/scene.js';
 import { AudioSystem } from '../systems/audio.js';
 import { DEFAULT_WORLD_MAP_SIZE, EL, LOG, TIMER_SAFE_ACTIONS } from './config.js';
-import { resolveLanguage } from './i18n.js';
+import { resolveLanguage, translateOr } from './i18n.js';
 import { getByPath } from './utils.js';
 import { normalizeCarriedItems, validateGameData } from './validate.js';
 import { registerBuiltinActions } from '../systems/actions.js';
@@ -377,9 +377,7 @@ export class RPGEngine {
 
   openScene(modifier) { return this.narrative.openScene(modifier); }
   log(type, message, variant, persist) {
-    const localeKey = `log.${type}`;
-    const label = this.t(localeKey);
-    return this.narrative.log(label !== localeKey ? label : type, message, variant, persist);
+    return this.narrative.log(translateOr(this.t, `log.${type}`, type), message, variant, persist);
   }
   // Amend-or-false: extends the last player choice line with the act's yield
   // (see NarrativeLog.amendLast). Callers log a standalone line on false.

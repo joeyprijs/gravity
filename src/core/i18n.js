@@ -14,6 +14,14 @@ export function isOne(language, count) {
   return new Intl.PluralRules(language).select(count) === 'one';
 }
 
+// t(key, params), or fallback when the locale has no entry for the key. The
+// translator signals a miss by echoing the key, so callers with a sensible
+// stand-in (a raw id, a generic string) use this instead of comparing.
+export function translateOr(t, key, fallback, params) {
+  const text = t(key, params);
+  return text !== key ? text : fallback;
+}
+
 /**
  * Picks the active language from the languages a game ships and the user's
  * preference list. Preference tags are matched case-insensitively against the
