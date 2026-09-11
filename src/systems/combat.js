@@ -5,28 +5,23 @@ import { rollBreakdown, skillLabel } from './skill-checks.js';
 import { formatList, isOne } from '../core/i18n.js';
 import { CombatRenderer } from '../ui/combat-ui.js';
 
-// CombatSystem runs a turn-based encounter. Initiative splits the enemies into
-// a "before" phase (out-rolled the player) and an "after" phase; the player's
-// turn ends when their AP runs out, and AP refills at the close of each round.
+// A turn-based encounter. Initiative splits the enemies into those acting
+// before the player and those after; the player's turn ends when their AP
+// runs out, and AP refills each round.
 export class CombatSystem {
   constructor(engine) {
     this.engine = engine;
     this.enemies = [];
 
-    // originOption captures the scene option action that triggered this encounter.
-    // On victory, the option's onVictory actions array is executed as a pipeline.
+    // The action that started the fight; its onVictory pipeline runs on the win.
     this.originOption = null;
     this.playerInit = 0;
     this.renderer = new CombatRenderer(this);
   }
 
-  // Whether an encounter is active — a facade over the engine's mode machine,
-  // which is the single source of truth.
   get inCombat() { return this.engine.inCombat; }
 
-  // Called by engine._spendAP after every combat AP spend. Hands the turn to
-  // the enemies once the player's AP is exhausted; otherwise refreshes the
-  // combat controls.
+  // After every AP spend: the enemies' turn once AP is out, else a refresh.
   notePlayerSpentAP() {
     if (!this.inCombat) return;
     if (this.engine.state.getPlayer().resources.ap.current <= 0) {
@@ -36,12 +31,9 @@ export class CombatSystem {
     }
   }
 
-  // Starts an encounter against the given NPC ids, rolls initiatives, and
-  // launches the first round. `fromSceneEntry` marks an `autoAttack` ambush,
-  // where the scene description just framed the encounter and the enemy's own
-  // description would repeat it.
+  // fromSceneEntry marks an ambush the scene description already framed.
   startCombat(enemyIds, originOption, { fromSceneEntry = false } = {}) {
-    // Clone enemy templates so battles never mutate the loaded base data.
+    // Clones, so a battle never mutates the loaded data.
     const enemyDataList = enemyIds.map(id => {
       const data = this.engine.data.npcs[id];
       if (!data) {
@@ -60,22 +52,16 @@ export class CombatSystem {
     this.enemies = enemyDataList;
     this.originOption = originOption;
 
-    // AP is a per-combat tactical budget: the player always begins a fight
-    // fully charged.
     this.engine.state.modifyPlayerStat('ap', 'full');
     const player = this.engine.state.getPlayer();
 
-    // List grammar comes from Intl, not code (see _narrateEnemyResult).
     const names = formatList(this.engine.language, this.enemies.map(e => e.name));
 
     this.engine.openScene(CSS.SCENE_COMBAT);
     this.engine.currentSceneEl.appendChild(
       buildSceneDescription(
         this.engine.t('combat.fightingTitle', { names }),
-        // A solo enemy introduces itself at the top of the fight — but only
-        // when nothing else framed the encounter. On an ambush the scene
-        // description a heartbeat earlier already narrated this instant;
-        // whoever framed it owns the prose.
+        // A solo enemy introduces itself, unless the scene already framed it.
         !fromSceneEntry && this.enemies.length === 1 ? (this.enemies[0].description || null) : null,
         this.engine.t
       )
@@ -83,7 +69,7 @@ export class CombatSystem {
 
     this.engine.log(LOG.COMBAT, this.engine.t('combat.started', { names }), 'combat');
 
-    // Initiative: 1d20 + flat modifier; higher acts earlier, ties keep order.
+    // Higher acts earlier; ties keep order.
     const initLabel = this.engine.t('combat.initiativeLabel');
     const playerInitBase = roll(1, MAX_D20_ROLL);
     const playerInitMod = player.attributes.initiative ?? 0;
@@ -119,10 +105,8 @@ export class CombatSystem {
     if (anyEnemyGoesFirst) this.enemyTurn('before');
   }
 
-  // Spends one use of a rest-limited weapon/spell (attributes.uses), or
-  // returns false when none remain. The spend lands before the attack resolves
-  // — the cast is committed hit or miss, and ending combat by the kill can't
-  // dodge it. Unlimited items pass through untouched.
+  // False when a rest-limited item has no uses left. Spent before the attack
+  // resolves: the cast is committed hit or miss.
   _spendItemUse(weapon) {
     const uses = this.engine.state.getItemUses(weapon.id);
     if (!uses) return true;
@@ -134,18 +118,10 @@ export class CombatSystem {
     return true;
   }
 
-  // The shared opening of every player attack: the AP precheck, the weapon's
-  // use, and the one hit roll. Returns null when the attack can't happen.
-  //
-  // The renderer disables unaffordable attacks, but damage lands BEFORE the
-  // spend — precheck the turn budget (mirroring items.js's useItem guard) so a
-  // call that slipped past the buttons can't resolve an attack the budget
-  // can't pay for.
-  //
-  // Accuracy is the wielder's: d20 + the weapon's governing attribute
-  // (attributes.attackAttribute — strength for a sword, intelligence for a
-  // spell). Weapons themselves carry no hit bonus; an "accurate blade" is
-  // gear with attributeBonuses on the governing attribute.
+  // The opening of every player attack: the AP precheck (damage lands before
+  // the spend, so a call past the disabled buttons must not resolve), the
+  // item use, and the hit roll: d20 + the weapon's attackAttribute. Null when
+  // the attack cannot happen.
   _beginPlayerAttack(weapon) {
     const apCost = weapon.attributes?.actionPoints ?? 0;
     if (this.remainingTurnBudget() < apCost) {
@@ -164,7 +140,6 @@ export class CombatSystem {
     };
   }
 
-  // A player attack with an equipped weapon/spell against one enemy.
   playerAttack(weapon, targetEnemy) {
     const attack = this._beginPlayerAttack(weapon);
     if (!attack) return;
@@ -178,7 +153,6 @@ export class CombatSystem {
         weapon: weapon.name, roll: hitRoll, breakdown,
         ac: targetEnemy.attributes.armorClass
       }), 'damage');
-      // The damage result is its own log entry (see enemyTurn).
       this.engine.log(LOG.PLAYER, this.engine.t('combat.enemyTakesDamage', {
         target: targetEnemy.name, damage: dmgResult.total,
         dice: weapon.attributes.damageRoll, rollStr: dmgResult.string
@@ -196,11 +170,8 @@ export class CombatSystem {
     this.engine._spendAP(apCost);
   }
 
-  // A player attack that strikes several enemies with one cast
-  // (attributes.targets): one hit roll, compared against each target's AC,
-  // with every enemy caught taking its own damage roll. targetEnemies is the
-  // blast (targets: N — splashTargets around the enemy the player attacked);
-  // null strikes every living enemy (targets: "all").
+  // One hit roll against each target's AC, each hit taking its own damage
+  // roll. targetEnemies is the splash of a capped attack; null is every enemy.
   playerAttackMulti(weapon, targetEnemies = null) {
     const attack = this._beginPlayerAttack(weapon);
     if (!attack) return;
@@ -209,7 +180,6 @@ export class CombatSystem {
 
     const living = (targetEnemies ?? this.enemies).filter(e => e.attributes.healthPoints > 0);
 
-    // An aimed cast names its chosen targets; "all" speaks of the field.
     this.engine.log(LOG.PLAYER, targetEnemies
       ? this.engine.t('combat.aoeAttackTargets', {
           weapon: weapon.name, roll: hitRoll, breakdown,
@@ -234,7 +204,7 @@ export class CombatSystem {
       }
     }
 
-    // Defeats resolve after every target has taken its share of the one cast.
+    // Defeats resolve after every target has taken its share.
     for (const enemy of living) {
       if (enemy.attributes.healthPoints <= 0 && this._handleEnemyDefeat(enemy)) return;
     }
@@ -242,30 +212,24 @@ export class CombatSystem {
     this.engine._spendAP(apCost);
   }
 
-  // One damage roll for a weapon in a wielder's hands: the dice, plus the
-  // wielder's damageAttribute when the weapon names one — damage scales with
-  // its wielder the same way accuracy does (attackAttribute), player or enemy.
+  // The dice plus the wielder's damageAttribute when the weapon names one.
   _rollDamage(weapon, wielderAttributes) {
     const result = parseDamage(weapon.attributes.damageRoll);
     const attrId = weapon.attributes?.damageAttribute;
     const mod = attrId ? (wielderAttributes[attrId] ?? 0) : 0;
     if (!mod) return result;
     return {
-      // Clamped like parseDamage — negative damage would heal the target.
+      // Clamped like parseDamage: negative damage would heal.
       total: Math.max(0, result.total + mod),
       string: `${result.string} ${mod < 0 ? '-' : '+'} ${Math.abs(mod)} ${skillLabel(this.engine, attrId)}`
     };
   }
 
-  // AP the player may still spend this turn — their current AP. The engine's
-  // _spendAP checks this before any combat action and the renderer disables
-  // attacks the pool can't afford.
   remainingTurnBudget() {
     return this.engine.state.getPlayer().resources.ap.current;
   }
 
-  // Resolves an enemy's (possible) defeat after damage lands. Returns true
-  // when the whole battle ended — callers stop processing.
+  // True when the whole battle ended.
   _handleEnemyDefeat(targetEnemy) {
     if (targetEnemy.attributes.healthPoints > 0) return false;
     if (this.enemies.every(e => e.attributes.healthPoints <= 0)) {
@@ -276,8 +240,7 @@ export class CombatSystem {
     return false;
   }
 
-  // Runs the attacks of one initiative phase: 'before' is the enemies who
-  // out-rolled the player, 'after' the ones who rolled lower.
+  // 'before' is the enemies who out-rolled the player, 'after' the rest.
   enemyTurn(phase = 'after') {
     if (!this.inCombat) return;
 
@@ -297,8 +260,7 @@ export class CombatSystem {
         console.warn(`[Gravity] enemyTurn: no weapon resolved for "${enemy.name}", skipping.`);
         continue;
       }
-      // Same authoring-slip visibility as the missing weapon above: without an
-      // AP budget the enemy stands mute every turn with no other hint.
+      // Without an AP budget the enemy would stand mute with no other hint.
       if (!(enemy.attributes.actionPoints > 0)) {
         console.warn(`[Gravity] enemyTurn: "${enemy.name}" has no attributes.actionPoints — it can never attack.`);
         continue;
@@ -314,14 +276,12 @@ export class CombatSystem {
     }
 
     if (phase === 'before') {
-      // High-initiative enemies are done — the round opens for the player.
+      // The round opens for the player.
       this.renderer.render();
     } else {
-      // Low-initiative enemies are done — the round ends and the player's AP
-      // pool recharges for a fresh turn.
+      // The round ends; AP recharges.
       this.engine.state.modifyPlayerStat('ap', 'full');
 
-      // High-initiative enemies open the next round before the player acts.
       const hasBeforeEnemies = this.enemies.some(e => e.attributes.healthPoints > 0 && (e.initiativeRoll ?? 0) > this.playerInit);
       if (hasBeforeEnemies) {
         this.enemyTurn('before');
@@ -331,10 +291,7 @@ export class CombatSystem {
     }
   }
 
-  // Logs one enemy's attack summary and its damage line. The damage result is
-  // its own log entry: same source, so it groups under the attack line with a
-  // breathing gap instead of a repeated label. Plurals pick a One-variant key
-  // and lists join through Intl — no English grammar in code.
+  // The attack summary and, as its own grouped entry, the damage line.
   _narrateEnemyResult(enemy, eWeapon, result) {
     const lang = this.engine.language;
     const parts = [];
@@ -359,12 +316,8 @@ export class CombatSystem {
       : this.engine.t('combat.playerTakesNoDamage'), 'damage');
   }
 
-  // The weapon an enemy attacks with: the first hand slot of theirs holding a
-  // Weapon or Spell, falling back to rules.fallbackWeapons.enemy (the core
-  // claw by default). Reading the kind rather than one named hand means an
-  // enemy armed in either hand still swings, and an enemy carrying a shield
-  // in one hand doesn't try to hit anyone with it. Null when neither resolves
-  // to a loaded item.
+  // The first hand slot holding a Weapon or Spell, else the fallback claw;
+  // null when neither is a loaded item.
   _resolveEnemyWeapon(enemy) {
     const item = handSlots(this.engine.data.rules)
       .map(slot => this.engine.data.items[enemy.equipment?.[slot]])
@@ -373,10 +326,8 @@ export class CombatSystem {
     return item || this.engine.data.items[fallbackId] || null;
   }
 
-  // Resolves one enemy's attacks for the turn: swings until its AP budget
-  // can't cover another attack or someone drops. Returns the tallies and
-  // roll breakdowns ({ attackCount, hits, misses, totalDamage, hitRolls,
-  // missRolls, damageRolls }) for _narrateEnemyResult.
+  // Swings until the AP budget is out or someone drops; returns the tallies
+  // for _narrateEnemyResult.
   _resolveEnemyAttacks(eWeapon, eAP, enemy) {
     if (!eWeapon.attributes?.actionPoints) {
       return { attackCount: 0, hits: 0, misses: 0, totalDamage: 0, hitRolls: [], missRolls: [], damageRolls: [] };
@@ -390,8 +341,7 @@ export class CombatSystem {
       eAP -= eWeapon.attributes.actionPoints;
       attackCount++;
 
-      // Enemies use their own attribute for the weapon's attackAttribute —
-      // an accurate enemy is one with the stat, not one with a special blade.
+      // The enemy's own attribute; an accurate enemy is one with the stat.
       const attrId = eWeapon.attributes?.attackAttribute;
       const attrMod = attrId ? (enemy.attributes[attrId] ?? 0) : 0;
       const baseRoll = roll(1, MAX_D20_ROLL);
@@ -417,32 +367,23 @@ export class CombatSystem {
     return { attackCount, hits, misses, totalDamage, hitRolls, missRolls, damageRolls };
   }
 
-  // Finalizes combat: rewards and the post-fight re-render on victory, the
-  // game-over screen on defeat.
   endCombat(isVictory) {
     this.engine.setMode(isVictory ? 'scene' : 'gameover');
 
     if (isVictory) {
       const names = formatList(this.engine.language, this.enemies.map(e => e.name));
 
-      // Award XP from defeated enemies, folded into the victory line — one
-      // event, one message. addXP carries surplus across level-ups, so a
-      // single summed call matches the per-enemy awards it replaces.
+      // One summed award, folded into the victory line.
       const totalXp = this.enemies.reduce((sum, e) => sum + (e.attributes.xpReward || 0), 0);
       if (totalXp > 0) this.engine.state.addXP(totalXp);
       this.engine.log(LOG.SYSTEM, this.engine.t(totalXp > 0 ? 'combat.victoryXp' : 'combat.victory', { names, xp: totalXp }), 'loot');
 
-      // Restore AP to max at the combat boundary so the out-of-combat sheet
-      // reads full and the next fight opens fully charged.
       this.engine.state.modifyPlayerStat('ap', 'full');
 
       const didNavigate = this.engine.snapshotNavigation();
       this.engine.runActions(this.originOption?.onVictory || []);
 
-      // If the victory pipeline did not trigger scene navigation (or open a
-      // dialogue, custom UI, or new combat), force re-render options. The
-      // re-render skips the scene's autoAttack — without that, victory on an
-      // auto-attack scene would instantly restart the same encounter.
+      // Without skipAutoAttack a won ambush would restart itself.
       if (!didNavigate()) this.engine.renderScene(this.engine.state.getCurrentSceneId(), { skipAutoAttack: true });
 
     } else {

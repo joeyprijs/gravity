@@ -1,7 +1,4 @@
-// The condition evaluator: gates scene options, dialogue responses,
-// description variants, and auto-combat against the game state.
-//
-// Leaf shapes:
+// Gates options, responses, description variants, and auto-combat. Leaves:
 //   flag:      { "flag": "door_unlocked", "value": true }
 //   item:      { "item": "cellar_key", "count": 1 }
 //   gold:      { "gold": { "less_than": 50 } }
@@ -15,15 +12,14 @@
 //   story:     { "story": "gertas_story", "chapter": "the_dance" }  chapter heard
 //   attribute: { "stealth": { "more_than": 2 } }      any declared attribute
 //
-// Combinators `and` (array), `or` (array), and `not` (single child) nest
-// arbitrarily. Like dice.js, this module is DOM- and engine-free.
+// `and`/`or` (arrays) and `not` (one child) nest arbitrarily. DOM- and
+// engine-free.
 
 import { MISSION_STATUS } from '../core/config.js';
 import { getDay, getSegment } from './time.js';
 
-// Compares a live numeric value against a condition operand: a bare number
-// (meaning at-least — the natural "do I qualify?" gate) or an operator object:
-// at_least, more_than, at_most, less_than, is.
+// A bare number means at-least; else one of at_least, more_than, at_most,
+// less_than, is.
 function compare(actual, operand) {
   if (typeof operand === 'number') return actual >= operand;
 
@@ -37,12 +33,10 @@ function compare(actual, operand) {
   return false;
 }
 
-// Recursively evaluates a condition tree against a StateManager. An absent
-// condition always passes.
+// An absent condition passes.
 export function evaluateCondition(condition, state) {
   if (!condition) return true;
 
-  // Combinators recurse before any leaf is considered.
   if (condition.and) return condition.and.every(c => evaluateCondition(c, state));
   if (condition.or) return condition.or.some(c => evaluateCondition(c, state));
   if (condition.not) return !evaluateCondition(condition.not, state);
@@ -50,10 +44,8 @@ export function evaluateCondition(condition, state) {
   if ('flag' in condition) return state.getFlag(condition.flag) === condition.value;
 
   if ('mission' in condition) {
-    // `stage` is "the player is doing this right now" — exact current stage,
-    // active missions only. `stageReached` is "the story got at least this
-    // far" — compared by authored stage order, and still true after the
-    // mission ends (the recorded stage stays where it got to).
+    // stage: the exact current stage of an active mission. stageReached: at
+    // or past, by authored order, and still true after the mission ends.
     if ('stage' in condition) {
       return state.getMissionStatus(condition.mission) === MISSION_STATUS.ACTIVE
         && state.getMissionStage(condition.mission) === condition.stage;
@@ -66,9 +58,7 @@ export function evaluateCondition(condition, state) {
     return state.getMissionStatus(condition.mission) === condition.status;
   }
 
-  // Has the player heard this chapter of a story book? Granted chapters are
-  // the state the book itself replays, so gating on one can never disagree
-  // with what the book shows — the resume mechanism for long stories.
+  // Gating on a heard chapter never disagrees with what the book shows.
   if ('story' in condition) {
     return state.hasStoryChapter(condition.story, condition.chapter);
   }
@@ -76,12 +66,8 @@ export function evaluateCondition(condition, state) {
   const player = state.getPlayer();
   const attrs = player.attributes ?? {};
 
-  // Time leaves: absolute elapsed ticks, derived day number, day segment.
-  // Day and segment need rules.time (ticksPerDay / segments) — without that
-  // config the leaf evaluates false (validateGameData warns at load).
-  // A custom attribute sharing one of these names predates the leaf — the
-  // attribute keeps its original semantics via the attributes fallthrough
-  // below (validateGameData flags the collision).
+  // day and segment need rules.time, else false. A custom attribute sharing
+  // one of these names keeps its meaning through the fallthrough below.
   if ('time' in condition && !('time' in attrs)) {
     return compare(state.getTicks?.() ?? 0, condition.time);
   }
@@ -93,8 +79,7 @@ export function evaluateCondition(condition, state) {
     return getSegment(state.getTicks?.() ?? 0, state.getRules?.()?.time) === condition.segment;
   }
 
-  // Item possession counts both unequipped inventory stacks and worn slots,
-  // so equipping the cellar key can't lock the player out of the cellar.
+  // Worn items count, so equipping a key cannot lock a door.
   if ('item' in condition) {
     const totalCount = state.countPlayerItem(condition.item);
     return condition.count ? totalCount >= condition.count : totalCount > 0;
@@ -103,9 +88,7 @@ export function evaluateCondition(condition, state) {
   if ('level' in condition) return compare(player.level, condition.level);
   if ('gold' in condition) return compare(player.resources.gold, condition.gold);
 
-  // Any declared attribute (perception, stealth, …) is a leaf by name, so
-  // rules.customAttributes gate content without engine changes. Iterate the
-  // condition's own keys, not the player's whole attribute map.
+  // Any declared attribute is a leaf by name.
   for (const key of Object.keys(condition)) {
     if (key in attrs) return compare(attrs[key], condition[key]);
   }

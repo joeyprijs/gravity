@@ -11,14 +11,12 @@ import {
   rollBreakdown, skillLabel
 } from './skill-checks.js';
 
-// SceneRenderer handles navigating to scenes, resolving their descriptions,
-// and rendering their option buttons. It is the main driver of scene-to-scene
-// movement and all non-combat, non-dialogue player interactions.
+// Scene rendering: the description, the options panel, the skill checks, and
+// the moves between scenes.
 export class SceneRenderer {
   constructor(engine) {
     this.engine = engine;
-    // Tracks the last rendered scene/desc so we don't duplicate narrative
-    // entries when re-rendering options without changing the scene body.
+    // So an options re-render does not append the description again.
     this.lastRenderedSceneId = null;
     this.lastRenderedDesc = null;
   }
@@ -28,9 +26,8 @@ export class SceneRenderer {
     this.lastRenderedDesc = null;
   }
 
-  // Called after a save is loaded. Syncs the cache to the restored state so
-  // the next render doesn't duplicate the scene description, then re-renders
-  // the option buttons without appending a new narrative block.
+  // After a load: sync the cache so the next render does not repeat the
+  // description, and rebuild the options without a new narrative block.
   restoreFromSave(sceneId, lastDesc) {
     if (lastDesc !== null) {
       this.lastRenderedSceneId = sceneId;
@@ -43,10 +40,8 @@ export class SceneRenderer {
     }
   }
 
-  // Renders a scene: its description, options, skills, and any auto-combat.
-  // No-op while combat is active. skipAutoAttack suppresses the scene's
-  // autoAttack encounter — the post-victory re-render uses it so winning a
-  // fight on an auto-attack scene doesn't immediately restart it.
+  // No-op in combat. skipAutoAttack is for the post-victory re-render, so a
+  // won ambush does not restart itself.
   render(sceneId, { skipAutoAttack = false } = {}) {
     if (this.engine.inCombat) return;
 
@@ -56,23 +51,19 @@ export class SceneRenderer {
       return;
     }
 
-    // Passive checks roll BEFORE the description resolves, so conditional
-    // description variants already see the flags they set. Their narration
-    // logs after the description block (see below).
+    // Passive checks roll before the description resolves, so its variants
+    // see the flags they set; their narration logs after it.
     const passiveTexts = this._rollPassiveChecks(scene, sceneId);
 
-    // Attempt counters reset on actual (re-)entry only — a same-scene
-    // re-render (e.g. after a successful check) must not rewind other checks'
-    // retry wording or refill their maxAttempts budgets mid-visit.
+    // Attempt counters reset on entry only; a same-scene re-render must not
+    // refill maxAttempts budgets mid-visit.
     const isEntry = this.engine.state.getCurrentSceneId() !== sceneId;
 
-    // Visited before current: the current-scene notification re-renders the
-    // minimap, which reads visitedScenes.
+    // Visited before current: the current-scene notification redraws the map.
     this.engine.state.addVisitedScene(sceneId);
     this.engine.state.setCurrentSceneId(sceneId);
 
     this._appendSceneDescription(scene, sceneId);
-    // Re-syncing is a no-op while the loop is unchanged.
     this.engine.audio?.syncAmbience(scene);
 
     passiveTexts.forEach(text => this.engine.log(LOG.NARRATOR, text));
@@ -80,15 +71,10 @@ export class SceneRenderer {
     this._awardSceneXP(scene, sceneId);
     this.renderOptions(scene);
 
-    // Emitted after the options render, so a listener may replace the panel
-    // with a UI of its own (the curator opens its dashboard on entering a wing).
-    // `isEntry` separates walking in from a same-scene re-render or a save
-    // restore — listeners that act on arrival must check it. Quest triggers do
-    // not: they re-check scene.questTrigger and are idempotent. The scene's
-    // auto-encounter is decided BEFORE the emit and passed as `startsCombat`:
-    // combat hasn't begun yet at this point, so a listener that opens a UI on
-    // arrival can't learn from engine.inCombat that a fight is about to take
-    // the screen over.
+    // After the options render, so a listener may replace the panel with a UI
+    // of its own. isEntry separates arrival from a re-render; startsCombat is
+    // decided before the emit because a listener opening a UI on arrival
+    // cannot otherwise know a fight is about to take the screen.
     const startsCombat = !skipAutoAttack && this._autoAttackDue(scene);
     this.engine.emit('scene:entered', { sceneId, scene, isEntry, startsCombat });
 
@@ -102,16 +88,12 @@ export class SceneRenderer {
     this.engine.scrollNarrativeToBottom();
   }
 
-  // Appends the scene description as a new narrative block — but only when the
-  // scene or its description actually changed, preventing duplicate entries
-  // when options re-render.
+  // A new narrative block, only when the scene or its description changed.
   _appendSceneDescription(scene, sceneId) {
     const currentDesc = this._resolveDescription(scene);
     if (this.lastRenderedSceneId === sceneId && this.lastRenderedDesc === currentDesc) return;
 
     this.engine.openScene();
-    // Scene content comes from developer-authored JSON, not user input —
-    // buildSceneDescription uses innerHTML for the body to allow basic formatting.
     const descEl = buildSceneDescription(scene.title || scene.name, currentDesc, this.engine.t);
     this.engine.currentSceneEl.appendChild(descEl);
     this.engine.state.appendLog({ type: 'scene', title: scene.title || scene.name, desc: currentDesc });
@@ -120,12 +102,8 @@ export class SceneRenderer {
     this.lastRenderedDesc = currentDesc;
   }
 
-  // Passive checks: auto-rolled the first time the player enters the scene,
-  // writing pass/fail into an author-named flag that conditions, description
-  // variants, and option gates can read. Rolled exactly once per game — never
-  // re-rolled on re-entry — so the world stays consistent. Silent unless the
-  // check succeeds and carries authored `text` (returned for post-description
-  // logging).
+  // Rolled once per game on first entry, writing pass/fail into an authored
+  // flag. Returns the success texts to narrate after the description.
   _rollPassiveChecks(scene, sceneId) {
     const texts = [];
     (scene.passiveChecks || []).forEach((check, i) => {
@@ -141,9 +119,8 @@ export class SceneRenderer {
     return texts;
   }
 
-  // One-time XP reward on first visit. The flag prevents re-awarding on
-  // subsequent visits or after loading a save. Lives in render(), not
-  // renderOptions() — rendering buttons must never mutate progression state.
+  // Once per game; in render(), because rendering buttons must never mutate
+  // progression.
   _awardSceneXP(scene, sceneId) {
     if (!scene.xpReward) return;
     const xpFlag = FLAG_KEYS.xpAwarded(sceneId);
@@ -153,8 +130,7 @@ export class SceneRenderer {
     this.engine.log(LOG.SYSTEM, this.engine.t('loot.xpGained', { amount: scene.xpReward }), 'loot');
   }
 
-  // Resets skill-check attempt counters on scene re-entry so retryText wording
-  // starts fresh. Discovery progress and resolved (retired) checks persist.
+  // Retry wording starts fresh on re-entry; resolved checks stay resolved.
   _resetSkillAttempts(scene, sceneId) {
     (scene.skills || []).forEach(opt => {
       if (!opt.skillCheck) return;
@@ -176,29 +152,19 @@ export class SceneRenderer {
     const talkOpts = [];
     const actionOpts = [];
 
-    // A "back" option is sorted to the bottom of the list. Detected by the
-    // `return` action type or an explicit `"isBack": true` flag — never by
-    // matching English words in the text, which would break in other locales.
+    // Sinks to the bottom. Detected by action type or the isBack flag, never
+    // by the words in the text.
     const isBackOption = (opt) => {
       if (opt.isBack === true) return true;
       return opt.actions?.some(a => a.type === 'return') ?? false;
     };
 
-    // Which section an option lands in follows from what its pipeline does —
-    // the action type says so in every locale, for the same reason isBackOption
-    // checks types, not words. The unheaded first list is moves within the same
-    // space (a road on, a door to the next room); talking is its own section;
-    // everything left is an act performed here and lands under Actions.
+    // The section follows from what the pipeline does: moves in the unheaded
+    // list, talk under its heading, everything else under Actions.
     const startsAction = (opt, type) => opt.actions?.some(a => a.type === type) ?? false;
 
-    // A door into a building is a move like any other: the building is a
-    // square on the outdoor minimap, and the ground outside it is on the indoor
-    // one, so crossing a threshold either way is a step across the drawn space.
-    //
-    // Where an option leads, as a scene id — whether the move *has* a
-    // direction is addDirectionMarker's question. Road prose does not name its
-    // direction; the marker does, in every language. An unknown destination is
-    // a typo, and validate.js is the one that names it.
+    // Where an option leads, as a scene id; whether the move has a direction
+    // is addDirectionMarker's question. An unknown destination is validate.js's.
     const destinationOf = (opt) => (opt.actions || [])
       .find(a => a.type === 'navigate' && this.engine.data.scenes[a.destination])?.destination;
 
@@ -230,8 +196,7 @@ export class SceneRenderer {
       const stats = [...(extraStats ?? []), ...(reqText ? [reqText] : [])];
       const btn = buildOptionButton(opt.text, stats.length ? stats : null);
 
-      // Where the option leads rides on the button, so focusing it can light
-      // the destination on the minimap (the peek listeners in ui.js).
+      // The destination rides on the button for the minimap peek (ui.js).
       const destId = destinationOf(opt);
       if (destId) {
         addDirectionMarker(this.engine, scene, this.engine.data.scenes[destId], btn);
@@ -244,9 +209,8 @@ export class SceneRenderer {
       return btn;
     };
 
-    // Both headed option sections are opened up front and swept at the end, so
-    // a plugin decorator can append to one without having to know whether this
-    // scene filled it: a section nobody put a button in loses its heading again.
+    // Opened up front and swept at the end, so a decorator can append to a
+    // section without knowing whether the scene filled it.
     const openSection = (container, headingKey) => {
       container.appendChild(createElement('div', CSS.SECTION_HEADING, this.engine.t(headingKey)));
       container.removeAttribute('hidden');
@@ -262,10 +226,8 @@ export class SceneRenderer {
 
     navOpts.forEach(opt => renderOptionBtn(opt));
     talkOpts.forEach(opt => renderOptionBtn(opt, talkContainer));
-    // Acts render in authored order — where a rest sits is the scene author's
-    // call, like whether the scene offers one at all. A rest's card says what
-    // it does, item-style; the short rest disables (rather than hides) at an
-    // empty pool, so what a full rest would give back stays visible.
+    // Authored order. A rest's card says what it does; the short rest disables
+    // rather than hides at an empty pool, so what a full rest restores stays visible.
     actionOpts.forEach(opt => {
       if (startsAction(opt, 'full_rest')) {
         renderOptionBtn(opt, actionsContainer, this._fullRestStats());
@@ -304,9 +266,8 @@ export class SceneRenderer {
       skillsContainer.removeAttribute('hidden');
     }
 
-    // Plugin-registered decorators may append extra option buttons. They get the
-    // panel's headed sections too, so a plugin's own act (the curator's "Curate
-    // the exhibits") sits with the scene's acts instead of among its doors.
+    // Decorators get the headed sections too, so a plugin's act sits with the
+    // scene's acts instead of among its doors.
     const sections = { conversations: talkContainer, actions: actionsContainer };
     for (const decorator of this.engine.sceneDecorators) {
       if (decorator.options) decorator.options(scene, optionsContainer, this.engine, sections);
@@ -317,10 +278,8 @@ export class SceneRenderer {
     sweepSection(actionsContainer);
   }
 
-  // What a short rest does, as card stat lines — shown on any scene act whose
-  // pipeline short-rests: the configured heal, plus the pool's remaining
-  // uses. Null when rules.shortRest isn't wired to a declared pool, so a
-  // misconfigured act still renders as a plain button.
+  // The short rest's card lines: the heal and the pool's remaining uses. Null
+  // when rules.shortRest is not wired to a pool, so the act still renders.
   _shortRestStats() {
     const config = this.engine.data.rules?.shortRest;
     if (!config?.resource) return null;
@@ -333,9 +292,7 @@ export class SceneRenderer {
     ];
   }
 
-  // What a full rest gives back, as card stat lines — shown on any scene act
-  // whose pipeline full-rests (the bedroom's Long Rest). Derived from the
-  // same rules handleFullRest reads, so the lines can't drift from the act.
+  // The full rest's card lines, from the same rules handleFullRest reads.
   _fullRestStats() {
     const t = this.engine.t;
     const resourceLabel = (id) => translateOr(t, `ui.resources.${id}`, id);
@@ -351,8 +308,6 @@ export class SceneRenderer {
     return lines;
   }
 
-  // Executes a chosen scene option: logs the choice (unless silenced) and runs
-  // its action pipeline.
   handleOption(opt) {
     if (this.engine.isGameOver) return; // only Load/Restart act after death
     if (opt.log !== false) this.engine.log(LOG.PLAYER, opt.text, 'choice');
@@ -362,18 +317,15 @@ export class SceneRenderer {
     const didNavigate = this.engine.snapshotNavigation();
     this.engine.runActions(opt.actions || []);
 
-    // Re-render options if nothing caused navigation, so flag changes take
-    // effect immediately.
+    // Flag changes take effect at once when nothing navigated.
     if (!didNavigate()) {
       const scene = this.engine.data.scenes[this.engine.state.getCurrentSceneId()];
       if (scene) this.renderOptions(scene);
     }
   }
 
-  // Picks which rules.time.defaultCosts entry applies to a plain scene option,
-  // from what its pipeline does: moving somewhere defaults to the travel cost,
-  // a full rest to the rest cost. Anything else is free unless the option
-  // carries an explicit timeCost.
+  // Which rules.time.defaultCosts kind a plain option charges: a move the
+  // travel cost, a full rest the rest cost, anything else nothing.
   _optionCostKind(opt) {
     const actions = opt.actions || [];
     if (actions.some(a => a.type === 'navigate' || a.type === 'return')) return 'navigate';
@@ -381,33 +333,23 @@ export class SceneRenderer {
     return null;
   }
 
-  // Advances the world clock for a chosen option/check. An explicit timeCost
-  // always wins; otherwise the kind's default from rules.time.defaultCosts
-  // applies. Always charged BEFORE any pipeline that can navigate, so a timer
-  // that fires can set flags the destination scene already sees. Plain options
-  // charge up front; skill checks charge after their roll and loot are
-  // narrated, so the passage of time reads as a consequence of the attempt.
+  // Charged before any pipeline that can navigate, so a timer that fires can
+  // set flags the destination already sees. Checks charge after their roll,
+  // so time reads as a consequence of the attempt.
   _chargeTime(opt, kind) {
     const cost = resolveTimeCost(opt.timeCost, kind, this.engine.data.rules);
     if (cost > 0) this.engine.advanceTime(cost);
   }
 
-  // Reads one discovery entry's state from the shared per-skill check-state map.
-  // The map is shared by every check in the scene that rolls the same skill
-  // (pass/fail attempt counters, narrative uses, resolution markers), so
-  // discovery state lives NAMESPACED under `disc_<index>` — it must never
-  // replace the whole map, or it wipes its siblings' state. Older saves
-  // stored discovery state at the map's top level; that shape is adopted by
-  // the first discovery entry that reads it.
+  // One discovery entry's state, namespaced under `disc_<index>` in the map
+  // every check of the same skill shares; replacing the whole map would wipe
+  // the siblings. Older saves kept it at the top level, adopted by entry 0.
   _readDiscoveryState(skillKey, i, items) {
     const map = this.engine.state.getCheckState(skillKey);
     const state = typeof map === 'object' && map !== null ? map[`disc_${i}`] : null;
     if (state?.found) return state;
     if (i === 0 && map?.found) {
-      // Legacy top-level shape (pre-namespacing) — adopt it as the FIRST
-      // entry's only (later entries didn't exist when it was written), padding
-      // or truncating `found` to the current item list so no holes or stale
-      // trailing entries survive.
+      // `found` is padded or truncated to the current item list.
       return {
         found: items.map((_, idx) => map.found[idx] ?? false),
         tries: map.tries,
@@ -417,8 +359,7 @@ export class SceneRenderer {
     return { found: items.map(() => false) };
   }
 
-  // Persists one discovery entry's state into the shared map, clearing any
-  // legacy top-level discovery fields it supersedes.
+  // Clears the legacy top-level fields the entry supersedes.
   _saveDiscoveryState(skillKey, i, state) {
     const existing = this.engine.state.getCheckState(skillKey);
     const map = typeof existing === 'object' && existing !== null ? existing : {};
@@ -430,9 +371,8 @@ export class SceneRenderer {
     this.engine.state.setCheckState(skillKey, map);
   }
 
-  // Item-discovery skill check: roll against per-item DCs, track found items.
-  // Returns a button, or null when everything has been found or the check has
-  // been retired (resolveOnce, or an exhausted maxAttempts budget).
+  // A roll against per-item DCs. Null once everything is found or the check
+  // is retired.
   _buildItemDiscoveryButton(opt, i, sceneId, scene) {
     const skillKey = CHECK_KEYS.skillDc(opt.skillCheck, sceneId);
     const items = opt.items;
@@ -455,16 +395,13 @@ export class SceneRenderer {
     return btn;
   }
 
-  // The DC a discovery roll is judged against: the easiest still-hidden
-  // item's — what the button's badge advertised for this attempt.
+  // The easiest still-hidden item's DC, which the badge advertised.
   _lowestHiddenDc(items, state) {
     return Math.min(...items.map(l => l.dc ?? 10).filter((_, idx) => !state.found[idx]));
   }
 
-  // Resolves one discovery attempt: rolls once against every still-hidden
-  // item's DC, marks hits as found, awards the found loot, persists the
-  // updated state, and re-renders the options. A maxAttempts budget that runs
-  // out (or resolveOnce) retires the check; exhaustion runs onExhausted.
+  // One roll against every still-hidden item's DC; an exhausted maxAttempts
+  // budget retires the check and runs onExhausted.
   _resolveDiscovery(opt, i, state, skillKey, scene) {
     const items = opt.items;
     const mod = this.engine.state.getPlayer().attributes[opt.skillCheck] ?? 0;
@@ -489,8 +426,7 @@ export class SceneRenderer {
       dc: lowestDc,
       breakdown: rollBreakdown(baseRoll, mod, skillLabel(this.engine, opt.skillCheck)),
     }), variant);
-    // The outcome narration is its own log entry: same source, so it groups
-    // under the roll line with a breathing gap (like combat's damage lines).
+    // Its own entry, so it groups under the roll line like combat's damage.
     this.engine.log(LOG.SYSTEM, this.engine.t(msgKey), variant);
 
     this._awardDiscoveredLoot(newlyFound);
@@ -510,9 +446,7 @@ export class SceneRenderer {
     this.renderOptions(scene);
   }
 
-  // Awards the loot for newly found discovery entries: rolls table entries
-  // into concrete drops, aggregates duplicates, adds gold/items to the player,
-  // and logs one summary line listing everything found.
+  // Rolls tables into drops, aggregates duplicates, awards, and logs one line.
   _awardDiscoveredLoot(newlyFound) {
     const drops = [];
     newlyFound.forEach(l => {
@@ -546,16 +480,12 @@ export class SceneRenderer {
 
     if (lootItems.length === 0) return;
 
-    // Locale-aware list joining ("A, B, and C") — list grammar never lives
-    // in code, and the sentence itself comes from loot.foundItems.
     const list = formatList(this.engine.language, lootItems);
     this.engine.log(LOG.SYSTEM, this.engine.t('loot.foundItems', { list }), 'loot');
   }
 
-  // Narrative (free) skill check: no roll, no DC — a story beat framed as a
-  // skill. Logs the authored resultText (a string, or an array walked per use)
-  // and runs an optional action pipeline. Retires after one use unless marked
-  // repeatable. Returns a button, or null once retired.
+  // A story beat framed as a skill: no roll, no DC. Retires after one use
+  // unless repeatable.
   _buildNarrativeButton(opt, i, sceneId, scene) {
     const skillKey = CHECK_KEYS.skillDc(opt.skillCheck, sceneId);
     const state = this.engine.state.getCheckState(skillKey);
@@ -565,7 +495,6 @@ export class SceneRenderer {
 
     const badge = translateOr(this.engine.t, `actions.skillBadgeFree.${opt.skillCheck}`, this.engine.t('actions.lookAroundBadge'));
 
-    // Narrative beats are free story moments — no AP, no roll.
     const btn = buildOptionButton(opt.text, badge);
     btn.onclick = () => {
       if (this.engine.isGameOver) return;
@@ -580,7 +509,7 @@ export class SceneRenderer {
         this.engine.log(LOG.SYSTEM, this.engine.t('actions.lookAroundEmpty'));
       }
 
-      // Narrative beats are free by default — no skillAttempt default cost.
+      // No skillAttempt default cost: a beat is free unless it says otherwise.
       this._chargeTime(opt, null);
 
       const didNavigate = this.engine.snapshotNavigation();
@@ -590,10 +519,7 @@ export class SceneRenderer {
     return btn;
   }
 
-  // Pass/fail skill check, resolved against the check's outcome tiers
-  // (critical/success/partial/failure) by the shared runCheckAttempt machine.
-  // Returns a button, or null when the check has been retired (resolveOnce,
-  // or an exhausted maxAttempts budget).
+  // Resolved against the outcome tiers by runCheckAttempt. Null once retired.
   _buildPassFailButton(opt, i, sceneId, scene) {
     const skillKey = CHECK_KEYS.skillDc(opt.skillCheck, sceneId);
     if (isResolved(this.engine.state, skillKey, i)) return null;
@@ -611,12 +537,10 @@ export class SceneRenderer {
         attemptKey: skillKey,
         entryKey: i,
         runActions: (actions) => this.engine.runActions(actions),
-        // Like handleOption, the re-render must be skipped when a pipeline
-        // opened a dialogue or custom UI — rendering would clobber it.
         didNavigate: this.engine.snapshotNavigation(),
         chargeTime: () => this._chargeTime(opt, 'skillAttempt'),
         rerender: () => this.renderOptions(scene),
-        // A success may set flags a description variant reads — re-render fully.
+        // A success may set flags a description variant reads.
         rerenderSuccess: () => this.engine.renderScene(this.engine.state.getCurrentSceneId()),
       });
     };
@@ -635,8 +559,6 @@ export class SceneRenderer {
       desc = variant?.text || '';
     }
 
-    // Plugin-registered decorators may append dynamic HTML to any scene's
-    // description (e.g. the curator plugin's exhibits table).
     const sceneId = this.engine.state.getCurrentSceneId() || scene.id;
     for (const decorator of this.engine.sceneDecorators) {
       if (decorator.description) desc += decorator.description(scene, sceneId, this.engine) || '';

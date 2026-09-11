@@ -1,26 +1,15 @@
-// AudioSystem — the engine's ambience layer: a looping background bed
-// resolved per scene. A scene's own `ambience` overrides its region's; an
-// explicit null silences the scene. Re-syncing to the same path is a no-op, so
-// walking between rooms of one region never restarts the loop.
-//
-// Everything is opt-in via game data — a game that authors no audio fields
-// never fetches or decodes a single byte of audio. Browsers block audio until
-// a user gesture, so the AudioContext is created on the first
-// pointerdown/keydown (data or not); paths resolved before that are
-// remembered and started at unlock. Web Audio (not
-// <audio loop>) because buffer sources loop gaplessly. Safari caveats:
-// callback-form decodeAudioData, no connect() chaining.
+// The ambience layer: one looping bed per scene, the scene's own `ambience`
+// over its region's, null for silence. Browsers block audio until a gesture,
+// so the AudioContext is created on the first pointerdown/keydown and the
+// pending path starts then. Web Audio, because buffer sources loop gaplessly.
 
 const SETTINGS_KEY = 'gravity.audio';
-// 1 is the ceiling: the file's own level, unaltered.
 const DEFAULT_SETTINGS = { muted: false, ambienceVolume: 1 };
 
-// Seconds an ambience loop takes to fade in/out when the location changes.
+// Fade seconds when the location changes.
 export const AMBIENCE_FADE = 1.5;
 
-// Resolves the ambience loop path for a scene against the manifest's regions
-// map: the scene's own `ambience` field wins (null meaning "explicitly
-// silent"), else the region's, else null.
+// The scene's own `ambience` (null: silent) wins over its region's.
 export function resolveAmbience(scene, regions) {
   if ('ambience' in scene) return scene.ambience ?? null;
   return regions?.[scene.region]?.ambience ?? null;
@@ -31,24 +20,22 @@ export class AudioSystem {
     this.engine = engine;
     this.settings = this._loadSettings();
 
-    // Created at unlock; null means "not unlocked yet" everywhere below.
+    // Null until unlock.
     this._ctx = null;
     this._masterGain = null;
     this._channelGain = { ambience: null };
 
-    // path → Promise<AudioBuffer|null>. Failed loads cache null so a missing
-    // file warns once instead of re-fetching on every scene entry.
+    // path → Promise<AudioBuffer|null>; a missing file caches null and warns once.
     this._buffers = new Map();
 
-    // The resolved target loop (what SHOULD be playing) vs the playing one.
+    // What should be playing, and what is.
     this._ambiencePath = null;
     this._ambienceNodes = null; // { source, gain, path }
 
     this._bindUnlock();
   }
 
-  // Syncs the ambience channel to a scene. Called on every scene render and
-  // on save restore; a no-op when the resolved loop is already the target.
+  // On every scene render; a no-op while the loop is unchanged.
   syncAmbience(scene) {
     const path = resolveAmbience(scene, this.engine.data.regions);
     if (path === this._ambiencePath) return;
@@ -58,14 +45,14 @@ export class AudioSystem {
     if (path) this._startAmbience(path);
   }
 
-  // Persisted as a device preference (localStorage), not game state.
+  // A device preference (localStorage), not game state.
   setMuted(muted) {
     this.settings.muted = muted;
     this._saveSettings();
     this._applySettings();
   }
 
-  // Sets a channel's volume (0..1). Persisted like setMuted.
+  // 0..1, persisted like setMuted.
   setVolume(channel, value) {
     this.settings[`${channel}Volume`] = value;
     this._saveSettings();
@@ -91,8 +78,8 @@ export class AudioSystem {
     this._ctx = new Ctx();
     if (this._ctx.state === 'suspended') this._ctx.resume();
 
-    // source → (per-loop fade gain) → channel gain → master gain → speakers.
-    // Separate connect() statements: Safari's connect() returns undefined.
+    // source → fade gain → channel gain → master gain. Separate connect()
+    // calls: Safari's returns undefined.
     this._masterGain = this._ctx.createGain();
     this._masterGain.connect(this._ctx.destination);
     for (const channel of Object.keys(this._channelGain)) {
@@ -115,7 +102,7 @@ export class AudioSystem {
 
   _startAmbience(path) {
     this._getBuffer(path).then(buffer => {
-      // The target may have changed again while the buffer loaded.
+      // The target may have moved on while the buffer loaded.
       if (!buffer || this._ambiencePath !== path || this._ambienceNodes?.path === path) return;
       const source = this._ctx.createBufferSource();
       source.buffer = buffer;
@@ -149,10 +136,8 @@ export class AudioSystem {
     if (!this._buffers.has(path)) {
       const promise = fetch(path)
         .catch(err => {
-          // A failed FETCH (offline, flaky network) is transient — drop the
-          // cache entry so a later scene entry retries, instead of the clip
-          // staying silent for the whole session. A missing file (HTTP error)
-          // or an undecodable one keeps its cached null: warn once, not per entry.
+          // A failed fetch is transient, so a later entry retries; a missing
+          // or undecodable file keeps its cached null.
           this._buffers.delete(path);
           throw err;
         })
@@ -160,7 +145,7 @@ export class AudioSystem {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           return res.arrayBuffer();
         })
-        // Callback form: Safari's decodeAudioData predates the promise form.
+        // Callback form: Safari's decodeAudioData has no promise form.
         .then(data => new Promise((resolve, reject) => this._ctx.decodeAudioData(data, resolve, reject)))
         .catch(err => {
           console.warn(`[Gravity] audio: failed to load "${path}" —`, err);

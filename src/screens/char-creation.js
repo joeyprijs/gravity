@@ -1,19 +1,10 @@
 import { CSS, EL } from '../core/config.js';
 import { createElement, getByPath } from '../core/utils.js';
 
-// CharCreationScreen manages the pre-game character creation overlay.
-// It lets the player enter a name and distribute a small point budget across
-// the stats defined in rules.charCreation.stats (see data/rules.json).
-//
-// When the player confirms, the chosen bonuses are applied to the game state
-// and the overlay is hidden so the main game can start.
-//
-// To add more allocatable stats, change rules.json charCreation.stats —
-// no changes to this file are needed.
+// The pre-game overlay: a name, and a point budget spread over
+// rules.charCreation.stats.
 export class CharCreationScreen {
-  // onComplete: called when the player confirms character creation.
-  // The "Load Save" button triggers the shared #file-upload input; its change
-  // event is handled by UIManager which reveals the game and applies the save.
+  // The Load Save button clicks the shared file input, which UIManager handles.
   constructor(onComplete, t, names = [], rules = {}, state = null) {
     this.onComplete = onComplete;
     this.t = t;
@@ -23,10 +14,8 @@ export class CharCreationScreen {
     this.overlay = document.getElementById(EL.CHAR_CREATION);
 
     const stats = rules.charCreation?.stats ?? [];
-    // Track how many points have been spent on each stat
     this.spent = Object.fromEntries(stats.map(s => [s.id, 0]));
-    // Increment buttons per stat ID — kept here so the rules config objects
-    // stay free of DOM references.
+    // Kept here so the rules objects stay free of DOM references.
     this._incrementBtns = new Map();
     this._render();
   }
@@ -50,7 +39,6 @@ export class CharCreationScreen {
     this.overlay.appendChild(panel);
   }
 
-  // Name input with a random suggestion from the names table.
   _buildNameSection() {
     const section = createElement('div', CSS.CC_SECTION);
     const label = createElement('label', CSS.CC_LABEL, this.t('charCreation.nameLabel'));
@@ -70,8 +58,6 @@ export class CharCreationScreen {
     return section;
   }
 
-  // Point-allocation section: the remaining-points counter plus one row per
-  // stat declared in rules.charCreation.stats.
   _buildStatsSection() {
     const section = createElement('div', CSS.CC_SECTION);
     const title = createElement('div', CSS.CC_LABEL, this.t('charCreation.statPoints'));
@@ -88,11 +74,10 @@ export class CharCreationScreen {
     return section;
   }
 
-  // One stat row: label + description on the left, −/value/+ controls on the right.
   _buildStatRow(stat) {
     const info = createElement('div', CSS.CC_STAT_INFO);
     info.append(
-      // Use localeKey for locale lookup (avoids dot-path traversal issues)
+      // localeKey, because stat.id is a dotted path.
       createElement('span', CSS.CC_STAT_LABEL, this.t(`charCreation.stats.${stat.localeKey}.label`)),
       createElement('span', CSS.CC_STAT_DESC, this.t(`charCreation.stats.${stat.localeKey}.description`)),
     );
@@ -121,7 +106,6 @@ export class CharCreationScreen {
     return row;
   }
 
-  // Confirm + Load Save buttons.
   _buildActionsRow() {
     const actions = createElement('div', CSS.CC_ACTIONS);
 
@@ -129,7 +113,6 @@ export class CharCreationScreen {
     this.confirmBtn.onclick = () => this._confirm();
     this._updateConfirmBtn();
 
-    // Load save button — lets returning players skip char creation
     const loadBtn = createElement('button', [CSS.BTN, CSS.CC_LOAD_BTN], this.t('charCreation.loadSaveBtn'));
     loadBtn.onclick = () => document.getElementById(EL.FILE_UPLOAD).click();
 
@@ -155,7 +138,6 @@ export class CharCreationScreen {
 
   _updateConfirmBtn() {
     this.confirmBtn.disabled = !this.nameInput.value.trim();
-    // Also refresh all increment buttons since points may have changed
     for (const btn of this._incrementBtns.values()) {
       btn.disabled = this.pointsRemaining <= 0;
     }
@@ -165,8 +147,7 @@ export class CharCreationScreen {
     const name = this.nameInput.value.trim();
     if (!name) return;
 
-    // One sanctioned mutation — StateManager owns the point-buy semantics
-    // (raising a resource cap raises the resource itself; see applyCharCreation).
+    // One mutation; StateManager owns the point-buy semantics.
     const stats = this.rules.charCreation?.stats ?? [];
     this.state.applyCharCreation(name, stats.map(stat => ({
       id: stat.id,

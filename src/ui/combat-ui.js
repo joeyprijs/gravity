@@ -1,11 +1,8 @@
 import { buildPanelSection, buildSceneDescription, buildOptionButton, resetOptionsPanel, itemStatLines, handSlots } from '../core/utils.js';
 import { EL, CSS } from '../core/config.js';
 
-// The enemies a capped multi-target attack (targets: N) catches around a
-// primary target: a window of up to N on the living-enemies line (authored
-// encounter order), positioned as centered on the primary as the line's ends
-// allow. The attacked enemy is always inside; its neighbours fill the rest.
-// Pure list math, engine-free, so it runs directly in node:test.
+// The window of up to cap enemies a capped attack catches around its target,
+// as centred on it as the line's ends allow. Pure, for node:test.
 export function splashTargets(living, primary, cap) {
   if (cap >= living.length) return living;
   const idx = living.indexOf(primary);
@@ -13,19 +10,15 @@ export function splashTargets(living, primary, cap) {
   return living.slice(start, start + cap);
 }
 
-// CombatRenderer owns the combat UI: the attack/end-turn controls and the
-// game-over screen. It holds no state of its own — every render reads live
-// from the CombatSystem, so a re-render can never show stale HP or AP.
+// The combat controls and the game-over screen. No state of its own: every
+// render reads the CombatSystem live.
 export class CombatRenderer {
   constructor(combatSystem) {
     this.cs = combatSystem;
   }
 
-  // The attacks the player can make: the Weapon/Spell items in their hand
-  // slots, or rules.fallbackWeapons.player (unarmed) when both are empty —
-  // followed by the spells their worn gear grants (attributes.grantsSpells),
-  // each listed once. A granted spell takes no hand, so it is castable with
-  // both hands full, and it leaves the list the moment its item comes off.
+  // The Weapons and Spells in hand, or the unarmed fallback, plus the spells
+  // worn gear grants.
   getAvailableAttacks() {
     const { equipment } = this.cs.engine.state.getPlayer();
     const items = this.cs.engine.data.items;
@@ -37,9 +30,7 @@ export class CombatRenderer {
       ? held
       : [items[this.cs.engine.data.rules?.fallbackWeapons?.player]].filter(Boolean);
 
-    // Worn gear grants its spells on top. A spell already in hand isn't
-    // offered twice — the charges are the spell's, not the source's, so a
-    // second button would only split one pool across two controls.
+    // A spell already in hand is not offered twice: one pool, one control.
     const granted = Object.values(equipment)
       .flatMap(itemId => items[itemId]?.attributes?.grantsSpells ?? [])
       .map(spellId => items[spellId])
@@ -48,8 +39,6 @@ export class CombatRenderer {
     return [...new Set([...attacks, ...granted])];
   }
 
-  // Renders the game-over screen: the death notice in the narrative log and
-  // the recovery controls in the options panel.
   renderGameOver() {
     this.cs.engine.openScene();
     const desc = buildSceneDescription(
@@ -62,9 +51,7 @@ export class CombatRenderer {
 
     const { container } = resetOptionsPanel();
 
-    // The recovery controls delegate to the options-tab buttons, which only
-    // exist when rules.tabs includes an 'options' widget — skip a control
-    // whose target is missing rather than render a dead button.
+    // Delegates to the options-tab buttons; no dead button when they are absent.
     const loadTarget = document.getElementById(EL.BTN_LOAD);
     if (loadTarget) {
       const loadBtn = buildOptionButton(this.cs.engine.t('combat.loadLastSave'));
@@ -79,12 +66,10 @@ export class CombatRenderer {
       container.appendChild(restartBtn);
     }
 
-    // Dead characters don't drink potions — the sidebar item buttons go dark.
+    // Dead characters do not drink potions.
     document.querySelectorAll(`.${CSS.BTN_ITEM}`).forEach(btn => { btn.disabled = true; });
   }
 
-  // Rebuilds the combat controls: End Turn on top, then one section per
-  // living enemy with an attack button for each available weapon.
   render() {
     const livingEnemies = this.cs.enemies.filter(e => e.attributes.healthPoints > 0);
 
@@ -94,14 +79,12 @@ export class CombatRenderer {
     const fieldWide = attacks.filter(att => att.attributes?.targets === 'all');
     const perEnemy = attacks.filter(att => att.attributes?.targets !== 'all');
 
-    // End Turn sits first so the most-reached-for control never moves as
-    // enemy sections come and go.
+    // First, so the most-reached-for control never moves.
     const endBtn = buildOptionButton(this.cs.engine.t('combat.endTurn'));
     endBtn.onclick = () => this.cs.enemyTurn('after');
     container.appendChild(endBtn);
 
-    // An all-enemies attack takes no target, so it renders once, in its own
-    // section above the enemy list.
+    // An all-enemies attack takes no target, so it renders once.
     if (fieldWide.length) {
       const section = buildPanelSection(this.cs.engine.t('combat.allEnemiesHeading'));
       fieldWide.forEach(att => {
@@ -110,9 +93,7 @@ export class CombatRenderer {
       panel.insertBefore(section, skillsContainer);
     }
 
-    // A capped attack (targets: N) reads like any other: one button under
-    // each enemy. The click centers the blast there — splashTargets adds
-    // the neighbours — so choosing whom to attack still matters.
+    // A capped attack centres its blast on the enemy clicked.
     livingEnemies.forEach(target => {
       const section = buildPanelSection(
         this.cs.engine.t('combat.enemyStats', { name: target.name, hp: target.attributes.healthPoints, ac: target.attributes.armorClass }));
@@ -128,8 +109,7 @@ export class CombatRenderer {
     });
   }
 
-  // One attack button: label, the item's stat lines, disabled when the
-  // player's remaining AP can't cover it or a rest-limited item is spent.
+  // Disabled when AP cannot cover it or the item's uses are spent.
   _attackButton(att, onClick) {
     const uses = this.cs.engine.state.getItemUses(att.id);
     const btn = buildOptionButton(

@@ -2,18 +2,15 @@ import { CSS, EL, HAND_SLOT_KIND } from './config.js';
 import { iconHtml } from './icons.js';
 import { translateOr } from './i18n.js';
 
-// Reads a value from a nested object using a dot-separated path, e.g.
-// getByPath(player, 'resources.hp.current'). Undefined if any segment is missing.
+// getByPath(player, 'resources.hp.current'); undefined if a segment is missing.
 export function getByPath(obj, path) {
   return path.split('.').reduce((cur, key) => cur?.[key], obj);
 }
 
-// Keys that would let a dotted path reach an object's prototype chain. Blocked
-// so setByPath can never be used as a prototype-pollution sink.
+// Blocked in setByPath so a dotted path can never pollute the prototype chain.
 const UNSAFE_PATH_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
-// Sets a value on a nested object using a dot-separated path, e.g.
-// setByPath(player, 'resources.hp.max', 15). Prototype-chain segments are rejected.
+// setByPath(player, 'resources.hp.max', 15); a prototype-chain segment is a no-op.
 export function setByPath(obj, path, value) {
   const parts = path.split('.');
   if (parts.some(p => UNSAFE_PATH_KEYS.has(p))) return;
@@ -22,11 +19,9 @@ export function setByPath(obj, path, value) {
   cur[parts[parts.length - 1]] = value;
 }
 
-// Creates a DOM element. Content is set via textContent — game data (item
-// names, descriptions, locale strings) is always treated as plain text, never
-// HTML. The only sanctioned HTML channels are scene description bodies (see
-// buildSceneDescription) and engine-authored structural templates; dynamic
-// values embedded in those must go through escapeHtml().
+// Content goes in as textContent: game data is never HTML. The only HTML
+// channels are scene description bodies (buildSceneDescription) and
+// engine-authored templates, where dynamic values pass through escapeHtml().
 export function createElement(tag, className = '', textContent = '') {
   const el = document.createElement(tag);
   if (Array.isArray(className)) el.classList.add(...className.filter(Boolean));
@@ -35,8 +30,7 @@ export function createElement(tag, className = '', textContent = '') {
   return el;
 }
 
-// Escapes HTML special characters. Use for any dynamic value (player input,
-// save-file data) that flows into innerHTML.
+// For any dynamic value (player input, save data) that flows into innerHTML.
 export function escapeHtml(str) {
   return String(str)
     .replaceAll('&', '&amp;')
@@ -46,45 +40,36 @@ export function escapeHtml(str) {
     .replaceAll("'", '&#39;');
 }
 
-// Section expand state, keyed by group so it survives panel re-renders within
-// one visit. In memory only — see createSectionToggles for the policy.
+// Expanded sections per group, so a panel re-render within one visit keeps
+// them open. In memory only: never saved, dropped on every tab switch.
 const sectionExpandState = new Map();
 
 // Every toggle group built this session, so collapseAllSections can reach a
-// panel that isn't re-rendered when it opens (the sheet). A group is created
-// once per UI object and the game reloads on restart, so this never grows.
+// panel that is not re-rendered when it opens (the sheet).
 const sectionGroups = new Set();
 
-// Shuts every section in every panel. Called on tab switch.
+// Called on tab switch: a tab always opens as headings only.
 export function collapseAllSections() {
   for (const group of sectionGroups) group.collapseAll();
 }
 
-/**
- * Collapse/expand wiring for section-toggle headings. Every section starts
- * collapsed, so a panel always opens as a short list of headings; expansions
- * are a per-session UI preference — never saved, and dropped on every tab
- * switch. Collapsing hides the body element in place — no re-render, so its
- * bindings and buttons survive. Used by the inventory panel and the sheet
- * tab, each with its own group key.
- */
+// Collapse/expand wiring for the section headings of one panel (the inventory
+// and the sheet each have a group). Collapsing hides the body in place, so its
+// bindings and buttons survive without a re-render.
 export function createSectionToggles(groupKey) {
   let expanded = sectionExpandState.get(groupKey);
   if (!expanded) {
     expanded = new Set();
     sectionExpandState.set(groupKey, expanded);
   }
-  // The heading/body pair currently on screen for each key, so collapseAll can
-  // shut a panel that won't be re-rendered. Re-wiring after a render overwrites
-  // the entry, so this holds live nodes rather than accumulating detached ones.
+  // The live heading/body pair per key; re-wiring after a render overwrites
+  // the entry, so detached nodes never accumulate.
   const wired = new Map();
   const group = {
-    // Read by render decisions that hinge on visibility (e.g. the heading's
-    // new-content dot). A section never opened this session counts as collapsed.
+    // A section never opened this session counts as collapsed.
     isCollapsed(key) { return !expanded.has(key); },
-    // Applies the current state to a heading/body pair and flips it on heading
-    // clicks. onclick, not addEventListener, so re-wiring after a re-render
-    // replaces the handler instead of stacking.
+    // onclick, not addEventListener: re-wiring after a re-render replaces the
+    // handler instead of stacking.
     wire(heading, body, key) {
       wired.set(key, { heading, body });
       const applyState = (isCollapsed) => {
@@ -95,13 +80,13 @@ export function createSectionToggles(groupKey) {
       heading.onclick = () => {
         const nowCollapsed = expanded.delete(key);
         if (!nowCollapsed) expanded.add(key);
-        // Expanding reveals the contents — the new-content dot has done its job.
+        // Expanding reveals the contents; the new-content dot has done its job.
         if (!nowCollapsed) heading.classList.remove(CSS.SECTION_TOGGLE_NOTIFY);
         applyState(nowCollapsed);
       };
     },
-    // Clears the set (what the next render needs) and hides what's on screen
-    // now (what a hidden, un-re-rendered panel needs).
+    // Both the set (for the next render) and the nodes on screen (for a
+    // panel that will not be re-rendered).
     collapseAll() {
       expanded.clear();
       for (const { heading, body } of wired.values()) {
@@ -119,20 +104,17 @@ export function isResourcePool(value) {
   return !!(value && typeof value === 'object' && 'current' in value);
 }
 
-// A number with its sign spelled out ("+2", "-1", "+0") — how modifiers,
-// bonuses, and yields read on badges and log lines.
+// "+2", "-1", "+0": how modifiers, bonuses, and yields read.
 export function formatSigned(n) {
   return n >= 0 ? `+${n}` : `${n}`;
 }
 
-// The one cursor-following hover tooltip, shared by every surface that names
-// things at the pointer (minimap boxes, tab icons). A custom element rather
-// than the native title attribute, whose fixed ~1s hover delay reads as
-// unresponsive — a player pointing at something wants its name now. Created
-// on first use; a single element suffices since only one thing is hovered.
+// The one hover tooltip (minimap boxes, tab icons), created on first use. A
+// custom element because the native title attribute's ~1s delay reads as
+// unresponsive.
 let cursorTooltipEl = null;
 
-// Shows the shared tooltip with the given label, beside the cursor (e is the mousemove event).
+// e is the mousemove event the label follows.
 export function showCursorTooltip(label, e) {
   if (!cursorTooltipEl) {
     cursorTooltipEl = document.createElement('div');
@@ -149,129 +131,82 @@ export function hideCursorTooltip() {
   if (cursorTooltipEl) cursorTooltipEl.hidden = true;
 }
 
-// The display label for an item: its name (falling back to the raw id) plus an
-// "(xN)" suffix when amount > 1, e.g. "Healing Potion (x3)".
+// "Healing Potion (x3)"; the raw id when the item is unknown.
 export function getItemLabel(itemsData, itemId, amount = 1) {
   const name = itemsData[itemId]?.name || itemId;
   return amount > 1 ? `${name} (x${amount})` : name;
 }
 
-/**
- * True for a Special item — the story/required category the player can never
- * part with by choice: not sellable, not displayable, not stowable in a chest.
- * Every surface that parts the player from an item filters on this. Scripted
- * effects (a quest turn-in, a scene that consumes it) still remove it normally.
- */
+// A Special item is one the player can never part with by choice: not sold,
+// exhibited, or stowed. Every such surface filters on this; scripted removal
+// (a quest turn-in) still works.
 export function isSpecialItem(itemData) {
   return itemData?.type === 'Special';
 }
 
-/**
- * Whether a scene is the inside of a building rather than a place in the open
- * world. A building of one room marks itself (`interior` on the scene); the
- * rooms of a bigger one are grouped by a region flagged `interior`.
- *
- * The map draws buildings from this and the interactions panel sorts doors
- * apart from roads by it — both ask here so they can't disagree.
- */
+// Inside a building: the scene marks itself `interior`, or its region is.
+// The map and the options panel both ask here so they cannot disagree.
 export function isInteriorScene(scene, regions) {
   return !!(scene?.interior || regions?.[scene?.region]?.interior);
 }
 
-/**
- * The four cardinal points, clockwise from north.
- *
- * Four, not eight: a diagonal arrow is harder to read at option size — the eye
- * takes "up" instantly but has to work out "up-and-right". Roads are still
- * authored in eight-point order (which needs the finer resolution to be
- * deterministic); what the player sees rounds to the nearest cardinal.
- */
+// Clockwise from north. Four, not eight: a diagonal arrow is the one the eye
+// stops to decode, so display rounds to the nearest cardinal.
 export const COMPASS_POINTS = Object.freeze(['N', 'E', 'S', 'W']);
 
-/**
- * Which way one scene lies from another, as a compass point.
- *
- * Derived from map coordinates rather than authored in prose ("take the forge
- * lane east"), so the game's one piece of navigational meaning isn't trapped
- * in a string a translator has to get right. Null unless both scenes have
- * geometry.
- *
- * Read edge to edge, not centre to centre, because the map is boxes and the
- * eye reads a box by where it sits against yours: an inn hugging the top
- * right corner of a wide square is *above* it, though the line between the
- * two centres runs 47° — a shade past the diagonal, and east by the centre
- * rule. So a box that overlaps this one side to side is north or south, one
- * that overlaps it top to bottom is east or west, and only a box off in a
- * corner, apart on both axes, is placed by the larger of its two gaps. A dead
- * tie there, or two boxes that intersect, falls back to the bearing between
- * centres, rounded to a compass point on purpose: a road bearing 340° reads as
- * north to anyone looking at it.
- */
+// Which way `to` lies from `from`, read edge to edge rather than centre to
+// centre (the rule and its reasons: README, "Regions, Interiors, and the Map").
+// Null unless both scenes have mapDefinitions.
 export function compassPoint(from, to) {
   const a = from?.mapDefinitions;
   const b = to?.mapDefinitions;
   if (!a || !b) return null;
 
-  // Screen coordinates put north at the *top*, so north is a negative dy.
+  // Screen coordinates: north is a negative dy.
   const dx = (b.left + b.width / 2) - (a.left + a.width / 2);
   const dy = (b.top + b.height / 2) - (a.top + a.height / 2);
-  // Per axis, how far apart the two boxes are; negative where they overlap.
+  // Per-axis distance between the boxes; negative where they overlap.
   const gapX = Math.max(b.left - (a.left + a.width), a.left - (b.left + b.width));
   const gapY = Math.max(b.top - (a.top + a.height), a.top - (b.top + b.height));
   if (gapX > gapY && dx) return dx > 0 ? 'E' : 'W';
   if (gapY > gapX && dy) return dy > 0 ? 'S' : 'N';
 
+  // A tie, or intersecting boxes: the bearing between centres, rounded.
   if (!dx && !dy) return null;
   const degrees = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
   const step = 360 / COMPASS_POINTS.length;
   return COMPASS_POINTS[Math.round(degrees / step) % COMPASS_POINTS.length];
 }
 
-// The slot kind an item targets. Armor and everything else name their kind
-// outright; a Weapon or Spell defaults to a hand, so the hundreds of swords a
-// game may hold never have to repeat `"slot": "hand"`. Returns null for an
-// item that goes into no slot at all (a potion, a key).
+// A Weapon or Spell defaults to a hand, so swords never repeat "slot": "hand".
 const HAND_TYPES = new Set(['Weapon', 'Spell']);
 
+// The slot kind an item targets; null for an item that wears nowhere.
 export function itemSlotKind(itemData) {
   if (!itemData) return null;
   return itemData.slot ?? (HAND_TYPES.has(itemData.type) ? HAND_SLOT_KIND : null);
 }
 
-/**
- * The display name of an equipment slot (ui.equipmentSlots.<id>) or of a slot
- * kind (itemStats.slotKinds.<kind>), falling back to the raw id. Slot ids are
- * semantic (`left_ring`), so the wording is the locale's to own — a game in
- * another language renames the slot without touching rules.json.
- */
+// The display name of a slot (ui.equipmentSlots.<id>) or, with kind, of a
+// slot kind (itemStats.slotKinds.<kind>); the raw id when the locale has none.
 export function slotLabel(t, id, kind = false) {
   return translateOr(t, kind ? `itemStats.slotKinds.${id}` : `ui.equipmentSlots.${id}`, id);
 }
 
-/**
- * The declared equipment slots of one kind, in declaration order — which is
- * also the order they render in. Slots are game-defined
- * (rules.playerDefaults.equipmentSlots); only the `hand` kind is special to
- * the engine, because combat reads the player's attacks from it.
- */
+// The declared slot ids of one kind, in declaration order (which is render order).
 export function slotsOfKind(rules, kind) {
   return (rules?.playerDefaults?.equipmentSlots ?? [])
     .filter(slot => slot.kind === kind)
     .map(slot => slot.id);
 }
 
-// The slot ids a weapon or spell can occupy. Combat reads the player's
-// attacks from these, and an enemy's weapon out of the same kind.
+// The one kind the engine depends on: combat reads attacks and weapons from it.
 export function handSlots(rules) {
   return slotsOfKind(rules, HAND_SLOT_KIND);
 }
 
-/**
- * The attribute deltas one equipment piece carries while worn: its
- * attributeBonuses map, plus the legacy armorClassBonus folded into 'ac'.
- * equipItem/unequipItem apply these on swap, so a relic can raise any
- * declared attribute the way armor has always raised AC.
- */
+// What a worn piece adds to the wearer: attributeBonuses, plus the legacy
+// armorClassBonus folded into 'ac'.
 export function equipmentAttributeBonuses(itemData) {
   const map = { ...(itemData?.attributes?.attributeBonuses || {}) };
   const acBonus = itemData?.attributes?.armorClassBonus ?? 0;
@@ -279,41 +214,27 @@ export function equipmentAttributeBonuses(itemData) {
   return map;
 }
 
-// Item attributes the generic stat-line loop must skip: authoring data that
-// isn't a player-facing stat (a scene id on a card helps nobody), and
-// attackAttribute, which gets its own "Uses:" line above the loop.
+// Skipped by the generic stat-line loop: authoring data that is no stat, and
+// the attributes that get a dedicated line.
 const HIDDEN_ITEM_ATTRS = new Set(['teleportScene', 'attackAttribute', 'actionPoints', 'damageAttribute']);
 
-/**
- * The display name of an attribute (actions.skillBadgeFree.<id>), falling
- * back to the capitalized id. Takes the translate function directly so
- * DOM-free helpers can use it; skillLabel (skill-checks.js) is the
- * engine-flavored wrapper.
- */
+// The display name of an attribute (actions.skillBadgeFree.<id>), else the
+// capitalized id. skillLabel (skill-checks.js) is the engine-bound wrapper.
 export function attributeLabel(t, attrId) {
   return translateOr(t, `actions.skillBadgeFree.${attrId}`, attrId.charAt(0).toUpperCase() + attrId.slice(1));
 }
 
-/**
- * Builds the displayable stat lines for an item — one string per stat, in a
- * fixed order: AP cost, hit modifier (signed), then scalar attributes. Known
- * stats resolve their label through the locale (itemStats.<key>); unknown
- * attribute keys fall back to "key: value". Shared by the combat attack
- * buttons and the inventory panel so an item reads the same in both.
- *
- * `attributes` are the wielder's, to show the governing attribute's current
- * modifier. `uses` is the item's remaining rest-limited uses
- * (state.getItemUses) — live state, so the caller looks it up; null renders no
- * uses line. `items` (the loaded definitions) names granted spells; omitted
- * renders no grants line.
- */
+// An item's stat lines, one string each: AP cost, the attack roll, then the
+// scalar attributes (itemStats.<key>, or "key: value" for an unknown one).
+// Shared by the combat attack buttons and every item card. `attributes` are
+// the wielder's; `uses` is state.getItemUses(id) or null; `items` names
+// granted spells.
 export function itemStatLines(t, itemData, attributes = {}, uses = null, items = null) {
   const lines = [];
   const apCost = itemData.attributes?.actionPoints;
   if (apCost !== undefined) lines.push(t('itemStats.actionPoints', { value: apCost }));
-  // The hit line spells out the attack roll ("Attack: 1d20 + Strength") —
-  // accuracy is the wielder's, so their current modifier rides along as a
-  // locale param for locales that want to show it.
+  // "Attack: 1d20 + Strength": accuracy is the wielder's, so their modifier
+  // rides along for locales that show it.
   const attackAttr = itemData.attributes?.attackAttribute;
   if (attackAttr) {
     const mod = attributes[attackAttr] ?? 0;
@@ -326,15 +247,14 @@ export function itemStatLines(t, itemData, attributes = {}, uses = null, items =
     for (const k in itemData.attributes) {
       if (HIDDEN_ITEM_ATTRS.has(k)) continue;
       const v = itemData.attributes[k];
-      // attributeBonuses renders one line per worn bonus ("Bonus: +1 Perception").
+      // One line per worn bonus ("Bonus: +1 Perception").
       if (k === 'attributeBonuses' && v && typeof v === 'object') {
         for (const [attr, amt] of Object.entries(v)) {
           lines.push(t('itemStats.attributeBonus', { attribute: attributeLabel(t, attr), value: formatSigned(amt) }));
         }
         continue;
       }
-      // A granted spell renders one line per spell, naming the spell rather
-      // than its id — the id is authoring data, and no player knows it.
+      // One line per granted spell, by name; no player knows the id.
       if (k === 'grantsSpells' && Array.isArray(v)) {
         for (const spellId of v) {
           const name = items?.[spellId]?.name;
@@ -343,16 +263,14 @@ export function itemStatLines(t, itemData, attributes = {}, uses = null, items =
         continue;
       }
       if (typeof v === 'object') continue;
-      // The damage line carries the wielder-scaling attribute when the weapon
-      // names one ("Damage: 8d6 + Intelligence") — one stat, one line.
+      // "Damage: 8d6 + Intelligence" when the weapon scales with an attribute.
       if (k === 'damageRoll' && itemData.attributes.damageAttribute) {
         lines.push(t('itemStats.damageRollWithAttribute', {
           value: v, attribute: attributeLabel(t, itemData.attributes.damageAttribute),
         }));
         continue;
       }
-      // targets is semantic ("all" or a cap), so its line is a dedicated key,
-      // not the raw data value.
+      // "all" or a cap: a dedicated key, not the raw value.
       if (k === 'targets') {
         lines.push(v === 'all' ? t('itemStats.targetsAll') : t('itemStats.targets', { value: v }));
         continue;
@@ -360,9 +278,8 @@ export function itemStatLines(t, itemData, attributes = {}, uses = null, items =
       lines.push(translateOr(t, `itemStats.${k}`, `${k}: ${v}`, { value: v }));
     }
   }
-  // The remaining rest-limited uses trail the item's fixed facts — live
-  // state, not a property of the item. The line names the rest that brings
-  // the charges back, so the key splits on the refresh.
+  // Live state trails the item's fixed facts; the key names the rest that
+  // brings the charges back.
   if (uses) {
     lines.push(t(uses.refresh === 'short_rest' ? 'itemStats.usesShortRest' : 'itemStats.usesFullRest',
       { current: uses.current, max: uses.max }));
@@ -370,27 +287,15 @@ export function itemStatLines(t, itemData, attributes = {}, uses = null, items =
   return lines;
 }
 
-/**
- * The stat lines of an item CARD — itemStatLines plus slot and value, the two
- * facts cards show and attack buttons don't. An item a merchant won't pay for
- * (value 0) shows no value line. Shared by every surface that presents an item
- * as a card (inventory, the curator's exhibits) so the same item reads the
- * same in all of them.
- *
- * Options: `slot: false` drops the leading slot row — the equipped list passes
- * it because its cards already say "Equipped: Torso", and a card must not state
- * the same fact twice. `uses` and `items` are as in itemStatLines. `story`
- * ({granted, total}) is a story book's heard-chapter progress — the card's
- * visible sign that listening filled more pages. Returns undefined when the
- * item has no lines (buildCard's `stats` takes undefined for "no stat block").
- */
+// An item card's stat lines: itemStatLines plus the slot (leading) and the
+// value (trailing; none at value 0). `slot: false` is for the equipped list,
+// whose cards already name the slot. `story` is { granted, total } chapters.
+// Undefined when there are no lines, which buildCard takes as no stat block.
 export function itemCardStats(t, itemData, attributes = {}, { slot = true, uses = null, items = null, story = null } = {}) {
   const lines = itemStatLines(t, itemData, attributes, uses, items);
   if (story) lines.push(t('itemStats.storyChapters', { current: story.granted, total: story.total }));
-  // Where it's worn leads, because it's what the player checks first on gear.
-  // The KIND is what the card can honestly promise — which of a kind's slots
-  // the item lands in is decided at equip time (see pickSlot), so a ring says
-  // "Ring", not which hand it will end up on.
+  // The kind, not the slot: which slot of a kind the item lands in is decided
+  // at equip time (see pickSlot).
   if (slot && itemData.type === 'Armor' && itemData.slot) {
     lines.unshift(t('itemStats.slot', { value: slotLabel(t, itemData.slot, true) }));
   }
@@ -398,8 +303,7 @@ export function itemCardStats(t, itemData, attributes = {}, { slot = true, uses 
   return lines.length > 0 ? lines : undefined;
 }
 
-// itemCardStats bound to an engine: the player's attributes, the item's
-// remaining uses and story progress come from live state.
+// itemCardStats with the live state filled in from the engine.
 export function itemCardStatsFor(engine, itemData, options = {}) {
   const story = itemData.story
     ? { granted: engine.state.getStoryChapters(itemData.id).length, total: itemData.story.chapters.length }
@@ -408,22 +312,17 @@ export function itemCardStatsFor(engine, itemData, options = {}) {
     { ...options, uses: engine.state.getItemUses(itemData.id), items: engine.data.items, story });
 }
 
-// A panel section built at render time (chest contents, an enemy's attacks, a
-// museum's wings) with its heading; null skips the heading. The caller fills
-// it and inserts it before the skills container of resetOptionsPanel().
+// A section built at render time (chest contents, an enemy's attacks); the
+// caller fills it and inserts it before resetOptionsPanel's skills container.
 export function buildPanelSection(headingText = null) {
   const section = createElement('div', [CSS.PANEL_SECTION, CSS.PANEL_SECTION_DYNAMIC]);
   if (headingText) section.appendChild(createElement('div', CSS.SECTION_HEADING, headingText));
   return section;
 }
 
-/**
- * Resets the scene options panel to an empty state: clears the option button
- * container, removes injected option sections, and clears + hides the headed
- * sections (conversations, actions, skills). The location reminder is
- * re-appended as the container's first child; pass reminderText to also update
- * its text.
- */
+// Empties the options panel: the option list, the injected sections, and the
+// headed sections (hidden again). The location reminder stays as the first
+// child; reminderText, when given, renames it.
 export function resetOptionsPanel(reminderText = null) {
   const panel = document.getElementById(EL.SCENE_OPTIONS_PANEL);
   const container = document.getElementById(EL.SCENE_OPTIONS);
@@ -433,8 +332,7 @@ export function resetOptionsPanel(reminderText = null) {
   const reminder = document.getElementById(EL.SCENE_LOCATION_REMINDER);
 
   container.replaceChildren();
-  // Every headed section starts empty and hidden: its heading is only earned
-  // once something lands in it (see renderOptions).
+  // A headed section earns its heading only once something lands in it.
   [talkContainer, actionsContainer, skillsContainer].forEach(section => {
     section.replaceChildren();
     section.setAttribute('hidden', '');
@@ -448,13 +346,8 @@ export function resetOptionsPanel(reminderText = null) {
   return { panel, container, talkContainer, actionsContainer, skillsContainer, reminder };
 }
 
-/**
- * Wraps a leading "[label]" prefix in a styling span so it can be themed
- * separately from the body that follows. Only a prefix at the very start is
- * matched (the engine treats a leading bracket as a speaker/log label); a
- * no-op when the text has no leading prefix. The brackets are marker syntax,
- * not display — the rendered label drops them (weight and color carry it).
- */
+// A leading "[label]" becomes a styled span, brackets dropped: they are
+// marker syntax, and weight and color carry the label on screen.
 function wrapLogPrefix(html) {
   return String(html).replace(
     /^(\s*)\[([^\]]*)\]/,
@@ -462,26 +355,18 @@ function wrapLogPrefix(html) {
   );
 }
 
-// Prefixes a description body with the translated "[Narrator]" label (plain
-// "Narrator" when t is omitted or has no translation), wrapping the body in a
-// span that scopes ::first-letter styling (drop caps) to the narrator's text.
-// A body that already carries a leading "[label]" (NPC speech) stays unwrapped
-// on purpose.
+// Prefixes a body with the "[Narrator]" label and wraps it in the span that
+// scopes the drop cap. A body already carrying a "[label]" (NPC speech) is
+// left alone.
 function narratorLabelHtml(body, t = null) {
   if (!body || /^\s*\[/.test(body)) return body;
   const label = t ? translateOr(t, 'log.Narrator', 'Narrator') : 'Narrator';
   return `[${label}] <span class="${CSS.SCENE_BODY_TEXT}">${body}</span>`;
 }
 
-/**
- * Builds the standard scene header block:
- *   div.scene__description > h2.scene__title + optional p.scene__body
- *
- * title is set via textContent (plain text — NPC/scene names are not trusted HTML).
- * body is set via innerHTML and may contain authored HTML (<br>, <span>, etc.).
- * Omit body (or pass null) for scenes that have no description paragraph.
- * t (engine.t) translates the Narrator label.
- */
+// The scene header block: a title (text) over an optional body. The body is
+// authored HTML from game JSON and may carry inline markup; never pass
+// user-supplied or save-derived content. t translates the Narrator label.
 export function buildSceneDescription(title, body = null, t = null) {
   const div = createElement('div', CSS.SCENE_DESCRIPTION);
   const h2 = createElement('h2', CSS.SCENE_TITLE);
@@ -489,23 +374,15 @@ export function buildSceneDescription(title, body = null, t = null) {
   div.appendChild(h2);
   if (body !== null) {
     const p = createElement('p', CSS.SCENE_BODY);
-    // body is trusted HTML authored in game JSON (scene descriptions, NPC text).
-    // It intentionally supports inline markup (<br>, <em>, etc.). Never pass
-    // user-supplied or save-file-derived content here.
     p.innerHTML = wrapLogPrefix(narratorLabelHtml(body, t));
     div.appendChild(p);
   }
   return div;
 }
 
-/**
- * One sheet attribute row — the label/value line the sheet tab's sections
- * are made of, shared so plugin rows injected into them (e.g. the curator's
- * reputation) can't drift from the sheet's markup. The label is escaped and
- * marked with its icon; valueHtml and trailingHtml are engine-authored markup
- * (data-stat-bind spans, the point-buy spend button). icon is a name from
- * core/icons.js.
- */
+// One sheet row, shared with plugin rows so they cannot drift from the
+// sheet's markup. The label is escaped; valueHtml and trailingHtml are
+// engine-authored markup; icon is a name from core/icons.js.
 export function attrRowHtml({ label, valueHtml, icon = '', extraClasses = '', trailingHtml = '' }) {
   return `<div class="attr-list__row${extraClasses ? ` ${extraClasses}` : ''}">
     <span class="attr-list__label">${icon ? iconHtml(icon) : ''}${escapeHtml(label)}</span>
@@ -513,31 +390,18 @@ export function attrRowHtml({ label, valueHtml, icon = '', extraClasses = '', tr
   </div>`;
 }
 
-/**
- * Builds an interactive card (button.card) with a title and optional accent
- * stat lines — the standard clickable option (see buildCard). Pass reqText
- * for the stat lines (AP cost, price, skill DC, retry cost — a line or an
- * array of lines). Returns the button element — caller sets .onclick and
- * .disabled.
- */
+// The standard clickable option: a button card with optional stat lines
+// (a string or an array). The caller sets onclick and disabled.
 export function buildOptionButton(text, reqText = null) {
   return buildCard({ tag: 'button', title: text, stats: reqText ?? undefined });
 }
 
-/**
- * Adds the direction arrow to a navigation option button. Every move across
- * the space the minimap draws has one: a road between outdoor places, a door
- * between two rooms, and a building's threshold either way — the building is
- * a square on the outdoor map, the ground outside its door is on the indoor
- * one. The rule lives here because the scene renderer and the curator's
- * panels both build navigation buttons and must agree on it. Geometry on both
- * sides is required; a scene without mapDefinitions is nowhere in particular.
- *
- * Marks the button with a class instead of letting CSS ask via `:has()`: the
- * marker is positioned against its card, every ancestor above the card is
- * `static`, and where `:has()` is unsupported the arrow would resolve against
- * the viewport and land in a page corner.
- */
+// The direction arrow on a navigation button. Here rather than in the scene
+// renderer because the curator's panels build navigation buttons too. Nothing
+// is added when either scene has no geometry.
+//
+// The button gets a class instead of CSS asking via `:has()`: where `:has()`
+// is unsupported the marker would position against the viewport.
 export function addDirectionMarker(engine, scene, destination, button) {
   if (!destination) return;
 
@@ -548,17 +412,15 @@ export function addDirectionMarker(engine, scene, destination, button) {
   marker.dataset.point = point;
   // One glyph drawn pointing north, turned a quarter-turn per point by CSS.
   marker.style.setProperty('--turn', String(COMPASS_POINTS.indexOf(point)));
-  // The glyph is aria-hidden; the point's name rides along for screen readers.
+  // The glyph is aria-hidden; the point's name is there for screen readers.
   marker.innerHTML = `${iconHtml('arrow')}<span class="visually-hidden">${escapeHtml(engine.t(`ui.compass${point}`))}</span>`;
 
   button.classList.add(CSS.CARD_DIRECTED);
   button.appendChild(marker);
 }
 
-// One stat line for a card: "Action Points: 1" splits on its first colon into
-// label and value spans so CSS can column-align card values. A line without a
-// colon (a bare badge like "Deposit") stays a single full-row span. tag is
-// 'li' in container cards, 'span' in button cards.
+// "Action Points: 1" splits at the first colon into label and value spans so
+// CSS can column-align values; a line without a colon stays one span.
 function buildStatLine(tag, line) {
   const el = createElement(tag);
   const colon = line.indexOf(':');
@@ -571,30 +433,18 @@ function buildStatLine(tag, line) {
   return el;
 }
 
-/**
- * Builds a card — THE standard block for anything presented as a titled box:
- * scene options, skill checks, dialogue responses, combat attacks, inventory
- * items, quests, chest rows, exhibits. One DOM shape and one class
- * vocabulary, so a designer restyles every card in the game from the .card
- * block in styles.css:
- *
- *   <tag class="card">
- *     <.card__title>     the bold first line
- *     <.card__body>      0..n muted secondary lines
- *     <.card__stats>     muted stat lines, one element per fact — a real
- *                        <ul>/<li> in container cards; block <span>s inside
- *                        button cards (buttons allow phrasing content only).
- *                        Each line splits into a label/value pair of spans
- *                        (see buildStatLine)
- *
- * A card the player acts on is a <button class="card"> — the whole card is the
- * control (scene options, chest rows, inventory items). Cards with nothing to
- * click are <div>/<li> (quests, keepsakes). tag is 'button' | 'div' | 'li';
- * empty body lines are skipped; stats strings are split on \n so game packs
- * with multi-line locale strings keep working.
- */
+// The one block for every titled box in the UI (options, checks, attacks,
+// items, quests, exhibits), restyled from the .card block in styles.css:
+//
+//   <tag class="card">
+//     <.card__title>   the bold first line
+//     <.card__body>    0..n muted lines
+//     <.card__stats>   one element per fact, each split label/value (buildStatLine)
+//
+// A card the player acts on is a <button>: the whole card is the control.
+// Inert cards are <div> or <li>. Stats split on \n for multi-line locale strings.
 export function buildCard({ tag = 'div', title, body, stats, classes = [] } = {}) {
-  // Buttons may not contain block elements — inline children only.
+  // A button may hold phrasing content only, so its children are spans.
   const child = tag === 'button' ? 'span' : 'div';
   const card = createElement(tag, [CSS.CARD, ...classes]);
   if (title) card.appendChild(createElement(tag === 'button' ? 'span' : 'strong', CSS.CARD_TITLE, title));
@@ -604,8 +454,7 @@ export function buildCard({ tag = 'div', title, body, stats, classes = [] } = {}
   const statLines = stats == null ? []
     : (Array.isArray(stats) ? stats : [stats]).flatMap(s => String(s).split('\n')).filter(Boolean);
   if (statLines.length > 0) {
-    // Screen readers flatten a button to its text anyway, so the spans lose
-    // nothing over a list there; CSS displays both shapes as one-fact rows.
+    // Screen readers flatten a button to its text, so spans lose nothing there.
     const [listTag, lineTag] = tag === 'button' ? ['span', 'span'] : ['ul', 'li'];
     const list = createElement(listTag, CSS.CARD_STATS);
     statLines.forEach(line => list.appendChild(buildStatLine(lineTag, line)));

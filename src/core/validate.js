@@ -1,41 +1,26 @@
 import { GOLD_ITEM_ID, ITEM_TYPES, TIMER_SAFE_ACTIONS, HAND_SLOT_KIND } from './config.js';
-// The icon set owns its own name list; validation reads it from there rather
-// than keeping a second copy that could drift.
 import { ICON_NAMES } from './icons.js';
 import { isResourcePool } from './utils.js';
 
-// Load-time validation of all game data. Pure functions over the loaded data
-// object — no DOM, no engine — so authors get fail-fast feedback on boot and
-// the checks are testable in plain Node.
-//
-// validateGameData() returns a flat list of { group, message } issues; the
-// engine groups them per source entity when printing (see engine._validateData).
+// Load-time validation of the game data: pure functions returning
+// { group, message } issues, which the engine prints grouped per entity.
 
-// Attributes an NPC needs to participate in combat without crashing it.
+// What an NPC needs to fight without crashing combat.
 const COMBAT_NPC_ATTRIBUTES = ['healthPoints', 'armorClass', 'actionPoints'];
 
-// Words a condition leaf already uses structurally. A custom attribute sharing
-// one of these names is indistinguishable from the built-in leaf (e.g. a
-// `{ "gold": 5 }` condition), so the engine would mis-resolve it. Reserved to
-// prevent that ambiguity.
+// A custom attribute named like a condition leaf would be mis-resolved.
 const RESERVED_CONDITION_KEYS = new Set([
   'and', 'or', 'not', 'flag', 'value', 'item', 'count', 'gold', 'level', 'mission', 'status',
   'stage', 'stageReached', 'time', 'day', 'segment', 'story', 'chapter',
 ]);
 
-// The outcome tier names a check's `outcomes` object may define.
 const OUTCOME_TIERS = new Set(['critical', 'success', 'partial', 'failure']);
 
-// The defaultCosts kinds the engine charges (see systems/time.js).
+// The defaultCosts kinds the engine charges.
 const TIME_COST_KINDS = new Set(['navigate', 'skillAttempt', 'fullRest']);
 
-/**
- * Normalizes every NPC's carriedItems to the object form
- * { item: string, amount: number|null } (amount null = unlimited stock).
- * Data files may use the string shorthand (see npc.schema.json); the engine
- * normalizes once at load so every consumer sees a single shape. Runs before
- * validateGameData, which assumes the normalized form. Mutates in place.
- */
+// carriedItems to { item, amount } (null: unlimited) in place, so every
+// consumer sees one shape; the string shorthand is authoring convenience.
 export function normalizeCarriedItems(npcs) {
   for (const npc of Object.values(npcs || {})) {
     if (!npc.carriedItems) continue;
@@ -47,13 +32,8 @@ export function normalizeCarriedItems(npcs) {
   }
 }
 
-/**
- * Validates all loaded game data and returns the issues found.
- *
- * knownActionTypes is the registered action type names. NPC carriedItems
- * must already be normalized (see normalizeCarriedItems). Returns one
- * { group, message } per issue; empty when the data is clean.
- */
+// knownActionTypes are the registered action names; carriedItems must be
+// normalized already.
 export function validateGameData(data, knownActionTypes) {
   const issues = [];
   const ctx = {
@@ -74,12 +54,10 @@ export function validateGameData(data, knownActionTypes) {
   return issues;
 }
 
-// The status values a questTrigger may set — not_started is the absence of
-// progress, never a transition target.
+// not_started is never a transition target.
 const TRIGGER_STATUSES = new Set(['active', 'complete', 'failed']);
 
-// Checks a questTrigger (scene block or action): it must name a known
-// mission and exactly one of a valid status or a known stage.
+// A known mission, and exactly one of a valid status or a known stage.
 function validateQuestTrigger(ctx, group, trigger, where) {
   const mission = ctx.missions[trigger.mission];
   if (!trigger.mission)
@@ -96,8 +74,6 @@ function validateQuestTrigger(ctx, group, trigger, where) {
     ctx.add(group, `${where}: unknown stage "${trigger.stage}" on mission "${trigger.mission}"`);
 }
 
-// Missions: a stages array must be a non-empty list of uniquely-id'd stages;
-// advanceWhen trees get the same reference checks as every other condition.
 function validateMissions(ctx) {
   for (const [mId, mission] of Object.entries(ctx.missions ?? {})) {
     const group = `Mission "${mId}"`;
@@ -119,16 +95,13 @@ function validateMissions(ctx) {
   }
 }
 
-// The declared equipment slots, guarded so a malformed declaration reports
-// once (in validateRules) instead of throwing in every check that reads it.
+// Guarded, so a malformed declaration reports once instead of throwing everywhere.
 function declaredSlotList(rules) {
   const slots = rules?.playerDefaults?.equipmentSlots;
   return Array.isArray(slots) ? slots.filter(slot => slot && typeof slot.id === 'string') : [];
 }
 
-// Equipment slots: the list must exist, ids must be unique, every slot needs a
-// kind, and at least one must be a `hand` — combat reads the player's attacks
-// from that kind alone, so a game without one has no way to fight.
+// Without a `hand` slot the game has no way to fight.
 function validateEquipmentSlots(ctx) {
   const group = 'Rules';
   const slots = ctx.rules?.playerDefaults?.equipmentSlots;
@@ -155,17 +128,10 @@ function validateEquipmentSlots(ctx) {
   }
 }
 
-// Items: type must name a known item type; slot must name a declared
-// equipment slot; attribute references must name declared attributes
-// (playerDefaults attributes or customAttributes) — a typo'd type silently
-// makes the item unequippable, a typo'd slot equips into a nonexistent slot,
-// a typo'd attackAttribute silently rolls +0, and a typo'd attributeBonuses
-// key silently does nothing on equip.
+// Every typo here fails silently in play: an unequippable item, a slot that
+// does not exist, an attack at +0, a bonus that never applies.
 function validateItems(ctx) {
-  // Equipment slots are game-defined (rules.playerDefaults.equipmentSlots) —
-  // only the `hand` kind is engine-fixed, because combat reads attacks from
-  // it. An item names a KIND, not one of the slots: which slot of that kind
-  // it lands in is decided at equip time.
+  // An item names a slot kind, not a slot.
   const declaredKinds = new Set(declaredSlotList(ctx.rules).map(slot => slot.kind));
   for (const [id, item] of Object.entries(ctx.items ?? {})) {
     const group = `Item "${id}"`;
@@ -193,8 +159,7 @@ function validateItems(ctx) {
       if (!ctx.knownSkills.has(key))
         ctx.add(group, `attributeBonuses key "${key}" is not a declared attribute (playerDefaults.attributes or customAttributes)`);
     }
-    // A granted spell that isn't a loaded Spell item is dropped from the
-    // attack list without a word — the wearer just never gets the button.
+    // A bad grant drops out of the attack list without a word.
     const granted = item.attributes?.grantsSpells;
     if (granted !== undefined && !Array.isArray(granted))
       ctx.add(group, `attributes.grantsSpells must be an array of item ids (got ${JSON.stringify(granted)})`);
@@ -208,11 +173,7 @@ function validateItems(ctx) {
   }
 }
 
-// A story book's declaration: chapters must be a non-empty list of uniquely
-// id'd { id, text } entries — the ids are what grant_chapter and story
-// conditions reference, the text is what reading the book prints. And story
-// and type Book must come as a pair: the type is what makes the card readable
-// in the pack, and the story is the only thing a Book can do.
+// Chapters are uniquely id'd { id, text }; story and type Book come as a pair.
 function validateStory(ctx, group, item) {
   if (item.story === undefined) {
     if (item.type === 'Book')
@@ -236,8 +197,7 @@ function validateStory(ctx, group, item) {
     ctx.add(group, `declares a story but is type "${item.type}" — make it "Book" so its card reads from the pack`);
 }
 
-// The set of attribute names a skillCheck may reference: the player's base
-// attributes from rules plus every declared custom attribute.
+// playerDefaults.attributes plus customAttributes.
 function collectKnownSkills(rules) {
   return new Set([
     ...Object.keys(rules?.playerDefaults?.attributes ?? {}),
@@ -249,8 +209,7 @@ function isKnownItem(ctx, itemId) {
   return itemId === GOLD_ITEM_ID || !!ctx.items[itemId];
 }
 
-// Recursively checks a condition tree for unknown item and mission references
-// and for time leaves used without their backing configuration.
+// Unknown references, and time leaves without their rules.time backing.
 function validateCondition(ctx, group, condition, where) {
   if (!condition) return;
   if (condition.and) { condition.and.forEach(c => validateCondition(ctx, group, c, where)); return; }
@@ -293,8 +252,7 @@ function validateSkillCheck(ctx, group, skillCheck, where) {
     ctx.add(group, `${where}: unknown skillCheck "${skillCheck}" — checks roll with modifier 0; declare it in rules.customAttributes or playerDefaults.attributes`);
 }
 
-// Checks the NPCs referenced as enemies: they must exist and carry the
-// attributes combat reads, otherwise the encounter crashes mid-fight.
+// An enemy missing combat attributes crashes the fight.
 function validateEnemyList(ctx, group, enemyIds, where) {
   for (const id of (enemyIds || [])) {
     const npc = ctx.npcs[id];
@@ -308,9 +266,7 @@ function validateEnemyList(ctx, group, enemyIds, where) {
   }
 }
 
-// Validates a scene-option action pipeline (also used for onVictory pipelines).
-// npc, when given, is the conversation the actions run inside — its
-// goToConversation targets must be nodes of that NPC.
+// npc, when given, is the conversation the pipeline runs inside.
 function validateActions(ctx, group, actions, where, npc = null) {
   for (const action of (actions || [])) {
     if (!ctx.knownActionTypes.has(action.type))
@@ -331,8 +287,7 @@ function validateActions(ctx, group, actions, where, npc = null) {
         ctx.add(group, `${where}: grant_chapter → unknown item "${action.item}"`);
       else if (!storyItem.story)
         ctx.add(group, `${where}: grant_chapter → "${action.item}" declares no story`);
-      // A missing chapter is the grant-everything form (a found book), so
-      // only a chapter that is PRESENT but unknown is an authoring mistake.
+      // No chapter is the grant-everything form; only a wrong one is a mistake.
       else if (action.chapter !== undefined && !(storyItem.story.chapters ?? []).some(ch => ch.id === action.chapter))
         ctx.add(group, `${where}: grant_chapter → unknown chapter "${action.chapter}" on "${action.item}"`);
     }
@@ -355,8 +310,7 @@ function validateActions(ctx, group, actions, where, npc = null) {
   }
 }
 
-// Collects the flags a condition tree requires to be false — the shape of a
-// self-gating check ("success sets flag X; the check requires X false").
+// The flags a condition requires false: the shape of a self-gating check.
 function collectFalseFlagGates(condition, out = new Set()) {
   if (!condition) return out;
   (condition.and || []).forEach(c => collectFalseFlagGates(c, out));
@@ -367,9 +321,8 @@ function collectFalseFlagGates(condition, out = new Set()) {
   return out;
 }
 
-// A success that rewards loot but never retires the check is farmable: the
-// player re-rolls it for duplicate rewards. A check avoids the warning by
-// being resolveOnce, or by gating itself on a flag its own success sets.
+// A looting success that never retires its check can be re-rolled for
+// duplicates; resolveOnce or a self-set flag gate retires it.
 function warnIfSuccessFarmable(ctx, group, check, where) {
   if (check.resolveOnce || !(check.dc > 0)) return;
   const successTiers = [check.outcomes?.success, check.outcomes?.critical];
@@ -383,9 +336,7 @@ function warnIfSuccessFarmable(ctx, group, check, where) {
     ctx.add(group, `${where}: success loots a reward but nothing retires the check — it can be re-rolled for duplicates. Add resolveOnce, or gate the check on a flag its success sets (condition { "flag": X, "value": false } + success set_flag X).`);
 }
 
-// Validates the check-flavor fields shared by scene skill options and dialogue
-// responses: condition, pipelines, outcome tiers, one-shot markers, attempt
-// budgets.
+// The check fields shared by scene skills and dialogue responses.
 function validateCheck(ctx, group, check, where, npc = null) {
   validateCondition(ctx, group, check.condition, where);
   validateActions(ctx, group, check.actions, where, npc);
@@ -430,10 +381,8 @@ function validateScenes(ctx) {
     if (scene.questTrigger)
       validateQuestTrigger(ctx, group, scene.questTrigger, 'questTrigger');
 
-    // A building is drawn from its rooms' geometry, so a room of one with no
-    // mapDefinitions contributes nothing and the building has no square to
-    // occupy. Silent on the map either way — worth saying out loud, because the
-    // scene reads as placed and isn't.
+    // A building is drawn from its rooms' geometry; without it the scene reads
+    // as placed and never appears.
     const interiorRegion = ctx.regions?.[scene.region]?.interior;
     if ((scene.interior || interiorRegion) && !scene.mapDefinitions)
       ctx.add(group, `marked interior${scene.interior ? '' : ` (region "${scene.region}")`} but has no mapDefinitions — a building is drawn from its rooms' geometry, so it can never appear on the map`);
@@ -480,9 +429,7 @@ function validateNpcs(ctx) {
       if (!ctx.items[entry.item]) ctx.add(group, `carriedItems → unknown item "${entry.item}"`);
     }
 
-    // An NPC's equipment is keyed by slot ID, not by kind — it names the
-    // exact slot, the way the player's saved equipment map does. A typo'd
-    // slot is silently never read, so the NPC fights bare-handed.
+    // Keyed by slot id, like the player's map; a typo fights bare-handed.
     const declaredIds = new Set(declaredSlotList(ctx.rules).map(slot => slot.id));
     for (const [slot, itemId] of Object.entries(npc.equipment || {})) {
       if (itemId && !ctx.items[itemId]) ctx.add(group, `equipment[${slot}] → unknown item "${itemId}"`);
@@ -490,10 +437,8 @@ function validateNpcs(ctx) {
         ctx.add(group, `equipment["${slot}"] is not a declared equipment slot (playerDefaults.equipmentSlots ids: ${[...declaredIds].join(', ')})`);
     }
 
-    // A combat-capable NPC whose weapon rolls an attackAttribute needs that
-    // attribute in its stat block — otherwise it silently attacks at +0.
-    // Checks the equipped weapons plus the fallback claw NPCs without
-    // weapons swing with.
+    // A weapon's attribute the NPC lacks attacks at +0. Equipped weapons plus
+    // the fallback claw.
     if (npc.attributes?.healthPoints !== undefined) {
       const wielded = Object.values(npc.equipment || {}).filter(Boolean);
       if (!wielded.length && ctx.rules?.fallbackWeapons?.enemy) wielded.push(ctx.rules.fallbackWeapons.enemy);
@@ -521,12 +466,8 @@ function validateNpcs(ctx) {
   }
 }
 
-// A conversation node whose own actions hand over an item is the dialogue twin
-// of a rewarding skill check, and farmable the same way: node actions re-run
-// every time the node is displayed, so any route back into it is a second copy
-// of the gift. The gate has to sit on the responses that *reach* the node — a
-// guard one step further up covers only the path it happens to be on, which is
-// how a second route gets forgotten.
+// A node whose actions give an item re-runs them every time it is shown, so
+// every response that reaches it must be gated on a flag the node sets.
 function warnIfGiftFarmable(ctx, group, npc) {
   const conversations = npc.conversations || {};
 
@@ -535,14 +476,12 @@ function warnIfGiftFarmable(ctx, group, npc) {
     const gives = actions.some(a => a.type === 'loot' && (a.amount ?? 1) > 0);
     if (!gives) continue;
 
-    // The flags this node's own actions raise — the only ones that can retire it.
+    // The only flags that can retire this node.
     const ownGates = new Set(actions
       .filter(a => a.type === 'set_flag' && a.value === true)
       .map(a => a.flag));
 
-    // The start node is displayed by opening the conversation, not by choosing a
-    // response, so there is no response to gate and the loot runs every time the
-    // player says hello. Nothing below would catch it.
+    // The start node has no response to gate.
     if (nodeId === 'start')
       ctx.add(group, `conversation node "start" hands over loot, and opening the conversation displays it — so it runs again every time the player talks to this NPC. Move the gift to a node reached by a response, and gate that response on a flag the gift node sets.`);
 
@@ -564,19 +503,15 @@ function validateRules(ctx) {
   const { rules, items, locale } = ctx;
   const group = 'Rules';
 
-  // xpPerLevel scales the level-up threshold; a missing or non-positive value
-  // makes the threshold 0 and hangs addXP in an infinite loop on the first XP gain.
+  // A non-positive xpPerLevel would hang addXP.
   if (rules && !(rules.xpPerLevel > 0))
     ctx.add(group, `xpPerLevel must be a positive number (got ${rules.xpPerLevel}) — required for level-up math`);
 
-  // levelUpHpBonus is optional (omitted means no HP growth per level), but a
-  // malformed value would be silently treated as 0 by addXP's guard.
+  // Optional, but a malformed value is silently 0.
   if (rules?.levelUpHpBonus !== undefined && !Number.isFinite(rules.levelUpHpBonus))
     ctx.add(group, `levelUpHpBonus must be a number (got ${JSON.stringify(rules.levelUpHpBonus)}) — omit it for no HP growth on level-up`);
 
-  // rules.shortRest wires the short_rest action: its pool must be a
-  // declared { current, max } resource (not hp/ap — the pool is what a rest
-  // SPENDS, not what it restores), and heal is dice notation or a number.
+  // The pool is what a rest spends, so never hp or ap.
   const shortRest = rules?.shortRest;
   if (shortRest !== undefined) {
     const pool = rules?.playerDefaults?.resources?.[shortRest?.resource];
@@ -605,19 +540,16 @@ function validateRules(ctx) {
       ctx.add(group, `customAttributes "${attr.id}": missing locale entry at actions.skillBadgeFree.${attr.id} — roll breakdowns fall back to the capitalized id`);
     if (attr.max !== undefined && !(typeof attr.max === 'number' && attr.max >= (attr.default ?? 0)))
       ctx.add(group, `customAttributes "${attr.id}": max must be a number ≥ its default`);
-    // Like a tab's icon: optional, since the skill's row always shows its
-    // label — but a name the icon set doesn't know renders nothing.
+    // Optional, but an unknown name renders nothing.
     if (attr.icon !== undefined && !ICON_NAMES.includes(attr.icon))
       ctx.add(group, `customAttributes "${attr.id}": icon "${attr.icon}" is not a known icon (${ICON_NAMES.join(', ')})`);
   }
-  // Skill-check badges always append the shared DC line (see skillBadge).
   if ((rules?.customAttributes || []).length && !locale?.actions?.skillBadgeDc)
     ctx.add(group, 'missing locale entry at actions.skillBadgeDc — skill-check badges render the raw key as their DC line');
   if (rules?.skillRetry?.resource && !locale?.actions?.badgeRetryCost)
     ctx.add(group, 'skillRetry: missing locale entry at actions.badgeRetryCost — retry badges render the raw key');
 
-  // Level-up point buy: statPoints must be a non-negative integer —
-  // spendStatPoint's whole-point math breaks on fractional banks.
+  // spendStatPoint's whole-point math breaks on a fractional bank.
   if (rules?.levelUp?.statPoints !== undefined && !(Number.isInteger(rules.levelUp.statPoints) && rules.levelUp.statPoints >= 0))
     ctx.add(group, 'levelUp.statPoints must be a non-negative integer');
 
@@ -626,15 +558,13 @@ function validateRules(ctx) {
       ctx.add(group, `charCreation.stats "${stat.id}": missing locale entry at charCreation.stats.${stat.localeKey}`);
   }
 
-  // Time configuration sanity — the clock itself always works; days, segments
-  // and default costs only make sense when their config is coherent.
+  // The clock always works; days and segments need a coherent config.
   const time = rules?.time;
   if (time) {
     const hasDayLength = time.ticksPerDay > 0;
     if (!hasDayLength && (time.segments?.length || time.startTick !== undefined))
       ctx.add(group, 'time: segments/startTick need a positive ticksPerDay');
-    // startTick is the tick-of-day the game starts at; outside [0, ticksPerDay)
-    // the day/segment modulo math produces negative or off-by-a-day results.
+    // Outside [0, ticksPerDay) the modulo math goes off by a day.
     if (hasDayLength && time.startTick !== undefined
         && (typeof time.startTick !== 'number' || time.startTick < 0 || time.startTick >= time.ticksPerDay))
       ctx.add(group, `time.startTick (${time.startTick}) must be a number within [0, ${time.ticksPerDay - 1}]`);
@@ -659,8 +589,6 @@ function validateRules(ctx) {
   const declaredResources = rules?.playerDefaults?.resources ?? {};
   const isResource = (id) => isResourcePool(declaredResources[id]);
 
-  // Retry currency: rules.skillRetry.resource must be a declared { current, max }
-  // resource, cost positive, restRestore non-negative.
   const retry = rules?.skillRetry;
   if (retry) {
     if (!retry.resource)
@@ -673,10 +601,7 @@ function validateRules(ctx) {
       ctx.add(group, 'skillRetry.restRestore must be a non-negative number');
   }
 
-  // headerResources render in the sheet's character section as a label plus a
-  // value, and in the scene top bar as an icon plus a value: every entry needs
-  // a declared resource, a display label, and an icon — the top bar shows no
-  // label, so an entry without a usable icon leaves a bare number there.
+  // The top bar shows no label, so an entry without an icon is a bare number.
   for (const entry of (rules?.headerResources ?? [])) {
     const id = entry?.id;
     if (!id) {
@@ -691,20 +616,17 @@ function validateRules(ctx) {
       ctx.add(group, `headerResources "${id}": icon "${entry.icon}" is not a known icon (${ICON_NAMES.join(', ')})`);
   }
 
-  // The save/load/restart buttons only render inside an options-widget tab —
-  // a tabs list without one leaves the player unable to save or restart.
+  // The save/load/restart buttons exist only in an options widget tab.
   if (rules?.tabs && !rules.tabs.some(t => t?.widget === 'options'))
     ctx.add(group, 'tabs: no tab with widget "options" — the save/load/restart buttons render nowhere');
 
-  // A tab's icon is optional — its label is always on screen — but a name the
-  // icon set doesn't know renders nothing where an icon was meant to go.
+  // Optional, but an unknown name renders nothing.
   for (const tab of (rules?.tabs ?? [])) {
     if (tab?.icon !== undefined && !ICON_NAMES.includes(tab.icon))
       ctx.add(group, `tabs "${tab.id}": icon "${tab.icon}" is not a known icon (${ICON_NAMES.join(', ')})`);
   }
 
-  // Every weapon/spell at 0 AP means combat turns never end on their own —
-  // the End Turn button becomes the only handoff. Usually an authoring slip.
+  // With every attack at 0 AP, End Turn is the only handoff.
   const attackItems = Object.values(items ?? {}).filter(i => i.type === 'Weapon' || i.type === 'Spell');
   if (attackItems.length && attackItems.every(i => !(i.attributes?.actionPoints > 0)))
     ctx.add(group, 'every Weapon/Spell has an AP cost of 0 — combat turns will never end automatically (End Turn becomes the only handoff)');

@@ -1,25 +1,20 @@
 import { createElement, buildCard } from '../core/utils.js';
 import { CSS, EL, MISSION_STATUS } from '../core/config.js';
 
-// QuestUI renders the quest log sidebar panel.
+// The quest log panel.
 export class QuestUI {
   constructor(engine) {
     this.engine = engine;
   }
 
-  // Renders the quest log: one card section per mission status — active,
-  // completed, failed — and an empty note when no quest has surfaced yet.
-  // newQuests holds the mission ids that progressed since the player last
-  // viewed the tab; their cards wear the "new" dot.
+  // One section per status; newQuests are the ids that wear the "new" dot.
   render(newQuests = null) {
     const panel = document.getElementById(EL.TAB_QUESTS);
     if (!panel) return;
     panel.replaceChildren();
 
-    // A started/completed quest wears a dot until the player rests the pointer
-    // on its card (see UIManager.setup) or leaves the tab. The card names its
-    // mission in the dataset — that's what the hover handler acknowledges.
-    // An active staged quest shows its current objective as a second body line.
+    // The card names its mission for the hover-to-acknowledge handler; an
+    // active staged quest shows its objective as a second line.
     const buildQuestCard = (id, mission, { done = false, stageDesc = null } = {}) => {
       const card = buildCard({
         tag: 'li',

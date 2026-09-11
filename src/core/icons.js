@@ -1,18 +1,9 @@
-// The engine's icon set: solid single-color glyphs that mark what a label
-// says — beside it on the tab nav and the sheet's rows, in place of it in the
-// scene top bar, where there is no room for the word. One glyph per concept
-// across all three surfaces, so a heart means hit points wherever it appears.
-// Each is drawn on a 24×24 grid and filled with `currentColor`, so a host's
-// `font-size` and `color` size and tint it; nothing here loads a file or font.
-//
-// Icon names are an author-facing vocabulary: `rules.tabs[].icon`,
-// `rules.headerResources[].icon`, and `rules.customAttributes[].icon` pick
-// from ICON_NAMES, and validate.js rejects a name this module doesn't know.
+// The icon set: one glyph per concept across the tabs, the sheet, and the top
+// bar, drawn on a 24×24 grid in currentColor. Game data names them by key
+// (rules.tabs[].icon and the like); validate.js rejects unknown names.
 
-// Glyphs whose inner detail is cut out of the silhouette (a page's text
-// lines, an eye's pupil) need `fill-rule: evenodd` to punch the holes;
-// glyphs built from separate solid parts must not have it, or overlapping
-// parts would cancel out.
+// evenodd punches a glyph's inner holes out of its silhouette; a glyph made
+// of separate solid parts must not have it, or overlaps cancel out.
 const ICONS = {
   sheet: {
     evenodd: true,
@@ -31,8 +22,7 @@ const ICONS = {
      + 'M17.5 4.2h3v2.3c0 2-1.2 3.8-3 4.6V8.7c.6-.5 1-1.3 1-2.2v-.8h-1V4.2z'
      + 'M10.9 12.4h2.2v5.1h-2.2z M8 17.5h8v2.4H8z M6.8 19.9h10.4v2.1H6.8z',
   },
-  // Drawn pointing north. The four cardinal points are this one glyph turned in
-  // quarter-turns by CSS, so a direction never needs its own art.
+  // Drawn pointing north; CSS turns it a quarter-turn per compass point.
   arrow: {
     d: 'M12 2.6l5.6 8.4h-11.2z'
      + 'M10.2 9.8h3.6v11.6h-3.6z',
@@ -109,17 +99,11 @@ const ICONS = {
   },
 };
 
-// The icon names game data may reference. Exported for validate.js, which
-// runs under node:test — this module stays DOM-free for that reason.
+// For validate.js, which runs under node:test; this module stays DOM-free.
 export const ICON_NAMES = Object.freeze(Object.keys(ICONS));
 
-/**
- * Renders one icon as an `<svg>` element for an engine-authored innerHTML
- * template. The glyph is hidden from assistive tech: every caller pairs it
- * with a text label (visible on a tab, screen-reader-only in the top bar).
- *
- * Returns '' for an unknown name.
- */
+// An <svg> for an engine-authored template, aria-hidden: every caller pairs
+// it with a text label. '' for an unknown name.
 export function iconHtml(name) {
   const icon = ICONS[name];
   if (!icon) {

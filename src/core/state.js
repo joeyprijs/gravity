@@ -4,7 +4,7 @@ import { SAVE_VERSION, adoptSave, encodeSave } from './save.js';
 
 const MAX_LOG_ENTRIES = 200;
 
-// The empty state shape — every field a save file carries.
+// Every field a save file carries.
 function makeSkeletonState() {
   return {
     saveVersion: SAVE_VERSION,
@@ -29,17 +29,14 @@ function makeDefaultState(rules) {
   (rules.customAttributes ?? []).forEach(attr => {
     player.attributes[attr.id] = attr.default ?? 0;
   });
-  // The declared slots ARE the equipment map, all empty, in declaration
-  // order — which is the order the equipped panel renders them in. Holding
-  // the declaration and the live map separately would let them drift.
+  // The declared slots become the equipment map, in declaration order (which
+  // is render order); keeping the declaration around too would let them drift.
   player.equipment = Object.fromEntries(
     (player.equipmentSlots ?? []).map(slot => [slot.id, null])
   );
   delete player.equipmentSlots;
-  // Banked level-up stat points (rules.levelUp.statPoints per level).
   player.statPoints = 0;
-  // Remaining uses of rest-limited items (itemId → remaining). An absent
-  // entry means "full" — see getItemUses.
+  // itemId → remaining uses; an absent entry means full (see getItemUses).
   player.itemUses = {};
   return {
     ...makeSkeletonState(),
@@ -48,20 +45,18 @@ function makeDefaultState(rules) {
   };
 }
 
-// StateManager is the single source of truth for all mutable game data.
-// All writes go through its methods, which call notifyListeners() so the UI
-// stays in sync automatically. The state object is serialized for save files.
+// The single source of truth for mutable game data. Every write goes through
+// a method here, which notifies the UI; the state object is what a save holds.
 class StateManager {
   constructor() {
-    // Skeleton until init(rules) runs — enough for registerMissions() and
-    // registerSceneFlags(), which are called during data loading.
+    // A skeleton until init(rules): enough for the registrations that run
+    // during data loading.
     this.state = makeSkeletonState();
     this.listeners = [];
     this._rules = null;
     this._items = {};
     this._missions = {};
-    // The flags data/flags declares, kept so reset() and loadFromObject() can
-    // re-apply the defaults a fresh or older save is missing.
+    // The flags data/flags declares, re-applied on reset and load.
     this._sceneFlags = {};
     this._pluginMigrations = {};
     this._mutationHooks = [];
@@ -70,21 +65,10 @@ class StateManager {
 
   // Plugin lifecycle hooks
 
-  // The formal alternative to wrapping StateManager methods on the live
-  // singleton: plugins observe mutations and intercept custom stats through
-  // these registrations instead.
-
-  /**
-   * Registers a hook called after a state mutation completes, immediately
-   * BEFORE its notifyListeners call — so anything a hook derives or records
-   * (plugin stats, the UI's new-entry sets) is in place for the render that
-   * notification triggers. Guard-rejected calls (e.g. addToInventory of an
-   * unknown item) do not emit. Hooks may themselves mutate state — but must
-   * not call the method they are hooked on.
-   *
-   * fn receives the StateManager method name and an info object with its
-   * relevant arguments (e.g. { itemId, amount } for addToInventory).
-   */
+  // fn(method, info) runs after a mutation completes and BEFORE its listeners
+  // are notified, so what a hook derives is in place for the render. Guarded
+  // no-ops do not emit. A hook may mutate state, but not through the method
+  // it is hooked on.
   onMutation(fn) {
     this._mutationHooks.push(fn);
   }
@@ -93,34 +77,21 @@ class StateManager {
     this._mutationHooks.forEach(fn => fn(method, info));
   }
 
-  /**
-   * Registers an interceptor for modifyPlayerStat(stat, amount). When a
-   * handler exists for the stat it fully replaces the default behavior,
-   * including listener notification. Used by plugins that derive a stat
-   * instead of storing it directly (e.g. the curator plugin's reputation).
-   *
-   * fn receives the delta passed to modifyPlayerStat.
-   */
+  // fn(delta) replaces modifyPlayerStat for one stat entirely, notification
+  // included; for a plugin that derives a stat instead of storing it.
   registerStatHandler(stat, fn) {
     this._statHandlers[stat] = fn;
   }
 
-  // Sets a player attribute to an absolute value (modifyPlayerStat is
-  // delta-based). Creates the attribute if it does not exist yet.
+  // An absolute write (modifyPlayerStat is a delta); creates the attribute.
   setPlayerAttribute(attr, value) {
     if (!this.state.player?.attributes) return;
     this.state.player.attributes[attr] = value;
     this.notifyListeners('stats');
   }
 
-  /**
-   * Called by the engine after rules.json is loaded. Replaces the skeleton
-   * state with a proper default state derived from the rules. Must be called
-   * before any gameplay code accesses the player object.
-   *
-   * When items (engine.data.items) is provided, addToInventory rejects ids
-   * that are not in it.
-   */
+  // Replaces the skeleton with the default state the rules describe. With
+  // items given, addToInventory rejects ids not in it.
   init(rules, items = {}) {
     this._rules = rules;
     this._items = items;
@@ -129,25 +100,17 @@ class StateManager {
     this._emitMutation('init', { rules, items });
   }
 
-  // Fresh states are current: stamp every registered plugin's latest version
-  // so saving and reloading a new game doesn't re-run plugin migrations.
+  // A fresh state is current, so a saved new game never re-runs plugin migrations.
   _stampPluginVersions() {
     for (const [pluginId, line] of Object.entries(this._pluginMigrations)) {
       this.state.pluginSaveVersions[pluginId] = Math.max(...Object.keys(line).map(Number));
     }
   }
 
-  /**
-   * Plugin hook: registers a save migration on the plugin's own version line.
-   * Plugins that change their own save data call this during their register()
-   * fn. Core and plugin versions are partitioned — state.saveVersion never
-   * carries a plugin's number (and vice versa: plugin lines live under
-   * state.pluginSaveVersions[pluginId]), so a plugin stamping its data can
-   * never make a save silently skip a future core migration.
-   *
-   * version is the plugin save version the migration produces (each plugin's
-   * line starts at 1); fn mutates the raw parsed save object in place.
-   */
+  // A save migration on the plugin's own version line
+  // (state.pluginSaveVersions[pluginId], starting at 1), partitioned from the
+  // core counter so a plugin can never make a save skip a core migration.
+  // fn mutates the raw parsed save in place.
   registerMigration(pluginId, version, fn) {
     if (typeof pluginId !== 'string' || !pluginId) {
       throw new Error('[Gravity] registerMigration: a plugin id string is required — plugin migrations run on their own per-plugin version line (registerMigration(pluginId, version, fn))');
@@ -162,15 +125,12 @@ class StateManager {
     line[version] = fn;
   }
 
-  // The state as save-file text (see save.js). The download itself is the
-  // UI layer's, so this module stays headless.
+  // The download itself is the UI layer's, so this module stays headless.
   getSaveString() {
     return encodeSave(this.state);
   }
 
-  // Replaces the entire state with a parsed save object, brought forward to
-  // the current shape first (see adoptSave). Returns false, with the current
-  // game untouched, when the save is too malformed to load.
+  // False, with the current game untouched, for a save too malformed to load.
   loadFromObject(parsedData) {
     const adopted = adoptSave(parsedData, {
       rules: this._rules,
@@ -189,11 +149,8 @@ class StateManager {
     if (this.state.log.length > MAX_LOG_ENTRIES) this.state.log.shift();
   }
 
-  // Extends the newest choice entry in place — the yield-amend path (see
-  // NarrativeLog.amendLast), so a reloaded save shows the act and its yield
-  // as the one line they were live. Reaches past narrator entries (time
-  // ticks, timers land between an act and its yield) but never across a
-  // scene boundary, mirroring amendLast's in-DOM scope.
+  // The persisted half of NarrativeLog.amendLast: reaches back past narrator
+  // entries to the newest choice line, but never across a scene boundary.
   amendLog(suffix) {
     for (let i = this.state.log.length - 1; i >= 0; i--) {
       const entry = this.state.log[i];
@@ -207,10 +164,8 @@ class StateManager {
 
   getLog() { return this.state.log; }
 
-  // Called once on startup to ensure every mission ID exists in state.
-  // Skips missions already present so loaded saves are not overwritten.
-  // Keeps the definitions so stage lookups (getMissionStage's first-stage
-  // fallback, missionStageIndex) work without reaching into engine data.
+  // Seeds a not_started entry per mission, skipping the ones a loaded save
+  // holds; keeps the definitions for the stage lookups below.
   registerMissions(missionsData) {
     this._missions = missionsData;
     Object.keys(missionsData).forEach(missionId => {
@@ -220,8 +175,7 @@ class StateManager {
     });
   }
 
-  // Called once on startup with the flags declared in data/flags.json.
-  // Only sets flags that don't yet exist in state so loaded saves are preserved.
+  // Seeds the declared flags, skipping the ones a loaded save holds.
   registerSceneFlags(flagsMap) {
     this._sceneFlags = { ...flagsMap };
     Object.entries(flagsMap).forEach(([flag, value]) => {
@@ -229,8 +183,6 @@ class StateManager {
     });
   }
 
-  // Wipes all state back to defaults and re-applies the scene flags so that
-  // the initial option visibility is correct immediately after a restart.
   reset() {
     this.state = makeDefaultState(this._rules);
     this._stampPluginVersions();
@@ -240,9 +192,8 @@ class StateManager {
   }
 
   getFlag(flagName) { return this.state.flags[flagName] ?? false; }
-  // Deliberately no notifyListeners (flag changes surface through the
-  // re-renders their own flow drives) — but the mutation IS emitted, so
-  // observers of world state (quest advanceWhen conditions) see flag writes.
+  // No notification: the flow that set the flag drives its own re-render. The
+  // mutation still emits, so quest advanceWhen observers see the write.
   setFlag(flagName, value) {
     this.state.flags[flagName] = value;
     this._emitMutation('setFlag', { flag: flagName, value });
@@ -250,34 +201,25 @@ class StateManager {
 
   // Check bookkeeping
 
-  // The engine-private skill-check state maps (attempt counts, resolution
-  // markers, discovery progress), keyed by the CHECK_KEYS builders. Like
-  // setFlag, writes deliberately do not notify: check state only surfaces
-  // through re-renders the check flow itself drives.
+  // The skill-check maps (attempts, resolution, discovery), keyed by
+  // CHECK_KEYS. Like setFlag, writes do not notify.
 
-  // The stored check-state entry, or undefined.
   getCheckState(key) { return this.state.checkState[key]; }
   setCheckState(key, value) { this.state.checkState[key] = value; }
 
-  // The loaded rules object (null before init).
+  // Null before init.
   getRules() { return this._rules; }
 
   // World clock & timers
 
-  // The clock is a single monotonic tick counter; days and segments are
-  // derived presentation (see systems/time.js). Time only moves through
-  // advanceTime — never from wall-clock — so saves replay deterministically.
+  // One monotonic tick counter; days and segments derive from it
+  // (systems/time.js). Time moves only through advanceTime, never from the
+  // wall clock, so saves replay deterministically.
 
-  // Absolute ticks elapsed since the game started.
   getTicks() { return this.state.time?.ticks ?? 0; }
 
-  /**
-   * Advances the world clock and collects the timers that came due, in
-   * deadline order. The engine's advanceTime delegate runs their pipelines —
-   * StateManager stays free of action handling.
-   *
-   * Non-positive amounts are ignored.
-   */
+  // Returns the timers that came due, in deadline order, for the engine to
+  // run; a non-positive amount is ignored.
   advanceTime(amount) {
     if (!Number.isFinite(amount) || amount <= 0) return [];
     if (!this.state.time) this.state.time = { ticks: 0 };
@@ -293,7 +235,7 @@ class StateManager {
     return due;
   }
 
-  // Arms (or re-arms) a timer. A timer with the same id replaces the old one.
+  // A timer with the same id replaces the old one.
   setTimer(timer) {
     if (!timer?.id) return;
     if (!this.state.timers) this.state.timers = [];
@@ -301,7 +243,6 @@ class StateManager {
     this.state.timers.push(timer);
   }
 
-  // Disarms a timer by id. Unknown ids are a no-op.
   cancelTimer(id) {
     if (!this.state.timers) return;
     this.state.timers = this.state.timers.filter(t => t.id !== id);
@@ -309,19 +250,10 @@ class StateManager {
 
   getPlayer() { return this.state.player; }
 
-  /**
-   * Modifies a player stat by the given amount. Accepts convenience names
-   * ('hp', 'ap', 'maxHp', 'maxAp', 'gold') or any attribute name ('ac',
-   * 'charisma', 'perception', …). hp/ap are clamped to [0, max]. Stats with a
-   * registered stat handler are delegated to it instead.
-   *
-   * amount is a delta, or 'full' to top a { current, max } resource up to its
-   * cap — the recurring refill idiom at combat boundaries and rest.
-   */
+  // stat is a resource ('hp', 'gold'), 'maxHp'/'maxAp', or any attribute;
+  // amount a delta, or 'full' to top a { current, max } resource up.
   modifyPlayerStat(stat, amount) {
-    // Resolve the 'full' sentinel BEFORE any handler dispatch: handlers expect
-    // numeric deltas ('full' has no meaning for a derived stat), and only a
-    // declared { current, max } resource can be topped up.
+    // 'full' resolves before handler dispatch: handlers expect numeric deltas.
     const p = this.state.player;
     if (amount === 'full') {
       const res = p.resources?.[stat];
@@ -329,7 +261,6 @@ class StateManager {
       amount = res.max - res.current;
     }
 
-    // A registered stat handler fully replaces the default behavior.
     const handler = this._statHandlers[stat];
     if (handler) {
       handler(amount);
@@ -341,13 +272,8 @@ class StateManager {
     this.notifyListeners('stats');
   }
 
-  /**
-   * Applies several stat deltas as one mutation with a single 'stats'
-   * notification — the equip/unequip path applies a whole bonus map at once,
-   * and per-key calls would re-render the UI once per attribute. Zero deltas
-   * are skipped; stats with a registered handler still delegate to it
-   * (handlers notify themselves).
-   */
+  // Several deltas, one notification: the equip path applies a whole bonus
+  // map at once. Handled stats still go to their handler.
   modifyPlayerStats(deltas) {
     let changed = false;
     for (const [stat, amount] of Object.entries(deltas)) {
@@ -365,15 +291,9 @@ class StateManager {
     this.notifyListeners('stats');
   }
 
-  /**
-   * The remaining uses of a rest-limited item (attributes.uses). Only spent
-   * counts are stored (player.itemUses); an absent entry reads as full, so
-   * saves that predate an item's uses cap load with every use available.
-   *
-   * Returns { current, max, refresh } — refresh names the rest that restores
-   * the uses ('short_rest' or the default 'full_rest') — or null when the item
-   * declares no uses cap.
-   */
+  // { current, max, refresh } for a rest-limited item (attributes.uses), or
+  // null without a cap. An absent itemUses entry reads as full, so older
+  // saves load with every use available.
   getItemUses(itemId) {
     const uses = this._items[itemId]?.attributes?.uses;
     if (!Number.isInteger(uses?.max) || uses.max < 1) return null;
@@ -381,8 +301,7 @@ class StateManager {
     return { current, max: uses.max, refresh: uses.refresh ?? 'full_rest' };
   }
 
-  // Spends one use of a rest-limited item, clamped at 0. A no-op for items
-  // without a uses cap.
+  // Clamped at 0; a no-op without a uses cap.
   spendItemUse(itemId) {
     const uses = this.getItemUses(itemId);
     if (!uses) return;
@@ -391,11 +310,8 @@ class StateManager {
     this.notifyListeners('stats');
   }
 
-  /**
-   * Restores rest-limited item uses at a rest boundary. A full rest restores
-   * everything; a short rest only the items that declare
-   * uses.refresh: "short_rest" (the default refresh is the full rest).
-   */
+  // A full rest restores every item's uses; a short rest only those that
+  // declare uses.refresh: "short_rest".
   refreshItemUses(rest) {
     const spent = this.state.player.itemUses ?? {};
     let changed = false;
@@ -411,8 +327,7 @@ class StateManager {
     this.notifyListeners('stats');
   }
 
-  // The delta application shared by modifyPlayerStat and modifyPlayerStats —
-  // no handler dispatch, no notification.
+  // No handler dispatch, no notification.
   _applyStatDelta(stat, amount) {
     const { resources, attributes } = this.state.player;
 
@@ -420,10 +335,8 @@ class StateManager {
     if (stat === 'maxAp') { resources.ap.max += amount; return; }
     if (stat === 'gold')  { resources.gold += amount; return; }
 
-    // Any declared { current, max } resource — hp and ap included — is
-    // modifiable by name and clamped to [0, max]. This is how games add
-    // their own resources (e.g. a "luckPoints" retry currency) without
-    // engine changes.
+    // Any declared { current, max } resource, clamped to [0, max]: how a game
+    // adds its own pools without engine changes.
     const res = resources?.[stat];
     if (isResourcePool(res)) {
       res.current = Math.max(0, Math.min(res.current + amount, res.max));
@@ -432,22 +345,17 @@ class StateManager {
     }
   }
 
-  /**
-   * Awards XP and handles level-up. XP threshold scales with level so each
-   * level requires more XP than the last (threshold = level × xpPerLevel).
-   * Surplus XP carries over and can trigger multiple level-ups in one call.
-   */
+  // The threshold is level × xpPerLevel; surplus carries over, so one award
+  // can level up more than once.
   addXP(amount) {
     const p = this.state.player;
     p.xp += amount;
     const xpPerLevel = this._rules.xpPerLevel;
-    // Guard against a missing or non-positive xpPerLevel (bad rules data): a
-    // threshold of 0 would make `xp >= threshold` always true and loop forever.
-    // XP still banks; validate.js flags the misconfiguration on boot.
+    // A non-positive xpPerLevel would loop forever; XP still banks and
+    // validate.js reports the rules.
     if (xpPerLevel > 0) {
       const statPointsPerLevel = this._rules.levelUp?.statPoints ?? 0;
-      // A missing (or non-numeric) levelUpHpBonus means no HP growth — never
-      // NaN'd HP. validate.js flags a malformed value on boot.
+      // A malformed levelUpHpBonus means no growth rather than NaN HP.
       const hpBonus = Number.isFinite(this._rules.levelUpHpBonus) ? this._rules.levelUpHpBonus : 0;
       let threshold = p.level * xpPerLevel;
       while (p.xp >= threshold) {
@@ -455,7 +363,6 @@ class StateManager {
         p.level++;
         p.resources.hp.max += hpBonus;
         p.resources.hp.current = p.resources.hp.max;
-        // Bank point-buy currency (spent via spendStatPoint / the stats panel).
         if (statPointsPerLevel > 0) p.statPoints = (p.statPoints ?? 0) + statPointsPerLevel;
         threshold = p.level * xpPerLevel;
       }
@@ -464,12 +371,8 @@ class StateManager {
     this.notifyListeners('stats');
   }
 
-  /**
-   * An attribute's base value: the live value minus what worn equipment
-   * contributes (attributeBonuses / armorClassBonus). Point-buy caps compare
-   * against this, so gear can neither block a legitimate spend nor be
-   * equip-cycled to exceed the configured max.
-   */
+  // The live value minus worn bonuses. Point-buy caps compare against this,
+  // so gear can neither block a spend nor be cycled to exceed the max.
   playerBaseAttribute(attrId) {
     const p = this.state.player;
     let worn = 0;
@@ -479,10 +382,8 @@ class StateManager {
     return (p.attributes?.[attrId] ?? 0) - worn;
   }
 
-  // Applies a point-buy bonus to a dotted player path with char creation's
-  // semantics: raising a resource cap raises the resource itself by the same
-  // amount, so invested points are felt immediately. Shared by
-  // applyCharCreation and spendStatPoint so the two can't drift.
+  // Point-buy semantics, shared by character creation and level-up: raising
+  // a resource cap raises the resource with it.
   _applyStatBonus(target, bonus) {
     const p = this.state.player;
     setByPath(p, target, (getByPath(p, target) ?? 0) + bonus);
@@ -492,14 +393,7 @@ class StateManager {
     }
   }
 
-  /**
-   * Applies the character-creation choices as one sanctioned mutation: the
-   * chosen name plus the point-buy bonuses. The creation screen calls this
-   * instead of writing the player object directly.
-   *
-   * bonuses pairs dotted rules.charCreation.stats ids with the total bonus
-   * bought for each.
-   */
+  // bonuses pairs dotted rules.charCreation.stats ids with the total bought.
   applyCharCreation(name, bonuses) {
     this.state.player.name = name;
     for (const { id, bonus } of bonuses) {
@@ -509,33 +403,17 @@ class StateManager {
     this.notifyListeners('stats');
   }
 
-  /**
-   * A named bag for plugin-owned save data, stored under state.plugins.<id>
-   * and serialized with the save. The sanctioned alternative to plugins
-   * writing top-level state fields directly.
-   *
-   * Created on first access.
-   */
+  // A plugin's save-data bag (state.plugins.<id>), created on first access.
   pluginState(id) {
     if (!this.state.plugins) this.state.plugins = {};
     if (!this.state.plugins[id]) this.state.plugins[id] = {};
     return this.state.plugins[id];
   }
 
-  /**
-   * Spends one banked level-up stat point. Two target forms:
-   * - A declared attribute id (e.g. 'perception'): +1 to the attribute,
-   *   refused when its BASE value (worn bonuses excluded — see
-   *   playerBaseAttribute) already sits at the optional per-attribute cap
-   *   (customAttributes[].max).
-   * - A dotted rules.charCreation.stats id (e.g. 'resources.hp.max'): applies
-   *   that entry's bonusPerPoint with char creation's semantics (see
-   *   _applyStatBonus). This keeps level-up point-buy covering the same
-   *   stats as character creation.
-   * Always refused when no points are banked or the target isn't declared.
-   *
-   * Returns whether the point was spent.
-   */
+  // Spends one banked point on an attribute id (+1, refused at its base-value
+  // cap) or a dotted charCreation.stats id (that entry's bonusPerPoint), so
+  // level-up covers the same stats as character creation. Returns whether it
+  // was spent.
   spendStatPoint(target) {
     const p = this.state.player;
     if ((p.statPoints ?? 0) <= 0) return false;
@@ -555,16 +433,14 @@ class StateManager {
     return true;
   }
 
-  // Shared add/remove logic for {item, amount} stack collections (the player
-  // inventory and chest contents share the same entry shape).
+  // The inventory and chest contents share the { item, amount } stack shape.
   _addToItemList(list, itemId, amount) {
     const existing = list.find(i => i.item === itemId);
     if (existing) existing.amount += amount;
     else list.push({ item: itemId, amount });
   }
 
-  // Decrements a stack and returns the updated list, dropping entries that
-  // reach zero. Returns the list unchanged when the item is absent.
+  // Returns the updated list, dropping a stack that reaches zero.
   _removeFromItemList(list, itemId, amount) {
     const existing = list.find(i => i.item === itemId);
     if (!existing) return list;
@@ -572,49 +448,29 @@ class StateManager {
     return existing.amount <= 0 ? list.filter(i => i.item !== itemId) : list;
   }
 
-  /**
-   * Adds an item stack to the player inventory (inventory entries have the
-   * shape { item: string, amount: number }). Unknown item IDs are rejected
-   * with a console warning so bad data can't put unrenderable entries into
-   * the inventory — the check only applies when an item database was provided
-   * to init(), keeping headless tests free to use ad-hoc IDs.
-   *
-   * options.silent skips listener notification. Returns true when the item
-   * was added.
-   */
+  // An unknown id is rejected (when init got an item database), so bad data
+  // never puts an unrenderable entry in the pack. silent skips notification
+  // and marks the add as an internal move, which the tab notifier ignores.
   addToInventory(itemId, amount = 1, { silent = false } = {}) {
     if (Object.keys(this._items).length && !this._items[itemId]) {
       console.warn(`[Gravity] addToInventory: unknown item "${itemId}" — ignored`);
       return false;
     }
     this._addToItemList(this.state.player.inventory, itemId, amount);
-    // silent flows to observers too: a silent add is an internal move (equip
-    // swap, chest/display withdrawal), not a narrative gain — the tab notifier
-    // dots only on non-silent gains.
     this._emitMutation('addToInventory', { itemId, amount, silent });
     if (!silent) this.notifyListeners('inventory');
     return true;
   }
 
-  /**
-   * Removes an item stack from the player inventory; entries that reach zero
-   * are dropped. Removing an absent item is a no-op.
-   *
-   * options.silent skips listener notification.
-   */
+  // A no-op for an absent item; silent skips notification.
   removeFromInventory(itemId, amount = 1, { silent = false } = {}) {
     this.state.player.inventory = this._removeFromItemList(this.state.player.inventory, itemId, amount);
     this._emitMutation('removeFromInventory', { itemId, amount });
     if (!silent) this.notifyListeners('inventory');
   }
 
-  /**
-   * Equips an item into an equipment slot, returning any previously equipped
-   * item to the inventory. Pass null to unequip.
-   *
-   * slot is a declared slot id (e.g. 'right_hand'). Returns whether the change
-   * was made.
-   */
+  // Swaps the slot's current item back into the pack; null unequips. Returns
+  // whether the change was made.
   equipItem(slot, itemId) {
     if (itemId) {
       if (this.countPlayerItem(itemId, { includeEquipped: false }) <= 0) return false;
@@ -633,8 +489,7 @@ class StateManager {
 
   getMissionStatus(missionId) { return this.state.missions[missionId]?.status || MISSION_STATUS.NOT_STARTED; }
 
-  // Preserves the entry's stage — status and stage move independently
-  // (activation sets status; advancement sets stage).
+  // Status and stage move independently; this leaves the stage alone.
   setMissionStatus(missionId, status) {
     const entry = (this.state.missions[missionId] ??= {});
     entry.status = status;
@@ -642,12 +497,8 @@ class StateManager {
     this.notifyListeners('quests');
   }
 
-  /**
-   * The mission's current stage id. Null for missions that haven't started
-   * (or have no stages). A started mission that never advanced — including
-   * saves that predate a mission gaining stages — reports the first declared
-   * stage, so authors never see a "stageless but active" gap.
-   */
+  // Null before the mission starts. A started mission that never advanced
+  // reports the first declared stage, so an active mission is never stageless.
   getMissionStage(missionId) {
     const entry = this.state.missions[missionId];
     if (!entry?.status || entry.status === MISSION_STATUS.NOT_STARTED) return null;
@@ -661,11 +512,7 @@ class StateManager {
     this.notifyListeners('quests');
   }
 
-  /**
-   * A stage's position in its mission's authored stage order — what
-   * "stageReached" conditions compare by. -1 for unknown missions, stageless
-   * missions, and unknown stage ids.
-   */
+  // The position stageReached conditions compare by; -1 when unknown.
   missionStageIndex(missionId, stageId) {
     const stages = this._missions?.[missionId]?.stages;
     if (!Array.isArray(stages)) return -1;
@@ -674,24 +521,20 @@ class StateManager {
 
   // Story chapters
 
-  // The chapters the player has heard of each story book (state.stories,
-  // keyed by the book's item id). Granted state written at listen time, never
-  // derived — the book item's authored chapter list owns text and order; this
-  // map only answers "which chapters have been heard".
+  // Which chapters of each story book the player has heard, keyed by the
+  // book's item id; the book's authored chapter list owns text and order.
 
-  // The granted chapter ids (grant order, not authored order).
+  // In grant order, not authored order.
   getStoryChapters(storyId) { return this.state.stories?.[storyId] ?? []; }
 
   hasStoryChapter(storyId, chapterId) { return this.getStoryChapters(storyId).includes(chapterId); }
 
-  // Grants a story chapter. Idempotent: a chapter already granted returns
-  // false and emits nothing — hearing a story twice is not an event.
+  // False, and no emit, for a chapter already granted.
   grantStoryChapter(storyId, chapterId) {
     if (this.hasStoryChapter(storyId, chapterId)) return false;
     ((this.state.stories ??= {})[storyId] ??= []).push(chapterId);
     this._emitMutation('grantStoryChapter', { storyId, chapterId });
-    // 'inventory': the book's card shows its chapter count, and nothing else
-    // in the UI renders granted chapters.
+    // Only the book's card renders granted chapters.
     this.notifyListeners('inventory');
     return true;
   }
@@ -700,8 +543,7 @@ class StateManager {
   setCurrentSceneId(sceneId) { this.state.currentSceneId = sceneId; this.notifyListeners('map'); }
 
   getVisitedScenes() { return this.state.visitedScenes; }
-  // Intentionally no notifyListeners() — scene rendering drives its own display
-  // update, and triggering a full UI re-render here would be redundant.
+  // No notification: the scene render that follows updates the map itself.
   addVisitedScene(sceneId) {
     if (!this.state.visitedScenes.includes(sceneId)) this.state.visitedScenes.push(sceneId);
   }
@@ -709,8 +551,7 @@ class StateManager {
   getReturnSceneId() { return this.state.returnSceneId; }
   setReturnSceneId(sceneId) { this.state.returnSceneId = sceneId; }
 
-  // Returns the total quantity of the item in the player's possession.
-  // By default, includes both unequipped inventory stacks and equipped slots.
+  // Inventory stacks plus, by default, worn slots.
   countPlayerItem(itemId, { includeEquipped = true } = {}) {
     const player = this.state.player;
     if (!player) return 0;
@@ -723,11 +564,9 @@ class StateManager {
     return invCount + equipCount;
   }
 
-  // A chest's contents (empty array if absent).
   getChest(chestId) { return this.state.chests[chestId] ?? []; }
 
-  // Moves an item stack from the player inventory into a chest, creating the
-  // chest on first use.
+  // Creates the chest on first use.
   depositToChest(chestId, itemId, amount = 1) {
     const existing = this.state.player.inventory.find(i => i.item === itemId);
     if (!existing) return;
@@ -740,8 +579,6 @@ class StateManager {
     this.notifyListeners('inventory');
   }
 
-  // Moves an item stack from a chest back into the player inventory.
-  // No-op when the chest doesn't contain the item.
   withdrawFromChest(chestId, itemId, amount = 1) {
     const chest = this.state.chests[chestId];
     const existing = chest?.find(i => i.item === itemId);
@@ -754,14 +591,9 @@ class StateManager {
     this.notifyListeners('inventory');
   }
 
-  /**
-   * Subscribes to state changes. Every mutation calls back with the full
-   * state and an optional hint ('stats', 'inventory', 'quests', 'map', 'time',
-   * or undefined for a full update) so subscribers can re-render only the
-   * affected region. A plugin may notify with a hint of its own (the curator
-   * uses 'displays'); an unrecognised hint updates nothing in particular,
-   * which is why a plugin's own render doesn't ride on it.
-   */
+  // callback(state, hint): the hint ('stats', 'inventory', 'quests', 'map',
+  // 'time', or undefined for everything) narrows what the UI re-renders. An
+  // unknown hint updates nothing, so a plugin's own render never rides on it.
   subscribe(callback) { this.listeners.push(callback); }
   notifyListeners(hint) { this.listeners.forEach(cb => cb(this.state, hint)); }
 }

@@ -7,15 +7,12 @@ import {
   spendRetryCost
 } from './skill-checks.js';
 
-// Actions that move the conversation to a new panel (node, store, or scene).
-// _runActions reports these as "navigated" so callers skip re-rendering the
-// current node's options on top of the new panel.
+// Actions that move the conversation to a new panel; _runActions reports
+// them as navigation.
 const DIALOGUE_NAV_ACTIONS = new Set(['goToConversation', 'trade', 'leave']);
 
-// DialogueSystem manages NPC conversation trees — branching nodes with
-// skill-checked responses — and the merchant store (buy/sell). All
-// conversation bookkeeping lives in state (checkState for attempt maps,
-// flags for merchant stock and discounts), so it survives save/load.
+// Conversation trees with skill-checked responses, and the merchant store.
+// All bookkeeping lives in state, so it survives a save.
 export class DialogueSystem {
   constructor(engine) {
     this.engine = engine;
@@ -23,8 +20,7 @@ export class DialogueSystem {
     this.currentNPCId = null;
     this.activeDiscount = 0;
 
-    // Reactively refresh the store UI whenever a state change occurs
-    // (e.g. buying/selling changes gold and inventory, which must update instantly).
+    // Buying and selling change gold and inventory; the store follows.
     this.engine.state.subscribe(() => {
       if (this.engine.mode === 'store') this.renderStore(true);
     });
@@ -32,16 +28,13 @@ export class DialogueSystem {
     this._registerActions();
   }
 
-  // Clears the conversation data when the player leaves dialogue for a scene.
-  // Called by engine.renderScene — the mode transition itself is the engine's.
+  // Called by engine.renderScene; the mode transition is the engine's.
   close() {
     this.currentNPC = null;
     this.currentNPCId = null;
   }
 
-  // Registers the dialogue actions on the engine's global action registry so
-  // conversation nodes and scene options share one extension mechanism. The
-  // conversation-bound actions warn and no-op outside an active dialogue.
+  // The conversation-bound actions warn and no-op outside a dialogue.
   _registerActions() {
     const requireNPC = (type, fn) => (action, engine) => {
       if (!this.currentNPC) {
@@ -59,14 +52,11 @@ export class DialogueSystem {
       const rawPct = typeof action.tradeDiscount === 'string'
         ? parseFloat(action.tradeDiscount)
         : (action.tradeDiscount ?? 0);
-      // Guard against malformed discount data (e.g. "abc") that would make every
-      // price NaN; an unparseable discount means no discount.
+      // An unparseable discount is no discount, not NaN prices.
       const pct = Number.isFinite(rawPct) ? rawPct : 0;
       this.activeDiscount = pct / 100;
 
-      // Optionally save this discount permanently in the session state.
-      // Markups (negative values) persist too — an offended merchant's
-      // grudge should outlast the conversation, same as earned goodwill.
+      // Markups persist too: a grudge outlasts the conversation like goodwill.
       if (action.persistDiscount && pct !== 0) {
         this.engine.state.setFlag(FLAG_KEYS.tradeDiscount(this.currentNPCId), pct);
       }
@@ -96,9 +86,8 @@ export class DialogueSystem {
     this.currentNPC = npc;
     this.currentNPCId = npcId;
 
-    // Clear per-conversation check state (attempt counts, in-conversation
-    // exhaustion) when starting fresh. Permanently resolved responses live in
-    // a separate map (CHECK_KEYS.dialogueResolved) and survive this reset.
+    // Attempt counts reset per conversation; resolved responses live in a
+    // separate map and survive.
     this.engine.state.setCheckState(CHECK_KEYS.dialogueDc(npcId), {});
 
     if (npc.conversations) {
@@ -108,10 +97,8 @@ export class DialogueSystem {
     }
   }
 
-  // Runs a conversation node's action pipeline through the global action
-  // registry. Returns true when navigation occurred — the dialogue closed,
-  // a new node rendered, or the store opened — so callers skip re-rendering
-  // the current node's options over the new panel.
+  // True when a pipeline navigated: closed the dialogue, changed node, or
+  // opened the store.
   _runActions(actions) {
     let navigated = false;
     for (const action of (actions || [])) {
@@ -121,18 +108,14 @@ export class DialogueSystem {
         continue;
       }
       handler(action, this.engine);
-      // Clearing currentNPC acts as the "left dialogue" signal (e.g. a navigate
-      // action rendered a scene); the nav set covers in-dialogue panel changes.
+      // A cleared currentNPC means a scene was rendered.
       if (DIALOGUE_NAV_ACTIONS.has(action.type) || !this.currentNPC) navigated = true;
     }
     return navigated;
   }
 
-  // Renders a conversation node: its text and the player's reply choices with
-  // their skill-check gates. overrideText (e.g. a store farewell line) means
-  // the node is being re-shown, not entered, so its action pipeline is NOT
-  // re-run (a greeting gift must not be granted again every time the player
-  // backs out of the store). optionsOnly skips the narrative text blocks.
+  // overrideText re-shows the node without re-running its actions (a greeting
+  // gift must not repeat on every store exit); optionsOnly skips the text.
   renderDialogue(nodeId = 'start', overrideText = null, optionsOnly = false) {
     const node = this.currentNPC.conversations[nodeId];
     if (!node) {
@@ -156,11 +139,7 @@ export class DialogueSystem {
       this.engine.t('ui.locationDialogue', { name: this.currentNPC.name })
     );
 
-    // Conversational Skill Checks
-
-    // Attempt counts live in a per-conversation flag map (reset by
-    // startDialogue); permanent resolution markers live in a separate flag
-    // that survives across conversations and saves.
+    // Conversational skill checks
     const dcStateKey = CHECK_KEYS.dialogueDc(this.currentNPCId);
     const resolvedKey = CHECK_KEYS.dialogueResolved(this.currentNPCId);
     const skillResponses = [];
@@ -171,12 +150,9 @@ export class DialogueSystem {
       const needsCheck = !!res.skillCheck && res.dc > 0;
       const resKey = `${res.skillCheck}_${nodeId}_${i}`;
 
-      // A resolveOnce response stays retired across conversations; an
-      // exhausted maxAttempts budget retires it for the rest of this
-      // conversation only (patience resets on re-talk).
+      // resolveOnce retires across conversations; exhaustion only until re-talk.
       if (needsCheck && (isResolved(this.engine.state, resolvedKey, resKey) || isResolved(this.engine.state, dcStateKey, resKey))) return;
 
-      // Checked responses carry a retry badge; plain responses are free.
       let p;
       if (needsCheck) {
         p = checkPresentation(this.engine, res, getAttempts(this.engine.state, dcStateKey, resKey));
@@ -189,9 +165,7 @@ export class DialogueSystem {
       btn.onclick = () => {
         this.engine.log(LOG.PLAYER, p.displayText, 'choice');
 
-        // Dialogue is free by default; an explicit timeCost on a response
-        // advances the clock (browsing a store never costs time). Charging
-        // order follows SceneRenderer._chargeTime.
+        // Dialogue is free unless a response carries a timeCost.
         if (needsCheck) {
           spendRetryCost(this.engine, p.gate);
           let navigated = false;
@@ -202,16 +176,14 @@ export class DialogueSystem {
             runActions: (actions) => { navigated = this._runActions(actions) || navigated; },
             didNavigate: () => navigated,
             chargeTime: () => { if (res.timeCost > 0) this.engine.advanceTime(res.timeCost); },
-            // Re-render options-only when nothing navigated, so a resolveOnce
-            // response retires from the panel instead of staying clickable.
+            // So a resolveOnce response retires from the panel.
             rerender: () => this.renderDialogue(nodeId, null, true),
           });
           return;
         }
 
-        // Action routing for plain (check-free) responses. Read through
-        // normalizeOutcomes so a response authored in the outcomes
-        // shape keeps working if its check is later removed.
+        // Through normalizeOutcomes, so the outcomes shape keeps working
+        // when a check is removed.
         if (res.timeCost > 0) this.engine.advanceTime(res.timeCost);
         this._runActions(normalizeOutcomes(res).success.actions);
       };
@@ -233,7 +205,6 @@ export class DialogueSystem {
     this.engine.scrollNarrativeToBottom();
   }
 
-  // A new dialogue block in the narrative, headed by the NPC's opening line.
   _openDialogueScene(text) {
     this.engine.openScene(CSS.SCENE_DIALOGUE);
     this.engine.currentSceneEl.appendChild(
@@ -241,7 +212,7 @@ export class DialogueSystem {
     );
   }
 
-  // The greeting screen for an NPC with no conversation tree.
+  // For an NPC with no conversation tree.
   renderDialogueFallback(overrideText = null) {
     this._openDialogueScene(overrideText || this.engine.t('dialogue.greeting', { name: this.currentNPC.name }));
 
@@ -267,28 +238,24 @@ export class DialogueSystem {
     this.engine.scrollNarrativeToBottom();
   }
 
-  // The merchant's remaining stock for an item: the persisted flag when a
-  // sale has happened, else the NPC-configured amount (null = unlimited).
-  // Stock lives in flags so the static NPC file is never mutated.
+  // The persisted flag once a sale happened, else the authored amount (null:
+  // unlimited). In flags, so the NPC data is never mutated.
   _getStock(itemId, npcAmount) {
     if (npcAmount === null) return null;
     const flagVal = this.engine.state.getFlag(FLAG_KEYS.merchantStock(this.currentNPCId, itemId));
     return flagVal !== false ? flagVal : npcAmount;
   }
 
-  // Renders the merchant store: buy/sell lists with their prices. isUpdate
-  // skips the narrative text blocks.
+  // isUpdate skips the narrative block.
   renderStore(isUpdate = false) {
     if (!isUpdate) {
-      // Pull saved discounts from previous conversation branches if active
       if (this.activeDiscount === 0) {
         const saved = this.engine.state.getFlag(FLAG_KEYS.tradeDiscount(this.currentNPCId));
         if (saved) this.activeDiscount = saved / 100;
       }
       this.engine.setMode('store');
       this.engine.openScene(CSS.SCENE_MERCHANT);
-      // An active discount or markup is stated with the greeting — repriced
-      // wares the player can't recognize as repriced aren't a consequence.
+      // A discount the player cannot see is not a consequence.
       let greeting = this.engine.t('dialogue.merchantGreeting', { name: this.currentNPC.name });
       if (this.activeDiscount !== 0) {
         const pct = Math.round(Math.abs(this.activeDiscount * 100));
@@ -310,7 +277,6 @@ export class DialogueSystem {
       this.engine.t('ui.locationMerchant', { name: this.currentNPC.name })
     );
 
-    // Exit Button placed at the top for accessibility
     const neverMind = this.engine.t('dialogue.neverMind');
     const leaveBtn = buildOptionButton(neverMind);
     leaveBtn.onclick = () => {
@@ -333,10 +299,7 @@ export class DialogueSystem {
     this.engine.scrollNarrativeToBottom();
   }
 
-  // Builds the merchant "Buy" section: one button per in-stock carried item,
-  // with discount-adjusted prices and stock bookkeeping in persistent flags.
   _buildBuySection(panel, skillsContainer) {
-    // carriedItems entries are normalized to { item, amount } at load.
     const buyItems = (this.currentNPC.carriedItems || [])
       .map(({ item: id, amount: npcAmount }) => {
         const stock = this._getStock(id, npcAmount);
@@ -350,7 +313,7 @@ export class DialogueSystem {
 
     buyItems.forEach(({ id: itemId, item, stock, npcAmount }) => {
       const displayName = stock !== null ? `${item.name} (x${stock})` : item.name;
-      // A negative discount is a markup — an annoyed merchant padding prices.
+      // A negative discount is a markup.
       const price = this.activeDiscount !== 0 ? Math.floor(item.value * (1 - this.activeDiscount)) : item.value;
       const btn = buildOptionButton(
         this.engine.t('dialogue.buyButton', { name: displayName }),
@@ -359,17 +322,14 @@ export class DialogueSystem {
 
       if (this.engine.state.getPlayer().resources.gold < price) btn.disabled = true;
 
-      // No explicit re-render: the store's state subscription re-renders on
-      // the gold/inventory notifications these mutations emit.
+      // The store's subscription re-renders on the notifications.
       btn.onclick = () => {
         if (npcAmount !== null) {
           this.engine.state.setFlag(FLAG_KEYS.merchantStock(this.currentNPCId, itemId), stock - 1);
         }
         this.engine.state.modifyPlayerStat('gold', -price);
         this.engine.state.addToInventory(itemId, 1);
-        // Narrated, not logged in the player's voice: buying is a card click
-        // inside a panel, and the line reports what happened — the same shape
-        // as lifting a relic out of a chest or a display case.
+        // Narrated: a transaction, like lifting a relic out of a case.
         this.engine.log(LOG.SYSTEM, this.engine.t('dialogue.bought', { name: item.name, price }), 'loot');
       };
       buySection.appendChild(btn);
@@ -377,8 +337,7 @@ export class DialogueSystem {
     panel.insertBefore(buySection, skillsContainer);
   }
 
-  // Builds the merchant "Sell" section: one button per sellable inventory
-  // item, priced at floor(itemValue * rules.merchantSellRatio).
+  // Priced at floor(value * rules.merchantSellRatio).
   _buildSellSection(panel, skillsContainer) {
     const player = this.engine.state.getPlayer();
     const sellRatio = this.engine.data.rules?.merchantSellRatio ?? 0.5;

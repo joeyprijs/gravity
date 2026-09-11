@@ -1,8 +1,5 @@
-// Pure time math for the world clock.
-//
-// The clock itself is a single monotonic tick counter in state
-// (StateManager.advanceTime). Everything here — days, day segments, "ticks
-// until morning" — is presentation derived from rules.time, never stored:
+// Pure time math. The clock is one tick counter in state; days, segments,
+// and "ticks until morning" derive from rules.time:
 //
 //   "time": {
 //     "ticksPerDay": 24,
@@ -11,32 +8,24 @@
 //     "defaultCosts": { "navigate": 1, "skillAttempt": 1, "fullRest": 8 }
 //   }
 //
-// Like dice.js, this module is DOM- and engine-free so it runs directly in
-// node:test.
+// The clock helpers return null without a positive ticksPerDay.
 
-// The four clock helpers take the absolute tick count since the game started
-// and rules.time, and return null when the rules can't derive days (no
-// positive ticksPerDay). resolveTimeCost is the exception: it maps an action
-// to its tick cost and returns 0 when there is none.
-
-// The tick-of-day (0 … ticksPerDay-1).
+// 0 … ticksPerDay-1.
 export function getTickOfDay(ticks, timeRules) {
   if (!timeRules?.ticksPerDay || timeRules.ticksPerDay <= 0) return null;
   const start = timeRules.startTick ?? 0;
   return (ticks + start) % timeRules.ticksPerDay;
 }
 
-// The 1-based day number.
+// 1-based.
 export function getDay(ticks, timeRules) {
   if (!timeRules?.ticksPerDay || timeRules.ticksPerDay <= 0) return null;
   const start = timeRules.startTick ?? 0;
   return Math.floor((ticks + start) / timeRules.ticksPerDay) + 1;
 }
 
-// The id of the day segment the tick falls into, or null when segments aren't
-// configured. A tick-of-day before the earliest segment's `from` belongs to the
-// latest segment (it carries over midnight — e.g. "night" running from 22
-// through to 6).
+// A tick before the earliest segment's `from` belongs to the latest, which
+// carries over midnight.
 export function getSegment(ticks, timeRules) {
   const tickOfDay = getTickOfDay(ticks, timeRules);
   if (tickOfDay === null || !timeRules.segments?.length) return null;
@@ -48,10 +37,7 @@ export function getSegment(ticks, timeRules) {
   return current.id;
 }
 
-// How many ticks until the NEXT start of the given segment (null for an
-// unknown segment). Never returns 0: asked during the segment itself (or
-// exactly at its start), the answer is the next day's occurrence — "sleep
-// until morning" in the morning sleeps a full day.
+// Never 0: asked during the segment, the answer is tomorrow's.
 export function ticksUntilSegment(ticks, timeRules, segmentId) {
   const tickOfDay = getTickOfDay(ticks, timeRules);
   if (tickOfDay === null) return null;
@@ -61,11 +47,8 @@ export function ticksUntilSegment(ticks, timeRules, segmentId) {
   return delta === 0 ? timeRules.ticksPerDay : delta;
 }
 
-// Resolves the time cost of a player action: an explicit `timeCost` on the
-// option/skill/response always wins; otherwise the kind's default from
-// rules.time.defaultCosts ('navigate', 'skillAttempt', 'fullRest') applies;
-// otherwise the action is free. Without rules.time the whole system stays
-// dormant and only explicit costs charge.
+// An explicit timeCost wins; else the kind's rules.time.defaultCosts entry;
+// else 0.
 export function resolveTimeCost(explicitCost, kind, rules) {
   if (explicitCost !== undefined) return explicitCost;
   if (!kind) return 0;

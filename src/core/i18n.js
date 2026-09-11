@@ -1,37 +1,23 @@
-// Pure language-resolution helper for the engine's i18n support. Kept free of
-// browser globals so it can be unit-tested headlessly (engine.js passes in
-// navigator.languages).
+// Pure translation helpers; the engine passes navigator.languages in.
 
-// Locale-aware list joining ("A, B, and C" in English, with each language's
-// own separators and conjunction) — list grammar never lives in code.
+// "A, B, and C" in the language's own grammar.
 export function formatList(language, items) {
   return new Intl.ListFormat(language, { style: 'long', type: 'conjunction' }).format(items);
 }
 
-// Whether a count is grammatically singular in the given language —
-// message keys split into One-variants use this to pick the right one.
+// Picks the …One variant of a message key.
 export function isOne(language, count) {
   return new Intl.PluralRules(language).select(count) === 'one';
 }
 
-// t(key, params), or fallback when the locale has no entry for the key. The
-// translator signals a miss by echoing the key, so callers with a sensible
-// stand-in (a raw id, a generic string) use this instead of comparing.
+// t(key, params), or fallback when the locale has no entry (t echoes the key).
 export function translateOr(t, key, fallback, params) {
   const text = t(key, params);
   return text !== key ? text : fallback;
 }
 
-/**
- * Picks the active language from the languages a game ships and the user's
- * preference list. Preference tags are matched case-insensitively against the
- * available codes, first as the exact tag (e.g. "pt-BR"), then by base code
- * (e.g. "pt").
- *
- * `available` is the manifest's locale keys, `preferred` typically
- * navigator.languages. Returns the first preference with a match, else the
- * fallback, else the first available language.
- */
+// The first preferred tag matching an available code, exact ("pt-BR") then
+// base ("pt"), case-insensitively; else the fallback; else the first available.
 export function resolveLanguage(available = [], preferred = [], fallback = 'en') {
   const norm = (tag) => String(tag).toLowerCase();
   for (const tag of preferred) {

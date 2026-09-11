@@ -1,14 +1,10 @@
-// Maximum value of a d20 roll — used for hit chance and initiative rolls
 export const MAX_D20_ROLL = 20;
 
-// The reserved item ID representing currency. Loot tables and loot actions
-// using this ID modify the player's gold resource instead of the inventory.
+// The reserved item id for currency: loot of it changes gold, not the pack.
 export const GOLD_ITEM_ID = 'gold';
 
-// Builders for the dynamic state-flag keys used by the engine and built-in
-// plugins. Centralized so each key format is defined exactly once — an inline
-// typo'd key would silently create a brand-new flag. These are scalar world
-// state: authored conditions may read them (e.g. gating on a sold-out stock).
+// The engine's dynamic flag keys, built here so a typo cannot mint a new flag.
+// Scalar world state that authored conditions may read.
 export const FLAG_KEYS = {
   passiveDone:   (sceneId, index) => `passive_done_${sceneId}_${index}`,
   merchantStock: (npcId, itemId)  => `merchant_stock_${npcId}_${itemId}`,
@@ -16,21 +12,16 @@ export const FLAG_KEYS = {
   xpAwarded:     (sceneId)        => `xp_awarded_${sceneId}`,
 };
 
-// Builders for the keys in state.checkState — the engine-private skill-check
-// bookkeeping maps (attempt counts, resolution markers, discovery progress).
-// A separate namespace from flags: these are object-valued internals that
-// conditions never read, and keeping them out of state.flags keeps the flag
-// namespace a clean, author-facing key→scalar map.
+// The state.checkState keys: object-valued check bookkeeping that conditions
+// never read, kept out of the flag namespace.
 export const CHECK_KEYS = {
   skillDc:          (skillId, sceneId) => `skill_dc_${skillId}_${sceneId}`,
   dialogueDc:       (npcId)            => `dialogue_dc_${npcId}`,
   dialogueResolved: (npcId)            => `dialogue_resolved_${npcId}`,
 };
 
-// CSS class names referenced from JavaScript. Centralized here so that renaming
-// a class only requires a change in this file, not a grep across all JS files.
-// Dynamic variant suffixes (e.g. scene__log--${variant}) are built by
-// appending to the base constant: `${CSS.SCENE_LOG}--${variant}`.
+// Every CSS class JS refers to. Variant suffixes append to the base:
+// `${CSS.SCENE_LOG}--${variant}`.
 export const CSS = {
   // Scene / narrative
   SCENE:                  'scene',
@@ -45,9 +36,7 @@ export const CSS = {
   SCENE_BODY_TEXT:        'scene__body-text',
   SCENE_LOG:              'scene__log',
   SCENE_LOG_PREFIX:       'scene__log-prefix',
-  // Generic section container and heading — used by the scene options panel,
-  // the player tabs (inventory/quests/sheet/map), and the chest/merchant/
-  // curator panels.
+  // Section container and heading, shared by every panel
   PANEL_SECTION:          'panel-section',
   PANEL_SECTION_DYNAMIC:  'panel-section--dynamic',
   SECTION_HEADING:        'section-heading',
@@ -62,10 +51,7 @@ export const CSS = {
   BTN:                    'button',
   BTN_ITEM:               'btn--item',
 
-  // Cards — THE standard block for every titled box in the UI: scene options,
-  // skill checks, dialogue responses, combat attacks, inventory items, quests,
-  // chest rows, exhibits. One DOM shape + class vocabulary (see buildCard in
-  // core/utils.js), restyled in one place (the .card block in styles.css).
+  // Cards: the one block for every titled box (see buildCard in core/utils.js)
   CARD:                   'card',
   CARD_TITLE:             'card__title',
   CARD_BODY:              'card__body',
@@ -120,7 +106,7 @@ export const CSS = {
   CC_LOAD_BTN:            'char-creation__load-btn',
 };
 
-// HTML element IDs — single source of truth for every getElementById call in JS.
+// Every element id JS looks up.
 export const EL = {
   // Narrative / scene
   SCENE_PANEL:             'scene-panel',
@@ -160,15 +146,11 @@ export const EL = {
   FULLMAP_CLOSE:           'fullmap-close',
 };
 
-// Action types a timer pipeline may contain. Timers fire from inside
-// advanceTime — potentially mid-option, mid-rest, or right before a combat
-// starts — so they are restricted to "quiet" actions that only change state
-// and log. The world reacts through flags, which already flow into scene
-// re-renders, option visibility, and dialogue gating naturally.
+// Timers fire from inside advanceTime, mid-flow, so their pipelines are
+// limited to quiet actions: state and logs, never navigation or combat.
 export const TIMER_SAFE_ACTIONS = new Set(['set_flag', 'log', 'questTrigger', 'cancel_timer', 'set_timer']);
 
-// Canonical mission status values — used by QuestSystem, StateManager, QuestUI, and conditions.
-// COMPLETE and FAILED are terminal: no trigger moves a mission out of them.
+// COMPLETE and FAILED are terminal.
 export const MISSION_STATUS = {
   NOT_STARTED: 'not_started',
   ACTIVE:      'active',
@@ -176,7 +158,7 @@ export const MISSION_STATUS = {
   FAILED:      'failed',
 };
 
-// Log type labels — the [Label] prefix shown in every narrative log entry.
+// The [Label] prefixes of the narrative log.
 export const LOG = {
   SYSTEM:   'System',
   PLAYER:   'Player',
@@ -185,31 +167,25 @@ export const LOG = {
   NARRATOR: 'Narrator',
 };
 
-// Default world canvas dimensions used when worldMapSize is absent from index.json
+// When the manifest has no worldMapSize.
 export const DEFAULT_WORLD_MAP_SIZE = { width: 3000, height: 2000 };
 
-// CSS fallback background applied to map nodes that have no background defined
-// in their mapDefinitions. Must stay in sync with the --panel-bg CSS variable.
+// For map nodes without a background of their own.
 export const MAP_NODE_DEFAULT_BG = 'var(--panel-bg)';
 
-// Size of the minimap HUD in pixels (square)
+// The minimap square, in pixels.
 export const MINIMAP_SIZE = 200;
 
-// Pixel buffer around the map bounding box so scaled rooms keep clean margins
+// Around the map's bounding box, so scaled rooms keep a margin.
 export const MAP_PADDING = 40;
 
-// The one equipment slot kind the engine itself depends on: combat reads the
-// player's attacks, and an enemy's weapon, out of the slots declared with it.
-// Every other kind (ring, head, body...) is the game's own invention.
+// The one slot kind the engine depends on: combat reads attacks from it.
 export const HAND_SLOT_KIND = 'hand';
 
-// The item `type` vocabulary the engine branches on (equip flow, combat,
-// inventory grouping). Data may omit type (treated as Flavour); a declared
-// type outside this set is an authoring typo — validateGameData flags it.
-// Keep in sync with the enum in schemas/item.schema.json (a test cross-checks).
+// The item types the engine branches on; an omitted type is Flavour. A test
+// cross-checks the enum in schemas/item.schema.json.
 export const ITEM_TYPES = new Set(['Weapon', 'Spell', 'Armor', 'Consumable', 'Book', 'Special', 'Flavour']);
 
-// Fallback item ID used when an enemy has no weapon equipped. Must match an
-// entry in data/items/ and data/index.json. Overridable via rules.fallbackWeapons.enemy.
+// What an unarmed enemy swings with, unless rules.fallbackWeapons.enemy says otherwise.
 export const ENEMY_CLAW_ID = 'enemy_claw';
 

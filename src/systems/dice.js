@@ -1,15 +1,11 @@
-// Pure dice math: rolls, damage-notation parsing, and weighted tables.
-// Like condition.js and time.js, this module is DOM- and engine-free so it
-// runs directly in node:test.
+// Pure dice math: rolls, damage notation, weighted tables.
 
-// A random integer in [min, max], both inclusive.
+// An integer in [min, max], inclusive.
 export function roll(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-// Picks a random entry from a weighted table, or null for a missing/empty
-// table. Each entry may carry an optional `dropWeight` (relative likelihood,
-// defaults to 1) — higher means more common, not item carry weight.
+// A weighted pick (dropWeight, default 1), or null for an empty table.
 export function rollTable(table) {
   if (!table?.entries?.length) return null;
   const totalWeight = table.entries.reduce((sum, e) => sum + (e.dropWeight ?? 1), 0);
@@ -21,24 +17,21 @@ export function rollTable(table) {
   return table.entries[table.entries.length - 1];
 }
 
-// Rolls a damage notation — standard NdF[+/-M] ("1d6", "2d4+2", "1d8-1") or
-// the legacy range syntax ("1-4") — returning the total (clamped to >= 0) and
-// a breakdown string of the individual dice ("4+3+2", "3-1").
+// "2d4+2" or the legacy range "1-4": the total (>= 0) and the dice as a
+// string ("4+3+2").
 export function parseDamage(dmgString) {
   if (!dmgString) return { total: 1, string: '1' };
 
-  // Legacy range syntax (e.g., "1-4"). Evaluated first because the standard
-  // dice regex does not parse bare hyphens without a 'd' designator.
+  // The range syntax first: the dice regex does not take a bare hyphen.
   if (dmgString.includes('-') && !dmgString.includes('d')) {
     const parts = dmgString.split('-').map(Number);
     const [a, b] = parts;
-    // Reject malformed ranges ("1-2-3", "-3", "1-") that would otherwise roll
-    // NaN and silently corrupt combat math.
+    // "1-2-3", "-3", "1-" would roll NaN.
     if (parts.length !== 2 || !Number.isFinite(a) || !Number.isFinite(b)) {
       console.warn(`[Gravity] parseDamage: malformed range "${dmgString}". Defaulting to a flat roll of 1.`);
       return { total: 1, string: '1' };
     }
-    // min/max so a descending declaration ("4-1") still rolls a valid range.
+    // A descending "4-1" still rolls.
     return { total: roll(Math.min(a, b), Math.max(a, b)), string: dmgString };
   }
 
@@ -62,7 +55,7 @@ export function parseDamage(dmgString) {
     rollResults.push(r);
   }
 
-  // Clamped to >= 0 — negative damage would heal the target.
+  // Negative damage would heal.
   const grandTotal = Math.max(0, totalRoll + modifier);
 
   let rollStr = rollResults.join('+');

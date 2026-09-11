@@ -5,26 +5,20 @@ import { escapeHtml } from '../../core/utils.js';
 // save data. Everything here works on the StateManager and the loaded data;
 // nothing here touches the DOM — that is panel.js.
 
-// Hook registrations are per-StateManager: each registered manager gets its
-// own record ({ items, engine }) that the hook callbacks read through, so two
-// engines booted in one page (a manual-boot harness, the test suite) each
-// keep their own reputation current instead of the first registration winning
-// forever. Repeat registrations only refresh the record (the test suite
-// re-inits state per test).
+// One record per StateManager, read through by the hooks, so two engines in
+// one page (the smoke harness) each keep their own reputation current. A
+// repeat registration refreshes the record.
 const registrations = new WeakMap(); // StateManager → { items, engine }
 
-// The curator's save-data bag ({ museumReputation, obtainedItems, rooms,
-// displays }).
+// { museumReputation, obtainedItems, rooms, displays }.
 export const bagOf = (state) => state.pluginState('curator');
 
-// The museum's display cases, keyed by scene id — stored in the bag beside
-// the wings that hold them (see the header note on cases vs chests).
+// The display cases, keyed by scene id.
 const displaysOf = (state) => (bagOf(state).displays ??= {});
 
-// Generated case ids: display_<timestamp>_<sequence>.
 let displaySeq = 0;
 
-// A case as it is stored: the authored/installed fields and nothing derived.
+// A case as stored: nothing derived.
 function makeDisplay(config) {
   displaySeq += 1;
   return {
@@ -34,7 +28,6 @@ function makeDisplay(config) {
   };
 }
 
-// The display cases registered for a scene (empty array if none).
 export function getDisplaysForScene(state, sceneId) {
   return displaysOf(state)[sceneId] ?? [];
 }
@@ -43,8 +36,7 @@ export function findDisplay(state, sceneId, displayId) {
   return getDisplaysForScene(state, sceneId).find(d => d.id === displayId);
 }
 
-// Installs a new case in a scene and returns its id (generated when the
-// config carries none).
+// Returns the new case's id.
 export function addDisplayToScene(state, sceneId, config) {
   const map = displaysOf(state);
   const display = makeDisplay(config);
@@ -53,8 +45,7 @@ export function addDisplayToScene(state, sceneId, config) {
   return display.id;
 }
 
-// Moves an item from the player's inventory into a case. False when the case
-// or the item doesn't exist.
+// False when the case or the item does not exist.
 export function placeItemInDisplay(state, sceneId, displayId, itemId) {
   const display = findDisplay(state, sceneId, displayId);
   if (!display) return false;
@@ -62,15 +53,13 @@ export function placeItemInDisplay(state, sceneId, displayId, itemId) {
 
   display.item = itemId;
   state.removeFromInventory(itemId, 1, { silent: true });
-  // Recompute before the notification: the render it triggers must already
-  // count what now stands in this case.
+  // Before the notification, so the render it triggers counts the case.
   refreshReputation(state);
   state.notifyListeners('inventory');
   return true;
 }
 
-// Moves the item in a case back into the player's inventory. Returns the item
-// id taken, or null when the case was empty or missing.
+// Returns the item id taken, or null for an empty or missing case.
 export function takeItemFromDisplay(state, sceneId, displayId) {
   const display = findDisplay(state, sceneId, displayId);
   if (!display?.item) return null;
@@ -83,11 +72,9 @@ export function takeItemFromDisplay(state, sceneId, displayId) {
   return itemId;
 }
 
-// A scene file's `displays` array is the museum's starting furniture. Seeded
-// once per scene, and never over a save: cases already in the bag are the ones
-// the player installed and filled. Runs on init/load/reset rather than on
-// scene render — the panel and the scene decorator both ask whether a room has
-// cases while rendering it, which is too late to be discovering them.
+// A scene's authored `displays` are its starting furniture, seeded once and
+// never over a save. On init/load/reset, because the panel and the decorator
+// ask for cases while rendering, which is too late to discover them.
 function syncAuthoredDisplays(engine) {
   if (!engine) return;
   const map = displaysOf(engine.state);
@@ -97,19 +84,14 @@ function syncAuthoredDisplays(engine) {
   }
 }
 
-// What building a wing costs when the game's config doesn't say — the demo's
-// configured price. One constant because two places must agree on it: the
-// hall's build button (its label and its affordability check) and the
-// build_wing action that does the charging.
+// The build button and the build_wing action must agree on the price.
 export const DEFAULT_WING_COST = 250;
 
-// The museum reputation currently shown to the player (permanent + display bonus).
 export function getMuseumReputation(state) {
   return state.getPlayer()?.attributes?.reputation ?? 0;
 }
 
-// Recomputes the derived reputation attribute from the permanent score plus
-// the reputation of every relic currently on display.
+// The permanent score plus the reputation of every relic on display.
 function updateReputation(state, items) {
   let rep = bagOf(state).museumReputation ?? 0;
   const displays = displaysOf(state);
@@ -123,15 +105,12 @@ function updateReputation(state, items) {
   state.setPlayerAttribute('reputation', rep);
 }
 
-// Recomputes reputation for a state whose item database is only known to its
-// registration — the display mutators above are module functions, so they can't
-// close over the `items` the register call was given.
+// For the module-level mutators, which cannot close over the registered items.
 function refreshReputation(state) {
   updateReputation(state, registrations.get(state)?.items ?? {});
 }
 
-// First-time acquisition of a reputation-bearing item awards its reputation
-// permanently. obtainedItems tracks which items have already been counted.
+// The first acquisition of a reputation-bearing item scores permanently.
 function handleAcquisition(state, items, itemId) {
   const itemData = items[itemId];
   if (!itemData?.attributes?.reputation) return;
@@ -141,13 +120,8 @@ function handleAcquisition(state, items, itemId) {
   state.modifyPlayerStat('reputation', itemData.attributes.reputation);
 }
 
-// Registers the curator's state integrations: the reputation stat handler,
-// the mutation hooks that keep the derived attribute current, and the save
-// migration for the plugin's fields. Idempotent per StateManager — repeat
-// calls only refresh the registration's item/engine references (the test
-// suite re-inits state per test). The engine reference is optional: the
-// state-level tests call this on its own, and room synthesis stays out of
-// their way.
+// The stat handler, the mutation hooks, and the save migrations. Idempotent
+// per StateManager. engine is optional: the state-level tests run without one.
 export function registerCuratorState(state, items = {}, engine = null) {
   const existing = registrations.get(state);
   if (existing) {
@@ -158,8 +132,7 @@ export function registerCuratorState(state, items = {}, engine = null) {
   const reg = { items, engine };
   registrations.set(state, reg);
 
-  // modifyPlayerStat('reputation', delta) adjusts the permanent score; the
-  // visible attribute is recomputed (and notified) from updateReputation.
+  // A delta adjusts the permanent score; the attribute is recomputed from it.
   state.registerStatHandler('reputation', (amount) => {
     const bag = bagOf(state);
     bag.museumReputation = (bag.museumReputation ?? 0) + amount;
@@ -171,10 +144,7 @@ export function registerCuratorState(state, items = {}, engine = null) {
       case 'init':
       case 'loadFromObject':
       case 'reset':
-        // Wings first, then the cases standing in them, then what they are
-        // worth: each step reads the one before it. (Built wings carry no
-        // authored cases — the player installs those — but a wing's scene has
-        // to exist before anything walks data.scenes looking for them.)
+        // Wings, then the cases in them, then their worth: each reads the last.
         syncMuseumRooms(reg.engine);
         syncAuthoredDisplays(reg.engine);
         updateReputation(state, reg.items);
@@ -185,12 +155,9 @@ export function registerCuratorState(state, items = {}, engine = null) {
     }
   });
 
-  // The curator's save data, version 1 on the plugin's own migration line
-  // (state.pluginSaveVersions.curator — partitioned from the core
-  // saveVersion). Adopts the pre-bag top-level fields older saves carried,
-  // and seeds defaults for saves that predate the curator entirely.
-  // Idempotent on purpose: saves stamped 5 by the pre-partition version line
-  // re-run it once when they adopt the partitioned form.
+  // v1: adopts the top-level fields older saves carried into the bag, and
+  // seeds a save that predates the curator. Idempotent: a pre-partition save
+  // re-runs it once.
   state.registerMigration('curator', 1, (data) => {
     if (!data.plugins) data.plugins = {};
     const saved = data.plugins.curator ?? (data.plugins.curator = {});
@@ -199,8 +166,7 @@ export function registerCuratorState(state, items = {}, engine = null) {
       if (data.obtainedItems) {
         saved.obtainedItems = data.obtainedItems;
       } else {
-        // Backfill from everything the player already owns or exhibits, so
-        // pre-curator relics don't re-award reputation on pickup.
+        // Everything already owned or exhibited, so it never re-scores.
         const currentItems = new Set();
         (data.player?.inventory ?? []).forEach(i => currentItems.add(i.item));
         Object.values(data.player?.equipment ?? {}).forEach(itemId => {
@@ -216,11 +182,8 @@ export function registerCuratorState(state, items = {}, engine = null) {
     delete data.obtainedItems;
   });
 
-  // v2: the displays map moved out of core state into this bag, where the wings
-  // holding those cases already lived. MUST run after v1, which reads
-  // data.displays for its obtainedItems backfill — migrate() walks a plugin's
-  // versions in ascending order, so it does; anything that reorders them breaks
-  // that backfill silently.
+  // v2: the displays map moved from core state into the bag. Must run after
+  // v1, which reads data.displays for its backfill.
   state.registerMigration('curator', 2, (data) => {
     if (!data.plugins) data.plugins = {};
     const saved = data.plugins.curator ?? (data.plugins.curator = {});
@@ -229,25 +192,14 @@ export function registerCuratorState(state, items = {}, engine = null) {
   });
 }
 
-// Lays the museum out on the world map. A museum that can grow can't have its
-// coordinates authored one room at a time: a wing declares which slot it
-// occupies (`museumSlot`) and the geometry is derived from that, so however
-// many rooms exist, they tile without overlapping and without anyone editing
-// pixels. Slots run away from the hall in a pair per column — even slots north
-// of it, odd slots south — so the museum grows one column per TWO rooms and
-// stays roughly square instead of stretching into a ribbon.
+// Derives the museum's map geometry from each wing's `museumSlot`: even slots
+// north of the hall, odd slots south, one column per two rooms, the hall as
+// wide as the columns in use. Needs museumLayout { top, left, roomWidth,
+// roomHeight } in the plugin config; without it nothing is touched.
 //
-//     ┌────┬────┐        slot 0   slot 2      (north, columns 0 and 1)
-//     │ 0  │ 2  │
-//   ──┼────┴────┤        the hall (museumHall) spans every column in use
-//     │ 1  │ 3  │
-//     └────┴────┘        slot 1   slot 3      (south)
-//
-// The hall's own width follows the column count, which is what makes room for
-// the next wing on the map. Geometry only — nothing here knows what a room
-// holds. Needs `museumLayout: { top, left, roomWidth, roomHeight }` in the
-// plugin's manifest config (the hall's top-left corner and one room's size);
-// without it the authored mapDefinitions are left exactly as they are.
+//     ┌────┬────┐   slots 0, 2 north
+//   ──┼────┴────┤   the hall spans every column
+//     └────┴────┘   slots 1, 3 south
 export function layoutMuseum(engine) {
   const layout = engine.pluginConfig('curator').museumLayout;
   if (!layout) return;
@@ -268,28 +220,24 @@ export function layoutMuseum(engine) {
     });
   }
 
-  // An empty museum still has its hall — one column wide.
+  // An empty museum still has its hall, one column wide.
   if (hall) Object.assign(hall.mapDefinitions ??= {}, {
     left, top, width: roomWidth * Math.max(columns, 1), height: roomHeight,
   });
 }
 
-// Rooms the curator takes over on arrival: the hall (its wings and the building
-// of them) and anything holding display cases. Both get a panel instead of a
-// plain option list, so the museum reads the same wherever you stand in it.
+// The rooms whose arrival opens the curator panel.
 export function isMuseumRoom(scene, hasDisplays) {
   return Boolean(scene.museumHall || scene.supportsExhibits || hasDisplays);
 }
 
-// The museum's hall, as { id, scene } — the scene flagged museumHall. Null in
-// a game that has no museum.
+// { id, scene } of the scene flagged museumHall; null without a museum.
 export function findHall(engine) {
   const entry = Object.entries(engine.data.scenes).find(([, s]) => s.museumHall);
   return entry ? { id: entry[0], scene: entry[1] } : null;
 }
 
-// The slot a newly built wing takes: one past the highest in use, so ids and
-// geometry both follow from it and nothing has to be counted or stored twice.
+// One past the highest slot in use; id and geometry both follow from it.
 export function nextMuseumSlot(engine) {
   const slots = Object.values(engine.data.scenes)
     .map(s => s.museumSlot)
@@ -297,17 +245,12 @@ export function nextMuseumSlot(engine) {
   return slots.length ? Math.max(...slots) + 1 : 0;
 }
 
-// A built wing as a scene object. Everything but the player's chosen name is
-// derived: the id and geometry from the slot, the room's text from the plugin's
-// locale, the region and the way back from the hall it opens off. Bare on
-// purpose — the player installs display cases and decides what goes in.
-// The name is player input, and a description is rendered as HTML, so it is
-// escaped going in (the option button and map label take text nodes).
+// A built wing as a scene: everything but the player's name is derived from
+// the slot, the locale, and the hall. The name is player input rendered as
+// HTML in the description, so it is escaped there.
 function buildRoomScene(engine, hall, room) {
-  // Geometry comes from layoutMuseum; without a museumLayout there is none to
-  // derive, and a bare mapDefinitions would put the wing on the map at
-  // undefined coordinates — so the wing gets no map presence at all. (Building
-  // is gated on the layout, but a save carrying wings can be loaded anywhere.)
+  // Without a museumLayout there is no geometry to derive, so no map presence
+  // rather than undefined coordinates: a save with wings can load anywhere.
   const layout = engine.pluginConfig('curator').museumLayout;
   return {
     id: room.id,
@@ -327,12 +270,8 @@ function buildRoomScene(engine, hall, room) {
   };
 }
 
-// Brings data.scenes in line with the built wings in the save, then re-runs the
-// layout. Wings live in the save as { id, name, slot } and nothing else — their
-// scenes are rebuilt from that on every load, so a saved game can never carry
-// stale coordinates or drift from the layout rules. Called on boot, on load,
-// and after building: a loaded save must also DROP the wings the previous game
-// had, which is what museumBuilt marks.
+// Rebuilds the built wings' scenes from the save's { id, name, slot } records
+// and re-runs the layout; museumBuilt marks the scenes a loaded save must drop.
 export function syncMuseumRooms(engine) {
   if (!engine) return;
   const hall = findHall(engine);

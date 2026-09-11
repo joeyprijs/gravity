@@ -3,21 +3,11 @@ import { formatSigned, isResourcePool } from '../core/utils.js';
 import { rollAmount } from './items.js';
 import { ticksUntilSegment } from './time.js';
 
-// Built-in action handlers for the scene option action pipeline.
-// Each handler receives (action, engine) — the action object from the pipeline
-// (e.g. { type: "loot", item: "sword", amount: 1 }) and the engine reference.
-//
-// Handlers are responsible only for their side-effect; navigation is a separate
-// "navigate" action in the pipeline. Log output can be suppressed or overridden
-// by setting action.log = false (silent) or action.log = "custom message".
-// Override strings resolve through engine.t(), so a locale key keeps the prose
-// translatable; a string that isn't a key logs as-is (the one-off allowance).
-//
-// Register additional actions at runtime: window.gameEngine.registerAction(name, fn)
+// The built-in action handlers, each (action, engine). A handler owns one side
+// effect; navigation is its own action. action.log = false silences the
+// default line, a string replaces it (a locale key, or prose as-is).
 
-// action.received distinguishes how the loot reached the player: false/absent
-// means it was found (searched, dropped by an enemy), true means it was handed
-// over (an NPC gift or reward). It only selects the log message's locale key.
+// action.received picks the "handed over" line over the "found" one.
 function handleLoot(action, engine) {
   const amount = action.amount ?? 1;
   const isGold = action.item === GOLD_ITEM_ID;
@@ -40,8 +30,7 @@ function handleLoot(action, engine) {
 }
 
 function handleCombat(action, engine) {
-  // The action's onVictory pipeline (if any) runs on the win — the whole
-  // action is passed through as originOption for endCombat to read it from.
+  // endCombat reads the onVictory pipeline off the action.
   engine.combatSystem.startCombat(action.enemies || [], action);
 }
 
@@ -54,10 +43,8 @@ function handleReturn(_action, engine) {
   engine.renderScene(engine.state.getReturnSceneId() || fallback);
 }
 
-// The log tail shared by the restorative actions. A string override is
-// authored prose — the world's answer, narrated. The default is the act's
-// yield, amended onto the [Player] option line that ran this pipeline (see
-// STYLE.md, the narrative log's two voices).
+// A string override is the world's answer; the default yield is amended onto
+// the [Player] line that ran the pipeline (STYLE.md, the two voices).
 function logYield(engine, action, yieldLine, overrideVariant = 'system') {
   if (action.log === false) return;
   if (typeof action.log === 'string') engine.log(LOG.SYSTEM, engine.t(action.log), overrideVariant);
@@ -66,30 +53,22 @@ function logYield(engine, action, yieldLine, overrideVariant = 'system') {
 
 function handleFullRest(action, engine) {
   engine.state.modifyPlayerStat('hp', 'full');
-  // A night's rest also refills the retry currency (rules.skillRetry.restRestore,
-  // clamped to max) — the cozy counterweight to spending do-overs while out.
+  // A night also refills the retry currency (rules.skillRetry.restRestore).
   const retry = engine.data.rules?.skillRetry;
   if (retry?.resource && retry.restRestore > 0) {
     engine.state.modifyPlayerStat(retry.resource, retry.restRestore);
   }
-  // And the short-rest pool, D&D-style: short rests spend it out in the
-  // world, only a full rest brings it back (see handleShortRest).
+  // And the short-rest pool, which only a full rest brings back.
   const shortRest = engine.data.rules?.shortRest;
   if (shortRest?.resource) engine.state.modifyPlayerStat(shortRest.resource, 'full');
-  // Rest-limited item uses (attributes.uses) all come back with a night's
-  // sleep, whichever rest they refresh on.
+  // And every rest-limited item use, whichever rest it refreshes on.
   engine.state.refreshItemUses('full_rest');
   logYield(engine, action, engine.t('actions.fullRest'));
 }
 
-// { type: "short_rest" } — one draw on the short-rest pool: heals
-// rules.shortRest.heal (dice notation or a flat number) and spends one use of
-// rules.shortRest.resource. The pool only refills on a full rest (see
-// handleFullRest), so each draw spends something real — the D&D Hit Dice
-// rhythm. Where resting is on offer is the scene author's call: a scene
-// option built on this action renders with the pool's state as its stat
-// lines and disables at an empty pool, and the guard here mirrors that for
-// pipelines that slip past.
+// One draw on the short-rest pool: heals rules.shortRest.heal and spends one
+// use of rules.shortRest.resource, which only a full rest refills. The scene
+// option disables at an empty pool; the guard here covers pipelines that slip past.
 function handleShortRest(action, engine) {
   const config = engine.data.rules?.shortRest;
   if (!config?.resource) {
@@ -109,16 +88,13 @@ function handleShortRest(action, engine) {
   const { amount, rollSuffix } = rollAmount(engine, config.heal ?? 1);
   engine.state.modifyPlayerStat('hp', amount);
   engine.state.modifyPlayerStat(config.resource, -1);
-  // A breather also brings back the item uses that refresh on a short rest.
   engine.state.refreshItemUses('short_rest');
-  // The yield carries the roll: "Short Rest (+6 HP, 1d8: 6)".
   logYield(engine, action, engine.t('actions.heal', { amount: `+${amount}`, rollSuffix }));
 }
 
 function handleHeal(action, engine) {
   const amount = action.amount ?? engine.data.rules?.snackHealAmount ?? 2;
   engine.state.modifyPlayerStat('hp', amount);
-  // Signed so a harmful heal reads "(-2 HP)".
   logYield(engine, action, engine.t('actions.heal', { amount: formatSigned(amount), rollSuffix: '' }), 'loot');
 }
 
@@ -141,14 +117,9 @@ function handleManageChest(action, engine) {
   engine.ui.renderChestUI(action.chest);
 }
 
-// { type: "grant_chapter", item: "gertas_story", chapter: "the_dance" } — record
-// that the player heard one chapter of the story a book item retells. Granted
-// state is written here, at listen time, never derived from anything else.
-// The first chapter writes the book: the item lands in the pack the moment
-// there is something to put in it. Re-granting is a silent no-op — hearing a
-// chapter twice is not an event, so a re-listen never duplicates the log line.
-// Omitting `chapter` grants every chapter at once — a book FOUND in the world
-// arrives already written, so its default line is the find, not the writing.
+// Records a heard chapter of a story book; the first chapter puts the book in
+// the pack. Re-granting is a silent no-op. Without `chapter` every chapter is
+// granted at once: a book found in the world arrives written, and logs as a find.
 function handleGrantChapter(action, engine) {
   const itemData = engine.data.items[action.item];
   const chapters = itemData?.story?.chapters ?? [];
@@ -176,9 +147,8 @@ function handleGrantChapter(action, engine) {
 
 // Time actions
 
-// { type: "advance_time", amount: 8 } — advance the clock by a fixed amount.
-// { type: "advance_time", until: "morning" } — sleep to the next segment start
-// (requires rules.time segments; a missing segment is a warning no-op).
+// `amount` ticks, or `until` the next start of a segment (a warning no-op
+// for an unknown one).
 function handleAdvanceTime(action, engine) {
   let amount = action.amount ?? 0;
   if (action.until) {
@@ -193,9 +163,8 @@ function handleAdvanceTime(action, engine) {
   if (typeof action.log === 'string') engine.log(LOG.SYSTEM, engine.t(action.log));
 }
 
-// { type: "set_timer", id, afterTicks: 12, actions: [...] } — when the clock
-// passes the deadline, the (quiet-only) pipeline runs. Re-arming an id
-// replaces the previous timer.
+// { id, afterTicks, actions }: the quiet-only pipeline runs when the clock
+// passes the deadline. Re-arming an id replaces the timer.
 function handleSetTimer(action, engine) {
   if (!action.id) {
     console.warn('[Gravity] set_timer: missing "id" — ignored');
